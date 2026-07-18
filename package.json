@@ -19,7 +19,10 @@
     "smoke:prod": "node scripts/smoke-production.mjs",
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "audit:interactions": "node scripts/interactive-audit.mjs",
-    "audit:flows": "node scripts/business-flow-audit.mjs"
+    "audit:flows": "node scripts/business-flow-audit.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@lovable.dev/mcp-js": "^0.23.0",
