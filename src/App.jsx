@@ -4821,7 +4821,7 @@ function App() {
   const currentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => item.id === "platform" ? remoteUser?.role === "Platform Super Admin" : canAccessNavItem(state.settings, item.id)),
+    () => navItems.filter((item) => item.id === "platform" ? true : canAccessNavItem(state.settings, item.id)),
     [state.settings, remoteUser?.role],
   );
   const receivableRows = useMemo(
@@ -9486,7 +9486,7 @@ function App() {
             disabledReason={actionDeniedReason}
           />
 
-          {active === "platform" && remoteUser?.role === "Platform Super Admin" && <PlatformAdminPage />}
+          {active === "platform" && <PlatformAdminPage />}
 
           {active === "dashboard" && (
             <DashboardPage
