@@ -61,6 +61,116 @@ export type Database = {
           },
         ]
       }
+      goods_receipt_lines: {
+        Row: {
+          created_at: string
+          grn_id: string
+          id: string
+          po_line_id: string
+          qty_received: number
+          qty_rejected: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grn_id: string
+          id?: string
+          po_line_id: string
+          qty_received: number
+          qty_rejected?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grn_id?: string
+          id?: string
+          po_line_id?: string
+          qty_received?: number
+          qty_rejected?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipt_lines_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipt_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_match"
+            referencedColumns: ["po_line_id"]
+          },
+          {
+            foreignKeyName: "goods_receipt_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goods_receipts: {
+        Row: {
+          created_at: string
+          grn_number: string
+          id: string
+          notes: string | null
+          po_id: string
+          receipt_date: string
+          received_by: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grn_number: string
+          id?: string
+          notes?: string | null
+          po_id: string
+          receipt_date?: string
+          received_by?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grn_number?: string
+          id?: string
+          notes?: string | null
+          po_id?: string
+          receipt_date?: string
+          received_by?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_match"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -171,6 +281,120 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_lines: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          line_no: number
+          po_id: string
+          product_sku: string
+          qty_ordered: number
+          tax_rate: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          line_no: number
+          po_id: string
+          product_sku: string
+          qty_ordered: number
+          tax_rate?: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          line_no?: number
+          po_id?: string
+          product_sku?: string
+          qty_ordered?: number
+          tax_rate?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_match"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          expected_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          po_number: string
+          status: Database["public"]["Enums"]["po_status"]
+          tenant_id: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number: string
+          status?: Database["public"]["Enums"]["po_status"]
+          tenant_id: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number?: string
+          status?: Database["public"]["Enums"]["po_status"]
+          tenant_id?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -230,13 +454,246 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_invoice_lines: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          invoice_id: string
+          po_line_id: string | null
+          qty_invoiced: number
+          tax_rate: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id: string
+          po_line_id?: string | null
+          qty_invoiced: number
+          tax_rate?: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          po_line_id?: string | null
+          qty_invoiced?: number
+          tax_rate?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_match"
+            referencedColumns: ["po_line_id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          match_notes: string | null
+          po_id: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          tenant_id: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          match_notes?: string | null
+          po_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tenant_id: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          match_notes?: string | null
+          po_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tenant_id?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoices_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_match"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "vendor_invoices_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          tax_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          tax_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          tax_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      po_line_match: {
+        Row: {
+          avg_invoice_price: number | null
+          line_no: number | null
+          po_id: string | null
+          po_line_id: string | null
+          po_number: string | null
+          po_unit_price: number | null
+          product_sku: string | null
+          qty_accepted: number | null
+          qty_invoiced: number | null
+          qty_ordered: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      apply_invoice_match: {
+        Args: {
+          _invoice_id: string
+          _price_tolerance?: number
+          _qty_tolerance?: number
+        }
+        Returns: Database["public"]["Enums"]["invoice_status"]
+      }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
       current_tenant_id: { Args: never; Returns: string }
+      evaluate_invoice_match: {
+        Args: {
+          _invoice_id: string
+          _price_tolerance?: number
+          _qty_tolerance?: number
+        }
+        Returns: {
+          invoice_unit_price: number
+          line_no: number
+          po_line_id: string
+          po_unit_price: number
+          price_ok: boolean
+          product_sku: string
+          qty_accepted: number
+          qty_invoiced: number
+          qty_ok: boolean
+          qty_ordered: number
+          status: string
+        }[]
+      }
       has_tenant_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -256,6 +713,20 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member" | "viewer"
+      invoice_status:
+        | "draft"
+        | "matched"
+        | "exception"
+        | "approved"
+        | "paid"
+        | "cancelled"
+      po_status:
+        | "draft"
+        | "approved"
+        | "partial"
+        | "received"
+        | "closed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -384,6 +855,22 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member", "viewer"],
+      invoice_status: [
+        "draft",
+        "matched",
+        "exception",
+        "approved",
+        "paid",
+        "cancelled",
+      ],
+      po_status: [
+        "draft",
+        "approved",
+        "partial",
+        "received",
+        "closed",
+        "cancelled",
+      ],
     },
   },
 } as const
