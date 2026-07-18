@@ -7634,6 +7634,47 @@ function App() {
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
 
+  function deleteProduct(productId) {
+    if (!requirePermission("warehouse.manage", "məhsul kataloqunu silmək")) return;
+    const currentProduct = state.products.find((product) => product.id === productId);
+    if (!currentProduct) {
+      notify("Məhsul tapılmadı.", "warning");
+      return;
+    }
+    if (!window.confirm(`${currentProduct.name} məhsulunu silmək istədiyinizə əminsiniz?`)) return;
+
+    // Optimistic local removal + related stock cleanup
+    setState((current) => {
+      const stripRows = (rows) => (rows || []).filter((row) => row.product !== currentProduct.name);
+      const warehouseStock = Object.fromEntries(
+        Object.entries(current.warehouseStock || {}).map(([wid, rows]) => [wid, stripRows(rows)]),
+      );
+      return auditCurrentState(
+        {
+          ...current,
+          products: current.products.filter((p) => p.id !== productId),
+          stock: stripRows(current.stock),
+          warehouseStock,
+        },
+        { module: "Məhsul", action: "Məhsul silindi", detail: `${currentProduct.sku} · ${currentProduct.name}` },
+      );
+    });
+
+    // Persist to DB
+    if (activeTenantId && deleteDbProduct) {
+      const dbRow =
+        (dbProducts || []).find((p) => p.id === productId) ||
+        (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
+      if (dbRow) {
+        deleteDbProduct(dbRow.id).catch((err) => {
+          notify(`Məhsul DB-dən silinmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
+    setModal(null);
+    notify(`${currentProduct.name} silindi.`);
+  }
+
   function saveFinanceAccount(accountId, values) {
     if (!requirePermission("finance.manage", "kassa və bank hesabını idarə etmək")) return;
 
@@ -10028,6 +10069,7 @@ function App() {
           onCreatePurchaseOrder={createPurchaseOrder}
           onImportWarehouseStock={importWarehouseStock}
           onUpdateProduct={updateProduct}
+          onDeleteProduct={deleteProduct}
           onSaveFinanceAccount={saveFinanceAccount}
           onUpdateSalesOrder={updateSalesOrder}
           onDeleteSalesOrder={deleteSalesOrder}
@@ -18588,7 +18630,7 @@ function WarehouseFormModal({ mode, warehouse, onClose, onSubmit }) {
   );
 }
 
-function ProductFormModal({ product, onClose, onSubmit }) {
+function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
   const [values, setValues] = useState({
     name: product?.name || "",
     sku: product?.sku || "",
@@ -18670,6 +18712,11 @@ function ProductFormModal({ product, onClose, onSubmit }) {
             </select>
           </label>
           <div className="modal-actions">
+            {onDelete && (
+              <button type="button" className="secondary-btn danger-outline" onClick={onDelete}>
+                <Trash2 size={16} /> Sil
+              </button>
+            )}
             <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
             <button type="submit" className="primary-btn">
               <Check size={16} />
@@ -20436,6 +20483,7 @@ function CreateModal({
   onCreatePurchaseOrder,
   onImportWarehouseStock,
   onUpdateProduct,
+  onDeleteProduct,
   onSaveFinanceAccount,
   onUpdateSalesOrder,
   onDeleteSalesOrder,
@@ -20576,6 +20624,7 @@ function CreateModal({
       <ProductFormModal
         product={product}
         onClose={onClose}
+        onDelete={mode === "edit" && product ? () => onDeleteProduct(product.id) : null}
         onSubmit={(values) => {
           if (mode === "edit" && product) {
             onUpdateProduct(product.id, values);
