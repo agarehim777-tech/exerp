@@ -12,6 +12,7 @@ const Consent = lazy(() => import("./auth/Consent.jsx"));
 const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
+const TenantSwitcher = lazy(() => import("./auth/TenantSwitcher.jsx"));
 
 const fullPage = {
   display: "flex",
@@ -39,6 +40,7 @@ function ProtectedApp() {
   }
   return (
     <Suspense fallback={<Loading label="Tətbiq yüklənir…" />}>
+      <Suspense fallback={null}><TenantSwitcher /></Suspense>
       <App />
     </Suspense>
   );
