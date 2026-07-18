@@ -1,4 +1,8 @@
 export const pageMeta = {
+  platform: {
+    title: "Şirkətlər və SaaS idarəetməsi",
+    subtitle: "Tenant-ları, tarifləri, statusları və şirkət administratorlarını idarə edin.",
+  },
   dashboard: {
     title: "İdarəetmə Paneli",
     subtitle: "Satış, anbar, maliyyə və HR göstəricilərinin real vaxt icmalı.",
