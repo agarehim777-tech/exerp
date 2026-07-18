@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
-  plugins: [react()],
+  plugins: [react(), mcpPlugin()],
   build: {
     sourcemap: false,
     rollupOptions: {
