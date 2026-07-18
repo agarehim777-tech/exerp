@@ -4762,6 +4762,23 @@ function userHasEffectivePermission(user, roles, permission) {
 
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
+  const { activeTenantId } = useAuth();
+  const { customers: dbCustomers } = useCustomers(activeTenantId);
+  const { products: dbProducts } = useProducts(activeTenantId);
+  const { orders: dbOrders } = useOrders(activeTenantId);
+
+  // Read-bridge: overlay DB data onto legacy state when present.
+  useEffect(() => {
+    if (!activeTenantId) return;
+    if (dbCustomers.length === 0 && dbProducts.length === 0 && dbOrders.length === 0) return;
+    setState((prev) => ({
+      ...prev,
+      ...(dbCustomers.length ? { customers: dbCustomers.map(dbCustomerToLegacy) } : {}),
+      ...(dbProducts.length ? { products: dbProducts.map(dbProductToLegacy) } : {}),
+      ...(dbOrders.length ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
+    }));
+  }, [activeTenantId, dbCustomers, dbProducts, dbOrders]);
+
   const location = useLocation();
   const navigate = useNavigate();
   const [active, setActiveState] = useState(() => moduleFromPath(location.pathname));
