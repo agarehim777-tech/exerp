@@ -18,7 +18,21 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  async function forgot() {
+    setError(null);
+    setInfo(null);
+    if (!email) return setError("Əvvəlcə emailinizi daxil edin.");
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    setBusy(false);
+    if (error) return setError(error.message);
+    setInfo("Şifrə bərpası linki emailinizə göndərildi.");
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
