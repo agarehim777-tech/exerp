@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: erpaz-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run api
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ERP_BOOTSTRAP_EMAIL
+        sync: false
+      - key: ERP_BOOTSTRAP_PASSWORD
+        sync: false
+      - key: ERP_CORS_ORIGIN
+        value: https://agarehim777-tech.github.io
+      - key: VITE_RELEASE_VERSION
+        sync: false
+      - key: ERP_WEBHOOK_SIGNING_SECRET
+        sync: false
+      - key: SMS_PROVIDER_URL
+        sync: false
+      - key: SMS_API_KEY
+        sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: PAYMENT_PROVIDER_URL
+        sync: false
+      - key: PAYMENT_API_KEY
+        sync: false
