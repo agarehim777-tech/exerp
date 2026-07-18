@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { moduleFromPath, pathForModule } from "./config/routes.js";
 import {
   BarChart3,
   Bell,
