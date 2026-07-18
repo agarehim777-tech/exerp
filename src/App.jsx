@@ -4763,8 +4763,8 @@ function userHasEffectivePermission(user, roles, permission) {
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
   const { activeTenantId } = useAuth();
-  const { customers: dbCustomers } = useCustomers(activeTenantId);
-  const { products: dbProducts } = useProducts(activeTenantId);
+  const { customers: dbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
+  const { products: dbProducts, create: createDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
@@ -6974,6 +6974,22 @@ function App() {
         serialTracked: values.serialTracked === "Bəli",
         status: "Aktiv",
       };
+      // Persist to DB — Realtime bridge will merge into state.products
+      if (activeTenantId && createDbProduct) {
+        createDbProduct({
+          sku,
+          name,
+          description: values.category || null,
+          unit: values.unit || "ədəd",
+          price: Math.max(0, Number(values.salePrice || 0)),
+          currency: "AZN",
+          vat_rate: 18,
+          is_active: true,
+        }).catch((err) => {
+          console.error("[products] DB insert failed:", err);
+          notify(`Məhsul DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+        });
+      }
       setState((current) =>
         auditCurrentState(
           { ...current, products: [product, ...(current.products || [])] },
@@ -6983,6 +6999,18 @@ function App() {
       setModal(null);
       notify(`${product.name} məhsul kataloquna əlavə edildi.`);
       return;
+    }
+
+    if (type === "crm" && activeTenantId && createDbCustomer && values.name) {
+      createDbCustomer({
+        name: String(values.name).trim(),
+        phone: values.phone || null,
+        tax_id: values.fin || null,
+        notes: values.category ? `Kateqoriya: ${values.category}` : null,
+      }).catch((err) => {
+        console.error("[customers] DB insert failed:", err);
+        notify(`Müştəri DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+      });
     }
 
     setState((current) => {
