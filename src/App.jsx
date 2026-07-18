@@ -7612,6 +7612,24 @@ function App() {
         },
       );
     });
+    // Persist to DB — Realtime bridge will refresh state
+    if (activeTenantId && updateDbProduct) {
+      const dbRow =
+        (dbProducts || []).find((p) => p.id === productId) ||
+        (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
+      if (dbRow) {
+        updateDbProduct(dbRow.id, {
+          sku: nextProduct.sku,
+          name: nextProduct.name,
+          description: nextProduct.category || null,
+          unit: nextProduct.unit,
+          price: nextProduct.salePrice,
+        }).catch((err) => {
+          console.error("[products] DB update failed:", err);
+          notify(`Məhsul DB-də yenilənmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
     setModal(null);
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
