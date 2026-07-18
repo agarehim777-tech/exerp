@@ -4765,7 +4765,7 @@ function App() {
   const { activeTenantId } = useAuth();
   const { customers: dbCustomers } = useCustomers(activeTenantId);
   const { products: dbProducts } = useProducts(activeTenantId);
-  const { orders: dbOrders } = useOrders(activeTenantId);
+  const { orders: dbOrders, create: createDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
@@ -6869,6 +6869,53 @@ function App() {
       ) {
         notify("Sifariş üçün müştəri, anbar və satış üçün kifayət qədər məhsul seçin.", "warning");
         return;
+      }
+
+      // Persist to DB (Supabase). Realtime bridge will merge into state.orders.
+      if (activeTenantId && createDbOrder) {
+        const customersByName = new Map(
+          (dbCustomers || []).map((c) => [String(c.name || "").toLowerCase(), c]),
+        );
+        const productsBySku = new Map(
+          (dbProducts || []).map((p) => [String(p.sku || "").toLowerCase(), p]),
+        );
+        const productsByName = new Map(
+          (dbProducts || []).map((p) => [String(p.name || "").toLowerCase(), p]),
+        );
+        const orderProducts = Array.isArray(values.products) ? values.products : [];
+        const items = orderProducts
+          .filter((it) => it.product)
+          .map((it, idx) => {
+            const key = String(it.product || "").toLowerCase();
+            const prod = productsBySku.get(key) || productsByName.get(key) || null;
+            const qty = Number(it.qty || 0);
+            const unitPrice = Number(it.price || prod?.price || 0);
+            return {
+              line_no: idx + 1,
+              product_id: prod?.id || null,
+              description: it.product,
+              qty,
+              unit_price: unitPrice,
+              discount_pct: 0,
+              vat_rate: Number(prod?.vat_rate ?? 18),
+            };
+          });
+        const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
+        const orderNo = `SO-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
+          Math.random() * 9000 + 1000,
+        )}`;
+        createDbOrder({
+          order_no: orderNo,
+          customer_id: customerRow?.id || null,
+          order_date: values.date || new Date().toISOString().slice(0, 10),
+          status: "draft",
+          currency: "AZN",
+          notes: values.note || null,
+          items,
+        }).catch((err) => {
+          console.error("[orders] DB insert failed:", err);
+          notify(`DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+        });
       }
     }
 
