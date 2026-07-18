@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/*.sqlite
+data/*.sqlite-*
+work/
+*.log
+.env
+.env.local
+.env.production

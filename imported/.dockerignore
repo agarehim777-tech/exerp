@@ -1,0 +1,12 @@
+node_modules
+dist
+work
+outputs
+.git
+.agents
+.codex
+*.log
+npm-debug.log*
+.env
+.env.*
+!.env.example
