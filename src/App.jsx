@@ -9732,8 +9732,10 @@ function App() {
               contracts={state.contracts}
               onOpenSalesOrder={openLinkedSalesOrder}
               onOpenCredit={openLinkedCredit}
+              onDeleteCustomer={deleteCustomer}
             />
           )}
+
           {active === "sales" && (
             <SalesPage
               orders={filtered.orders}
