@@ -18630,7 +18630,7 @@ function WarehouseFormModal({ mode, warehouse, onClose, onSubmit }) {
   );
 }
 
-function ProductFormModal({ product, onClose, onSubmit }) {
+function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
   const [values, setValues] = useState({
     name: product?.name || "",
     sku: product?.sku || "",
