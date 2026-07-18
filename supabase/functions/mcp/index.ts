@@ -37,18 +37,133 @@ var whoami_default = defineTool2({
   }
 });
 
+// src/lib/mcp/tools/orders-list.ts
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.23.0";
+import { z as z2 } from "npm:zod@^4.4.3";
+
+// src/lib/mcp/tools/_supabase.ts
+import { createClient } from "npm:@supabase/supabase-js@^2.110.7";
+function supabaseForUser(ctx) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  return createClient(url, key, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+function requireAuth(ctx) {
+  if (!ctx.isAuthenticated()) {
+    return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+  }
+  return null;
+}
+
+// src/lib/mcp/tools/orders-list.ts
+var orders_list_default = defineTool3({
+  name: "orders_list",
+  title: "List orders",
+  description: "List the signed-in user's orders (most recent first).",
+  inputSchema: {
+    limit: z2.number().int().min(1).max(200).default(50).describe("Max rows to return."),
+    status: z2.string().optional().describe("Optional status filter (e.g. pending, paid).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit, status }, ctx) => {
+    const unauth = requireAuth(ctx);
+    if (unauth) return unauth;
+    let q = supabaseForUser(ctx).from("orders").select("id, customer_name, total_amount, status, notes, created_at, updated_at").order("created_at", { ascending: false }).limit(limit);
+    if (status) q = q.eq("status", status);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { orders: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/orders-get.ts
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.23.0";
+import { z as z3 } from "npm:zod@^4.4.3";
+var orders_get_default = defineTool4({
+  name: "orders_get",
+  title: "Get order",
+  description: "Get a single order owned by the signed-in user, by id.",
+  inputSchema: { id: z3.string().uuid().describe("Order id.") },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id }, ctx) => {
+    const unauth = requireAuth(ctx);
+    if (unauth) return unauth;
+    const { data, error } = await supabaseForUser(ctx).from("orders").select("id, customer_name, total_amount, status, notes, created_at, updated_at").eq("id", id).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data) return { content: [{ type: "text", text: "Not found" }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { order: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/projects-list.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.23.0";
+import { z as z4 } from "npm:zod@^4.4.3";
+var projects_list_default = defineTool5({
+  name: "projects_list",
+  title: "List projects",
+  description: "List the signed-in user's projects (most recent first).",
+  inputSchema: {
+    limit: z4.number().int().min(1).max(200).default(50).describe("Max rows to return."),
+    status: z4.string().optional().describe("Optional status filter (e.g. active, done).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit, status }, ctx) => {
+    const unauth = requireAuth(ctx);
+    if (unauth) return unauth;
+    let q = supabaseForUser(ctx).from("projects").select("id, name, description, status, budget, start_date, end_date, created_at, updated_at").order("created_at", { ascending: false }).limit(limit);
+    if (status) q = q.eq("status", status);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { projects: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/projects-get.ts
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.23.0";
+import { z as z5 } from "npm:zod@^4.4.3";
+var projects_get_default = defineTool6({
+  name: "projects_get",
+  title: "Get project",
+  description: "Get a single project owned by the signed-in user, by id.",
+  inputSchema: { id: z5.string().uuid().describe("Project id.") },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id }, ctx) => {
+    const unauth = requireAuth(ctx);
+    if (unauth) return unauth;
+    const { data, error } = await supabaseForUser(ctx).from("projects").select("id, name, description, status, budget, start_date, end_date, created_at, updated_at").eq("id", id).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data) return { content: [{ type: "text", text: "Not found" }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: { project: data }
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "rojwxgndtunssjdwngrh";
 var mcp_default = defineMcp({
   name: "erpaz-mcp",
   title: "ERPAZ Operations MCP",
-  version: "0.1.0",
-  instructions: "Tools for the ERPAZ operations suite. Use `echo` to verify connectivity, and `whoami` to confirm the signed-in user.",
+  version: "0.2.0",
+  instructions: "Tools for the ERPAZ operations suite. Use `echo` to verify connectivity, `whoami` for the signed-in user, `orders_list`/`orders_get` for orders, and `projects_list`/`projects_get` for projects. All data is scoped to the OAuth user via RLS.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [echo_default, whoami_default]
+  tools: [echo_default, whoami_default, orders_list_default, orders_get_default, projects_list_default, projects_get_default]
 });
 
 // lovable-mcp-supabase-entry.ts
