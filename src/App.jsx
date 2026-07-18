@@ -8224,6 +8224,14 @@ function App() {
       return;
     }
 
+    // DB delete for UUID ids (order_items cascade)
+    const isUuid = typeof orderId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
+    if (isUuid && deleteDbOrder) {
+      Promise.resolve(deleteDbOrder(orderId)).catch((e) => {
+        notify(`Silmə DB xətası: ${e?.message || e}`, "warning");
+      });
+    }
+
     setState((current) => {
       const order = current.orders.find((item) => item.id === orderId);
       if (!order) return current;
