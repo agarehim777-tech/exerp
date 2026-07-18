@@ -7675,6 +7675,41 @@ function App() {
     notify(`${currentProduct.name} silindi.`);
   }
 
+  function deleteCustomer(fin) {
+    if (!requirePermission("crm.manage", "müştəri silmək")) return;
+    const currentCustomer = (state.customers || []).find((c) => c.fin === fin);
+    if (!currentCustomer) {
+      notify("Müştəri tapılmadı.", "warning");
+      return;
+    }
+    if (!window.confirm(`${currentCustomer.name} müştərisini silmək istədiyinizə əminsiniz?`)) return;
+
+    setState((current) =>
+      auditCurrentState(
+        {
+          ...current,
+          customers: (current.customers || []).filter((c) => c.fin !== fin),
+        },
+        { module: "CRM", action: "Müştəri silindi", detail: `${currentCustomer.fin} · ${currentCustomer.name}` },
+      ),
+    );
+
+    if (activeTenantId && deleteDbCustomer) {
+      const dbRow =
+        (dbCustomers || []).find((c) => c.id === currentCustomer.id) ||
+        (dbCustomers || []).find((c) => (c.tax_id || "") === fin) ||
+        (dbCustomers || []).find((c) => normalize(c.name) === normalize(currentCustomer.name));
+      if (dbRow) {
+        deleteDbCustomer(dbRow.id).catch((err) => {
+          notify(`Müştəri DB-dən silinmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
+    notify(`${currentCustomer.name} silindi.`);
+  }
+
+
+
   function saveFinanceAccount(accountId, values) {
     if (!requirePermission("finance.manage", "kassa və bank hesabını idarə etmək")) return;
 
