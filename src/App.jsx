@@ -20619,6 +20619,7 @@ function CreateModal({
       <ProductFormModal
         product={product}
         onClose={onClose}
+        onDelete={mode === "edit" && product ? () => onDeleteProduct(product.id) : null}
         onSubmit={(values) => {
           if (mode === "edit" && product) {
             onUpdateProduct(product.id, values);
