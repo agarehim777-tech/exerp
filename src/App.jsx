@@ -20478,6 +20478,7 @@ function CreateModal({
   onCreatePurchaseOrder,
   onImportWarehouseStock,
   onUpdateProduct,
+  onDeleteProduct,
   onSaveFinanceAccount,
   onUpdateSalesOrder,
   onDeleteSalesOrder,
