@@ -10975,7 +10975,7 @@ function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesO
           </div>
         </div>
         <DataTable
-          columns={["FİN", "Ad Soyad", "Telefon", "Kateqoriya", "Müqavilə", "Qalıq", "Növbəti ödəniş", "Status"]}
+          columns={["FİN", "Ad Soyad", "Telefon", "Kateqoriya", "Müqavilə", "Qalıq", "Növbəti ödəniş", "Status", "Əməliyyat"]}
           rows={visibleCustomerProfiles.map(({ customer, profile }) => {
             const customerCredits = creditsByCustomer.get(customer.fin) || [];
             const nextPayment = profile.nextPayment;
@@ -11003,8 +11003,22 @@ function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesO
               <strong>{money(profile.totalBalance + Number(customer.debt || 0))}</strong>,
               nextPayment ? `${money(nextPayment.monthly)} · ${nextPayment.nextDue}` : "Yoxdur",
               <StatusBadge status={status} />,
+              onDeleteCustomer ? (
+                <button
+                  type="button"
+                  className="danger-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteCustomer(customer.fin);
+                  }}
+                  title="Müştərini sil"
+                >
+                  Sil
+                </button>
+              ) : null,
             ];
           })}
+
         />
       </Panel>
       {selectedCustomer ? (
