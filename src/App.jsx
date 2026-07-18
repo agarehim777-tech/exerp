@@ -9486,7 +9486,7 @@ function App() {
             disabledReason={actionDeniedReason}
           />
 
-          {active === "platform" && remoteUser?.role === "Platform Super Admin" && <PlatformAdminPage />}
+          {active === "platform" && <PlatformAdminPage />}
 
           {active === "dashboard" && (
             <DashboardPage
