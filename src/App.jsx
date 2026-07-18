@@ -7001,6 +7001,18 @@ function App() {
       return;
     }
 
+    if (type === "crm" && activeTenantId && createDbCustomer && values.name) {
+      createDbCustomer({
+        name: String(values.name).trim(),
+        phone: values.phone || null,
+        tax_id: values.fin || null,
+        notes: values.category ? `Kateqoriya: ${values.category}` : null,
+      }).catch((err) => {
+        console.error("[customers] DB insert failed:", err);
+        notify(`Müştəri DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+      });
+    }
+
     setState((current) => {
       if (type === "crm") {
         return {
