@@ -4763,8 +4763,8 @@ function userHasEffectivePermission(user, roles, permission) {
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
   const { activeTenantId } = useAuth();
-  const { customers: dbCustomers } = useCustomers(activeTenantId);
-  const { products: dbProducts } = useProducts(activeTenantId);
+  const { customers: dbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
+  const { products: dbProducts, create: createDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
