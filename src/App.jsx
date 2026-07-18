@@ -4763,7 +4763,7 @@ function userHasEffectivePermission(user, roles, permission) {
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
   const { activeTenantId } = useAuth();
-  const { customers: dbCustomers, create: createDbCustomer, update: updateDbCustomer } = useCustomers(activeTenantId);
+  const { customers: dbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder } = useOrders(activeTenantId);
 
