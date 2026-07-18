@@ -103,6 +103,12 @@ import {
   localDbKey,
   localDbSchemaVersion,
 } from "./services/persistence.js";
+import { total } from "./shared/utils/aggregate.js";
+import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
+import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
+import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
+import { ProductionPage } from "./modules/production/ProductionPage.jsx";
+
 
 const navIcons = {
   dashboard: LayoutDashboard,
@@ -2718,27 +2724,6 @@ function buildProjectRoiRows({ projects, orders, expenses, products = [] }) {
   });
 }
 
-function buildProjectRoiSummary(projects = []) {
-  const revenue = total(projects, "revenue");
-  const cost = total(projects, "totalCost");
-  const committedCost = total(projects, "committedCost");
-  const profit = total(projects, "profit");
-  const projectedProfit = total(projects, "projectedProfit");
-  const avgRoi = projects.length ? projects.reduce((sum, project) => sum + Number(project.roi || 0), 0) / projects.length : 0;
-  const riskCount = projects.filter((project) => normalize(project.status).includes("risk") || normalize(project.status).includes("aşım")).length;
-
-  return {
-    revenue,
-    cost,
-    committedCost,
-    profit,
-    projectedProfit,
-    avgRoi,
-    riskCount,
-    rows: projects.length,
-    exportedCount: projects.filter((project) => project.lastExportAt).length,
-  };
-}
 
 function ensureNotificationProviders(providers = []) {
   const storedById = new Map((providers || []).map((provider) => [provider.id, provider]));
@@ -3846,9 +3831,6 @@ function adjustStockRows(rows, quantities, { totalDelta = 0, reservedDelta = 0 }
   });
 }
 
-function total(rows, key) {
-  return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0);
-}
 
 function getDefaultUsers() {
   return initialState.settings?.users || [];
@@ -15396,188 +15378,7 @@ function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
   );
 }
 
-function ProjectsPage({ projects, snapshot = null }) {
-  const summary = buildProjectRoiSummary(projects);
-  const budget = total(projects, "budget");
-  const collected = total(projects, "collected");
-  const collectionRate = summary.revenue > 0 ? (collected / summary.revenue) * 100 : 0;
 
-  return (
-    <div className="stack">
-      <section className="metric-grid four">
-        <MetricCard label="Layihə gəliri" value={money(summary.revenue)} icon={Wallet} tone="success" />
-        <MetricCard label="Committed xərc" value={money(summary.committedCost)} trend={`Büdcə: ${money(budget)}`} icon={BarChart3} tone="warning" />
-        <MetricCard label="Mənfəət" value={money(summary.profit)} trend={`Proqnoz: ${money(summary.projectedProfit)}`} icon={TrendingUp} tone={summary.profit >= 0 ? "success" : "danger"} />
-        <MetricCard label="Orta ROI" value={percent(summary.avgRoi)} trend={`${summary.riskCount} risk`} icon={SlidersHorizontal} tone={summary.riskCount ? "warning" : "primary"} />
-      </section>
-      <section className="project-roi-control-grid" data-testid="project-roi-control-panel">
-        <div>
-          <span>Yığım faizi</span>
-          <strong>{percent(collectionRate)}</strong>
-          <small>{money(collected)} toplanıb</small>
-        </div>
-        <div>
-          <span>Report status</span>
-          <strong>{snapshot ? "Hazır" : "Gözləyir"}</strong>
-          <small>{snapshot ? `${snapshot.period} · ${snapshot.projects?.length || 0} layihə` : "ROI export düyməsini işə salın"}</small>
-        </div>
-        <div>
-          <span>Riskli layihələr</span>
-          <strong>{summary.riskCount}</strong>
-          <small>Büdcə, mənfəət və yığım siqnalları</small>
-        </div>
-      </section>
-      <Panel className="project-roi-panel">
-        <PanelHeader title="Layihə və kampaniya ROI" subtitle="Məhsul, xərc kateqoriyası və satış nəticələri əsasında hesablanır" icon={BarChart3} />
-        <DataTable
-          columns={["Layihə", "Sahib", "Büdcə", "Satış/Yığım", "Xərc", "Mənfəət", "ROI", "Status", "Növbəti addım", "Hesabat"]}
-          rows={projects.map((project) => [
-            <TwoLine title={project.name} subtitle={`${project.start} → ${project.end}`} />,
-            project.owner,
-            money(project.budget || project.investmentBase),
-            <TwoLine title={money(project.revenue)} subtitle={`${project.orders} sifariş · ${percent(project.collectionRate)} yığım`} />,
-            <TwoLine title={money(project.totalCost)} subtitle={`Committed: ${money(project.committedCost)}`} />,
-            <TwoLine title={money(project.profit)} subtitle={`Proqnoz: ${money(project.projectedProfit)}`} />,
-            <ProgressRow value={Math.max(0, Math.min(100, project.roi))} caption={percent(project.roi)} compact />,
-            <StatusBadge status={project.status} />,
-            project.nextAction,
-            project.lastExportAt || snapshot ? (
-              <TwoLine title={project.lastExportAt || snapshot.generatedAt} subtitle={`${project.exportCount || 1} export`} />
-            ) : (
-              <StatusBadge status={project.reportStatus} />
-            ),
-          ])}
-        />
-      </Panel>
-      <section className="dashboard-grid">
-        <Panel className="project-roi-breakdown-panel span-2">
-          <PanelHeader title="Xərc və gəlir breakdown" subtitle="Məhsul maya dəyəri, təsdiqli xərc, gözləyən xərc və budget usage" icon={Wallet} />
-          <DataTable
-            columns={["Layihə", "Məhsul maya", "Təsdiqli xərc", "Gözləyən xərc", "Budget usage", "Order ID-lər"]}
-            rows={projects.map((project) => [
-              <TwoLine title={project.name} subtitle={project.autoGenerated ? "Avtomatik portfel" : project.id} />,
-              money(project.productCost),
-              money(project.approvedExpenseCost),
-              money(project.pendingExpenseCost),
-              project.budget ? <ProgressRow value={Math.max(0, Math.min(100, project.budgetUsage))} caption={percent(project.budgetUsage)} compact /> : "—",
-              project.orderIds?.length ? project.orderIds.slice(0, 4).join(", ") : "—",
-            ])}
-          />
-        </Panel>
-        <Panel className="project-report-panel">
-          <PanelHeader title="ROI hesabat axını" subtitle="Son export snapshot-u və idarəetmə nəticəsi" icon={Download} />
-          {snapshot ? (
-            <div className="project-report-card">
-              <StatusBadge status={snapshot.summary?.riskCount ? "Nəzarət" : "Hazır"} />
-              <TwoLine title={snapshot.generatedAt} subtitle={`${snapshot.period} dövrü`} />
-              <div>
-                <span>Gəlir</span>
-                <strong>{money(snapshot.summary?.revenue || 0)}</strong>
-              </div>
-              <div>
-                <span>ROI</span>
-                <strong>{percent(snapshot.summary?.avgRoi || 0)}</strong>
-              </div>
-              <div>
-                <span>Risk</span>
-                <strong>{snapshot.summary?.riskCount || 0}</strong>
-              </div>
-            </div>
-          ) : (
-            <EmptyState title="ROI hesabatı hələ export edilməyib" />
-          )}
-        </Panel>
-      </section>
-    </div>
-  );
-}
-
-function ProductionPage({ plans, onCompletePlan, canManage = true }) {
-  const totalCost = total(plans, "totalCost");
-  const totalRevenue = total(plans, "projectedRevenue");
-  const riskCount = plans.filter((plan) => normalize(plan.status).includes("risk")).length;
-  const producedQty = plans.reduce((sum, plan) => sum + Number(plan.producedQty || 0), 0);
-  const readyCount = plans.filter((plan) => plan.canProduce).length;
-
-  return (
-    <div className="stack">
-      <section className="metric-grid four">
-        <MetricCard label="Plan sayı" value={plans.length} icon={Package} tone="primary" />
-        <MetricCard label="Maya dəyəri" value={money(totalCost)} icon={Wallet} tone="warning" />
-        <MetricCard label="İstehsala hazır" value={readyCount} trend={`${producedQty} hazır məhsul`} icon={Check} tone="success" />
-        <MetricCard label="Xammal riski" value={riskCount} trend={money(totalRevenue)} icon={CircleAlert} tone={riskCount ? "danger" : "success"} />
-      </section>
-      <section className="production-control-grid" data-testid="production-control-panel">
-        <div>
-          <span>BOM axını</span>
-          <strong>{plans.length}</strong>
-          <small>Plan → xammal çıxışı → hazır məhsul mədaxili</small>
-        </div>
-        <div>
-          <span>Faktiki maya</span>
-          <strong>{money(totalCost)}</strong>
-          <small>Material + əmək + overhead</small>
-        </div>
-        <div>
-          <span>Anbar əlaqəsi</span>
-          <strong>{plans.filter((plan) => plan.warehouseId).length}</strong>
-          <small>Xammal və hazır məhsul real stokdadır</small>
-        </div>
-      </section>
-      <Panel className="production-panel">
-        <PanelHeader title="BOM və maya dəyəri" subtitle="Anbar qalığı, xammal sərfi, əmək və overhead əsasında hesablanır" icon={Package} />
-        <DataTable
-          columns={["Plan", "Anbar", "Say", "Material", "Xammal çıxışı", "Əmək/Overhead", "Vahid maya", "Hazır məhsul", "Status", "Əməliyyat"]}
-          rows={plans.map((plan) => [
-            <TwoLine title={plan.product} subtitle={plan.id} />,
-            plan.warehouseName,
-            `${plan.plannedQty} ədəd`,
-            <TwoLine
-              title={money(plan.materialCost)}
-              subtitle={plan.materials.map((item) => `${item.product}: ${item.needed}/${item.available}`).join(", ")}
-            />,
-            <StatusBadge status={plan.issueStatus} />,
-            `${money(Number(plan.laborCost || 0) + Number(plan.overheadCost || 0))}`,
-            <strong>{money(plan.unitCost)}</strong>,
-            <TwoLine title={plan.receiptStatus} subtitle={`Marja: ${percent(plan.margin)}`} />,
-            <StatusBadge status={plan.status} />,
-            <button
-              className="secondary-btn compact"
-              onClick={() => onCompletePlan(plan.id)}
-              disabled={!canManage || !plan.canProduce}
-              title={!canManage ? "İstehsalat icazəsi yoxdur" : !plan.canProduce ? plan.bottleneck : "Xammal çıxışı və mədaxil et"}
-              data-testid="production-complete-plan"
-            >
-              <Check size={15} />
-              İstehsal et
-            </button>,
-          ])}
-        />
-      </Panel>
-      <Panel className="production-bom-panel">
-        <PanelHeader title="BOM xammal kartları" subtitle="Hər plan üzrə tələb, mövcud qalıq və faktiki material dəyəri" icon={Boxes} />
-        <div className="production-bom-grid">
-          {plans.flatMap((plan) =>
-            plan.materials.map((material) => (
-              <article key={`${plan.id}-${material.product}`} className="production-bom-card">
-                <div>
-                  <StatusBadge status={material.enough ? "Hazır" : "Xammal riski"} />
-                  <strong>{material.product}</strong>
-                  <span>{plan.id} · {plan.warehouseName}</span>
-                </div>
-                <div>
-                  <TwoLine title={`${material.needed} tələb`} subtitle={`${material.available} mövcud`} />
-                  <TwoLine title={money(material.cost)} subtitle={`${money(material.unitCost)} / vahid`} />
-                </div>
-              </article>
-            )),
-          )}
-          {plans.length === 0 && <EmptyState title="İstehsal planı yoxdur" />}
-        </div>
-      </Panel>
-    </div>
-  );
-}
 
 function VendorsPage({
   vendors,
@@ -17533,51 +17334,6 @@ function KpiPage({
   );
 }
 
-function ContractsPage({ contracts, onExport }) {
-  return (
-    <div className="stack">
-      <section className="metric-grid three">
-        <MetricCard label="Aktiv müqavilə" value={contracts.length} icon={FileText} tone="primary" />
-        <MetricCard
-          label="İmzalanıb"
-          value={contracts.filter((contract) => contract.status === "İmzalanıb").length}
-          trend="Bu ay"
-          icon={Check}
-          tone="success"
-        />
-        <MetricCard label="Şablon sayı" value={contractTemplates.length} icon={SlidersHorizontal} tone="info" />
-      </section>
-      <section className="template-grid">
-        {contractTemplates.map((template) => (
-          <Panel key={template.title}>
-            <div className="template-card">
-              <FileText size={22} />
-              <h3>{template.title}</h3>
-              <p>{template.desc}</p>
-            </div>
-          </Panel>
-        ))}
-      </section>
-      <Panel>
-        <PanelHeader title="Son Müqavilələr" subtitle="PDF/DOCX formatında ixrac" />
-        <DataTable
-          columns={["№", "Müştəri", "FİN", "Məhsul", "Məbləğ", "Status", "Əməliyyat"]}
-          rows={contracts.map((contract) => [
-            <strong>{contract.id}</strong>,
-            contract.customer,
-            contract.fin,
-            contract.product,
-            money(contract.amount),
-            <StatusBadge status={contract.status} />,
-            <button className="text-btn" onClick={() => onExport(contract.id)}>
-              PDF
-            </button>,
-          ])}
-        />
-      </Panel>
-    </div>
-  );
-}
 
 function SupportPage({
   tickets,
