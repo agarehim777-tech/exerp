@@ -19,7 +19,10 @@
     "smoke:prod": "node scripts/smoke-production.mjs",
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "audit:interactions": "node scripts/interactive-audit.mjs",
-    "audit:flows": "node scripts/business-flow-audit.mjs"
+    "audit:flows": "node scripts/business-flow-audit.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@lovable.dev/mcp-js": "^0.23.0",
@@ -28,11 +31,17 @@
     "pg": "^8.22.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^29.1.1",
     "playwright": "^1.60.0",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.10"
   }
 }

@@ -18,7 +18,21 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  async function forgot() {
+    setError(null);
+    setInfo(null);
+    if (!email) return setError("Əvvəlcə emailinizi daxil edin.");
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    setBusy(false);
+    if (error) return setError(error.message);
+    setInfo("Şifrə bərpası linki emailinizə göndərildi.");
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -72,7 +86,16 @@ export default function Login() {
         <button onClick={() => setMode(mode === "signup" ? "signin" : "signup")} style={{ background: "none", border: 0, color: "#2563eb", cursor: "pointer", padding: 0 }}>
           {mode === "signup" ? "Hesabınız var? Daxil olun" : "Hesabınız yoxdur? Qeydiyyat"}
         </button>
+        {mode === "signin" && (
+          <>
+            {" · "}
+            <button onClick={forgot} style={{ background: "none", border: 0, color: "#2563eb", cursor: "pointer", padding: 0 }}>
+              Şifrəni unutmusunuz?
+            </button>
+          </>
+        )}
       </p>
+      {info && <p style={{ color: "#0d7a5f", marginTop: 10 }}>{info}</p>}
       {error && <p style={{ color: "#b91c1c", marginTop: 10 }}>{error}</p>}
     </main>
   );
