@@ -52,6 +52,14 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/.lovable/oauth/consent" element={<Consent />} />
         <Route
+          path="/satinalma/*"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<Loading />}><ProcurementPage /></Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/*"
           element={
             <ProtectedRoute>
