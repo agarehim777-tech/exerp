@@ -126,6 +126,7 @@ const navIcons = {
   credits: CreditCard,
   receivables: Wallet,
   vendors: Building2,
+  procurement: ShoppingCart,
   projects: BarChart3,
   production: Package,
   hr: UserCog,
