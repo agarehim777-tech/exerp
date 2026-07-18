@@ -4764,8 +4764,8 @@ function App() {
   const [state, setState] = useState(() => loadPersistentState());
   const { activeTenantId } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
-  const { products: dbProducts, create: createDbProduct } = useProducts(activeTenantId);
-  const { orders: dbOrders, create: createDbOrder } = useOrders(activeTenantId);
+  const { products: dbProducts, create: createDbProduct, update: updateDbProduct } = useProducts(activeTenantId);
+  const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
@@ -7612,6 +7612,24 @@ function App() {
         },
       );
     });
+    // Persist to DB — Realtime bridge will refresh state
+    if (activeTenantId && updateDbProduct) {
+      const dbRow =
+        (dbProducts || []).find((p) => p.id === productId) ||
+        (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
+      if (dbRow) {
+        updateDbProduct(dbRow.id, {
+          sku: nextProduct.sku,
+          name: nextProduct.name,
+          description: nextProduct.category || null,
+          unit: nextProduct.unit,
+          price: nextProduct.salePrice,
+        }).catch((err) => {
+          console.error("[products] DB update failed:", err);
+          notify(`Məhsul DB-də yenilənmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
     setModal(null);
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
@@ -8031,6 +8049,32 @@ function App() {
       return;
     }
     if (!validateSalesOrderEdit(existingOrder, values)) return;
+
+    // Persist header changes to DB when the order originated from DB
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (activeTenantId && updateDbOrder && uuidRe.test(String(orderId))) {
+      const statusMap = {
+        "Yeni": "draft",
+        "Təsdiqlənib": "confirmed",
+        "Yolda": "shipped",
+        "Təhvil verilib": "delivered",
+        "Ləğv edilib": "cancelled",
+      };
+      const custRow = (dbCustomers || []).find(
+        (c) => String(c.name).toLowerCase() === String(values.customer || existingOrder.customer || "").toLowerCase(),
+      );
+      const patch = {
+        customer_id: custRow?.id ?? null,
+        order_date: values.date || existingOrder.date || new Date().toISOString().slice(0, 10),
+        notes: values.note ?? existingOrder.note ?? null,
+        status: statusMap[values.status || existingOrder.status] || "draft",
+      };
+      updateDbOrder(orderId, patch).catch((err) => {
+        console.error("[orders] DB update failed:", err);
+        notify(`Sifariş DB-də yenilənmədi: ${err.message || err}`, "warning");
+      });
+    }
+
 
     setState((current) => {
       const order = current.orders.find((item) => item.id === orderId);
