@@ -93,7 +93,8 @@ export function ProductionPage({ plans, onCompletePlan, canManage = true }) {
           )}
           {plans.length === 0 && <EmptyState title="İstehsal planı yoxdur" />}
         </div>
-      </section>
+      </Panel>
+
     </div>
   );
 }
