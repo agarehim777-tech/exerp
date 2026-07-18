@@ -11,6 +11,7 @@ const Login = lazy(() => import("./auth/Login.jsx"));
 const Consent = lazy(() => import("./auth/Consent.jsx"));
 const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
+const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 
 const fullPage = {
   display: "flex",
