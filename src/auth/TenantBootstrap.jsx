@@ -24,16 +24,26 @@ export default function TenantBootstrap() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const finalSlug = (slug || slugify(name) || `sirket-${Date.now().toString(36)}`).slice(0, 48);
-    const { error } = await supabase.rpc("create_tenant", { _name: name.trim(), _slug: finalSlug });
-    setBusy(false);
-    if (error) {
-      logger.error("create_tenant failed", { message: error.message });
-      setError(error.message);
-      return;
+    const base = (slug || slugify(name) || `sirket`).slice(0, 40);
+    let finalSlug = base;
+    let lastError = null;
+    for (let i = 0; i < 4; i++) {
+      const { error } = await supabase.rpc("create_tenant", { _name: name.trim(), _slug: finalSlug });
+      if (!error) {
+        setBusy(false);
+        await refresh();
+        return;
+      }
+      lastError = error;
+      const isDup = error.code === "23505" || /duplicate key|tenants_slug_key/i.test(error.message);
+      if (!isDup) break;
+      finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
     }
-    await refresh();
+    setBusy(false);
+    logger.error("create_tenant failed", { message: lastError?.message });
+    setError(lastError?.message || "Xəta baş verdi");
   }
+
 
   return (
     <main style={wrap}>
