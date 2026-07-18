@@ -4765,7 +4765,7 @@ function App() {
   const { activeTenantId } = useAuth();
   const { customers: dbCustomers } = useCustomers(activeTenantId);
   const { products: dbProducts } = useProducts(activeTenantId);
-  const { orders: dbOrders } = useOrders(activeTenantId);
+  const { orders: dbOrders, create: createDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
