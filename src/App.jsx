@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { moduleFromPath, pathForModule } from "./config/routes.js";
 import {
   BarChart3,
   Bell,
@@ -4754,7 +4756,20 @@ function userHasEffectivePermission(user, roles, permission) {
 
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
-  const [active, setActive] = useState("dashboard");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [active, setActiveState] = useState(() => moduleFromPath(location.pathname));
+  const setActive = useCallback((id) => {
+    setActiveState(id);
+    const target = pathForModule(id);
+    if (location.pathname !== target && !location.pathname.startsWith(target + "/")) {
+      navigate(target);
+    }
+  }, [navigate, location.pathname]);
+  useEffect(() => {
+    const fromUrl = moduleFromPath(location.pathname);
+    setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
+  }, [location.pathname]);
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
