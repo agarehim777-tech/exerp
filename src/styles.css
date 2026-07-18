@@ -1,27 +1,38 @@
 :root {
-  --bg: #f6f8fb;
+  /* Emerald Prestige palette */
+  --bg: #f5f0e0;
+  --bg-soft: #faf6ea;
   --canvas: #ffffff;
   --panel: #ffffff;
-  --sidebar: #181a1f;
-  --sidebar-soft: #242731;
-  --sidebar-text: #f4f7fb;
-  --text: #151922;
-  --muted: #687386;
-  --line: #dde3ec;
-  --line-strong: #c7d0dd;
-  --accent: #12805c;
-  --accent-strong: #0f6d4e;
+  --sidebar: #064e3b;
+  --sidebar-soft: #0d7a5f;
+  --sidebar-text: #f5f0e0;
+  --text: #0f2a20;
+  --muted: #5f7a70;
+  --line: #e6dfc9;
+  --line-strong: #d4c9a3;
+  --accent: #0d7a5f;
+  --accent-strong: #064e3b;
+  --gold: #c9a84c;
+  --gold-soft: #e8d38a;
   --blue: #2563eb;
   --cyan: #0891b2;
-  --amber: #d97706;
-  --red: #dc2626;
-  --green: #16a34a;
-  --shadow: 0 12px 32px rgba(21, 25, 34, 0.08);
-  --radius: 8px;
+  --amber: #c9a84c;
+  --red: #b23a3a;
+  --green: #0d7a5f;
+  --shadow: 0 10px 30px rgba(6, 78, 59, 0.08);
+  --shadow-lifted: 0 18px 44px rgba(6, 78, 59, 0.14);
+  --radius: 14px;
+  --radius-lg: 22px;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
+}
+
+h1, h2, h3, h4, .brand-title, .kpi-value, .stat-value {
+  font-family: Sora, Manrope, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 * {
@@ -9759,3 +9770,119 @@ tr:hover td {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* =========================================================
+   Prestige overrides — Emerald + Gold, Sora/Manrope, bento
+   ========================================================= */
+
+body { background: var(--bg); }
+
+/* Sidebar — deep emerald with gold active accent */
+.sidebar {
+  background: linear-gradient(180deg, #064e3b 0%, #053d2f 100%);
+}
+.nav-item {
+  border-radius: 12px;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.nav-item:hover {
+  background: rgba(201, 168, 76, 0.10);
+  color: #f5f0e0;
+  transform: translateX(2px);
+}
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(13, 122, 95, 0.85), rgba(13, 122, 95, 0.55));
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--gold), 0 6px 18px rgba(6, 78, 59, 0.35);
+}
+.nav-item.active svg,
+.nav-item.active [class*="icon"] { color: var(--gold); }
+
+/* Topbar — cream glass */
+.topbar {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Panels — bento tiles */
+.panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff 0%, #fdfaf0 100%);
+  box-shadow: var(--shadow);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.panel:hover {
+  box-shadow: var(--shadow-lifted);
+  border-color: var(--line-strong);
+}
+.panel-header h2 { font-family: Sora, sans-serif; letter-spacing: -0.01em; }
+
+/* KPI / metric tiles */
+.metric-card {
+  min-height: 132px;
+  padding: 22px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(155deg, #ffffff 0%, #faf6ea 100%);
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -30px -30px auto;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(201, 168, 76, 0.18), transparent 70%);
+  pointer-events: none;
+}
+.metric-card strong {
+  font-family: Sora, sans-serif;
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--accent-strong);
+}
+.metric-card small { color: var(--accent); font-weight: 600; }
+
+.metric-icon {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(13, 122, 95, 0.12), rgba(201, 168, 76, 0.18));
+  color: var(--accent-strong);
+}
+.metric-icon.primary  { background: linear-gradient(135deg, rgba(13,122,95,0.15), rgba(13,122,95,0.05)); color: var(--accent); }
+.metric-icon.success  { background: linear-gradient(135deg, rgba(13,122,95,0.18), rgba(201,168,76,0.12)); color: var(--accent-strong); }
+.metric-icon.info     { background: linear-gradient(135deg, rgba(6,78,59,0.14), rgba(201,168,76,0.10)); color: var(--accent-strong); }
+.metric-icon.warning  { background: linear-gradient(135deg, rgba(201,168,76,0.28), rgba(201,168,76,0.10)); color: #8a6f1f; }
+.metric-icon.danger   { background: linear-gradient(135deg, rgba(178,58,58,0.14), rgba(178,58,58,0.05)); color: var(--red); }
+
+/* Primary CTA — emerald with gold hover */
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  border: 0;
+  color: #f5f0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(6, 78, 59, 0.22);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(6, 78, 59, 0.3), 0 0 0 1px var(--gold);
+  filter: brightness(1.05);
+}
+
+/* Brand */
+.brand-title, .brand { font-family: Sora, sans-serif; letter-spacing: -0.02em; }
+
+/* Bento sizing hint — every third panel in dashboard-grid gets a subtle gold hairline */
+.dashboard-grid > .panel:nth-child(3n) {
+  border-top: 2px solid var(--gold-soft);
+}
+
+/* Motion */
+@keyframes pz-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.panel, .metric-card { animation: pz-rise 320ms ease both; }
