@@ -10069,6 +10069,7 @@ function App() {
           onCreatePurchaseOrder={createPurchaseOrder}
           onImportWarehouseStock={importWarehouseStock}
           onUpdateProduct={updateProduct}
+          onDeleteProduct={deleteProduct}
           onSaveFinanceAccount={saveFinanceAccount}
           onUpdateSalesOrder={updateSalesOrder}
           onDeleteSalesOrder={deleteSalesOrder}
