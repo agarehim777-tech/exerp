@@ -7675,6 +7675,41 @@ function App() {
     notify(`${currentProduct.name} silindi.`);
   }
 
+  function deleteCustomer(fin) {
+    if (!requirePermission("crm.manage", "müştəri silmək")) return;
+    const currentCustomer = (state.customers || []).find((c) => c.fin === fin);
+    if (!currentCustomer) {
+      notify("Müştəri tapılmadı.", "warning");
+      return;
+    }
+    if (!window.confirm(`${currentCustomer.name} müştərisini silmək istədiyinizə əminsiniz?`)) return;
+
+    setState((current) =>
+      auditCurrentState(
+        {
+          ...current,
+          customers: (current.customers || []).filter((c) => c.fin !== fin),
+        },
+        { module: "CRM", action: "Müştəri silindi", detail: `${currentCustomer.fin} · ${currentCustomer.name}` },
+      ),
+    );
+
+    if (activeTenantId && deleteDbCustomer) {
+      const dbRow =
+        (dbCustomers || []).find((c) => c.id === currentCustomer.id) ||
+        (dbCustomers || []).find((c) => (c.tax_id || "") === fin) ||
+        (dbCustomers || []).find((c) => normalize(c.name) === normalize(currentCustomer.name));
+      if (dbRow) {
+        deleteDbCustomer(dbRow.id).catch((err) => {
+          notify(`Müştəri DB-dən silinmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
+    notify(`${currentCustomer.name} silindi.`);
+  }
+
+
+
   function saveFinanceAccount(accountId, values) {
     if (!requirePermission("finance.manage", "kassa və bank hesabını idarə etmək")) return;
 
@@ -9697,8 +9732,10 @@ function App() {
               contracts={state.contracts}
               onOpenSalesOrder={openLinkedSalesOrder}
               onOpenCredit={openLinkedCredit}
+              onDeleteCustomer={deleteCustomer}
             />
           )}
+
           {active === "sales" && (
             <SalesPage
               orders={filtered.orders}
@@ -10690,7 +10727,7 @@ function DashboardPage({
   );
 }
 
-function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit }) {
+function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit, onDeleteCustomer }) {
   const [pipelineFilter, setPipelineFilter] = useState("Hamısı");
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
   const [selectedCustomerFin, setSelectedCustomerFin] = useState("");
@@ -10938,7 +10975,7 @@ function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesO
           </div>
         </div>
         <DataTable
-          columns={["FİN", "Ad Soyad", "Telefon", "Kateqoriya", "Müqavilə", "Qalıq", "Növbəti ödəniş", "Status"]}
+          columns={["FİN", "Ad Soyad", "Telefon", "Kateqoriya", "Müqavilə", "Qalıq", "Növbəti ödəniş", "Status", "Əməliyyat"]}
           rows={visibleCustomerProfiles.map(({ customer, profile }) => {
             const customerCredits = creditsByCustomer.get(customer.fin) || [];
             const nextPayment = profile.nextPayment;
@@ -10966,8 +11003,22 @@ function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesO
               <strong>{money(profile.totalBalance + Number(customer.debt || 0))}</strong>,
               nextPayment ? `${money(nextPayment.monthly)} · ${nextPayment.nextDue}` : "Yoxdur",
               <StatusBadge status={status} />,
+              onDeleteCustomer ? (
+                <button
+                  type="button"
+                  className="danger-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteCustomer(customer.fin);
+                  }}
+                  title="Müştərini sil"
+                >
+                  Sil
+                </button>
+              ) : null,
             ];
           })}
+
         />
       </Panel>
       {selectedCustomer ? (
