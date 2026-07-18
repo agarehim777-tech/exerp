@@ -13,6 +13,7 @@ export const moduleRoutes = {
   credits: "/kredit",
   receivables: "/borclar",
   vendors: "/vendor",
+  procurement: "/satinalma",
   projects: "/layihe",
   production: "/istehsalat",
   hr: "/hr/emekdaslar",
