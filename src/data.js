@@ -21,6 +21,7 @@ export const navItems = [
   { id: "credits", label: "Kreditlər" },
   { id: "receivables", label: "Borclar" },
   { id: "vendors", label: "Vendorlar" },
+  { id: "procurement", label: "Satınalma" },
   { id: "projects", label: "ROI" },
   { id: "production", label: "İstehsalat" },
   { id: "hr", label: "HR" },
