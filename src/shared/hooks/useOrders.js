@@ -92,10 +92,15 @@ export function useOrders(tenantId) {
     if (error) throw error;
   };
 
+  const updateHeader = async (id, patch) => {
+    const { error } = await supabase.from('orders').update(patch).eq('id', id);
+    if (error) throw error;
+  };
+
   const remove = async (id) => {
     const { error } = await supabase.from('orders').delete().eq('id', id);
     if (error) throw error;
   };
 
-  return { orders, loading, error, refresh: fetchAll, create, updateStatus, remove };
+  return { orders, loading, error, refresh: fetchAll, create, updateStatus, updateHeader, remove };
 }
