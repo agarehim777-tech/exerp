@@ -10727,7 +10727,7 @@ function DashboardPage({
   );
 }
 
-function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit }) {
+function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit, onDeleteCustomer }) {
   const [pipelineFilter, setPipelineFilter] = useState("Hamısı");
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
   const [selectedCustomerFin, setSelectedCustomerFin] = useState("");
