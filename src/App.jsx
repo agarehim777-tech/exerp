@@ -18712,6 +18712,11 @@ function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
             </select>
           </label>
           <div className="modal-actions">
+            {onDelete && (
+              <button type="button" className="secondary-btn danger-outline" onClick={onDelete}>
+                <Trash2 size={16} /> Sil
+              </button>
+            )}
             <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
             <button type="submit" className="primary-btn">
               <Check size={16} />
