@@ -22,6 +22,7 @@
     "audit:flows": "node scripts/business-flow-audit.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.7",
     "lucide-react": "^0.468.0",
     "pg": "^8.22.0",
     "react": "^18.3.1",
