@@ -4763,9 +4763,9 @@ function userHasEffectivePermission(user, roles, permission) {
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
   const { activeTenantId } = useAuth();
-  const { customers: dbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
-  const { products: dbProducts, create: createDbProduct, update: updateDbProduct } = useProducts(activeTenantId);
-  const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder } = useOrders(activeTenantId);
+  const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
+  const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
+  const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
 
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
@@ -8222,6 +8222,14 @@ function App() {
     if (!targetOrder) {
       notify("Satış əməliyyatı tapılmadı.", "warning");
       return;
+    }
+
+    // DB delete for UUID ids (order_items cascade)
+    const isUuid = typeof orderId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
+    if (isUuid && deleteDbOrder) {
+      Promise.resolve(deleteDbOrder(orderId)).catch((e) => {
+        notify(`Silmə DB xətası: ${e?.message || e}`, "warning");
+      });
     }
 
     setState((current) => {
