@@ -48,15 +48,20 @@ import { HelpCenterPage } from "./modules/help/HelpCenterPage.jsx";
 import { OnboardingPage } from "./modules/onboarding/OnboardingPage.jsx";
 import { ReportsPage } from "./modules/reports/ReportsPage.jsx";
 import {
+  changeRemotePassword,
+  createRemoteCompany,
   createRemoteUser,
+  deleteRemoteCompany,
   getRemoteSession,
   getRemoteToken,
   loadRemoteState,
+  listRemoteCompanies,
   loginRemote,
   logoutRemote,
   remoteApiEnabled,
   saveRemoteState,
   setRemoteToken,
+  updateRemoteCompany,
 } from "./remote-api.js";
 import {
   AvatarLine,
@@ -101,6 +106,7 @@ import {
 
 const navIcons = {
   dashboard: LayoutDashboard,
+  platform: Building2,
   crm: Users,
   sales: ShoppingCart,
   warehouse: Warehouse,
@@ -4017,12 +4023,18 @@ function getCurrentUser(settings = {}) {
 
 function getActiveRole(settings = {}) {
   const safeSettings = ensureSettings(settings);
+  const user = safeSettings.users.find((item) => item.id === safeSettings.sessionUserId);
+  if (user?.role === "Platform Super Admin") {
+    return { name: "Platform Super Admin", scope: "Bütün platforma və əsas ERP tenant-ına tam giriş", permissions: permissionCatalog.map((item) => item.key) };
+  }
   return safeSettings.roles.find((role) => role.name === safeSettings.currentRole) || safeSettings.roles[0];
 }
 
 function hasRolePermission(settings, permission) {
   if (!permission) return true;
-  if (!getCurrentUser(settings)) return false;
+  const user = getCurrentUser(settings);
+  if (!user) return false;
+  if (user.role === "Platform Super Admin") return true;
   const role = getActiveRole(settings);
   return Array.isArray(role?.permissions) && role.permissions.includes(permission);
 }
@@ -4031,7 +4043,7 @@ function hasUserModuleAccess(settings, moduleId) {
   if (!moduleId) return true;
   const user = getCurrentUser(settings);
   if (!user) return false;
-  if (user.role === "Super Admin") return true;
+  if (user.role === "Platform Super Admin") return true;
   return normalizeUserModuleAccess(user, ensureSettings(settings).roles).includes(moduleId);
 }
 
@@ -4750,7 +4762,7 @@ function hasPageAction(moduleId) {
 function userHasEffectivePermission(user, roles, permission) {
   if (!permission) return true;
   if (!user) return false;
-  if (user.role === "Super Admin") return true;
+  if (user.role === "Super Admin" || user.role === "Platform Super Admin") return true;
   const role = roles.find((item) => item.name === user.role);
   const roleAllows = Array.isArray(role?.permissions) && role.permissions.includes(permission);
   const moduleId = getModuleForPermission(permission);
@@ -4774,6 +4786,7 @@ function App() {
   const [selectedSupportTicketId, setSelectedSupportTicketId] = useState("");
   const [remoteAuthStatus, setRemoteAuthStatus] = useState(remoteApiEnabled ? "checking" : "local");
   const [authError, setAuthError] = useState("");
+  const [remoteUser, setRemoteUser] = useState(null);
   const remoteSaveTimer = useRef(null);
   const creditRecords = useMemo(
     () => buildAllCreditRecords(state.orders, state.credits),
@@ -4808,8 +4821,8 @@ function App() {
   const currentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => canAccessNavItem(state.settings, item.id)),
-    [state.settings],
+    () => navItems.filter((item) => item.id === "platform" ? remoteUser?.role === "Platform Super Admin" : canAccessNavItem(state.settings, item.id)),
+    [state.settings, remoteUser?.role],
   );
   const receivableRows = useMemo(
     () =>
@@ -4992,14 +5005,28 @@ function App() {
       return undefined;
     }
 
-    Promise.all([loadRemoteState(), getRemoteSession()])
-      .then(([payload, session]) => {
+    getRemoteSession()
+      .then(async (session) => {
         if (!active) return;
+        setRemoteUser(session.user);
+        if (session.user.mustChangePassword) {
+          setRemoteAuthStatus("signedIn");
+          setAuthError("");
+          return;
+        }
+        const payload = await loadRemoteState();
+        if (!active) return;
+        const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
+        const sessionUser = { ...session.user, moduleAccess: session.user.companyModules || navItems.map((item) => item.id) };
+        const users = tenantUsers.some((user) => user.id === session.user.id)
+          ? tenantUsers.map((user) => (user.id === session.user.id ? { ...user, ...sessionUser } : user))
+          : [sessionUser, ...tenantUsers];
         setState(
           hydrateState({
             ...(payload.state || initialState),
             settings: {
               ...(payload.state?.settings || initialState.settings),
+              users,
               sessionUserId: session.user.id,
               currentRole: session.user.role,
             },
@@ -5010,6 +5037,7 @@ function App() {
       })
       .catch((error) => {
         if (!active) return;
+        setRemoteUser(null);
         setRemoteToken("");
         setState((current) =>
           hydrateState({
@@ -5040,7 +5068,7 @@ function App() {
       });
     }, 500);
     return () => window.clearTimeout(remoteSaveTimer.current);
-  }, [state]);
+  }, [state, remoteUser?.role]);
 
   useEffect(() => {
     if (state.employees.length === 0) return;
@@ -5285,12 +5313,24 @@ function App() {
     try {
       const login = await loginRemote(email, password);
       setRemoteToken(login.token);
+      setRemoteUser(login.user);
+      if (login.user.mustChangePassword) {
+        setRemoteAuthStatus("signedIn");
+        notify("İlk giriş üçün yeni parol təyin edin.");
+        return;
+      }
       const payload = await loadRemoteState();
+      const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
+      const sessionUser = { ...login.user, moduleAccess: login.user.companyModules || navItems.map((item) => item.id) };
+      const users = tenantUsers.some((user) => user.id === login.user.id)
+        ? tenantUsers.map((user) => (user.id === login.user.id ? { ...user, ...sessionUser } : user))
+        : [sessionUser, ...tenantUsers];
       setState(
         hydrateState({
           ...(payload.state || initialState),
           settings: {
             ...(payload.state?.settings || initialState.settings),
+            users,
             sessionUserId: login.user.id,
             currentRole: login.user.role,
           },
@@ -5300,6 +5340,7 @@ function App() {
       notify(`${login.user.name} kimi giriş edildi.`);
     } catch (error) {
       setRemoteToken("");
+      setRemoteUser(null);
       setRemoteAuthStatus("signedOut");
       setAuthError(error instanceof Error ? error.message : "Giriş alınmadı.");
     }
@@ -5327,6 +5368,7 @@ function App() {
     if (remoteApiEnabled) {
       logoutRemote().catch(() => undefined);
       setRemoteToken("");
+      setRemoteUser(null);
       setRemoteAuthStatus("signedOut");
     }
     notify(`${userName} sistemdən çıxdı.`);
@@ -9376,6 +9418,10 @@ function App() {
     setDraftMessage("");
   }
 
+  if (remoteUser?.mustChangePassword && remoteAuthStatus === "signedIn") {
+    return <PasswordChangeScreen user={remoteUser} onLogout={logoutUser} />;
+  }
+
   if (!currentUser || (remoteApiEnabled && remoteAuthStatus === "checking")) {
     return (
       <>
@@ -9439,6 +9485,8 @@ function App() {
             canAct={canPerformPageAction}
             disabledReason={actionDeniedReason}
           />
+
+          {active === "platform" && remoteUser?.role === "Platform Super Admin" && <PlatformAdminPage />}
 
           {active === "dashboard" && (
             <DashboardPage
@@ -9989,6 +10037,197 @@ function PageHeader({ meta, onAction, showAction = true, canAct = true, disabled
           {meta.action}
         </button>
       )}
+    </div>
+  );
+}
+
+function PasswordChangeScreen({ user, onLogout }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState("");
+
+  async function submit(event) {
+    event.preventDefault();
+    if (newPassword.length < 8 || newPassword !== confirmation) {
+      setError("Yeni parol ən azı 8 simvol olmalı və təkrar ilə uyğun gəlməlidir.");
+      return;
+    }
+    try {
+      await changeRemotePassword(currentPassword, newPassword);
+      window.location.reload();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Parol dəyişdirilmədi.");
+    }
+  }
+
+  return (
+    <div className="login-screen">
+      <div className="login-card">
+        <ShieldCheck size={36} />
+        <h1>Yeni parol təyin edin</h1>
+        <p>{user.name}, təhlükəsizlik üçün ilkin parolu dəyişdirin.</p>
+        <form className="login-form" onSubmit={submit}>
+          <label><span>İlkin parol</span><input type="password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></label>
+          <label><span>Yeni parol</span><input type="password" required minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></label>
+          <label><span>Yeni parolun təkrarı</span><input type="password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+          {error ? <div className="login-error">{error}</div> : null}
+          <button type="submit" className="primary-btn">Parolu dəyiş</button>
+          <button type="button" className="secondary-btn" onClick={onLogout}>Çıxış</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const companyModuleCopy = {
+  dashboard: ["İdarəetmə paneli", "Əsas göstəricilər və ümumi əməliyyat icmalı"],
+  crm: ["Müştərilər (CRM)", "Müştəri bazası, əlaqələr və 360° görünüş"],
+  sales: ["Satış", "Sifarişlər, satış axını və bonuslar"],
+  warehouse: ["Anbar və stok", "Qalıqlar, rezervlər və anbar əməliyyatları"],
+  deliveries: ["Təhvil və logistika", "Çatdırılma mərhələləri və təhvil nəzarəti"],
+  finance: ["Maliyyə", "Kassa, xərclər və maliyyə təsdiqləri"],
+  invoices: ["Fakturalar və e-qaimə", "Faktura yaradılması və ödəniş izləmə"],
+  accounting: ["Mühasibat", "Mühasibat yazılışları və maliyyə hesabatları"],
+  tax: ["Vergi təqvimi", "Vergi öhdəlikləri və son tarixlər"],
+  credits: ["Kreditlər", "Kredit satışları və ödəniş cədvəlləri"],
+  receivables: ["Debitor və kreditor", "Alacaq və borc balanslarının idarəsi"],
+  vendors: ["Təchizatçılar", "Vendorlar, kvotalar və satınalma əlaqələri"],
+  projects: ["Layihələr və ROI", "Layihə gəlirliliyi və investisiya analizi"],
+  production: ["İstehsalat", "İstehsal planları və material axını"],
+  hr: ["İnsan resursları (HR)", "Əməkdaşlar, şöbələr və məzuniyyətlər"],
+  kpi: ["KPI və performans", "Hədəflər, nəticələr və bonus hesablamaları"],
+  contracts: ["Müqavilələr", "Müqavilə şablonları və sənədlər"],
+  reports: ["Hesabatlar", "İdarəetmə hesabatları və export"],
+  support: ["Dəstək", "Sorğular, tapşırıqlar və xidmət izləmə"],
+  help: ["Kömək mərkəzi", "Təlimatlar və istifadəçi bələdçisi"],
+  onboarding: ["İlkin quraşdırma", "Şirkətin sistemə qoşulma addımları"],
+  messages: ["Daxili mesajlar", "Komanda daxilində yazışmalar"],
+  notifications: ["Bildirişlər", "Sistem xəbərdarlıqları və avtomatlaşdırma"],
+  api: ["API inteqrasiyaları", "Xarici sistemlər və webhook bağlantıları"],
+  settings: ["Sistem ayarları", "İstifadəçilər, rollar və ümumi sazlamalar"],
+};
+
+function CompanyModulePicker({ modules, value, onToggle }) {
+  return (
+    <div className="company-module-picker">
+      {modules.map((module) => {
+        const Icon = navIcons[module.id] || Boxes;
+        const [label, description] = companyModuleCopy[module.id] || [module.label, "ERP modulu"];
+        const selected = value.includes(module.id);
+        const required = module.id === "dashboard";
+        return (
+          <label key={module.id} className="company-module-card">
+            <input type="checkbox" checked={selected} disabled={required} onChange={() => onToggle(module.id)} />
+            <span className="company-module-icon"><Icon size={18} /></span>
+            <span className="company-module-copy"><strong>{label}</strong><small>{description}</small></span>
+            <span className="company-module-state">{selected ? <Check size={16} /> : null}</span>
+            {required ? <em>Məcburi</em> : null}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlatformAdminPage() {
+  const [companies, setCompanies] = useState([]);
+  const [availableModules, setAvailableModules] = useState(() => navItems.filter((item) => item.id !== "platform"));
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", slug: "", plan: "Standart", userLimit: 10, moduleAccess: navItems.filter((item) => item.id !== "platform").map((item) => item.id), adminName: "", adminEmail: "", adminPassword: "" });
+
+  async function refreshCompanies() {
+    setLoading(true);
+    try {
+      const payload = await listRemoteCompanies();
+      setCompanies(payload.companies || []);
+      setAvailableModules(payload.availableModules || navItems.filter((item) => item.id !== "platform"));
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Şirkətlər yüklənmədi.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshCompanies();
+  }, []);
+
+  async function submit(event) {
+    event.preventDefault();
+    try {
+      await createRemoteCompany(form);
+      setForm({ name: "", slug: "", plan: "Standart", userLimit: 10, moduleAccess: availableModules.map((item) => item.id), adminName: "", adminEmail: "", adminPassword: "" });
+      await refreshCompanies();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Şirkət yaradılmadı.");
+    }
+  }
+
+  function toggleModule(target, moduleId, setter) {
+    const current = target.moduleAccess || [];
+    setter({ ...target, moduleAccess: current.includes(moduleId) ? current.filter((id) => id !== moduleId) : [...current, moduleId] });
+  }
+
+  async function saveCompany(event) {
+    event.preventDefault();
+    if (!editing) return;
+    try {
+      await updateRemoteCompany(editing.id, editing);
+      setEditing(null);
+      await refreshCompanies();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Şirkət yenilənmədi.");
+    }
+  }
+
+  async function toggleCompanyStatus(company) {
+    try {
+      await updateRemoteCompany(company.id, { status: company.status === "Aktiv" ? "Dondurulub" : "Aktiv" });
+      await refreshCompanies();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Şirkət statusu dəyişmədi.");
+    }
+  }
+
+  async function archiveCompany(company) {
+    if (!window.confirm(`${company.name} şirkətini silinmiş kimi arxivləmək istəyirsiniz? İstifadəçilərin sessiyaları bağlanacaq.`)) return;
+    try {
+      await deleteRemoteCompany(company.id);
+      if (editing?.id === company.id) setEditing(null);
+      await refreshCompanies();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Şirkət silinmədi.");
+    }
+  }
+
+  return (
+    <div className="page-grid">
+          <Panel>
+            <PanelHeader title="Yeni şirkət" subtitle="Şirkət və onun ilk administrator hesabını birlikdə yaradın." />
+            <form className="form-grid" onSubmit={submit}>
+              <label className="field"><span>Şirkət adı</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+              <label className="field"><span>Slug</span><input placeholder="avto yaradılır" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} /></label>
+              <label className="field"><span>Tarif</span><select value={form.plan} onChange={(event) => setForm({ ...form, plan: event.target.value })}><option>Standart</option><option>Premium</option><option>Enterprise</option></select></label>
+              <label className="field"><span>İstifadəçi limiti</span><input required type="number" min="1" max="10000" value={form.userLimit} onChange={(event) => setForm({ ...form, userLimit: Number(event.target.value) })} /></label>
+              <label className="field"><span>Şirkət admininin adı</span><input required value={form.adminName} onChange={(event) => setForm({ ...form, adminName: event.target.value })} /></label>
+              <label className="field"><span>Admin email</span><input required type="email" value={form.adminEmail} onChange={(event) => setForm({ ...form, adminEmail: event.target.value })} /></label>
+              <label className="field"><span>İlkin parol</span><input required type="password" minLength={8} value={form.adminPassword} onChange={(event) => setForm({ ...form, adminPassword: event.target.value })} /></label>
+              <div className="field full company-module-field"><span>Veriləcək modullar</span><p>Şirkətin istifadə edə biləcəyi funksiyaları seçin. İdarəetmə paneli bütün paketlərdə məcburidir.</p><CompanyModulePicker modules={availableModules} value={form.moduleAccess || []} onToggle={(moduleId) => toggleModule(form, moduleId, setForm)} /></div>
+              <div className="form-actions"><button type="submit" className="primary-btn">Şirkət yarat</button></div>
+            </form>
+            {error ? <div className="form-error">{error}</div> : null}
+          </Panel>
+          <Panel>
+            <PanelHeader title="Şirkətlər" subtitle={`${companies.length} tenant`} action={<button type="button" className="secondary-btn" onClick={refreshCompanies}>Yenilə</button>} />
+            {loading ? <p className="muted">Yüklənir...</p> : (
+              <DataTable columns={["Şirkət", "Tarif", "Modul", "İstifadəçi", "Status", "Əməliyyat"]} rows={companies.map((company) => [<TwoLine title={company.name} subtitle={company.slug} />, company.plan, `${(company.module_access || []).length} modul`, `${company.user_count} / ${company.user_limit}`, <StatusBadge status={company.status} />, <div className="table-actions"><button type="button" className="icon-btn" title="Düzəliş" onClick={() => setEditing({ ...company, moduleAccess: company.module_access || [] })}><Pencil size={15} /></button><button type="button" className="secondary-btn" disabled={company.id === "CMP-DEFAULT" || company.status === "Silinib"} onClick={() => toggleCompanyStatus(company)}>{company.status === "Aktiv" ? "Dondur" : "Aktiv et"}</button><button type="button" className="icon-btn danger" title="Sil" disabled={company.id === "CMP-DEFAULT" || company.status === "Silinib"} onClick={() => archiveCompany(company)}><Trash2 size={15} /></button></div>])} />
+            )}
+          </Panel>
+          {editing ? <Panel><PanelHeader title="Şirkət düzəlişi" subtitle={`${editing.name} · limit və modul paketi`} /><form className="form-grid" onSubmit={saveCompany}><label className="field"><span>Şirkət adı</span><input required value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} /></label><label className="field"><span>Slug</span><input required value={editing.slug} onChange={(event) => setEditing({ ...editing, slug: event.target.value })} /></label><label className="field"><span>Tarif</span><select value={editing.plan} onChange={(event) => setEditing({ ...editing, plan: event.target.value })}><option>Standart</option><option>Premium</option><option>Enterprise</option></select></label><label className="field"><span>İstifadəçi limiti</span><input type="number" min="1" max="10000" value={editing.user_limit} onChange={(event) => setEditing({ ...editing, user_limit: Number(event.target.value), userLimit: Number(event.target.value) })} /></label><div className="field full company-module-field"><span>Modul paketi</span><p>Şirkətin aktiv modul paketini yeniləyin.</p><CompanyModulePicker modules={availableModules} value={editing.moduleAccess || []} onToggle={(moduleId) => toggleModule(editing, moduleId, setEditing)} /></div><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setEditing(null)}>Ləğv et</button><button type="submit" className="primary-btn">Yadda saxla</button></div></form></Panel> : null}
     </div>
   );
 }

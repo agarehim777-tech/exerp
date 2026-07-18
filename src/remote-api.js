@@ -52,3 +52,29 @@ export function saveRemoteState(state) {
 export function createRemoteUser(values) {
   return request("/api/users", { method: "POST", body: JSON.stringify(values) });
 }
+
+export function listRemoteCompanies() {
+  return request("/api/companies");
+}
+
+export function createRemoteCompany(values) {
+  return request("/api/companies", { method: "POST", body: JSON.stringify(values) });
+}
+
+export function updateRemoteCompany(companyId, values) {
+  return request(`/api/companies/${encodeURIComponent(companyId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(values),
+  });
+}
+
+export function deleteRemoteCompany(companyId) {
+  return request(`/api/companies/${encodeURIComponent(companyId)}`, { method: "DELETE" });
+}
+
+export function changeRemotePassword(currentPassword, newPassword) {
+  return request("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
