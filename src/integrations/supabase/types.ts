@@ -61,6 +61,56 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          tax_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_receipt_lines: {
         Row: {
           created_at: string
@@ -171,38 +221,197 @@ export type Database = {
           },
         ]
       }
-      orders: {
+      order_items: {
         Row: {
           created_at: string
-          customer_name: string
+          description: string | null
+          discount_pct: number
           id: string
-          notes: string | null
-          status: string
-          total_amount: number
+          line_no: number
+          line_total: number
+          order_id: string
+          product_id: string | null
+          qty: number
+          tenant_id: string
+          unit_price: number
           updated_at: string
-          user_id: string
+          vat_rate: number
         }
         Insert: {
           created_at?: string
-          customer_name: string
+          description?: string | null
+          discount_pct?: number
           id?: string
-          notes?: string | null
-          status?: string
-          total_amount?: number
+          line_no?: number
+          line_total?: number
+          order_id: string
+          product_id?: string | null
+          qty?: number
+          tenant_id: string
+          unit_price?: number
           updated_at?: string
-          user_id: string
+          vat_rate?: number
         }
         Update: {
           created_at?: string
-          customer_name?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          line_no?: number
+          line_total?: number
+          order_id?: string
+          product_id?: string | null
+          qty?: number
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_id: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          order_no: string
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          tenant_id: string
+          total: number
+          updated_at: string
+          vat_total: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
           id?: string
           notes?: string | null
-          status?: string
-          total_amount?: number
+          order_date?: string
+          order_no: string
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal?: number
+          tenant_id: string
+          total?: number
           updated_at?: string
-          user_id?: string
+          vat_total?: number
         }
-        Relationships: []
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_no?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal?: number
+          tenant_id?: string
+          total?: number
+          updated_at?: string
+          vat_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          sku: string
+          tenant_id: string
+          unit: string
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          sku: string
+          tenant_id: string
+          unit?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          sku?: string
+          tenant_id?: string
+          unit?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -720,6 +929,12 @@ export type Database = {
         | "approved"
         | "paid"
         | "cancelled"
+      order_status:
+        | "draft"
+        | "confirmed"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
       po_status:
         | "draft"
         | "approved"
@@ -863,6 +1078,7 @@ export const Constants = {
         "paid",
         "cancelled",
       ],
+      order_status: ["draft", "confirmed", "shipped", "delivered", "cancelled"],
       po_status: [
         "draft",
         "approved",
