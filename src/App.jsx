@@ -7634,6 +7634,47 @@ function App() {
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
 
+  function deleteProduct(productId) {
+    if (!requirePermission("warehouse.manage", "məhsul kataloqunu silmək")) return;
+    const currentProduct = state.products.find((product) => product.id === productId);
+    if (!currentProduct) {
+      notify("Məhsul tapılmadı.", "warning");
+      return;
+    }
+    if (!window.confirm(`${currentProduct.name} məhsulunu silmək istədiyinizə əminsiniz?`)) return;
+
+    // Optimistic local removal + related stock cleanup
+    setState((current) => {
+      const stripRows = (rows) => (rows || []).filter((row) => row.product !== currentProduct.name);
+      const warehouseStock = Object.fromEntries(
+        Object.entries(current.warehouseStock || {}).map(([wid, rows]) => [wid, stripRows(rows)]),
+      );
+      return auditCurrentState(
+        {
+          ...current,
+          products: current.products.filter((p) => p.id !== productId),
+          stock: stripRows(current.stock),
+          warehouseStock,
+        },
+        { module: "Məhsul", action: "Məhsul silindi", detail: `${currentProduct.sku} · ${currentProduct.name}` },
+      );
+    });
+
+    // Persist to DB
+    if (activeTenantId && deleteDbProduct) {
+      const dbRow =
+        (dbProducts || []).find((p) => p.id === productId) ||
+        (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
+      if (dbRow) {
+        deleteDbProduct(dbRow.id).catch((err) => {
+          notify(`Məhsul DB-dən silinmədi: ${err.message || err}`, "warning");
+        });
+      }
+    }
+    setModal(null);
+    notify(`${currentProduct.name} silindi.`);
+  }
+
   function saveFinanceAccount(accountId, values) {
     if (!requirePermission("finance.manage", "kassa və bank hesabını idarə etmək")) return;
 
