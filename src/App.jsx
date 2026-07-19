@@ -10261,6 +10261,17 @@ function Sidebar({ active, items = navItems, currentUser, activeRole, mobileNav,
   );
 }
 
+function formatTimeAgo(date) {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "indicə";
+  if (minutes < 60) return `${minutes} dəq əvvəl`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} saat əvvəl`;
+  return `${Math.floor(hours / 24)} gün əvvəl`;
+}
+
 function Topbar({
   query,
   setQuery,
@@ -10275,6 +10286,7 @@ function Topbar({
   onLogin,
   onLogout,
   canSwitchUser = true,
+  gitHubSync,
 }) {
   return (
     <header className="topbar">
