@@ -9772,18 +9772,10 @@ function App() {
           {active === "crm-tasks" && <CrmTasksPage />}
 
 
-          {active === "sales" && (
-            <SalesPage
-              orders={filtered.orders}
-              stock={filtered.stock}
-              employees={state.employees}
-              selectedOrder={selectedOrder}
-              setSelectedOrder={setSelectedOrder}
-              advanceOrder={advanceOrder}
-              onEditOrder={openSalesOrderEditor}
-              onDeleteOrder={openSalesOrderDelete}
-            />
-          )}
+          {active === "sales-dashboard" && <SalesDashboardPage />}
+          {active === "sales-quotes" && <QuotesPage />}
+          {active === "sales-shipments" && <ShipmentsPage />}
+          {active === "sales" && <SalesOrdersPage />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}
@@ -10154,8 +10146,8 @@ function App() {
   );
 }
 
-const GROUP_LABELS = { crm: "CRM" };
-const GROUP_ICONS = { crm: Users };
+const GROUP_LABELS = { crm: "CRM", sales: "Satış" };
+const GROUP_ICONS = { crm: Users, sales: ShoppingCart };
 
 function SidebarNav({ items, active, onSelect }) {
   const groups = [];
