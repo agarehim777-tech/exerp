@@ -24,6 +24,7 @@ import {
   Eye,
   FileText,
   Filter,
+  GitBranch,
   LayoutDashboard,
   Menu,
   MessageSquare,
