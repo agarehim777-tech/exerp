@@ -117,7 +117,7 @@ import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
 import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
-import AccountingPage from "./modules/accounting/AccountingPage.jsx";
+import AccountingPageV2 from "./modules/accounting/AccountingPage.jsx";
 
 
 const navIcons = {
