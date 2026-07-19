@@ -5226,6 +5226,15 @@ function App() {
     }, 3200);
   }
 
+  const handleGitHubPush = useCallback(
+    (commit) => {
+      notify(`GitHub-a son push uğurlu: ${commit.sha}`, "success");
+    },
+    [notify]
+  );
+
+  const gitHubSync = useGitHubSync({ enabled: true, onPush: handleGitHubPush });
+
   function can(permission) {
     return hasEffectivePermission(state.settings, permission);
   }
