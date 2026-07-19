@@ -1150,6 +1150,7 @@ export type Database = {
         Args: { _tenant: string; _user: string }
         Returns: boolean
       }
+      seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       trial_balance: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: {
