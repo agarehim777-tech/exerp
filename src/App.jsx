@@ -117,6 +117,7 @@ import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
 import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
+import AccountingPage from "./modules/accounting/AccountingPage.jsx";
 
 
 const navIcons = {
@@ -9721,6 +9722,8 @@ function App() {
 
           {active === "platform" && <PlatformAdminPage />}
           {active === "roles" && <RolesPermissionsPage />}
+          {active === "accounting" && <AccountingPage />}
+
 
 
           {active === "dashboard" && (
