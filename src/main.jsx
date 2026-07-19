@@ -13,6 +13,7 @@ const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 const TenantSwitcher = lazy(() => import("./auth/TenantSwitcher.jsx"));
+const AcceptInvite = lazy(() => import("./auth/AcceptInvite.jsx"));
 
 const fullPage = {
   display: "flex",
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/.lovable/oauth/consent" element={<Consent />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route
           path="/satinalma/*"
           element={

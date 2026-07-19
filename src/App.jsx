@@ -117,6 +117,7 @@ import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
 import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
+import AccountingPageV2 from "./modules/accounting/AccountingPage.jsx";
 
 
 const navIcons = {
@@ -9721,6 +9722,8 @@ function App() {
 
           {active === "platform" && <PlatformAdminPage />}
           {active === "roles" && <RolesPermissionsPage />}
+          
+
 
 
           {active === "dashboard" && (
@@ -9819,16 +9822,7 @@ function App() {
               onOpenSalesOrder={openLinkedSalesOrder}
             />
           )}
-          {active === "accounting" && (
-            <AccountingPage
-              accounting={{
-                ...accountingData,
-                journalRows: filtered.accountingJournal,
-                chartRows: filtered.accountingChart,
-              }}
-              closeRun={state.accountingClose}
-            />
-          )}
+          {active === "accounting" && <AccountingPageV2 />}
           {active === "tax" && (
             <TaxPage
               taxRows={filtered.taxCalendar}
