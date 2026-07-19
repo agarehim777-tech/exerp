@@ -33,7 +33,9 @@ export default function TenantSwitcher() {
   return (
     <div style={{ position: "fixed", top: 12, right: 12, zIndex: 9999, fontFamily: "Manrope, system-ui" }}>
       <button onClick={() => setOpen(!open)} style={btn}>
-        🏢 {active?.tenants?.name || "Şirkət"} ▾
+        🏢 {active?.tenants?.name || "Şirkət"}
+        {active?.role && <span style={roleBadge}>{roleLabel(active.role)}</span>}
+        <span style={{ marginLeft: 4 }}>▾</span>
       </button>
       {open && (
         <div style={panel}>
