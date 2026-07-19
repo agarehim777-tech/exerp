@@ -90,6 +90,40 @@ export default function RolesPermissionsPage() {
     setSaving(false);
   };
 
+  const sendInvite = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setSaving(true); setMsg("");
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("tenant_invites")
+      .insert({ tenant_id: tenantId, email: inviteEmail.trim().toLowerCase(), role: inviteRole, invited_by: user.id })
+      .select().single();
+    if (error) setMsg("Xəta: " + error.message);
+    else {
+      const link = `${window.location.origin}/accept-invite?token=${data.token}`;
+      await navigator.clipboard?.writeText(link).catch(() => {});
+      setMsg(`Dəvət yaradıldı — link kopyalandı: ${link}`);
+      setInviteEmail("");
+    }
+    await reload();
+    setSaving(false);
+  };
+
+  const revokeInvite = async (id) => {
+    setSaving(true);
+    await supabase.from("tenant_invites").delete().eq("id", id);
+    await reload();
+    setSaving(false);
+  };
+
+  const copyInviteLink = async (token) => {
+    const link = `${window.location.origin}/accept-invite?token=${token}`;
+    await navigator.clipboard?.writeText(link);
+    setMsg("Link kopyalandı: " + link);
+  };
+
+
+
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <div style={card}>
