@@ -10258,16 +10258,18 @@ function Topbar({
 }
 
 function PageHeader({ meta, onAction, showAction = true, canAct = true, disabledReason = "" }) {
+  if (!meta) return null;
+  const actionLabel = meta.action || "";
   return (
     <div className="page-header">
       <div>
         <h1>{meta.title}</h1>
         <p>{meta.subtitle}</p>
       </div>
-      {showAction && (
+      {showAction && actionLabel && (
         <button className="primary-btn" onClick={onAction} disabled={!canAct} title={!canAct ? disabledReason : ""}>
-          {meta.action.includes("Yeni") ? <Plus size={16} /> : <Check size={16} />}
-          {meta.action}
+          {actionLabel.includes("Yeni") ? <Plus size={16} /> : <Check size={16} />}
+          {actionLabel}
         </button>
       )}
     </div>

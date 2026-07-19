@@ -21,7 +21,7 @@ export function useActivities(tenantId, { customerId, dealId, limit = 100 } = {}
 
   useEffect(() => {
     if (!tenantId) return;
-    const ch = supabase.channel(`activities:${tenantId}:${customerId||'all'}`)
+    const ch = supabase.channel(`activities:${tenantId}:${customerId||'all'}:${Math.random().toString(36).slice(2,10)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_activities', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };

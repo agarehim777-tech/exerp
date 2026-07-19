@@ -24,7 +24,7 @@ export function useCustomers(tenantId) {
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
-      .channel(`customers:${tenantId}`)
+      .channel(`customers:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'customers', filter: `tenant_id=eq.${tenantId}` },
         () => fetchAll()
