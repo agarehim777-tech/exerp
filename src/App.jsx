@@ -147,6 +147,7 @@ const navIcons = {
   notifications: Bell,
   api: ShieldCheck,
   settings: Settings,
+  roles: ShieldCheck,
 };
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
