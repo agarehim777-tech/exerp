@@ -6,6 +6,7 @@ import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
+import { usePermissions } from "./shared/hooks/usePermissions.js";
 import {
   BarChart3,
   Bell,
