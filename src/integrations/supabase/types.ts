@@ -771,6 +771,7 @@ export type Database = {
           order_id: string
           product_id: string | null
           qty: number
+          tax_rate: number
           tenant_id: string
           unit_price: number
           updated_at: string
@@ -786,6 +787,7 @@ export type Database = {
           order_id: string
           product_id?: string | null
           qty?: number
+          tax_rate?: number
           tenant_id: string
           unit_price?: number
           updated_at?: string
@@ -801,6 +803,7 @@ export type Database = {
           order_id?: string
           product_id?: string | null
           qty?: number
+          tax_rate?: number
           tenant_id?: string
           unit_price?: number
           updated_at?: string
@@ -836,12 +839,18 @@ export type Database = {
           created_by: string | null
           currency: string
           customer_id: string | null
+          discount_total: number
+          due_date: string | null
           id: string
           notes: string | null
           order_date: string
           order_no: string
+          paid_amount: number
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          quote_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
+          tax_total: number
           tenant_id: string
           total: number
           updated_at: string
@@ -852,12 +861,18 @@ export type Database = {
           created_by?: string | null
           currency?: string
           customer_id?: string | null
+          discount_total?: number
+          due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_no: string
+          paid_amount?: number
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
+          tax_total?: number
           tenant_id: string
           total?: number
           updated_at?: string
@@ -868,12 +883,18 @@ export type Database = {
           created_by?: string | null
           currency?: string
           customer_id?: string | null
+          discount_total?: number
+          due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_no?: string
+          paid_amount?: number
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
+          tax_total?: number
           tenant_id?: string
           total?: number
           updated_at?: string
@@ -885,6 +906,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
@@ -1143,6 +1171,135 @@ export type Database = {
           },
         ]
       }
+      quote_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount_pct: number
+          id: string
+          line_total: number
+          product_id: string | null
+          qty: number
+          quote_id: string
+          sort_order: number
+          tax_rate: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount_pct?: number
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          quote_id: string
+          sort_order?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount_pct?: number
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          quote_id?: string
+          sort_order?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          created_at: string
+          currency: string
+          customer_id: string | null
+          discount_total: number
+          id: string
+          notes: string | null
+          number: string
+          order_id: string | null
+          owner_id: string | null
+          status: Database["public"]["Enums"]["quote_status"]
+          subtotal: number
+          tax_total: number
+          tenant_id: string
+          total: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          discount_total?: number
+          id?: string
+          notes?: string | null
+          number: string
+          order_id?: string | null
+          owner_id?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          tax_total?: number
+          tenant_id: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          discount_total?: number
+          id?: string
+          notes?: string | null
+          number?: string
+          order_id?: string | null
+          owner_id?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          tax_total?: number
+          tenant_id?: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           can_edit: boolean
@@ -1169,6 +1326,105 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      sales_shipment_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_item_id: string
+          qty_shipped: number
+          shipment_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_item_id: string
+          qty_shipped?: number
+          shipment_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          qty_shipped?: number
+          shipment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_shipment_items_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_shipment_items_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "sales_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_shipments: {
+        Row: {
+          carrier: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          shipment_no: string
+          shipped_at: string | null
+          status: Database["public"]["Enums"]["shipment_status"]
+          tenant_id: string
+          tracking_no: string | null
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          shipment_no: string
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          tenant_id: string
+          tracking_no?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          shipment_no?: string
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          tenant_id?: string
+          tracking_no?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_shipments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_shipments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_invites: {
         Row: {
@@ -1492,6 +1748,7 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["invoice_status"]
       }
+      convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
       crm_pipeline_summary: {
         Args: { _pipeline: string }
@@ -1526,6 +1783,15 @@ export type Database = {
           status: string
         }[]
       }
+      generate_doc_number: {
+        Args: {
+          _column: string
+          _prefix: string
+          _table: string
+          _tenant: string
+        }
+        Returns: string
+      }
       has_module_access: {
         Args: { _action?: string; _module: string; _tenant: string }
         Returns: boolean
@@ -1545,6 +1811,10 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant: string; _user: string }
         Returns: boolean
+      }
+      sales_dashboard: {
+        Args: { _from: string; _tenant: string; _to: string }
+        Returns: Json
       }
       seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       seed_default_crm_pipeline: { Args: { _tenant: string }; Returns: string }
@@ -1577,12 +1847,20 @@ export type Database = {
         | "shipped"
         | "delivered"
         | "cancelled"
+      payment_status: "unpaid" | "partial" | "paid" | "refunded"
       po_status:
         | "draft"
         | "approved"
         | "partial"
         | "received"
         | "closed"
+        | "cancelled"
+      quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
+      shipment_status:
+        | "pending"
+        | "packed"
+        | "shipped"
+        | "delivered"
         | "cancelled"
     }
     CompositeTypes: {
@@ -1722,12 +2000,21 @@ export const Constants = {
         "cancelled",
       ],
       order_status: ["draft", "confirmed", "shipped", "delivered", "cancelled"],
+      payment_status: ["unpaid", "partial", "paid", "refunded"],
       po_status: [
         "draft",
         "approved",
         "partial",
         "received",
         "closed",
+        "cancelled",
+      ],
+      quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
+      shipment_status: [
+        "pending",
+        "packed",
+        "shipped",
+        "delivered",
         "cancelled",
       ],
     },

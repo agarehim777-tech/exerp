@@ -125,6 +125,10 @@ import CrmCustomersPageV2 from "./modules/crm/CrmCustomersPage.jsx";
 import CrmDealsPage from "./modules/crm/CrmDealsPage.jsx";
 import CrmActivitiesPage from "./modules/crm/CrmActivitiesPage.jsx";
 import CrmTasksPage from "./modules/crm/CrmTasksPage.jsx";
+import SalesDashboardPage from "./modules/sales/SalesDashboardPage.jsx";
+import QuotesPage from "./modules/sales/QuotesPage.jsx";
+import SalesOrdersPage from "./modules/sales/SalesOrdersPage.jsx";
+import ShipmentsPage from "./modules/sales/ShipmentsPage.jsx";
 
 
 const navIcons = {
@@ -135,6 +139,9 @@ const navIcons = {
   "crm-activities": MessageSquare,
   "crm-tasks": ShieldCheck,
   sales: ShoppingCart,
+  "sales-dashboard": BarChart3,
+  "sales-quotes": FileText,
+  "sales-shipments": Truck,
   warehouse: Warehouse,
   deliveries: Truck,
   finance: Wallet,
@@ -9765,18 +9772,10 @@ function App() {
           {active === "crm-tasks" && <CrmTasksPage />}
 
 
-          {active === "sales" && (
-            <SalesPage
-              orders={filtered.orders}
-              stock={filtered.stock}
-              employees={state.employees}
-              selectedOrder={selectedOrder}
-              setSelectedOrder={setSelectedOrder}
-              advanceOrder={advanceOrder}
-              onEditOrder={openSalesOrderEditor}
-              onDeleteOrder={openSalesOrderDelete}
-            />
-          )}
+          {active === "sales-dashboard" && <SalesDashboardPage />}
+          {active === "sales-quotes" && <QuotesPage />}
+          {active === "sales-shipments" && <ShipmentsPage />}
+          {active === "sales" && <SalesOrdersPage />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}
@@ -10147,8 +10146,8 @@ function App() {
   );
 }
 
-const GROUP_LABELS = { crm: "CRM" };
-const GROUP_ICONS = { crm: Users };
+const GROUP_LABELS = { crm: "CRM", sales: "Satış" };
+const GROUP_ICONS = { crm: Users, sales: ShoppingCart };
 
 function SidebarNav({ items, active, onSelect }) {
   const groups = [];
