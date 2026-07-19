@@ -4841,9 +4841,15 @@ function App() {
   }, [state.kpiPeriods, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
   const currentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
+  const { can: dbCan, role: dbRole } = usePermissions();
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => item.id === "platform" ? true : canAccessNavItem(state.settings, item.id)),
-    [state.settings, remoteUser?.role],
+    () => navItems.filter((item) => {
+      if (item.id === "platform") return true;
+      const legacyOk = canAccessNavItem(state.settings, item.id);
+      const dbOk = dbRole ? dbCan(item.id, "view") : true;
+      return legacyOk && dbOk;
+    }),
+    [state.settings, remoteUser?.role, dbRole, dbCan],
   );
   const receivableRows = useMemo(
     () =>
