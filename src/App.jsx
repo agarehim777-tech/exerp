@@ -10152,8 +10152,8 @@ function SidebarNav({ items, active, onSelect }) {
     }
   }
   const activeGroup = items.find((x) => x.id === active)?.group;
-  const [open, setOpen] = React.useState(() => ({ [activeGroup]: true }));
-  React.useEffect(() => {
+  const [open, setOpen] = useState(() => ({ [activeGroup]: true }));
+  useEffect(() => {
     if (activeGroup) setOpen((o) => ({ ...o, [activeGroup]: true }));
   }, [activeGroup]);
 
