@@ -53,6 +53,7 @@ export default function TenantSwitcher() {
                 >
                   {isActive ? "✓ " : ""}{m.tenants?.name}
                   <span style={{ color: "#8a9a92", fontSize: 11, marginLeft: 6 }}>/{m.tenants?.slug}</span>
+                  <span style={inlineRoleBadge}>{roleLabel(m.role)}</span>
                 </button>
                 {m.role === "owner" && !isActive && (
                   <button onClick={() => remove(m.tenant_id)} disabled={busy === m.tenant_id} style={delBtn} title="Sil">
