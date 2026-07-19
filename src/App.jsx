@@ -9719,6 +9719,8 @@ function App() {
           />
 
           {active === "platform" && <PlatformAdminPage />}
+          {active === "roles" && <RolesPermissionsPage />}
+
 
           {active === "dashboard" && (
             <DashboardPage
