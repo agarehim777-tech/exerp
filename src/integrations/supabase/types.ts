@@ -604,6 +604,33 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -902,6 +929,10 @@ export type Database = {
           qty_ordered: number
           status: string
         }[]
+      }
+      has_module_access: {
+        Args: { _action?: string; _module: string; _tenant: string }
+        Returns: boolean
       }
       has_tenant_role: {
         Args: {
