@@ -19,23 +19,31 @@ export default function RolesPermissionsPage() {
   const tenantId = activeMembership?.tenant_id;
   const [rows, setRows] = useState([]);
   const [members, setMembers] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
 
   const reload = async () => {
     setLoading(true);
-    const [{ data: perms }, { data: mems }] = await Promise.all([
+    const [{ data: perms }, { data: mems }, { data: invs }] = await Promise.all([
       supabase.from("role_permissions").select("*"),
       tenantId
-        ? supabase
-            .from("tenant_members")
+        ? supabase.from("tenant_members")
             .select("id, user_id, role, profiles:user_id(email, full_name)")
             .eq("tenant_id", tenantId)
+        : Promise.resolve({ data: [] }),
+      tenantId
+        ? supabase.from("tenant_invites")
+            .select("*").eq("tenant_id", tenantId).is("accepted_at", null)
+            .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
     ]);
     setRows(perms || []);
     setMembers(mems || []);
+    setInvites(invs || []);
     setLoading(false);
   };
 
