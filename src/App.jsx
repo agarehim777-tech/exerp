@@ -125,6 +125,10 @@ import CrmCustomersPageV2 from "./modules/crm/CrmCustomersPage.jsx";
 import CrmDealsPage from "./modules/crm/CrmDealsPage.jsx";
 import CrmActivitiesPage from "./modules/crm/CrmActivitiesPage.jsx";
 import CrmTasksPage from "./modules/crm/CrmTasksPage.jsx";
+import SalesDashboardPage from "./modules/sales/SalesDashboardPage.jsx";
+import QuotesPage from "./modules/sales/QuotesPage.jsx";
+import SalesOrdersPage from "./modules/sales/SalesOrdersPage.jsx";
+import ShipmentsPage from "./modules/sales/ShipmentsPage.jsx";
 
 
 const navIcons = {
@@ -135,6 +139,9 @@ const navIcons = {
   "crm-activities": MessageSquare,
   "crm-tasks": ShieldCheck,
   sales: ShoppingCart,
+  "sales-dashboard": BarChart3,
+  "sales-quotes": FileText,
+  "sales-shipments": Truck,
   warehouse: Warehouse,
   deliveries: Truck,
   finance: Wallet,
