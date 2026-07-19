@@ -10150,21 +10150,8 @@ function Sidebar({ active, items = navItems, currentUser, activeRole, mobileNav,
           </button>
         </div>
 
-        <nav className="nav-list">
-          {items.map((item) => {
-            const Icon = navIcons[item.id];
-            return (
-              <button
-                key={item.id}
-                className={`nav-item ${active === item.id ? "active" : ""}`}
-                onClick={() => onSelect(item.id)}
-              >
-                <Icon size={17} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <SidebarNav items={items} active={active} onSelect={onSelect} />
+
 
         <div className="admin-card">
           <div className="avatar">
