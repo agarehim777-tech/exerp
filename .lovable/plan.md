@@ -1,47 +1,116 @@
-# customers / products / orders — Supabase inteqrasiyası
+# İdeal CRM Modulu
 
-## Vəziyyət
+Cari `CrmPage` sadəcə müştəri cədvəlidir. Onu tam CRM-ə çeviririk: Lead → Deal pipeline, aktivlik tarixi, tapşırıqlar, 360° müştəri profili və müasir Attio/Folk üslubunda interfeys.
 
-`src/App.jsx` (20 700+ sətir) `useState(loadPersistentState())` ilə tək bir `state` obyekti saxlayır. Bu state 100+ yerdə `state.customers`, `state.orders`, `state.products` kimi oxunur və mock məlumatın **fərqli forması** var:
+## 1. Data qatı (Supabase migration)
 
-**Legacy (localStorage) forması:**
-- `orders`: `{ id, customer, fin, amount, paid, products, productLines[], status: "Təhvil verilib", deliveryDate, ... }`
-- `customers`: `{ id, name, fin, phone, segment, ... }`
-- `products`: `{ id, name, sku, price, status: "Aktiv" }`
+Yeni cədvəllər (hamısı `tenant_id` + RLS + `owner_id`):
+- **`crm_pipelines`** — pipeline şablonları (default: Satış)
+- **`crm_stages`** — pipeline mərhələləri (Yeni, Kvalifikasiya, Təklif, Danışıq, Qazanıldı, İtirildi) + `probability`, `sort_order`, `color`
+- **`crm_deals`** — sövdələşmələr: title, customer_id, stage_id, amount, currency, expected_close, owner_id, status
+- **`crm_activities`** — timeline: type (call/meeting/email/note), subject, body, customer_id, deal_id, occurred_at, owner_id
+- **`crm_tasks`** — tapşırıqlar: title, due_at, done, priority, assigned_to, customer_id, deal_id
+- **`crm_tags`** və **`crm_customer_tags`** — çox-çox teq sistemi
 
-**DB forması:**
-- `orders`: `{ id, tenant_id, order_no, customer_id, order_date, status: enum, subtotal, vat_total, total, items[] }`
-- `customers`: `{ id, tenant_id, name, email, phone, address, tax_id }`
-- `products`: `{ id, tenant_id, sku, name, price, vat_rate, is_active }`
+`customers` cədvəlinə əlavələr: `owner_id`, `tax_id` (VÖEN), `segment` (individual/business/vip), `lifetime_value` (computed view), `last_activity_at`.
 
-Forması fərqli olduğu üçün birbaşa əvəzləmə **onlarca hesabat, KPI, faktura, mühasibat** məntiqini sındıracaq (`buildInvoiceRows`, `buildCrmPipelineRows`, `buildAccountingData`, `buildReceivableRows` və s. — hamısı `order.amount / order.paid / order.customer / order.fin` sahələrini istifadə edir).
+Unique index: `(tenant_id, fin)` və `(tenant_id, tax_id)` — duplikat qarşısı.
 
-## Yanaşma: 3 addımlı mərhələli miqrasiya
+RLS: tenant üzvləri oxuyur; edit `owner_id = auth.uid()` VƏ YA `has_module_access(tenant, 'crm', 'edit')`.
 
-### Addım A — Adapter qatı (bu turda)
-`src/shared/adapters/erpShape.js` yarat:
-- `dbOrderToLegacy(dbOrder, customersMap)` → legacy formaya çevirir (`amount = total`, `paid = 0`, `customer = customer.name`, `status = "Yeni"` və s.)
-- `dbCustomerToLegacy(c)`, `dbProductToLegacy(p)`
-- Əks istiqamət: `legacyOrderToDb(o, customersMap)` — yeni sifariş yaradarkən DB-yə yazmaq üçün
+Helper funksiyalar:
+- `crm_pipeline_summary(pipeline_id)` — hər mərhələ üzrə deal sayı və məbləği
+- `customer_360(customer_id)` — profile + son 20 aktivlik + açıq deal-lar + sifariş ümumisi
 
-### Addım B — Read-bridge (bu turda)
-App.jsx-də:
-- `useAuth()` və `useCustomers/useProducts/useOrders(activeTenantId)` çağır
-- Yeni `useEffect`: DB-dən gələn məlumat dolu olduqda `setState(prev => ({ ...prev, customers: mapped, products: mapped, orders: mapped }))` — mock-u əvəz edir
-- Boş olduqda mock qalır (yumşaq keçid)
+## 2. Hooks qatı
 
-### Addım C — Write-bridge (növbəti turda, ayrıca)
-`dispatch`/`setState` üzərindən keçən `add-order`, `add-customer`, `add-product` axınlarını tapıb (əsasən modal `onSubmit`-lər) DB hook-larının `create/update/remove` metodlarına yönləndirmək. Realtime avtomatik olaraq oxunuşu yeniləyəcək.
+Yeni fayllar `src/shared/hooks/`:
+- `useDeals.js` — list/create/update/move (stage dəyişmə), realtime
+- `useActivities.js` — customer/deal üzrə timeline
+- `useTasks.js` — mənə aid + tarixə görə
+- `usePipelines.js` — pipeline/stage konfiqurasiyası
+- `useCustomer360.js` — bir müştərinin tam profili (RPC ilə)
 
-Bu addım daha risklidir çünki 20+ modal/form var; ona görə A+B-dən sonra ayrıca aparılmalıdır.
+Zod validasiyası: FIN (7 char), VÖEN (10 digit), telefon `+994XXXXXXXXX`, e-poçt.
 
-## Bu turda etməyəcəyim
+## 3. UI qatı — yeni CRM modulu
 
-- Legacy sahələri (məsələn `order.paid`, `credits`, `productLines[]`) tam sxemə köçürmək — bunun üçün ayrıca `payments`, `order_lines_extended` cədvəlləri lazım gələcək.
-- Hesabat funksiyalarını (100+ `build*` funksiyası) sındırmadan yenidən yazmaq. Adapter onları qoruyur.
+Sidebar-da **CRM** genişlənir:
+- **Müştərilər** (mövcud, redizayn olunur)
+- **Sövdələşmələr** (Kanban) — YENİ
+- **Aktivliklər** — YENİ
+- **Tapşırıqlar** — YENİ
 
-## Nəticə
+### 3.1 Müştərilər səhifəsi (redizayn)
+- Üstdə 4 stat kartı: Ümumi / Yeni bu ay / Aktiv (30 gün) / VIP
+- Sətrlərdə: rəngli inisial avatarı, ad + segment çipi, əlaqə, teqlər, sahib, son aktivlik "3 gün əvvəl", açıq deal sayı
+- Sətrə klik → sağdan sürüşən **CustomerDrawer** (bax 3.5)
+- Toolbar: fuzzy axtarış, segment filter, teq filter, sahib filter, "Yeni müştəri" CTA
+- Empty state: SVG illüstrasiya + CTA
+- Mobil: cədvəl → kart görünüşünə keçir
 
-Bu turdan sonra: DB-dəki `customers/products/orders` UI-da görünəcək (realtime), amma yeni yaradılan yazılar hələ də localStorage-a düşəcək. **Addım C** əlavə mesaj tələb edir.
+### 3.2 Deal Kanban səhifəsi (YENİ)
+- Yuxarıda pipeline seçici + ümumi məbləğ
+- Hər mərhələ = sütun, başlıqda: ad, deal sayı, cəm məbləğ, `probability` badge
+- Kart: title, müştəri, məbləğ, expected_close, owner avatarı, teqlər
+- Drag-and-drop (`@dnd-kit`) — mərhələ dəyişir, DB update + realtime
+- "Qazanıldı" sütununa atanda toast + confetti (framer-motion)
+- Sütun başlığına klik → kart yarat modal
 
-Davam edim?
+### 3.3 Aktivliklər səhifəsi
+- Timeline görünüşü, filter (növ, tarix, sahib)
+- Sürətli əlavə: "Zəng etdim: ..." tək sətir input
+
+### 3.4 Tapşırıqlar səhifəsi
+- 3 sütun: Bu gün / Bu həftə / Sonra
+- Checkbox ilə tamamla, `due_at` gec olanları qırmızı flag
+- Müştəri/deal linki
+
+### 3.5 CustomerDrawer (360° görünüş)
+Sağdan açılan panel (`Sheet`), tab-lar:
+- **Ümumi:** əlaqə blokları, teqlər (əlavə/sil), sahib dəyişdirmə, düzəliş formu
+- **Sövdələşmələr:** açıq/qapalı deal-lar mini kanban
+- **Aktivlik:** timeline + sürətli əlavə (zəng/görüş/qeyd)
+- **Tapşırıqlar:** aid tapşırıqlar
+- **Sifarişlər:** mövcud `orders` bu müştəri üzrə, cəm və status
+- Yuxarıda: böyük avatar, LTV, son aktivlik, "Zəng et" / "Email göndər" / "Task əlavə et" düymələri
+
+## 4. Görünüş sistemi
+- Yeni CSS token-ları: `--crm-stage-1..6` mərhələ rəngləri, `--crm-priority-high/med/low`
+- Framer-motion: kart hover lift, drawer slide-in spring, stage move layout animation
+- Avatar: inisialdan HSL-hash rəng — determinist
+- Teq çipləri: pastel bg, tünd text, ovalpə
+- Mövcud "Emerald Prestige" temasına uyğun
+
+## 5. Testlər (minimum)
+- Vitest: `usePipelines`, deal move, tag toggle
+- Playwright: müştəri yarat → deal yarat → mərhələ dəyiş → drawer aç
+
+## Fayl xülasəsi
+
+**Yeni migration** (1):
+- `crm_pipelines`, `crm_stages`, `crm_deals`, `crm_activities`, `crm_tasks`, `crm_tags`, `crm_customer_tags` + RPC-lər + `customers` üçün ALTER + seed default pipeline funksiyası
+
+**Yeni hook-lar** (5): `useDeals`, `useActivities`, `useTasks`, `usePipelines`, `useCustomer360`
+
+**Yeni komponentlər** `src/modules/crm/`:
+- `CrmCustomersPage.jsx` (redizayn)
+- `CrmDealsPage.jsx` (Kanban)
+- `CrmActivitiesPage.jsx`
+- `CrmTasksPage.jsx`
+- `CustomerDrawer.jsx`
+- `DealCard.jsx`, `StageColumn.jsx`, `ActivityItem.jsx`, `TaskItem.jsx`, `Avatar.jsx`, `TagChip.jsx`
+
+**Dəyişənlər:**
+- `src/App.jsx` — köhnə `CrmPage`-i yeni `CrmCustomersPage` ilə əvəz + 3 yeni route + sidebar alt-menyu
+- `src/styles.css` — CRM token-ları
+- `package.json` — `@dnd-kit/core`, `@dnd-kit/sortable` əlavə
+
+## Təsdiq edildikdə icra sırası
+1. Migration (təsdiq gözləyir)
+2. Hook-lar + drawer + müştərilər redizaynı (tez dəyər)
+3. Deal Kanban + drag-drop
+4. Aktivlik + Tapşırıqlar
+5. Testlər + polish
+
+Təsdiqlə, başlayım.

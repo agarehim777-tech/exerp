@@ -118,12 +118,19 @@ import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
 import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
 import AccountingPageV2 from "./modules/accounting/AccountingPage.jsx";
+import CrmCustomersPageV2 from "./modules/crm/CrmCustomersPage.jsx";
+import CrmDealsPage from "./modules/crm/CrmDealsPage.jsx";
+import CrmActivitiesPage from "./modules/crm/CrmActivitiesPage.jsx";
+import CrmTasksPage from "./modules/crm/CrmTasksPage.jsx";
 
 
 const navIcons = {
   dashboard: LayoutDashboard,
   platform: Building2,
   crm: Users,
+  "crm-deals": TrendingUp,
+  "crm-activities": MessageSquare,
+  "crm-tasks": ShieldCheck,
   sales: ShoppingCart,
   warehouse: Warehouse,
   deliveries: Truck,
@@ -9739,17 +9746,11 @@ function App() {
               setActive={choosePage}
             />
           )}
-          {active === "crm" && (
-            <CrmPage
-              customers={filtered.customers}
-              credits={creditRecords}
-              orders={state.orders}
-              contracts={state.contracts}
-              onOpenSalesOrder={openLinkedSalesOrder}
-              onOpenCredit={openLinkedCredit}
-              onDeleteCustomer={deleteCustomer}
-            />
-          )}
+          {active === "crm" && <CrmCustomersPageV2 />}
+          {active === "crm-deals" && <CrmDealsPage />}
+          {active === "crm-activities" && <CrmActivitiesPage />}
+          {active === "crm-tasks" && <CrmTasksPage />}
+
 
           {active === "sales" && (
             <SalesPage
