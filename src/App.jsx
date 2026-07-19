@@ -116,6 +116,7 @@ import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
+import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
 
 
 const navIcons = {
