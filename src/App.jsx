@@ -5,6 +5,7 @@ import { useAuth } from "./auth/AuthProvider.jsx";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
+import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
 import {
@@ -23,6 +24,7 @@ import {
   Eye,
   FileText,
   Filter,
+  GitBranch,
   LayoutDashboard,
   Menu,
   MessageSquare,
@@ -5224,6 +5226,15 @@ function App() {
     }, 3200);
   }
 
+  const handleGitHubPush = useCallback(
+    (commit) => {
+      notify(`GitHub-a son push uğurlu: ${commit.sha}`, "success");
+    },
+    [notify]
+  );
+
+  const gitHubSync = useGitHubSync({ enabled: true, onPush: handleGitHubPush });
+
   function can(permission) {
     return hasEffectivePermission(state.settings, permission);
   }
@@ -9717,6 +9728,7 @@ function App() {
           onLogin={loginUser}
           onLogout={logoutUser}
           canSwitchUser={!remoteApiEnabled}
+          gitHubSync={gitHubSync}
         />
 
         <main className="main">
@@ -10250,6 +10262,17 @@ function Sidebar({ active, items = navItems, currentUser, activeRole, mobileNav,
   );
 }
 
+function formatTimeAgo(date) {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "indicə";
+  if (minutes < 60) return `${minutes} dəq əvvəl`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} saat əvvəl`;
+  return `${Math.floor(hours / 24)} gün əvvəl`;
+}
+
 function Topbar({
   query,
   setQuery,
@@ -10264,6 +10287,7 @@ function Topbar({
   onLogin,
   onLogout,
   canSwitchUser = true,
+  gitHubSync,
 }) {
   return (
     <header className="topbar">
@@ -10314,6 +10338,24 @@ function Topbar({
           <Bell size={20} />
           <span className="counter danger">{unread}</span>
         </button>
+        <div
+          className="sync-pill"
+          title={
+            gitHubSync?.lastCommit
+              ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
+              : gitHubSync?.error || "GitHub sync status"
+          }
+        >
+          <GitBranch size={16} />
+          <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
+          <span className="sync-label">
+            {gitHubSync?.status === "error"
+              ? "Sync xətası"
+              : gitHubSync?.lastSyncAt
+                ? formatTimeAgo(gitHubSync.lastSyncAt)
+                : "Yoxlanır..."}
+          </span>
+        </div>
         <button className="secondary-btn logout-btn" onClick={onLogout}>
           Çıxış
         </button>

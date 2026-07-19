@@ -340,6 +340,45 @@ button {
   gap: 8px;
 }
 
+.sync-pill {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: white;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sync-pill svg {
+  color: var(--accent);
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sync-dot.ok,
+.sync-dot.synced {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(13, 122, 95, 0.18);
+}
+
+.sync-dot.error {
+  background: var(--red);
+}
+
+.sync-dot.idle {
+  background: var(--gold);
+}
+
 .user-switcher,
 .session-pill {
   min-height: 38px;
