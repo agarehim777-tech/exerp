@@ -13,6 +13,25 @@ export const pageMeta = {
     subtitle: "FİN kodu, borc limiti, kateqoriya və 360° müştəri görünüşü.",
     action: "Yeni müştəri",
   },
+  "crm-deals": {
+    title: "Sövdələşmələr (Deals)",
+    subtitle: "Kanban pipeline, mərhələ dəyişikliyi və satış proqnozu.",
+    action: "Yeni sövdələşmə",
+  },
+  "crm-activities": {
+    title: "Aktivliklər",
+    subtitle: "Zəng, görüş, e-poçt və qeydlər üzrə vahid timeline.",
+    action: "Yeni aktivlik",
+  },
+  "crm-tasks": {
+    title: "Tapşırıqlar",
+    subtitle: "Müştəri və sövdələşmələrə bağlı tapşırıqlar, tarix və məsul.",
+    action: "Yeni tapşırıq",
+  },
+  roles: {
+    title: "Rollar və İcazələr",
+    subtitle: "Şirkət üzvləri, dəvətlər və modul-səviyyəli icazə matrisi.",
+  },
   sales: {
     title: "Satış Modulu",
     subtitle: "Sifarişlər, satıcı bölgüsü, bonuslar və stok uyğunluğu.",

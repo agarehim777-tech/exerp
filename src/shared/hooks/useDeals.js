@@ -22,7 +22,7 @@ export function useDeals(tenantId, pipelineId) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const ch = supabase.channel(`deals:${tenantId}`)
+    const ch = supabase.channel(`deals:${tenantId}:${Math.random().toString(36).slice(2,10)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_deals', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
