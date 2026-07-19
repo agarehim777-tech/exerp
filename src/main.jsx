@@ -13,6 +13,7 @@ const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 const TenantSwitcher = lazy(() => import("./auth/TenantSwitcher.jsx"));
+const AcceptInvite = lazy(() => import("./auth/AcceptInvite.jsx"));
 
 const fullPage = {
   display: "flex",
