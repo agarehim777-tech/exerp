@@ -54,6 +54,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/.lovable/oauth/consent" element={<Consent />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route
           path="/satinalma/*"
           element={
