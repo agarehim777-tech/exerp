@@ -224,6 +224,38 @@ export default function RolesPermissionsPage() {
           </tbody>
         </table>
       </div>
+
+      <div style={card}>
+        <h2 style={{ margin: 0, marginBottom: 4 }}>Üzv dəvətləri</h2>
+        <p style={{ margin: "0 0 12px", color: "#6b7a72", fontSize: 13 }}>
+          E-poçt daxil edin, sistem dəvət linki yaradacaq — həmin şəxs qeydiyyatdan keçib linkə keçəndə şirkətə əlavə olunacaq
+        </p>
+        <form onSubmit={sendInvite} style={{ display: "grid", gridTemplateColumns: "1fr 140px auto", gap: 8, marginBottom: 12 }}>
+          <input type="email" required placeholder="user@example.com" value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)} style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #d4c9a3" }} />
+          <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={select}>
+            {ROLES.filter((r) => !r.locked).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
+          <button type="submit" disabled={saving} style={{ background: "#064e3b", color: "#fbe89a", border: 0, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Dəvət et</button>
+        </form>
+        <table style={table}>
+          <thead>
+            <tr><th style={th}>E-poçt</th><th style={th}>Rol</th><th style={th}>Bitir</th><th style={th}>Link</th><th style={th}></th></tr>
+          </thead>
+          <tbody>
+            {invites.length === 0 && <tr><td style={td} colSpan={5}><i style={{ color: "#8a9a92" }}>Aktiv dəvət yoxdur</i></td></tr>}
+            {invites.map((inv) => (
+              <tr key={inv.id}>
+                <td style={{ ...td, textAlign: "left" }}>{inv.email}</td>
+                <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
+                <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
+                <td style={td}><button onClick={() => copyInviteLink(inv.token)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
+                <td style={td}><button onClick={() => confirm("Ləğv edilsin?") && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
