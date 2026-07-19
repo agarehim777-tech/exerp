@@ -33,9 +33,21 @@ export const pageMeta = {
     subtitle: "Şirkət üzvləri, dəvətlər və modul-səviyyəli icazə matrisi.",
   },
   sales: {
-    title: "Satış Modulu",
-    subtitle: "Sifarişlər, satıcı bölgüsü, bonuslar və stok uyğunluğu.",
-    action: "Yeni sifariş",
+    title: "Satış Sifarişləri",
+    subtitle: "Sifariş kanban, ödəniş qeydi və çatdırılma yaratma.",
+  },
+  "sales-dashboard": {
+    title: "Satış Dashboard",
+    subtitle: "Dövriyyə, orta çek, top müştəri və məhsul göstəriciləri.",
+  },
+  "sales-quotes": {
+    title: "Kotirovkalar",
+    subtitle: "Təklif hazırla, göndər, sifarişə çevir.",
+    action: "Yeni kotirovka",
+  },
+  "sales-shipments": {
+    title: "Çatdırılmalar",
+    subtitle: "Yığım, göndərmə və çatdırma statusu izləməsi.",
   },
   warehouse: {
     title: "Anbar qalıqları",
