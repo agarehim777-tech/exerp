@@ -10135,6 +10135,83 @@ function App() {
   );
 }
 
+const GROUP_LABELS = { crm: "CRM" };
+const GROUP_ICONS = { crm: Users };
+
+function SidebarNav({ items, active, onSelect }) {
+  const groups = [];
+  const seen = new Set();
+  for (const item of items) {
+    if (item.group) {
+      if (!seen.has(item.group)) {
+        seen.add(item.group);
+        groups.push({ type: "group", id: item.group, children: items.filter((x) => x.group === item.group) });
+      }
+    } else {
+      groups.push({ type: "item", item });
+    }
+  }
+  const activeGroup = items.find((x) => x.id === active)?.group;
+  const [open, setOpen] = React.useState(() => ({ [activeGroup]: true }));
+  React.useEffect(() => {
+    if (activeGroup) setOpen((o) => ({ ...o, [activeGroup]: true }));
+  }, [activeGroup]);
+
+  return (
+    <nav className="nav-list">
+      {groups.map((entry) => {
+        if (entry.type === "item") {
+          const Icon = navIcons[entry.item.id];
+          return (
+            <button
+              key={entry.item.id}
+              className={`nav-item ${active === entry.item.id ? "active" : ""}`}
+              onClick={() => onSelect(entry.item.id)}
+            >
+              <Icon size={17} />
+              <span>{entry.item.label}</span>
+            </button>
+          );
+        }
+        const isOpen = !!open[entry.id];
+        const GroupIcon = GROUP_ICONS[entry.id] || Users;
+        const hasActive = entry.children.some((c) => c.id === active);
+        return (
+          <div key={entry.id} className={`nav-group ${isOpen ? "open" : ""}`}>
+            <button
+              type="button"
+              className={`nav-item nav-group-head ${hasActive ? "active-group" : ""}`}
+              onClick={() => setOpen((o) => ({ ...o, [entry.id]: !o[entry.id] }))}
+              aria-expanded={isOpen}
+            >
+              <GroupIcon size={17} />
+              <span style={{ flex: 1, textAlign: "left" }}>{GROUP_LABELS[entry.id] || entry.id}</span>
+              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            {isOpen && (
+              <div className="nav-group-children" style={{ display: "flex", flexDirection: "column", gap: 2, paddingLeft: 18, marginTop: 2 }}>
+                {entry.children.map((child) => {
+                  const Icon = navIcons[child.id];
+                  return (
+                    <button
+                      key={child.id}
+                      className={`nav-item ${active === child.id ? "active" : ""}`}
+                      onClick={() => onSelect(child.id)}
+                    >
+                      {Icon && <Icon size={15} />}
+                      <span>{child.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
 function Sidebar({ active, items = navItems, currentUser, activeRole, mobileNav, onClose, onSelect }) {
   return (
     <>
