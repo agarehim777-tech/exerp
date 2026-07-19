@@ -9722,7 +9722,7 @@ function App() {
 
           {active === "platform" && <PlatformAdminPage />}
           {active === "roles" && <RolesPermissionsPage />}
-          {active === "accounting" && <AccountingPage />}
+          
 
 
 
@@ -9822,16 +9822,7 @@ function App() {
               onOpenSalesOrder={openLinkedSalesOrder}
             />
           )}
-          {active === "accounting" && (
-            <AccountingPage
-              accounting={{
-                ...accountingData,
-                journalRows: filtered.accountingJournal,
-                chartRows: filtered.accountingChart,
-              }}
-              closeRun={state.accountingClose}
-            />
-          )}
+          {active === "accounting" && <AccountingPageV2 />}
           {active === "tax" && (
             <TaxPage
               taxRows={filtered.taxCalendar}
