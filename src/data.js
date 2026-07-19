@@ -35,6 +35,7 @@ export const navItems = [
   { id: "notifications", label: "Bildirişlər" },
   { id: "api", label: "API" },
   { id: "settings", label: "Ayarlar" },
+  { id: "roles", label: "Rollar" },
 ];
 
 export const initialState = {

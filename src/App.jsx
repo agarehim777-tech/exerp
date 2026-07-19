@@ -116,6 +116,7 @@ import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
+import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
 
 
 const navIcons = {
@@ -146,6 +147,7 @@ const navIcons = {
   notifications: Bell,
   api: ShieldCheck,
   settings: Settings,
+  roles: ShieldCheck,
 };
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
@@ -4845,6 +4847,7 @@ function App() {
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
       if (item.id === "platform") return true;
+      if (item.id === "roles") return dbRole === "owner" || dbRole === "admin";
       const legacyOk = canAccessNavItem(state.settings, item.id);
       const dbOk = dbRole ? dbCan(item.id, "view") : true;
       return legacyOk && dbOk;
@@ -9717,6 +9720,8 @@ function App() {
           />
 
           {active === "platform" && <PlatformAdminPage />}
+          {active === "roles" && <RolesPermissionsPage />}
+
 
           {active === "dashboard" && (
             <DashboardPage
