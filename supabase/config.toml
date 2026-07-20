@@ -1,7 +1,4 @@
 project_id = "rojwxgndtunssjdwngrh"
 
-[functions.mcp]
-verify_jwt = false
-
 [functions.platform-provision-admin]
 verify_jwt = true
