@@ -10660,7 +10660,7 @@ function PlatformAdminPage() {
             </label>
             {!editing && (
               <label className="field" style={{ gridColumn: "1 / -1" }}>
-                <span>Admin e-poçtu (dəvət göndəriləcək)</span>
+                <span>Admin e-poçtu (müvəqqəti parol yaradılacaq)</span>
                 <input type="email" value={form.admin_email}
                   onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
                   placeholder="admin@sirket.az" />
