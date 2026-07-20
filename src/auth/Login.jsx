@@ -136,11 +136,11 @@ export default function Login() {
         .xp-metric:last-child { border-right:0; }
         .xp-metric b { display:block; font-family:'Instrument Serif',serif; font-size:2rem; color:#c9a84c; line-height:1; margin-bottom:.35rem; }
         .xp-metric span { font-size:.78rem; color:#9fb8ae; text-transform:uppercase; letter-spacing:.1em; }
-        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr);} .xp-metric:nth-child(2){border-right:0;} }
+        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr); gap:1rem 0;} .xp-metric{ border-right:0;} .xp-metric:nth-child(odd){ border-right:1px solid rgba(230,242,236,.08);} }
 
         /* Modules */
-        .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 5rem 2rem; }
-        .xp-sec-h { text-align:center; margin-bottom:3rem; }
+        .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem; }
+        .xp-sec-h { text-align:center; margin-bottom:2.5rem; }
         .xp-sec-lbl { color:#c9a84c; font-size:.75rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:.75rem; }
         .xp-sec-t { font-family:'Instrument Serif',serif; font-size: clamp(2rem, 3.5vw, 2.8rem); color:#fff; margin:0; letter-spacing:-.015em; }
         .xp-mods { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
