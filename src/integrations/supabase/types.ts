@@ -549,6 +549,59 @@ export type Database = {
           },
         ]
       }
+      employees: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          position: string | null
+          salary: number | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          position?: string | null
+          salary?: number | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          position?: string | null
+          salary?: number | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_receipt_lines: {
         Row: {
           created_at: string
@@ -1043,6 +1096,7 @@ export type Database = {
           name: string
           start_date: string | null
           status: string
+          tenant_id: string
           updated_at: string
           user_id: string
         }
@@ -1055,6 +1109,7 @@ export type Database = {
           name: string
           start_date?: string | null
           status?: string
+          tenant_id: string
           updated_at?: string
           user_id: string
         }
@@ -1067,10 +1122,19 @@ export type Database = {
           name?: string
           start_date?: string | null
           status?: string
+          tenant_id?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_lines: {
         Row: {
