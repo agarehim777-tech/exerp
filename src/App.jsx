@@ -10570,22 +10570,34 @@ function PlatformAdminPage() {
         if (e2) throw e2;
       } else {
         const base = (form.slug || slugifyPlatform(form.name) || "sirket").slice(0, 40);
-        let finalSlug = base; let lastErr = null;
+        let finalSlug = base; let lastErr = null; let createdTenantId = null;
         for (let i = 0; i < 4; i++) {
-          const { error: rpcErr } = await supabase.rpc("platform_create_tenant", {
+          const { data: newId, error: rpcErr } = await supabase.rpc("platform_create_tenant", {
             _name: form.name.trim(), _slug: finalSlug,
             _max_users: Number(form.max_users) || 10,
             _plan: form.plan_name, _modules: form.modules,
             _expires_at: form.expires_at || null, _notes: form.notes || null,
-            _admin_email: form.admin_email.trim() || null,
+            _admin_email: null,
           });
-          if (!rpcErr) { lastErr = null; break; }
+          if (!rpcErr) { lastErr = null; createdTenantId = newId; break; }
           lastErr = rpcErr;
           const dup = rpcErr.code === "23505" || /duplicate|tenants_slug_key/i.test(rpcErr.message || "");
           if (!dup) break;
           finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
         }
         if (lastErr) throw lastErr;
+
+        const adminEmail = form.admin_email.trim();
+        if (createdTenantId && adminEmail) {
+          const { data: prov, error: provErr } = await supabase.functions.invoke(
+            "platform-provision-admin",
+            { body: { tenant_id: createdTenantId, email: adminEmail, role: "admin" } },
+          );
+          if (provErr || prov?.error) {
+            throw new Error(provErr?.message || prov?.error || "Admin yaradıla bilmədi");
+          }
+          setCredential({ email: prov.email, password: prov.password });
+        }
       }
       cancelEdit();
       await refreshTenants();
