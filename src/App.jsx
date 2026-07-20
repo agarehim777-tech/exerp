@@ -9738,7 +9738,7 @@ function App() {
           onLogin={loginUser}
           onLogout={logoutUser}
           canSwitchUser={!remoteApiEnabled}
-          gitHubSync={gitHubSync}
+          gitHubSync={isPlatformAdmin ? gitHubSync : null}
         />
 
         <main className="main">
