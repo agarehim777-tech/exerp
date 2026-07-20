@@ -4865,14 +4865,16 @@ function App() {
   const { can: dbCan, role: dbRole } = usePermissions();
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
-      if (item.id === "platform") return true;
+      // "Şirkətlər" (platform) is only for super-admins
+      if (item.id === "platform") return isPlatformAdmin;
       if (item.id === "roles") return dbRole === "owner" || dbRole === "admin";
       const legacyOk = canAccessNavItem(state.settings, item.id);
       const dbOk = dbRole ? dbCan(item.id, "view") : true;
       return legacyOk && dbOk;
     }),
-    [state.settings, remoteUser?.role, dbRole, dbCan],
+    [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
   );
+
   const receivableRows = useMemo(
     () =>
       buildReceivableRows({
