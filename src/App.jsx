@@ -10340,24 +10340,27 @@ function Topbar({
           <Bell size={20} />
           <span className="counter danger">{unread}</span>
         </button>
-        <div
-          className="sync-pill"
-          title={
-            gitHubSync?.lastCommit
-              ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
-              : gitHubSync?.error || "GitHub sync status"
-          }
-        >
-          <GitBranch size={16} />
-          <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
-          <span className="sync-label">
-            {gitHubSync?.status === "error"
-              ? "Sync xətası"
-              : gitHubSync?.lastSyncAt
-                ? formatTimeAgo(gitHubSync.lastSyncAt)
-                : "Yoxlanır..."}
-          </span>
-        </div>
+        {gitHubSync && (
+          <div
+            className="sync-pill"
+            title={
+              gitHubSync?.lastCommit
+                ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
+                : gitHubSync?.error || "GitHub sync status"
+            }
+          >
+            <GitBranch size={16} />
+            <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
+            <span className="sync-label">
+              {gitHubSync?.status === "error"
+                ? "Sync xətası"
+                : gitHubSync?.lastSyncAt
+                  ? formatTimeAgo(gitHubSync.lastSyncAt)
+                  : "Yoxlanır..."}
+            </span>
+          </div>
+        )}
+
         <button className="secondary-btn logout-btn" onClick={onLogout}>
           Çıxış
         </button>
