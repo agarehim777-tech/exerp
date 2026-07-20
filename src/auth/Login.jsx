@@ -114,11 +114,12 @@ export default function Login() {
         .xp-links a { color:#9fb8ae; text-decoration:none; font-size:.86rem; font-weight:500; padding:.5rem .85rem; border-radius:.4rem; transition:.15s; }
         .xp-links a:hover { color:#fff; background: rgba(255,255,255,.04); }
         .xp-top-cta { display:flex; gap:.5rem; align-items:center; }
-        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; transition:.15s; }
+        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; transition:.15s; white-space:nowrap; }
         .xp-ghost:hover { border-color:#c9a84c; color:#c9a84c; }
-        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6);}
+        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6); white-space:nowrap;}
         .xp-cta:hover { background:#d9ba5e; transform: translateY(-1px); }
         @media(max-width:900px){ .xp-links{ display:none;} .xp-top{padding:1rem 1.25rem;} }
+        @media(max-width:520px){ .xp-brand div{ display:none;} .xp-ghost{ padding:.5rem .8rem; font-size:.8rem;} .xp-cta{ padding:.55rem .9rem; font-size:.8rem;} }
 
         /* Hero */
         .xp-hero { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem 3rem; text-align:center; }
