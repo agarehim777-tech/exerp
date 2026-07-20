@@ -11,6 +11,22 @@ function sanitizeNext(raw) {
   }
 }
 
+const MODULES = [
+  { k: "CRM", d: "Müştəri münasibətləri, pipeline, tapşırıqlar", i: "M3 3h18v4H3zM3 10h11v11H3zM17 10h4v11h-4z" },
+  { k: "Satış", d: "Kotirovka → Sifariş → Göndərmə axını", i: "M3 3v18h18M7 15l4-4 4 4 5-6" },
+  { k: "Anbar", d: "Stok, hərəkət, inventar auditi", i: "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10" },
+  { k: "Mühasibat", d: "IFRS, ikili yazılış, hesab planı", i: "M4 4h16v16H4zM8 8h8M8 12h8M8 16h5" },
+  { k: "HR", d: "Kadr, davamiyyət, əməkhaqqı", i: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M17 3.13a4 4 0 0 1 0 7.75" },
+  { k: "Satınalma", d: "PO → GRN → Faktura 3-way match", i: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" },
+];
+
+const METRICS = [
+  { v: "3–7", l: "gündə tətbiq" },
+  { v: "99.9%", l: "uptime SLA" },
+  { v: "24/7", l: "yerli dəstək" },
+  { v: "IFRS", l: "sertifikatlı" },
+];
+
 export default function Login() {
   const next = sanitizeNext(new URLSearchParams(window.location.search).get("next"));
   const [mode, setMode] = useState("signin");
@@ -22,8 +38,7 @@ export default function Login() {
   const [authOpen, setAuthOpen] = useState(false);
 
   async function forgot() {
-    setError(null);
-    setInfo(null);
+    setError(null); setInfo(null);
     if (!email) return setError("Əvvəlcə emailinizi daxil edin.");
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -73,218 +88,238 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        .fx, .fx * { box-sizing: border-box; }
-        .fx { min-height: 100vh; width: 100%; font-family: 'Inter', system-ui, sans-serif; color: #e8fff5; -webkit-font-smoothing: antialiased;
-              background: radial-gradient(ellipse at 20% 0%, #0f5f4d 0%, transparent 55%), radial-gradient(ellipse at 90% 100%, #0a3d33 0%, transparent 50%), linear-gradient(160deg, #0a2620 0%, #0d3830 40%, #114a3d 100%);
-              position: relative; overflow-x: hidden; }
-        .fx::before { content:''; position: absolute; inset: 0; background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.04) 1px, transparent 0); background-size: 32px 32px; pointer-events: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap');
+        .xp, .xp * { box-sizing: border-box; }
+        .xp { min-height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: #e6f2ec; -webkit-font-smoothing: antialiased;
+          background: #061511;
+          background-image:
+            radial-gradient(1200px 600px at 85% -10%, rgba(201,168,76,.10), transparent 60%),
+            radial-gradient(900px 500px at 10% 20%, rgba(13,122,95,.35), transparent 60%),
+            linear-gradient(180deg, #061511 0%, #06201a 50%, #041a15 100%);
+          position: relative; overflow-x: hidden;
+        }
+        .xp::before { content:''; position:absolute; inset:0; pointer-events:none;
+          background: linear-gradient(rgba(230,242,236,.04) 1px, transparent 1px) 0 0/100% 64px,
+                      linear-gradient(90deg, rgba(230,242,236,.04) 1px, transparent 1px) 0 0/64px 100%;
+          mask-image: radial-gradient(ellipse at 50% 30%, #000 40%, transparent 80%);
+        }
 
-        /* Nav pill */
-        .fx-nav-wrap { position: relative; padding: 1.25rem 1.5rem; display: flex; justify-content: center; }
-        .fx-nav { display: flex; align-items: center; gap: .35rem; background: rgba(10,30,26,.55); backdrop-filter: blur(14px); border: 1px solid rgba(94,234,180,.14); border-radius: 999px; padding: .45rem .5rem; box-shadow: 0 20px 50px -20px rgba(0,0,0,.5); }
-        .fx-logo { display:flex; align-items:center; gap:.55rem; padding: .35rem .9rem .35rem .5rem; font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; color: #fff; }
-        .fx-logo-mark { width: 2rem; height: 2rem; border-radius: .55rem; background: linear-gradient(135deg,#34d399,#10b981); display:flex; align-items:center; justify-content:center; color:#052e26; font-weight: 900; font-size: 1rem; }
-        .fx-logo-sub { color: #5eead4; font-weight: 700; margin-left: .1rem; }
-        .fx-nav a { text-decoration:none; color: #a7d9c8; font-size: .85rem; font-weight: 500; padding: .55rem .95rem; border-radius: 999px; transition: all .18s; }
-        .fx-nav a:hover { color:#fff; background: rgba(94,234,180,.08); }
-        .fx-nav a.active { color:#5eead4; background: rgba(94,234,180,.1); }
-        .fx-nav-cta { display:flex; gap:.4rem; margin-left:.4rem; }
-        .fx-btn-ghost { background: transparent; border: 1px solid rgba(94,234,180,.2); color:#e8fff5; padding: .55rem 1rem; border-radius: 999px; font-family: inherit; font-size:.85rem; font-weight: 500; cursor:pointer; transition: all .18s; display:inline-flex; align-items:center; gap:.4rem; }
-        .fx-btn-ghost:hover { border-color:#5eead4; background: rgba(94,234,180,.08); }
-        .fx-btn-primary { background: linear-gradient(135deg,#34d399,#10b981); color:#052e26; border:0; padding: .6rem 1.15rem; border-radius: 999px; font-family: inherit; font-size:.88rem; font-weight: 700; cursor:pointer; transition: all .2s; display:inline-flex; align-items:center; gap:.45rem; box-shadow: 0 10px 30px -10px rgba(52,211,153,.6); }
-        .fx-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 15px 35px -10px rgba(52,211,153,.75); }
-        @media (max-width: 900px) { .fx-nav a:not(.fx-nav-home) { display:none; } }
+        /* Top bar */
+        .xp-top { position: relative; z-index: 2; display:flex; align-items:center; justify-content:space-between; padding: 1.5rem 2.5rem; }
+        .xp-brand { display:flex; align-items:center; gap:.7rem; }
+        .xp-mark { width:2.2rem; height:2.2rem; border-radius:.5rem; background:linear-gradient(135deg,#c9a84c,#8a6f2a); color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:900; font-family:'Instrument Serif',serif; font-size:1.35rem; box-shadow: 0 8px 24px -8px rgba(201,168,76,.5);}
+        .xp-brand b { font-size: 1.05rem; letter-spacing:.02em; color:#fff; font-weight:700; }
+        .xp-brand span { color:#c9a84c; font-weight:600; margin-left:.15rem; }
+        .xp-links { display:flex; gap:.25rem; }
+        .xp-links a { color:#9fb8ae; text-decoration:none; font-size:.86rem; font-weight:500; padding:.5rem .85rem; border-radius:.4rem; transition:.15s; }
+        .xp-links a:hover { color:#fff; background: rgba(255,255,255,.04); }
+        .xp-top-cta { display:flex; gap:.5rem; align-items:center; }
+        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; transition:.15s; }
+        .xp-ghost:hover { border-color:#c9a84c; color:#c9a84c; }
+        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6);}
+        .xp-cta:hover { background:#d9ba5e; transform: translateY(-1px); }
+        @media(max-width:900px){ .xp-links{ display:none;} .xp-top{padding:1rem 1.25rem;} }
 
         /* Hero */
-        .fx-hero { display: grid; grid-template-columns: 1fr; gap: 3rem; max-width: 82rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; align-items: center; position: relative; z-index: 1; }
-        @media (min-width: 1024px) { .fx-hero { grid-template-columns: 1.05fr 1fr; padding: 5rem 2rem 6rem; gap: 4rem; } }
-        .fx-chip { display:inline-flex; align-items:center; gap:.5rem; background: rgba(94,234,180,.08); border: 1px solid rgba(94,234,180,.2); color:#5eead4; padding: .5rem 1rem; border-radius: 999px; font-size: .8rem; font-weight: 500; margin-bottom: 1.75rem; }
-        .fx-chip::before { content:''; width:.4rem; height:.4rem; border-radius:999px; background:#34d399; box-shadow: 0 0 10px #34d399; }
-        .fx-h1 { font-size: clamp(2.6rem, 5.5vw, 4.5rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; margin: 0 0 1.5rem; color: #fff; }
-        .fx-h1 .accent { background: linear-gradient(135deg,#5eead4,#34d399); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .fx-lede { font-size: 1.05rem; line-height: 1.65; color: #a7d9c8; margin: 0 0 2rem; max-width: 32rem; }
-        .fx-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 2rem; }
-        .fx-check-row { display: flex; flex-wrap: wrap; gap: 1.25rem 1.75rem; }
-        .fx-check { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: #a7d9c8; }
-        .fx-check svg { color:#34d399; flex-shrink:0; }
+        .xp-hero { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem 3rem; text-align:center; }
+        .xp-eyebrow { display:inline-flex; align-items:center; gap:.55rem; padding:.4rem .9rem; border:1px solid rgba(201,168,76,.35); border-radius:999px; color:#c9a84c; font-size:.78rem; font-weight:500; margin-bottom:1.75rem; background: rgba(201,168,76,.06); }
+        .xp-eyebrow i { width:.4rem; height:.4rem; border-radius:999px; background:#c9a84c; box-shadow:0 0 10px #c9a84c; }
+        .xp-h1 { font-family:'Instrument Serif', serif; font-weight:400; font-size: clamp(2.8rem, 6vw, 5.2rem); line-height: 1.02; letter-spacing:-.02em; margin: 0 0 1.5rem; color:#fff; }
+        .xp-h1 em { font-style: italic; color:#c9a84c; font-family:'Instrument Serif', serif; }
+        .xp-lede { max-width: 38rem; margin: 0 auto 2.25rem; font-size: 1.05rem; line-height:1.65; color:#9fb8ae; }
+        .xp-hero-cta { display:inline-flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
 
-        /* ERP mock */
-        .fx-mock-wrap { position: relative; }
-        .fx-mock-wrap::before { content:''; position:absolute; inset:-40px; background: radial-gradient(circle, rgba(52,211,153,.25) 0%, transparent 60%); filter: blur(30px); z-index:0; }
-        .fx-mock { position: relative; z-index:1; background: #071a17; border: 1px solid rgba(94,234,180,.15); border-radius: 1rem; overflow: hidden; box-shadow: 0 40px 80px -20px rgba(0,0,0,.6); animation: fxFloat 6s ease-in-out infinite; }
-        @keyframes fxFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        .fx-mock-head { display:flex; align-items:center; gap:.5rem; padding: .75rem 1rem; border-bottom: 1px solid rgba(94,234,180,.1); background: rgba(0,0,0,.2); }
-        .fx-dots { display:flex; gap:.35rem; }
-        .fx-dots span { width:.6rem; height:.6rem; border-radius:999px; }
-        .fx-dots span:nth-child(1){background:#ff5f57;} .fx-dots span:nth-child(2){background:#febc2e;} .fx-dots span:nth-child(3){background:#28c840;}
-        .fx-mock-url { flex:1; margin-left:.5rem; height:1.4rem; background: rgba(255,255,255,.05); border-radius: .35rem; }
-        .fx-mock-body { padding: 1.25rem; display:flex; flex-direction:column; gap: 1rem; }
-        .fx-kpi-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
-        .fx-kpi { background: rgba(94,234,180,.04); border: 1px solid rgba(94,234,180,.1); border-radius:.6rem; padding: .85rem; }
-        .fx-kpi-lbl { font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: #5eead4; margin-bottom: .35rem; font-weight: 600; }
-        .fx-kpi-val { font-size: 1.35rem; font-weight: 800; color: #fff; display:flex; align-items:baseline; gap:.35rem; letter-spacing: -.02em; }
-        .fx-kpi-arrow { color: #34d399; font-size: .85rem; }
-        .fx-kpi-val.blue { color: #60a5fa; }
-        .fx-kpi-delta { font-size: .7rem; color: #86e5c4; margin-top: .25rem; }
-        .fx-chart { display:flex; align-items:flex-end; gap:.35rem; height: 6.5rem; padding: .75rem; background: rgba(94,234,180,.04); border: 1px solid rgba(94,234,180,.1); border-radius: .6rem; }
-        .fx-chart span { flex:1; background: linear-gradient(180deg, #34d399, #0d9488); border-radius: .3rem .3rem 0 0; opacity:.7; }
-        .fx-chart span.hi { opacity: 1; box-shadow: 0 0 15px rgba(52,211,153,.6); }
+        /* Metrics strip */
+        .xp-metrics { max-width: 60rem; margin: 3rem auto 0; display:grid; grid-template-columns: repeat(4,1fr); gap:0; border-top: 1px solid rgba(230,242,236,.08); border-bottom: 1px solid rgba(230,242,236,.08); padding: 1.5rem 0; }
+        .xp-metric { text-align:center; border-right:1px solid rgba(230,242,236,.08); }
+        .xp-metric:last-child { border-right:0; }
+        .xp-metric b { display:block; font-family:'Instrument Serif',serif; font-size:2rem; color:#c9a84c; line-height:1; margin-bottom:.35rem; }
+        .xp-metric span { font-size:.78rem; color:#9fb8ae; text-transform:uppercase; letter-spacing:.1em; }
+        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr);} .xp-metric:nth-child(2){border-right:0;} }
 
-        /* Auth modal */
-        .fx-backdrop { position: fixed; inset: 0; background: rgba(4,15,13,.75); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1.25rem; animation: fxFade .2s ease both; }
-        .fx-modal { width: 100%; max-width: 25rem; background: linear-gradient(180deg,#0f2a24,#0a1f1b); border: 1px solid rgba(94,234,180,.15); border-radius: 1rem; padding: 2rem; box-shadow: 0 40px 80px -20px rgba(0,0,0,.7); position: relative; animation: fxPop .3s cubic-bezier(.2,.9,.3,1.15) both; }
-        .fx-modal-close { position: absolute; top: .85rem; right: .85rem; background: rgba(94,234,180,.08); border: 1px solid rgba(94,234,180,.15); color: #a7d9c8; width: 2rem; height: 2rem; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .18s; }
-        .fx-modal-close:hover { background: rgba(94,234,180,.15); color:#fff; }
-        .fx-modal-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; color: #fff; margin: 0 0 .35rem; }
-        .fx-modal-sub { color: #86a89c; font-size: .9rem; margin: 0 0 1.5rem; }
-        .fx-field { margin-bottom: .85rem; }
-        .fx-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
-        .fx-label { font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #86a89c; }
-        .fx-link-sm { font-size: .78rem; font-weight: 500; color: #5eead4; background: 0; border: 0; cursor: pointer; padding: 0; }
-        .fx-link-sm:hover { color:#fff; }
-        .fx-input { width: 100%; padding: .8rem 1rem; background: rgba(0,0,0,.3); border: 1px solid rgba(94,234,180,.15); border-radius: .55rem; font-size: .95rem; font-family: inherit; color: #fff; outline: none; transition: all .15s; }
-        .fx-input::placeholder { color: rgba(167,217,200,.4); }
-        .fx-input:focus { border-color: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.15); }
-        .fx-submit { width: 100%; padding: .9rem; background: linear-gradient(135deg,#34d399,#10b981); color: #052e26; font-weight: 700; font-family: inherit; font-size: .95rem; border: 0; border-radius: .55rem; cursor: pointer; transition: all .2s; margin-top: .35rem; box-shadow: 0 10px 25px -10px rgba(52,211,153,.6); }
-        .fx-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 15px 30px -10px rgba(52,211,153,.75); }
-        .fx-submit:disabled { opacity: .6; cursor: not-allowed; }
-        .fx-divider { position: relative; margin: 1.25rem 0; text-align: center; }
-        .fx-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(94,234,180,.15); }
-        .fx-divider span { position: relative; background: #0c2521; padding: 0 .75rem; color: #86a89c; font-size: .7rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
-        .fx-google { width: 100%; padding: .8rem; background: rgba(0,0,0,.25); border: 1px solid rgba(94,234,180,.15); color: #fff; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .75rem; transition: all .18s; font-family: inherit; font-size: .92rem; border-radius: .55rem; }
-        .fx-google:hover { border-color: #34d399; background: rgba(0,0,0,.4); }
-        .fx-foot { margin-top: 1.25rem; text-align: center; font-size: .88rem; color: #86a89c; }
-        .fx-foot button { background: 0; border: 0; color: #5eead4; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; }
-        .fx-alert { margin-top: .9rem; padding: .7rem .9rem; font-size: .85rem; border-radius: .5rem; border: 1px solid; }
-        .fx-alert.err { background: rgba(220,50,50,.1); color: #fca5a5; border-color: rgba(220,50,50,.3); }
-        .fx-alert.ok { background: rgba(52,211,153,.1); color: #86e5c4; border-color: rgba(52,211,153,.3); }
+        /* Modules */
+        .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 5rem 2rem; }
+        .xp-sec-h { text-align:center; margin-bottom:3rem; }
+        .xp-sec-lbl { color:#c9a84c; font-size:.75rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:.75rem; }
+        .xp-sec-t { font-family:'Instrument Serif',serif; font-size: clamp(2rem, 3.5vw, 2.8rem); color:#fff; margin:0; letter-spacing:-.015em; }
+        .xp-mods { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+        @media(max-width:900px){ .xp-mods{ grid-template-columns:repeat(2,1fr);} }
+        @media(max-width:560px){ .xp-mods{ grid-template-columns:1fr;} }
+        .xp-mod { position:relative; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border:1px solid rgba(230,242,236,.08); border-radius:.75rem; padding: 1.6rem 1.4rem; transition:.25s; overflow:hidden; }
+        .xp-mod::after { content:''; position:absolute; inset:0; border-radius:.75rem; padding:1px; background:linear-gradient(135deg, rgba(201,168,76,.4), transparent 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity:0; transition:.25s; }
+        .xp-mod:hover { transform:translateY(-3px); border-color:rgba(201,168,76,.3); }
+        .xp-mod:hover::after { opacity:1; }
+        .xp-mod-i { width:2.4rem; height:2.4rem; border-radius:.5rem; background: rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.25); color:#c9a84c; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; }
+        .xp-mod b { display:block; color:#fff; font-size:1.05rem; font-weight:600; margin-bottom:.35rem; letter-spacing:-.01em; }
+        .xp-mod p { margin:0; color:#9fb8ae; font-size:.88rem; line-height:1.55; }
 
-        @keyframes fxFade { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fxPop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
+        /* Terminal preview */
+        .xp-term-wrap { max-width:56rem; margin: 0 auto; position:relative; }
+        .xp-term-wrap::before{ content:''; position:absolute; inset:-40px; background:radial-gradient(circle, rgba(201,168,76,.15),transparent 60%); filter:blur(30px); }
+        .xp-term { position:relative; background:#03110d; border:1px solid rgba(230,242,236,.1); border-radius:.75rem; font-family: 'JetBrains Mono', ui-monospace, monospace; overflow:hidden; box-shadow: 0 40px 100px -30px rgba(0,0,0,.7); }
+        .xp-term-h { display:flex; align-items:center; gap:.4rem; padding:.7rem 1rem; border-bottom:1px solid rgba(230,242,236,.08); background: rgba(0,0,0,.3); }
+        .xp-term-h span { width:.6rem; height:.6rem; border-radius:999px; background:rgba(230,242,236,.15); }
+        .xp-term-h b { margin-left:.75rem; color:#9fb8ae; font-family:'Inter',sans-serif; font-size:.75rem; font-weight:500; letter-spacing:.05em; }
+        .xp-term-body { padding: 1.5rem; font-size:.85rem; line-height:1.7; color:#9fb8ae; }
+        .xp-term-body .p { color:#c9a84c; }
+        .xp-term-body .c { color:#e6f2ec; }
+        .xp-term-body .g { color:#5cbd9e; }
+        .xp-term-body .m { color:#7fa8d4; }
+
+        /* Footer CTA */
+        .xp-cta-band { text-align:center; padding: 4rem 2rem 5rem; }
+        .xp-cta-band h2 { font-family:'Instrument Serif',serif; font-size:clamp(2rem, 4vw, 3rem); color:#fff; margin:0 0 1rem; letter-spacing:-.015em; }
+        .xp-cta-band p { color:#9fb8ae; max-width:34rem; margin:0 auto 2rem; }
+
+        .xp-foot { border-top:1px solid rgba(230,242,236,.08); padding: 2rem; text-align:center; color:#5f7a70; font-size:.8rem; }
+
+        /* Modal */
+        .xp-bd { position:fixed; inset:0; background:rgba(3,10,8,.8); backdrop-filter:blur(10px); z-index:100; display:flex; align-items:center; justify-content:center; padding:1.25rem; animation: xpFade .2s both; }
+        .xp-mod-x { width:100%; max-width:24rem; background: linear-gradient(180deg,#0a2620,#061511); border:1px solid rgba(201,168,76,.2); border-radius:.75rem; padding:2rem; position:relative; animation: xpPop .3s cubic-bezier(.2,.9,.3,1.15) both; }
+        .xp-x { position:absolute; top:.85rem; right:.85rem; background:rgba(255,255,255,.05); border:1px solid rgba(230,242,236,.1); color:#9fb8ae; width:2rem; height:2rem; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .xp-x:hover { color:#fff; }
+        .xp-mt { font-family:'Instrument Serif',serif; font-size:1.75rem; color:#fff; margin:0 0 .35rem; letter-spacing:-.01em; }
+        .xp-ms { color:#9fb8ae; font-size:.88rem; margin:0 0 1.5rem; }
+        .xp-f { margin-bottom:.85rem; }
+        .xp-lr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
+        .xp-l { font-size:.7rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#9fb8ae; }
+        .xp-ls { font-size:.76rem; color:#c9a84c; background:0; border:0; cursor:pointer; padding:0; font-family:inherit;}
+        .xp-ls:hover{ color:#fff; }
+        .xp-in { width:100%; padding:.8rem 1rem; background:rgba(0,0,0,.35); border:1px solid rgba(230,242,236,.12); border-radius:.45rem; color:#fff; font:inherit; font-size:.95rem; outline:none; transition:.15s; }
+        .xp-in::placeholder{ color:rgba(159,184,174,.5);}
+        .xp-in:focus{ border-color:#c9a84c; box-shadow: 0 0 0 3px rgba(201,168,76,.15);}
+        .xp-sub { width:100%; padding:.9rem; background:#c9a84c; color:#0b1f1a; font:inherit; font-weight:700; font-size:.95rem; border:0; border-radius:.45rem; cursor:pointer; margin-top:.4rem; transition:.2s; }
+        .xp-sub:hover:not(:disabled){ background:#d9ba5e; }
+        .xp-sub:disabled{ opacity:.6; cursor:not-allowed; }
+        .xp-dv { position:relative; margin:1.25rem 0; text-align:center; }
+        .xp-dv::before{ content:''; position:absolute; top:50%; left:0; right:0; height:1px; background:rgba(230,242,236,.1);}
+        .xp-dv span{ position:relative; background:#0a2620; padding:0 .75rem; color:#9fb8ae; font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; font-weight:600;}
+        .xp-g { width:100%; padding:.8rem; background:rgba(0,0,0,.3); border:1px solid rgba(230,242,236,.12); color:#fff; border-radius:.45rem; font:inherit; font-size:.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.75rem; transition:.15s;}
+        .xp-g:hover{ border-color:#c9a84c;}
+        .xp-ft { margin-top:1.25rem; text-align:center; font-size:.86rem; color:#9fb8ae;}
+        .xp-ft button { background:0; border:0; color:#c9a84c; font-weight:600; cursor:pointer; font-family:inherit;}
+        .xp-al { margin-top:.9rem; padding:.7rem .9rem; font-size:.84rem; border-radius:.4rem; border:1px solid;}
+        .xp-al.e{ background:rgba(220,50,50,.1); color:#fca5a5; border-color:rgba(220,50,50,.3);}
+        .xp-al.o{ background:rgba(92,189,158,.1); color:#7fd4b2; border-color:rgba(92,189,158,.3);}
+        @keyframes xpFade { from{opacity:0;} to{opacity:1;} }
+        @keyframes xpPop { from{opacity:0; transform:scale(.96) translateY(6px);} to{opacity:1; transform:none;} }
       `}</style>
 
-      <main className="fx">
-        <div className="fx-nav-wrap">
-          <nav className="fx-nav">
-            <div className="fx-logo">
-              <span className="fx-logo-mark">E</span>
-              Expert<span className="fx-logo-sub">ERP</span>
-            </div>
-            <a className="fx-nav-home active" href="#">Ana Səhifə</a>
-            <a href="#imkanlar">Həllər</a>
-            <a href="#modullar">Modullar</a>
+      <main className="xp">
+        <header className="xp-top">
+          <div className="xp-brand">
+            <span className="xp-mark">E</span>
+            <div><b>ExERP</b><span> · Studio</span></div>
+          </div>
+          <nav className="xp-links">
+            <a href="#mods">Modullar</a>
+            <a href="#preview">İnteqrasiya</a>
             <a href="#qiymet">Qiymət</a>
             <a href="#elaqe">Əlaqə</a>
-            <div className="fx-nav-cta">
-              <button className="fx-btn-ghost" onClick={() => setAuthOpen(true)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                Daxil ol
-              </button>
-              <button className="fx-btn-primary" onClick={() => setAuthOpen(true)}>
-                Demo Al
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-              </button>
-            </div>
           </nav>
-        </div>
+          <div className="xp-top-cta">
+            <button className="xp-ghost" onClick={() => setAuthOpen(true)}>Daxil ol</button>
+            <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo istə →</button>
+          </div>
+        </header>
 
-        <section className="fx-hero">
-          <div>
-            <div className="fx-chip">Azərbaycan biznesi üçün ERP · Yerli komanda</div>
-            <h1 className="fx-h1">
-              <span className="accent">Azərbaycan biznesi</span> üçün ERP sistemi
-              <br />CRM, anbar, HR və mühasibat bir platformada
-            </h1>
-            <p className="fx-lede">
-              Expert ERP — CRM, maliyyə, anbar, HR və IFRS mühasibatı bir bulud platformasında.
-              Lokal dəstək, e-taxes və e-qaimə inteqrasiyası. 3–7 gündə tətbiq.
-            </p>
-            <div className="fx-actions">
-              <button className="fx-btn-primary" onClick={() => setAuthOpen(true)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>
-                3 Gün Pulsuz Sına
-              </button>
-              <button className="fx-btn-ghost" onClick={() => document.getElementById('modullar')?.scrollIntoView({behavior:'smooth'})}>
-                Bütün Modullara Bax →
-              </button>
-            </div>
-            <div className="fx-check-row">
-              {["3 gün tam giriş","Kart tələb olunmur","3–7 gündə quraşdırma","IFRS uyğun"].map(t => (
-                <span key={t} className="fx-check">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
-                  {t}
-                </span>
-              ))}
-            </div>
+        <section className="xp-hero">
+          <div className="xp-eyebrow"><i/>Azərbaycan biznesi üçün, yerli komanda</div>
+          <h1 className="xp-h1">
+            Bir platforma —<br/>
+            <em>bütün</em> əməliyyatlarınız
+          </h1>
+          <p className="xp-lede">
+            ExERP CRM, satış, anbar, mühasibat və HR modullarını vahid bulud sistemində birləşdirir.
+            IFRS uyğun, e-taxes və e-qaimə inteqrasiyalı, 3–7 gündə hazır.
+          </p>
+          <div className="xp-hero-cta">
+            <button className="xp-cta" onClick={() => setAuthOpen(true)}>3 gün pulsuz sına →</button>
+            <button className="xp-ghost" onClick={() => document.getElementById('mods')?.scrollIntoView({behavior:'smooth'})}>Modullara bax</button>
           </div>
 
-          <div className="fx-mock-wrap" aria-hidden="true">
-            <div className="fx-mock">
-              <div className="fx-mock-head">
-                <div className="fx-dots"><span/><span/><span/></div>
-                <div className="fx-mock-url"/>
+          <div className="xp-metrics">
+            {METRICS.map(m => (
+              <div key={m.l} className="xp-metric"><b>{m.v}</b><span>{m.l}</span></div>
+            ))}
+          </div>
+        </section>
+
+        <section className="xp-sec" id="mods">
+          <div className="xp-sec-h">
+            <div className="xp-sec-lbl">Modullar</div>
+            <h2 className="xp-sec-t">Şirkətinizə lazım olan hər şey</h2>
+          </div>
+          <div className="xp-mods">
+            {MODULES.map(m => (
+              <article key={m.k} className="xp-mod">
+                <div className="xp-mod-i">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={m.i}/></svg>
+                </div>
+                <b>{m.k}</b>
+                <p>{m.d}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="xp-sec" id="preview">
+          <div className="xp-sec-h">
+            <div className="xp-sec-lbl">API · MCP</div>
+            <h2 className="xp-sec-t">Sisteminizlə birbaşa danışın</h2>
+          </div>
+          <div className="xp-term-wrap">
+            <div className="xp-term">
+              <div className="xp-term-h">
+                <span/><span/><span/>
+                <b>exerp · mcp · orders.list</b>
               </div>
-              <div className="fx-mock-body">
-                <div className="fx-kpi-grid">
-                  <div className="fx-kpi">
-                    <div className="fx-kpi-lbl">Gəlir</div>
-                    <div className="fx-kpi-val"><span className="fx-kpi-arrow">▲</span>84,250</div>
-                    <div className="fx-kpi-delta">↑ +12.4%</div>
-                  </div>
-                  <div className="fx-kpi">
-                    <div className="fx-kpi-lbl">Sifarişlər</div>
-                    <div className="fx-kpi-val">142</div>
-                    <div className="fx-kpi-delta">↑ +8.1%</div>
-                  </div>
-                  <div className="fx-kpi">
-                    <div className="fx-kpi-lbl">Müştərilər</div>
-                    <div className="fx-kpi-val blue">328</div>
-                    <div className="fx-kpi-delta">↑ +5.7%</div>
-                  </div>
-                </div>
-                <div className="fx-chart">
-                  {[45,60,40,72,55,90,62,78,50,85,68,95].map((h,i) => (
-                    <span key={i} className={h >= 85 ? "hi" : ""} style={{ height: `${h}%` }} />
-                  ))}
-                </div>
+              <div className="xp-term-body">
+                <div><span className="p">$</span> <span className="c">exerp query</span> <span className="g">"son 7 gündə 10 000 AZN-dən yuxarı sifarişlər"</span></div>
+                <div>&nbsp;</div>
+                <div><span className="m">→</span> 14 nəticə tapıldı · 187 400 AZN cəm</div>
+                <div><span className="m">→</span> INV-1204  ·  12 800 AZN  ·  <span className="g">ödənilib</span></div>
+                <div><span className="m">→</span> INV-1211  ·  18 200 AZN  ·  <span className="g">ödənilib</span></div>
+                <div><span className="m">→</span> INV-1217  ·  22 500 AZN  ·  gözləyir</div>
+                <div>&nbsp;</div>
+                <div><span className="p">$</span> <span className="c">_</span></div>
               </div>
             </div>
           </div>
         </section>
 
+        <section className="xp-cta-band" id="qiymet">
+          <h2>Şirkətinizi rəqəmsallaşdırmağa hazırsınız?</h2>
+          <p>3 günlük tam funksional sınaq. Kart tələb olunmur, quraşdırma bizdən.</p>
+          <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo istə →</button>
+        </section>
+
+        <footer className="xp-foot" id="elaqe">© {new Date().getFullYear()} ExERP · Bakı, Azərbaycan</footer>
+
         {authOpen && (
-          <div className="fx-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setAuthOpen(false); }}>
-            <div className="fx-modal" role="dialog" aria-modal="true">
-              <button className="fx-modal-close" onClick={() => setAuthOpen(false)} aria-label="Bağla">
+          <div className="xp-bd" onClick={(e)=>{ if(e.target===e.currentTarget) setAuthOpen(false);}}>
+            <div className="xp-mod-x" role="dialog" aria-modal="true">
+              <button className="xp-x" onClick={()=>setAuthOpen(false)} aria-label="Bağla">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
-              <h2 className="fx-modal-title">{isSignup ? "Hesab yaradın" : "Xoş gəlmisiniz"}</h2>
-              <p className="fx-modal-sub">
-                {isSignup ? "Expert ERP-ə qoşulmaq üçün məlumatlarınızı daxil edin." : "Sistemə daxil olmaq üçün məlumatlarınızı qeyd edin."}
-              </p>
-
+              <h2 className="xp-mt">{isSignup ? "Hesab yaradın" : "Xoş gəlmisiniz"}</h2>
+              <p className="xp-ms">{isSignup ? "ExERP-ə qoşulmaq üçün məlumatlarınızı daxil edin." : "Sistemə daxil olmaq üçün məlumatlarınızı qeyd edin."}</p>
               <form onSubmit={submit} noValidate>
-                <div className="fx-field">
-                  <div className="fx-label-row"><label className="fx-label" htmlFor="fx-email">Email</label></div>
-                  <input id="fx-email" className="fx-input" required type="email" autoComplete="email" placeholder="ad@sirket.az" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <div className="xp-f">
+                  <div className="xp-lr"><label className="xp-l" htmlFor="xp-e">Email</label></div>
+                  <input id="xp-e" className="xp-in" required type="email" autoComplete="email" placeholder="ad@sirket.az" value={email} onChange={(e)=>setEmail(e.target.value)}/>
                 </div>
-                <div className="fx-field">
-                  <div className="fx-label-row">
-                    <label className="fx-label" htmlFor="fx-pass">Şifrə</label>
-                    {!isSignup && <button type="button" className="fx-link-sm" onClick={forgot}>Şifrəni unutmusunuz?</button>}
+                <div className="xp-f">
+                  <div className="xp-lr">
+                    <label className="xp-l" htmlFor="xp-p">Şifrə</label>
+                    {!isSignup && <button type="button" className="xp-ls" onClick={forgot}>Şifrəni unutmusunuz?</button>}
                   </div>
-                  <input id="fx-pass" className="fx-input" required type="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <input id="xp-p" className="xp-in" required type="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder="••••••••" value={password} onChange={(e)=>setPassword(e.target.value)}/>
                 </div>
-
-                <button disabled={busy} type="submit" className="fx-submit">
-                  {busy ? "Gözləyin..." : isSignup ? "Qeydiyyatdan keç" : "Daxil ol"}
-                </button>
+                <button disabled={busy} type="submit" className="xp-sub">{busy ? "Gözləyin..." : isSignup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
               </form>
-
-              <div className="fx-divider"><span>və ya</span></div>
-
-              <button type="button" onClick={google} className="fx-google">
+              <div className="xp-dv"><span>və ya</span></div>
+              <button type="button" onClick={google} className="xp-g">
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -293,13 +328,11 @@ export default function Login() {
                 </svg>
                 Google ilə davam et
               </button>
-
-              {error && <div className="fx-alert err">{error}</div>}
-              {info && <div className="fx-alert ok">{info}</div>}
-
-              <p className="fx-foot">
+              {error && <div className="xp-al e">{error}</div>}
+              {info && <div className="xp-al o">{info}</div>}
+              <p className="xp-ft">
                 {isSignup ? "Artıq hesabınız var? " : "Hesabınız yoxdur? "}
-                <button type="button" onClick={() => { setMode(isSignup ? "signin" : "signup"); setError(null); setInfo(null); }}>
+                <button type="button" onClick={()=>{ setMode(isSignup?"signin":"signup"); setError(null); setInfo(null);}}>
                   {isSignup ? "Daxil olun" : "Qeydiyyatdan keçin"}
                 </button>
               </p>
