@@ -41,7 +41,12 @@ export default function TenantBootstrap() {
     }
     setBusy(false);
     logger.error("create_tenant failed", { message: lastError?.message });
-    setError(lastError?.message || "Xəta baş verdi");
+    const msg = lastError?.message || "";
+    if (/forbidden/i.test(msg)) {
+      setError("İcazə yoxdur: yalnız platform administratoru yeni şirkət yarada bilər.");
+    } else {
+      setError(msg || "Xəta baş verdi");
+    }
   }
 
   // Regular users (company admins/members without a tenant assignment yet)
