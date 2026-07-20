@@ -31,7 +31,7 @@ export default function TenantSwitcher() {
   if (!memberships.length) return null;
 
   return (
-    <div style={{ position: "fixed", top: 14, right: 16, zIndex: 40, fontFamily: "Manrope, system-ui" }}>
+    <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 40, fontFamily: "Manrope, system-ui" }}>
       <button onClick={() => setOpen(!open)} style={btn}>
         🏢 {active?.tenants?.name || "Şirkət"}
         {active?.role && <span style={roleBadge}>{roleLabel(active.role)}</span>}
