@@ -10711,6 +10711,23 @@ function PlatformAdminPage() {
           </div>
         </form>
         {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
+        {credential && (
+          <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: "#e6f4ef", border: "1px solid #0d7a5f" }}>
+            <div style={{ fontWeight: 700, color: "#064e3b", marginBottom: 6 }}>Admin girişi yaradıldı</div>
+            <div style={{ fontSize: 13, color: "#0f2a20" }}>Bu məlumatı admin ilə paylaşın — bu pəncərəni bağladıqdan sonra parolu yenidən görə bilməyəcəksiniz.</div>
+            <div style={{ marginTop: 8, display: "grid", gap: 4, fontFamily: "monospace", fontSize: 14 }}>
+              <div><strong>E-poçt:</strong> {credential.email}</div>
+              <div><strong>Müvəqqəti parol:</strong> {credential.password}</div>
+            </div>
+            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+              <button type="button" className="secondary-btn"
+                onClick={() => navigator.clipboard?.writeText(`${credential.email} / ${credential.password}`)}>
+                Kopyala
+              </button>
+              <button type="button" className="link-btn" onClick={() => setCredential(null)}>Bağla</button>
+            </div>
+          </div>
+        )}
       </Panel>
 
       <Panel>
