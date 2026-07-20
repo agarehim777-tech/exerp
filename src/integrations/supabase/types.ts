@@ -924,6 +924,21 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string
@@ -1502,29 +1517,73 @@ export type Database = {
           },
         ]
       }
+      tenant_modules: {
+        Row: {
+          module: string
+          tenant_id: string
+        }
+        Insert: {
+          module: string
+          tenant_id: string
+        }
+        Update: {
+          module?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
           created_by: string
+          deleted_at: string | null
+          expires_at: string | null
+          frozen_at: string | null
           id: string
+          max_users: number
           name: string
+          notes: string | null
+          plan_name: string
           slug: string
+          status: Database["public"]["Enums"]["tenant_status"]
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          deleted_at?: string | null
+          expires_at?: string | null
+          frozen_at?: string | null
           id?: string
+          max_users?: number
           name: string
+          notes?: string | null
+          plan_name?: string
           slug: string
+          status?: Database["public"]["Enums"]["tenant_status"]
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
+          expires_at?: string | null
+          frozen_at?: string | null
           id?: string
+          max_users?: number
           name?: string
+          notes?: string | null
+          plan_name?: string
           slug?: string
+          status?: Database["public"]["Enums"]["tenant_status"]
           updated_at?: string
         }
         Relationships: []
@@ -1804,6 +1863,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant: string; _user: string }
         Returns: boolean
@@ -1811,6 +1871,61 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant: string; _user: string }
         Returns: boolean
+      }
+      platform_bootstrap_admin: { Args: never; Returns: boolean }
+      platform_create_tenant: {
+        Args: {
+          _admin_email?: string
+          _expires_at?: string
+          _max_users?: number
+          _modules?: string[]
+          _name: string
+          _notes?: string
+          _plan?: string
+          _slug: string
+        }
+        Returns: string
+      }
+      platform_delete_tenant: { Args: { _tenant: string }; Returns: undefined }
+      platform_list_tenants: {
+        Args: never
+        Returns: {
+          created_at: string
+          deleted_at: string
+          expires_at: string
+          frozen_at: string
+          id: string
+          max_users: number
+          member_count: number
+          modules: string[]
+          name: string
+          notes: string
+          plan_name: string
+          slug: string
+          status: Database["public"]["Enums"]["tenant_status"]
+        }[]
+      }
+      platform_set_tenant_modules: {
+        Args: { _modules: string[]; _tenant: string }
+        Returns: undefined
+      }
+      platform_set_tenant_status: {
+        Args: {
+          _status: Database["public"]["Enums"]["tenant_status"]
+          _tenant: string
+        }
+        Returns: undefined
+      }
+      platform_update_tenant: {
+        Args: {
+          _expires_at?: string
+          _max_users?: number
+          _name?: string
+          _notes?: string
+          _plan?: string
+          _tenant: string
+        }
+        Returns: undefined
       }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
@@ -1862,6 +1977,7 @@ export type Database = {
         | "shipped"
         | "delivered"
         | "cancelled"
+      tenant_status: "active" | "frozen" | "deleted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2017,6 +2133,7 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
+      tenant_status: ["active", "frozen", "deleted"],
     },
   },
 } as const
