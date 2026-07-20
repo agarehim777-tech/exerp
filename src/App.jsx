@@ -10482,113 +10482,248 @@ function slugifyPlatform(s) {
     .slice(0, 48);
 }
 
+const PLATFORM_PLANS = ["starter", "business", "enterprise"];
+const PLATFORM_MODULE_CHOICES = navItems
+  .filter((n) => !["platform"].includes(n.id))
+  .map((n) => ({ id: n.id, label: n.label }));
+
 function PlatformAdminPage() {
   const { user, refresh: refreshAuth } = useAuth();
-  const [companies, setCompanies] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "" });
+  const [editing, setEditing] = useState(null); // tenant obj or null
+  const emptyForm = {
+    name: "", slug: "", admin_email: "", max_users: 10,
+    plan_name: "starter", expires_at: "", notes: "",
+    modules: PLATFORM_MODULE_CHOICES.map((m) => m.id),
+  };
+  const [form, setForm] = useState(emptyForm);
 
-  async function refreshCompanies() {
+  const checkAdmin = useCallback(async () => {
     if (!user?.id) return;
-    setLoading(true);
-    try {
-      const { data, error: err } = await supabase
-        .from("tenant_members")
-        .select("role, tenants:tenant_id(id, name, slug, created_at)")
-        .eq("user_id", user.id);
-      if (err) throw err;
-      setCompanies((data || []).map((m) => ({ ...m.tenants, role: m.role })).filter(Boolean));
-      setError("");
-    } catch (e) {
-      setError(e?.message || "Şirkətlər yüklənmədi.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    refreshCompanies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const { data } = await supabase.from("platform_admins").select("user_id").eq("user_id", user.id).maybeSingle();
+    setIsAdmin(!!data);
+    setChecked(true);
   }, [user?.id]);
 
-  async function submit(event) {
-    event.preventDefault();
-    setError("");
+  const refreshTenants = useCallback(async () => {
+    setLoading(true);
+    const { data, error: err } = await supabase.rpc("platform_list_tenants");
+    if (err) setError(err.message);
+    else { setTenants(data || []); setError(""); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { checkAdmin(); }, [checkAdmin]);
+  useEffect(() => { if (isAdmin) refreshTenants(); }, [isAdmin, refreshTenants]);
+
+  async function bootstrap() {
     setBusy(true);
-    const name = form.name.trim();
-    const base = (form.slug || slugifyPlatform(name) || "sirket").slice(0, 40);
-    let finalSlug = base;
-    let lastError = null;
-    for (let i = 0; i < 4; i++) {
-      const { error: rpcErr } = await supabase.rpc("create_tenant", { _name: name, _slug: finalSlug });
-      if (!rpcErr) {
-        setForm({ name: "", slug: "" });
-        await refreshCompanies();
-        await refreshAuth?.();
-        setBusy(false);
-        return;
-      }
-      lastError = rpcErr;
-      const isDup = rpcErr.code === "23505" || /duplicate|tenants_slug_key/i.test(rpcErr.message || "");
-      if (!isDup) break;
-      finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
-    }
+    const { error: err } = await supabase.rpc("platform_bootstrap_admin");
     setBusy(false);
-    setError(lastError?.message || "Şirkət yaradılmadı.");
+    if (err) return setError(err.message);
+    await checkAdmin();
   }
 
-  async function archiveCompany(company) {
-    if (!window.confirm(`${company.name} şirkətini silmək istəyirsiniz?`)) return;
-    const { error: delErr } = await supabase.from("tenants").delete().eq("id", company.id);
-    if (delErr) { setError(delErr.message); return; }
-    await refreshCompanies();
+  function toggleModule(id) {
+    setForm((f) => ({
+      ...f,
+      modules: f.modules.includes(id) ? f.modules.filter((m) => m !== id) : [...f.modules, id],
+    }));
+  }
+
+  function startEdit(t) {
+    setEditing(t);
+    setForm({
+      name: t.name || "",
+      slug: t.slug || "",
+      admin_email: "",
+      max_users: t.max_users ?? 10,
+      plan_name: t.plan_name || "starter",
+      expires_at: t.expires_at || "",
+      notes: t.notes || "",
+      modules: t.modules?.length ? t.modules : PLATFORM_MODULE_CHOICES.map((m) => m.id),
+    });
+  }
+  function cancelEdit() { setEditing(null); setForm(emptyForm); }
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(""); setBusy(true);
+    try {
+      if (editing) {
+        const { error: e1 } = await supabase.rpc("platform_update_tenant", {
+          _tenant: editing.id, _name: form.name.trim(),
+          _max_users: Number(form.max_users) || 10,
+          _plan: form.plan_name, _expires_at: form.expires_at || null,
+          _notes: form.notes || null,
+        });
+        if (e1) throw e1;
+        const { error: e2 } = await supabase.rpc("platform_set_tenant_modules", {
+          _tenant: editing.id, _modules: form.modules,
+        });
+        if (e2) throw e2;
+      } else {
+        const base = (form.slug || slugifyPlatform(form.name) || "sirket").slice(0, 40);
+        let finalSlug = base; let lastErr = null;
+        for (let i = 0; i < 4; i++) {
+          const { error: rpcErr } = await supabase.rpc("platform_create_tenant", {
+            _name: form.name.trim(), _slug: finalSlug,
+            _max_users: Number(form.max_users) || 10,
+            _plan: form.plan_name, _modules: form.modules,
+            _expires_at: form.expires_at || null, _notes: form.notes || null,
+            _admin_email: form.admin_email.trim() || null,
+          });
+          if (!rpcErr) { lastErr = null; break; }
+          lastErr = rpcErr;
+          const dup = rpcErr.code === "23505" || /duplicate|tenants_slug_key/i.test(rpcErr.message || "");
+          if (!dup) break;
+          finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+        if (lastErr) throw lastErr;
+      }
+      cancelEdit();
+      await refreshTenants();
+      await refreshAuth?.();
+    } catch (err) {
+      setError(err?.message || "Əməliyyat alınmadı.");
+    } finally { setBusy(false); }
+  }
+
+  async function setStatus(t, status) {
+    if (status === "frozen" && !window.confirm(`${t.name} şirkəti dondurulsun?`)) return;
+    if (status === "active" && !window.confirm(`${t.name} şirkəti aktivləşdirilsin?`)) return;
+    const { error: err } = await supabase.rpc("platform_set_tenant_status", { _tenant: t.id, _status: status });
+    if (err) return setError(err.message);
+    await refreshTenants();
+  }
+  async function deleteTenant(t) {
+    if (!window.confirm(`${t.name} şirkəti və bütün məlumatları silinsin? Bu əməliyyat geri qaytarılmır.`)) return;
+    const { error: err } = await supabase.rpc("platform_delete_tenant", { _tenant: t.id });
+    if (err) return setError(err.message);
+    await refreshTenants();
     await refreshAuth?.();
+  }
+
+  if (!checked) return <p className="muted">Yüklənir…</p>;
+  if (!isAdmin) {
+    return (
+      <Panel>
+        <PanelHeader title="Platform Super Admin" subtitle="Bu bölmə yalnız platform administratorları üçündür." />
+        <p className="muted" style={{ marginBottom: 12 }}>
+          Hələ heç bir platform admin təyin edilməyib. İlk admin kimi özünüzü təyin edin.
+        </p>
+        <button type="button" className="primary-btn" onClick={bootstrap} disabled={busy}>
+          {busy ? "Təyin olunur…" : "Məni platform admin təyin et"}
+        </button>
+        {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
+      </Panel>
+    );
   }
 
   return (
     <div className="page-grid">
       <Panel>
-        <PanelHeader title="Yeni şirkət" subtitle="Şirkət adını daxil edin — siz onun sahibi (owner) olacaqsınız." />
-        <form className="form-grid" onSubmit={submit}>
-          <label className="field">
-            <span>Şirkət adı</span>
-            <input
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value, slug: form.slug || slugifyPlatform(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Slug (URL adı)</span>
-            <input
-              placeholder="avto yaradılır"
-              value={form.slug}
-              onChange={(e) => setForm({ ...form, slug: slugifyPlatform(e.target.value) })}
-            />
-          </label>
+        <PanelHeader
+          title={editing ? `Şirkəti redaktə et — ${editing.name}` : "Yeni şirkət yarat"}
+          subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin dəvəti."}
+          action={editing ? <button type="button" className="secondary-btn" onClick={cancelEdit}>Ləğv et</button> : null}
+        />
+        <form className="form-grid" onSubmit={submit} style={{ gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label className="field">
+              <span>Şirkət adı *</span>
+              <input required value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value, slug: editing ? form.slug : (form.slug || slugifyPlatform(e.target.value)) })} />
+            </label>
+            <label className="field">
+              <span>Slug</span>
+              <input disabled={!!editing} value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: slugifyPlatform(e.target.value) })} placeholder="avto" />
+            </label>
+            {!editing && (
+              <label className="field" style={{ gridColumn: "1 / -1" }}>
+                <span>Admin e-poçtu (dəvət göndəriləcək)</span>
+                <input type="email" value={form.admin_email}
+                  onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
+                  placeholder="admin@sirket.az" />
+              </label>
+            )}
+            <label className="field">
+              <span>Maks. istifadəçi</span>
+              <input type="number" min="1" value={form.max_users}
+                onChange={(e) => setForm({ ...form, max_users: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Plan</span>
+              <select value={form.plan_name} onChange={(e) => setForm({ ...form, plan_name: e.target.value })}>
+                {PLATFORM_PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>Bitmə tarixi</span>
+              <input type="date" value={form.expires_at || ""}
+                onChange={(e) => setForm({ ...form, expires_at: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Qeyd</span>
+              <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </label>
+          </div>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>İcazə verilən modullar ({form.modules.length}/{PLATFORM_MODULE_CHOICES.length})</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" className="link-btn" onClick={() => setForm({ ...form, modules: PLATFORM_MODULE_CHOICES.map((m) => m.id) })}>Hamısı</button>
+                <button type="button" className="link-btn" onClick={() => setForm({ ...form, modules: [] })}>Heç biri</button>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 6, padding: 10, border: "1px solid #e6dfc9", borderRadius: 10, maxHeight: 220, overflowY: "auto", background: "#fafaf5" }}>
+              {PLATFORM_MODULE_CHOICES.map((m) => (
+                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.modules.includes(m.id)} onChange={() => toggleModule(m.id)} />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="form-actions">
             <button type="submit" className="primary-btn" disabled={busy || !form.name.trim()}>
-              {busy ? "Yaradılır…" : "Şirkət yarat"}
+              {busy ? "Saxlanılır…" : (editing ? "Yadda saxla" : "Şirkət yarat")}
             </button>
           </div>
         </form>
-        {error ? <div className="form-error">{error}</div> : null}
+        {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
       </Panel>
+
       <Panel>
-        <PanelHeader title="Şirkətləriniz" subtitle={`${companies.length} tenant`} action={<button type="button" className="secondary-btn" onClick={refreshCompanies}>Yenilə</button>} />
-        {loading ? <p className="muted">Yüklənir...</p> : (
+        <PanelHeader
+          title="Bütün şirkətlər"
+          subtitle={`${tenants.length} tenant`}
+          action={<button type="button" className="secondary-btn" onClick={refreshTenants}>Yenilə</button>}
+        />
+        {loading ? <p className="muted">Yüklənir…</p> : (
           <DataTable
-            columns={["Şirkət", "Slug", "Rol", "Əməliyyat"]}
-            rows={companies.map((c) => [
-              <TwoLine title={c.name} subtitle={c.id?.slice(0, 8)} />,
-              c.slug,
-              <StatusBadge status={c.role} />,
-              <div className="table-actions">
-                <button type="button" className="icon-btn danger" title="Sil" disabled={c.role !== "owner"} onClick={() => archiveCompany(c)}>
-                  <Trash2 size={15} />
-                </button>
+            columns={["Şirkət", "Plan", "Status", "İstifadəçi", "Bitmə", "Modullar", "Əməliyyat"]}
+            rows={tenants.map((t) => [
+              <TwoLine title={t.name} subtitle={t.slug} />,
+              t.plan_name,
+              <StatusBadge status={t.status === "active" ? "Aktiv" : t.status === "frozen" ? "Dondurulub" : "Silinib"} />,
+              `${t.member_count}/${t.max_users}`,
+              t.expires_at || "—",
+              `${(t.modules || []).length}/${PLATFORM_MODULE_CHOICES.length}`,
+              <div className="table-actions" style={{ display: "flex", gap: 4 }}>
+                <button type="button" className="icon-btn" title="Redaktə" onClick={() => startEdit(t)}><Pencil size={14} /></button>
+                {t.status === "active" ? (
+                  <button type="button" className="icon-btn" title="Dondur" onClick={() => setStatus(t, "frozen")}>❄</button>
+                ) : (
+                  <button type="button" className="icon-btn" title="Aktivləşdir" onClick={() => setStatus(t, "active")}>▶</button>
+                )}
+                <button type="button" className="icon-btn danger" title="Sil" onClick={() => deleteTenant(t)}><Trash2 size={14} /></button>
               </div>,
             ])}
           />
