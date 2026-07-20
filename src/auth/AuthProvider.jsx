@@ -8,21 +8,26 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [memberships, setMemberships] = useState([]);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async (uid) => {
     if (!uid) {
       setProfile(null);
       setMemberships([]);
+      setIsPlatformAdmin(false);
       return;
     }
-    const [{ data: prof }, { data: mem }] = await Promise.all([
+    const [{ data: prof }, { data: mem }, { data: pa }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
       supabase.from("tenant_members").select("id, tenant_id, role, tenants(id,name,slug)").eq("user_id", uid),
+      supabase.from("platform_admins").select("user_id").eq("user_id", uid).maybeSingle(),
     ]);
     setProfile(prof ?? null);
     setMemberships(mem ?? []);
+    setIsPlatformAdmin(!!pa);
   }, []);
+
 
   useEffect(() => {
     // Register listener FIRST, then fetch initial session (recommended pattern)
@@ -60,6 +65,7 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setProfile(null);
     setMemberships([]);
+    setIsPlatformAdmin(false);
   }, []);
 
   const value = useMemo(
@@ -68,6 +74,7 @@ export function AuthProvider({ children }) {
       user: session?.user ?? null,
       profile,
       memberships,
+      isPlatformAdmin,
       activeTenantId: profile?.active_tenant_id ?? null,
       activeMembership: memberships.find((m) => m.tenant_id === profile?.active_tenant_id) ?? null,
       loading,
@@ -75,11 +82,12 @@ export function AuthProvider({ children }) {
       setActiveTenant,
       signOut,
     }),
-    [session, profile, memberships, loading, refresh, setActiveTenant, signOut],
+    [session, profile, memberships, isPlatformAdmin, loading, refresh, setActiveTenant, signOut],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
+
 
 export function useAuth() {
   const ctx = useContext(AuthCtx);

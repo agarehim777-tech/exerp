@@ -4784,7 +4784,7 @@ function userHasEffectivePermission(user, roles, permission) {
 
 function App() {
   const [state, setState] = useState(() => loadPersistentState());
-  const { activeTenantId } = useAuth();
+  const { activeTenantId, isPlatformAdmin } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
@@ -4865,14 +4865,16 @@ function App() {
   const { can: dbCan, role: dbRole } = usePermissions();
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
-      if (item.id === "platform") return true;
+      // "Şirkətlər" (platform) is only for super-admins
+      if (item.id === "platform") return isPlatformAdmin;
       if (item.id === "roles") return dbRole === "owner" || dbRole === "admin";
       const legacyOk = canAccessNavItem(state.settings, item.id);
       const dbOk = dbRole ? dbCan(item.id, "view") : true;
       return legacyOk && dbOk;
     }),
-    [state.settings, remoteUser?.role, dbRole, dbCan],
+    [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
   );
+
   const receivableRows = useMemo(
     () =>
       buildReceivableRows({
@@ -9736,7 +9738,7 @@ function App() {
           onLogin={loginUser}
           onLogout={logoutUser}
           canSwitchUser={!remoteApiEnabled}
-          gitHubSync={gitHubSync}
+          gitHubSync={isPlatformAdmin ? gitHubSync : null}
         />
 
         <main className="main">
@@ -10338,24 +10340,27 @@ function Topbar({
           <Bell size={20} />
           <span className="counter danger">{unread}</span>
         </button>
-        <div
-          className="sync-pill"
-          title={
-            gitHubSync?.lastCommit
-              ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
-              : gitHubSync?.error || "GitHub sync status"
-          }
-        >
-          <GitBranch size={16} />
-          <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
-          <span className="sync-label">
-            {gitHubSync?.status === "error"
-              ? "Sync xətası"
-              : gitHubSync?.lastSyncAt
-                ? formatTimeAgo(gitHubSync.lastSyncAt)
-                : "Yoxlanır..."}
-          </span>
-        </div>
+        {gitHubSync && (
+          <div
+            className="sync-pill"
+            title={
+              gitHubSync?.lastCommit
+                ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
+                : gitHubSync?.error || "GitHub sync status"
+            }
+          >
+            <GitBranch size={16} />
+            <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
+            <span className="sync-label">
+              {gitHubSync?.status === "error"
+                ? "Sync xətası"
+                : gitHubSync?.lastSyncAt
+                  ? formatTimeAgo(gitHubSync.lastSyncAt)
+                  : "Yoxlanır..."}
+            </span>
+          </div>
+        )}
+
         <button className="secondary-btn logout-btn" onClick={onLogout}>
           Çıxış
         </button>
