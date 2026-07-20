@@ -10495,6 +10495,7 @@ function PlatformAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [credential, setCredential] = useState(null); // { email, password }
   const [editing, setEditing] = useState(null); // tenant obj or null
   const emptyForm = {
     name: "", slug: "", admin_email: "", max_users: 10,
