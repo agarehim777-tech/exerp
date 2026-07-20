@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule } from "./config/routes.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
+import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
@@ -10471,23 +10472,37 @@ function CompanyModulePicker({ modules, value, onToggle }) {
   );
 }
 
+function slugifyPlatform(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
 function PlatformAdminPage() {
+  const { user, refresh: refreshAuth } = useAuth();
   const [companies, setCompanies] = useState([]);
-  const [availableModules, setAvailableModules] = useState(() => navItems.filter((item) => item.id !== "platform"));
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", slug: "", plan: "Standart", userLimit: 10, moduleAccess: navItems.filter((item) => item.id !== "platform").map((item) => item.id), adminName: "", adminEmail: "", adminPassword: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ name: "", slug: "" });
 
   async function refreshCompanies() {
+    if (!user?.id) return;
     setLoading(true);
     try {
-      const payload = await listRemoteCompanies();
-      setCompanies(payload.companies || []);
-      setAvailableModules(payload.availableModules || navItems.filter((item) => item.id !== "platform"));
+      const { data, error: err } = await supabase
+        .from("tenant_members")
+        .select("role, tenants:tenant_id(id, name, slug, created_at)")
+        .eq("user_id", user.id);
+      if (err) throw err;
+      setCompanies((data || []).map((m) => ({ ...m.tenants, role: m.role })).filter(Boolean));
       setError("");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Şirkətlər yüklənmədi.");
+    } catch (e) {
+      setError(e?.message || "Şirkətlər yüklənmədi.");
     } finally {
       setLoading(false);
     }
@@ -10495,83 +10510,94 @@ function PlatformAdminPage() {
 
   useEffect(() => {
     refreshCompanies();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function submit(event) {
     event.preventDefault();
-    try {
-      await createRemoteCompany(form);
-      setForm({ name: "", slug: "", plan: "Standart", userLimit: 10, moduleAccess: availableModules.map((item) => item.id), adminName: "", adminEmail: "", adminPassword: "" });
-      await refreshCompanies();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Şirkət yaradılmadı.");
+    setError("");
+    setBusy(true);
+    const name = form.name.trim();
+    const base = (form.slug || slugifyPlatform(name) || "sirket").slice(0, 40);
+    let finalSlug = base;
+    let lastError = null;
+    for (let i = 0; i < 4; i++) {
+      const { error: rpcErr } = await supabase.rpc("create_tenant", { _name: name, _slug: finalSlug });
+      if (!rpcErr) {
+        setForm({ name: "", slug: "" });
+        await refreshCompanies();
+        await refreshAuth?.();
+        setBusy(false);
+        return;
+      }
+      lastError = rpcErr;
+      const isDup = rpcErr.code === "23505" || /duplicate|tenants_slug_key/i.test(rpcErr.message || "");
+      if (!isDup) break;
+      finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
     }
-  }
-
-  function toggleModule(target, moduleId, setter) {
-    const current = target.moduleAccess || [];
-    setter({ ...target, moduleAccess: current.includes(moduleId) ? current.filter((id) => id !== moduleId) : [...current, moduleId] });
-  }
-
-  async function saveCompany(event) {
-    event.preventDefault();
-    if (!editing) return;
-    try {
-      await updateRemoteCompany(editing.id, editing);
-      setEditing(null);
-      await refreshCompanies();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Şirkət yenilənmədi.");
-    }
-  }
-
-  async function toggleCompanyStatus(company) {
-    try {
-      await updateRemoteCompany(company.id, { status: company.status === "Aktiv" ? "Dondurulub" : "Aktiv" });
-      await refreshCompanies();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Şirkət statusu dəyişmədi.");
-    }
+    setBusy(false);
+    setError(lastError?.message || "Şirkət yaradılmadı.");
   }
 
   async function archiveCompany(company) {
-    if (!window.confirm(`${company.name} şirkətini silinmiş kimi arxivləmək istəyirsiniz? İstifadəçilərin sessiyaları bağlanacaq.`)) return;
-    try {
-      await deleteRemoteCompany(company.id);
-      if (editing?.id === company.id) setEditing(null);
-      await refreshCompanies();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Şirkət silinmədi.");
-    }
+    if (!window.confirm(`${company.name} şirkətini silmək istəyirsiniz?`)) return;
+    const { error: delErr } = await supabase.from("tenants").delete().eq("id", company.id);
+    if (delErr) { setError(delErr.message); return; }
+    await refreshCompanies();
+    await refreshAuth?.();
   }
 
   return (
     <div className="page-grid">
-          <Panel>
-            <PanelHeader title="Yeni şirkət" subtitle="Şirkət və onun ilk administrator hesabını birlikdə yaradın." />
-            <form className="form-grid" onSubmit={submit}>
-              <label className="field"><span>Şirkət adı</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-              <label className="field"><span>Slug</span><input placeholder="avto yaradılır" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} /></label>
-              <label className="field"><span>Tarif</span><select value={form.plan} onChange={(event) => setForm({ ...form, plan: event.target.value })}><option>Standart</option><option>Premium</option><option>Enterprise</option></select></label>
-              <label className="field"><span>İstifadəçi limiti</span><input required type="number" min="1" max="10000" value={form.userLimit} onChange={(event) => setForm({ ...form, userLimit: Number(event.target.value) })} /></label>
-              <label className="field"><span>Şirkət admininin adı</span><input required value={form.adminName} onChange={(event) => setForm({ ...form, adminName: event.target.value })} /></label>
-              <label className="field"><span>Admin email</span><input required type="email" value={form.adminEmail} onChange={(event) => setForm({ ...form, adminEmail: event.target.value })} /></label>
-              <label className="field"><span>İlkin parol</span><input required type="password" minLength={8} value={form.adminPassword} onChange={(event) => setForm({ ...form, adminPassword: event.target.value })} /></label>
-              <div className="field full company-module-field"><span>Veriləcək modullar</span><p>Şirkətin istifadə edə biləcəyi funksiyaları seçin. İdarəetmə paneli bütün paketlərdə məcburidir.</p><CompanyModulePicker modules={availableModules} value={form.moduleAccess || []} onToggle={(moduleId) => toggleModule(form, moduleId, setForm)} /></div>
-              <div className="form-actions"><button type="submit" className="primary-btn">Şirkət yarat</button></div>
-            </form>
-            {error ? <div className="form-error">{error}</div> : null}
-          </Panel>
-          <Panel>
-            <PanelHeader title="Şirkətlər" subtitle={`${companies.length} tenant`} action={<button type="button" className="secondary-btn" onClick={refreshCompanies}>Yenilə</button>} />
-            {loading ? <p className="muted">Yüklənir...</p> : (
-              <DataTable columns={["Şirkət", "Tarif", "Modul", "İstifadəçi", "Status", "Əməliyyat"]} rows={companies.map((company) => [<TwoLine title={company.name} subtitle={company.slug} />, company.plan, `${(company.module_access || []).length} modul`, `${company.user_count} / ${company.user_limit}`, <StatusBadge status={company.status} />, <div className="table-actions"><button type="button" className="icon-btn" title="Düzəliş" onClick={() => setEditing({ ...company, moduleAccess: company.module_access || [] })}><Pencil size={15} /></button><button type="button" className="secondary-btn" disabled={company.id === "CMP-DEFAULT" || company.status === "Silinib"} onClick={() => toggleCompanyStatus(company)}>{company.status === "Aktiv" ? "Dondur" : "Aktiv et"}</button><button type="button" className="icon-btn danger" title="Sil" disabled={company.id === "CMP-DEFAULT" || company.status === "Silinib"} onClick={() => archiveCompany(company)}><Trash2 size={15} /></button></div>])} />
-            )}
-          </Panel>
-          {editing ? <Panel><PanelHeader title="Şirkət düzəlişi" subtitle={`${editing.name} · limit və modul paketi`} /><form className="form-grid" onSubmit={saveCompany}><label className="field"><span>Şirkət adı</span><input required value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} /></label><label className="field"><span>Slug</span><input required value={editing.slug} onChange={(event) => setEditing({ ...editing, slug: event.target.value })} /></label><label className="field"><span>Tarif</span><select value={editing.plan} onChange={(event) => setEditing({ ...editing, plan: event.target.value })}><option>Standart</option><option>Premium</option><option>Enterprise</option></select></label><label className="field"><span>İstifadəçi limiti</span><input type="number" min="1" max="10000" value={editing.user_limit} onChange={(event) => setEditing({ ...editing, user_limit: Number(event.target.value), userLimit: Number(event.target.value) })} /></label><div className="field full company-module-field"><span>Modul paketi</span><p>Şirkətin aktiv modul paketini yeniləyin.</p><CompanyModulePicker modules={availableModules} value={editing.moduleAccess || []} onToggle={(moduleId) => toggleModule(editing, moduleId, setEditing)} /></div><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setEditing(null)}>Ləğv et</button><button type="submit" className="primary-btn">Yadda saxla</button></div></form></Panel> : null}
+      <Panel>
+        <PanelHeader title="Yeni şirkət" subtitle="Şirkət adını daxil edin — siz onun sahibi (owner) olacaqsınız." />
+        <form className="form-grid" onSubmit={submit}>
+          <label className="field">
+            <span>Şirkət adı</span>
+            <input
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value, slug: form.slug || slugifyPlatform(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Slug (URL adı)</span>
+            <input
+              placeholder="avto yaradılır"
+              value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: slugifyPlatform(e.target.value) })}
+            />
+          </label>
+          <div className="form-actions">
+            <button type="submit" className="primary-btn" disabled={busy || !form.name.trim()}>
+              {busy ? "Yaradılır…" : "Şirkət yarat"}
+            </button>
+          </div>
+        </form>
+        {error ? <div className="form-error">{error}</div> : null}
+      </Panel>
+      <Panel>
+        <PanelHeader title="Şirkətləriniz" subtitle={`${companies.length} tenant`} action={<button type="button" className="secondary-btn" onClick={refreshCompanies}>Yenilə</button>} />
+        {loading ? <p className="muted">Yüklənir...</p> : (
+          <DataTable
+            columns={["Şirkət", "Slug", "Rol", "Əməliyyat"]}
+            rows={companies.map((c) => [
+              <TwoLine title={c.name} subtitle={c.id?.slice(0, 8)} />,
+              c.slug,
+              <StatusBadge status={c.role} />,
+              <div className="table-actions">
+                <button type="button" className="icon-btn danger" title="Sil" disabled={c.role !== "owner"} onClick={() => archiveCompany(c)}>
+                  <Trash2 size={15} />
+                </button>
+              </div>,
+            ])}
+          />
+        )}
+      </Panel>
     </div>
   );
 }
+
 
 function LoginScreen({ users = [], roles = [], onLogin, authMode = "local", onPasswordLogin, isLoading = false, authError = "" }) {
   const activeUsers = users.filter((user) => user.status === "Aktiv");
