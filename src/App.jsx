@@ -10495,6 +10495,7 @@ function PlatformAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [credential, setCredential] = useState(null); // { email, password }
   const [editing, setEditing] = useState(null); // tenant obj or null
   const emptyForm = {
     name: "", slug: "", admin_email: "", max_users: 10,
@@ -10569,22 +10570,34 @@ function PlatformAdminPage() {
         if (e2) throw e2;
       } else {
         const base = (form.slug || slugifyPlatform(form.name) || "sirket").slice(0, 40);
-        let finalSlug = base; let lastErr = null;
+        let finalSlug = base; let lastErr = null; let createdTenantId = null;
         for (let i = 0; i < 4; i++) {
-          const { error: rpcErr } = await supabase.rpc("platform_create_tenant", {
+          const { data: newId, error: rpcErr } = await supabase.rpc("platform_create_tenant", {
             _name: form.name.trim(), _slug: finalSlug,
             _max_users: Number(form.max_users) || 10,
             _plan: form.plan_name, _modules: form.modules,
             _expires_at: form.expires_at || null, _notes: form.notes || null,
-            _admin_email: form.admin_email.trim() || null,
+            _admin_email: null,
           });
-          if (!rpcErr) { lastErr = null; break; }
+          if (!rpcErr) { lastErr = null; createdTenantId = newId; break; }
           lastErr = rpcErr;
           const dup = rpcErr.code === "23505" || /duplicate|tenants_slug_key/i.test(rpcErr.message || "");
           if (!dup) break;
           finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
         }
         if (lastErr) throw lastErr;
+
+        const adminEmail = form.admin_email.trim();
+        if (createdTenantId && adminEmail) {
+          const { data: prov, error: provErr } = await supabase.functions.invoke(
+            "platform-provision-admin",
+            { body: { tenant_id: createdTenantId, email: adminEmail, role: "admin" } },
+          );
+          if (provErr || prov?.error) {
+            throw new Error(provErr?.message || prov?.error || "Admin yaradıla bilmədi");
+          }
+          setCredential({ email: prov.email, password: prov.password });
+        }
       }
       cancelEdit();
       await refreshTenants();
@@ -10630,7 +10643,7 @@ function PlatformAdminPage() {
       <Panel>
         <PanelHeader
           title={editing ? `Şirkəti redaktə et — ${editing.name}` : "Yeni şirkət yarat"}
-          subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin dəvəti."}
+          subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin — müvəqqəti parol yaradılır."}
           action={editing ? <button type="button" className="secondary-btn" onClick={cancelEdit}>Ləğv et</button> : null}
         />
         <form className="form-grid" onSubmit={submit} style={{ gap: 12 }}>
@@ -10647,7 +10660,7 @@ function PlatformAdminPage() {
             </label>
             {!editing && (
               <label className="field" style={{ gridColumn: "1 / -1" }}>
-                <span>Admin e-poçtu (dəvət göndəriləcək)</span>
+                <span>Admin e-poçtu (müvəqqəti parol yaradılacaq)</span>
                 <input type="email" value={form.admin_email}
                   onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
                   placeholder="admin@sirket.az" />
@@ -10698,6 +10711,23 @@ function PlatformAdminPage() {
           </div>
         </form>
         {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
+        {credential && (
+          <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: "#e6f4ef", border: "1px solid #0d7a5f" }}>
+            <div style={{ fontWeight: 700, color: "#064e3b", marginBottom: 6 }}>Admin girişi yaradıldı</div>
+            <div style={{ fontSize: 13, color: "#0f2a20" }}>Bu məlumatı admin ilə paylaşın — bu pəncərəni bağladıqdan sonra parolu yenidən görə bilməyəcəksiniz.</div>
+            <div style={{ marginTop: 8, display: "grid", gap: 4, fontFamily: "monospace", fontSize: 14 }}>
+              <div><strong>E-poçt:</strong> {credential.email}</div>
+              <div><strong>Müvəqqəti parol:</strong> {credential.password}</div>
+            </div>
+            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+              <button type="button" className="secondary-btn"
+                onClick={() => navigator.clipboard?.writeText(`${credential.email} / ${credential.password}`)}>
+                Kopyala
+              </button>
+              <button type="button" className="link-btn" onClick={() => setCredential(null)}>Bağla</button>
+            </div>
+          </div>
+        )}
       </Panel>
 
       <Panel>
