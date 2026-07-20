@@ -114,11 +114,12 @@ export default function Login() {
         .xp-links a { color:#9fb8ae; text-decoration:none; font-size:.86rem; font-weight:500; padding:.5rem .85rem; border-radius:.4rem; transition:.15s; }
         .xp-links a:hover { color:#fff; background: rgba(255,255,255,.04); }
         .xp-top-cta { display:flex; gap:.5rem; align-items:center; }
-        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; transition:.15s; }
+        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; transition:.15s; white-space:nowrap; }
         .xp-ghost:hover { border-color:#c9a84c; color:#c9a84c; }
-        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6);}
+        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:.86rem; font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6); white-space:nowrap;}
         .xp-cta:hover { background:#d9ba5e; transform: translateY(-1px); }
         @media(max-width:900px){ .xp-links{ display:none;} .xp-top{padding:1rem 1.25rem;} }
+        @media(max-width:520px){ .xp-brand div{ display:none;} .xp-ghost{ padding:.5rem .8rem; font-size:.8rem;} .xp-cta{ padding:.55rem .9rem; font-size:.8rem;} }
 
         /* Hero */
         .xp-hero { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem 3rem; text-align:center; }
@@ -135,11 +136,11 @@ export default function Login() {
         .xp-metric:last-child { border-right:0; }
         .xp-metric b { display:block; font-family:'Instrument Serif',serif; font-size:2rem; color:#c9a84c; line-height:1; margin-bottom:.35rem; }
         .xp-metric span { font-size:.78rem; color:#9fb8ae; text-transform:uppercase; letter-spacing:.1em; }
-        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr);} .xp-metric:nth-child(2){border-right:0;} }
+        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr); gap:1rem 0;} .xp-metric{ border-right:0;} .xp-metric:nth-child(odd){ border-right:1px solid rgba(230,242,236,.08);} }
 
         /* Modules */
-        .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 5rem 2rem; }
-        .xp-sec-h { text-align:center; margin-bottom:3rem; }
+        .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem; }
+        .xp-sec-h { text-align:center; margin-bottom:2.5rem; }
         .xp-sec-lbl { color:#c9a84c; font-size:.75rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:.75rem; }
         .xp-sec-t { font-family:'Instrument Serif',serif; font-size: clamp(2rem, 3.5vw, 2.8rem); color:#fff; margin:0; letter-spacing:-.015em; }
         .xp-mods { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
@@ -167,7 +168,7 @@ export default function Login() {
         .xp-term-body .m { color:#7fa8d4; }
 
         /* Footer CTA */
-        .xp-cta-band { text-align:center; padding: 4rem 2rem 5rem; }
+        .xp-cta-band { text-align:center; padding: 2rem 2rem 4rem; }
         .xp-cta-band h2 { font-family:'Instrument Serif',serif; font-size:clamp(2rem, 4vw, 3rem); color:#fff; margin:0 0 1rem; letter-spacing:-.015em; }
         .xp-cta-band p { color:#9fb8ae; max-width:34rem; margin:0 auto 2rem; }
 
