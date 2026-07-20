@@ -90,7 +90,29 @@ export default function Login() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap');
         .xp, .xp * { box-sizing: border-box; }
-        .xp { min-height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: #e6f2ec; -webkit-font-smoothing: antialiased;
+        .xp {
+          /* Typography scale */
+          --fs-display: clamp(2.5rem, 5vw, 4.25rem);
+          --fs-h2: clamp(1.75rem, 3vw, 2.375rem);
+          --fs-h3: 1.5rem;
+          --fs-h4: 1.0625rem;
+          --fs-lead: 1.0625rem;
+          --fs-base: 0.9375rem;
+          --fs-sm: 0.8125rem;
+          --fs-xs: 0.75rem;
+          --fs-2xs: 0.6875rem;
+          --lh-tight: 1.05;
+          --lh-snug: 1.2;
+          --lh-normal: 1.55;
+          --lh-loose: 1.7;
+          --ls-display: -0.02em;
+          --ls-tight: -0.015em;
+          --ls-wide: 0.1em;
+          --ls-widest: 0.18em;
+
+          min-height: 100vh; font-family: 'Inter', system-ui, sans-serif;
+          font-size: var(--fs-base); line-height: var(--lh-normal);
+          color: #e6f2ec; -webkit-font-smoothing: antialiased;
           background: #061511;
           background-image:
             radial-gradient(1200px 600px at 85% -10%, rgba(201,168,76,.10), transparent 60%),
