@@ -5,7 +5,7 @@ import { requireAuth, supabaseForUser } from "./_supabase";
 export default defineTool({
   name: "projects_list",
   title: "List projects",
-  description: "List the signed-in user's projects (most recent first).",
+  description: "List projects within the signed-in user's active tenant (most recent first). Data is scoped to the current company by RLS.",
   inputSchema: {
     limit: z.number().int().min(1).max(200).default(50).describe("Max rows to return."),
     status: z.string().optional().describe("Optional status filter (e.g. active, done)."),

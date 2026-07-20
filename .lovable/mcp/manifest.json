@@ -114,7 +114,7 @@
       {
         "name": "projects_list",
         "title": "List projects",
-        "description": "List the signed-in user's projects (most recent first).",
+        "description": "List projects within the signed-in user's active tenant (most recent first). Data is scoped to the current company by RLS.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
