@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setProfile(null);
     setMemberships([]);
+    setIsPlatformAdmin(false);
   }, []);
 
   const value = useMemo(
@@ -73,6 +74,7 @@ export function AuthProvider({ children }) {
       user: session?.user ?? null,
       profile,
       memberships,
+      isPlatformAdmin,
       activeTenantId: profile?.active_tenant_id ?? null,
       activeMembership: memberships.find((m) => m.tenant_id === profile?.active_tenant_id) ?? null,
       loading,
@@ -80,11 +82,12 @@ export function AuthProvider({ children }) {
       setActiveTenant,
       signOut,
     }),
-    [session, profile, memberships, loading, refresh, setActiveTenant, signOut],
+    [session, profile, memberships, isPlatformAdmin, loading, refresh, setActiveTenant, signOut],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
+
 
 export function useAuth() {
   const ctx = useContext(AuthCtx);
