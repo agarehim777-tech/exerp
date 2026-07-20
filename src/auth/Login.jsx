@@ -168,7 +168,7 @@ export default function Login() {
         .xp-term-body .m { color:#7fa8d4; }
 
         /* Footer CTA */
-        .xp-cta-band { text-align:center; padding: 4rem 2rem 5rem; }
+        .xp-cta-band { text-align:center; padding: 2rem 2rem 4rem; }
         .xp-cta-band h2 { font-family:'Instrument Serif',serif; font-size:clamp(2rem, 4vw, 3rem); color:#fff; margin:0 0 1rem; letter-spacing:-.015em; }
         .xp-cta-band p { color:#9fb8ae; max-width:34rem; margin:0 auto 2rem; }
 
