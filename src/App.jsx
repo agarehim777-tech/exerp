@@ -10643,7 +10643,7 @@ function PlatformAdminPage() {
       <Panel>
         <PanelHeader
           title={editing ? `Şirkəti redaktə et — ${editing.name}` : "Yeni şirkət yarat"}
-          subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin dəvəti."}
+          subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin — müvəqqəti parol yaradılır."}
           action={editing ? <button type="button" className="secondary-btn" onClick={cancelEdit}>Ləğv et</button> : null}
         />
         <form className="form-grid" onSubmit={submit} style={{ gap: 12 }}>
