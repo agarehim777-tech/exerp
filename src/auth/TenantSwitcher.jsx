@@ -69,8 +69,8 @@ export default function TenantSwitcher() {
   );
 }
 
-const btn = { background: "#fff", border: "1px solid #d4c9a3", borderRadius: 10, padding: "8px 12px", fontSize: 13, cursor: "pointer", fontWeight: 600, color: "#064e3b", boxShadow: "0 4px 14px rgba(6,78,59,0.12)", display: "inline-flex", alignItems: "center", gap: 6 };
-const panel = { position: "absolute", top: 42, right: 0, background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, minWidth: 260, boxShadow: "0 18px 44px rgba(6,78,59,0.18)", padding: "6px 0", maxHeight: 400, overflowY: "auto" };
+const btn = { background: "#fff", border: "1px solid #d4c9a3", borderRadius: 10, padding: "6px 10px", fontSize: 12, cursor: "pointer", fontWeight: 600, color: "#064e3b", boxShadow: "0 4px 14px rgba(6,78,59,0.12)", display: "inline-flex", alignItems: "center", gap: 6, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+const panel = { position: "absolute", top: 38, right: 0, background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, minWidth: 260, boxShadow: "0 18px 44px rgba(6,78,59,0.18)", padding: "6px 0", maxHeight: 400, overflowY: "auto" };
 const row = { display: "flex", alignItems: "center", padding: "0 4px" };
 const rowBtn = { flex: 1, background: "none", border: 0, textAlign: "left", padding: "8px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6 };
 const delBtn = { background: "none", border: 0, color: "#b23a3a", cursor: "pointer", padding: "6px 10px", fontSize: 14, borderRadius: 6 };
