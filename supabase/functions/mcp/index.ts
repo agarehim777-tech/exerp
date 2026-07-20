@@ -136,7 +136,7 @@ import { z as z5 } from "npm:zod@^4.4.3";
 var projects_get_default = defineTool6({
   name: "projects_get",
   title: "Get project",
-  description: "Get a single project owned by the signed-in user, by id.",
+  description: "Get a single project within the signed-in user's active tenant, by id. Data is scoped to the current company by RLS.",
   inputSchema: { id: z5.string().uuid().describe("Project id.") },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ id }, ctx) => {

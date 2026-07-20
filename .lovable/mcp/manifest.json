@@ -142,7 +142,7 @@
       {
         "name": "projects_get",
         "title": "Get project",
-        "description": "Get a single project owned by the signed-in user, by id.",
+        "description": "Get a single project within the signed-in user's active tenant, by id. Data is scoped to the current company by RLS.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
