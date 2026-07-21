@@ -168,6 +168,7 @@ const navIcons = {
   api: ShieldCheck,
   settings: Settings,
   roles: ShieldCheck,
+  "access-check": ShieldCheck,
 };
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
@@ -10178,7 +10179,7 @@ function SidebarNav({ items, active, onSelect }) {
     <nav className="nav-list">
       {groups.map((entry) => {
         if (entry.type === "item") {
-          const Icon = navIcons[entry.item.id];
+          const Icon = navIcons[entry.item.id] || Settings;
           return (
             <button
               key={entry.item.id}
