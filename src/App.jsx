@@ -168,6 +168,7 @@ const navIcons = {
   api: ShieldCheck,
   settings: Settings,
   roles: ShieldCheck,
+  "access-check": ShieldCheck,
 };
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
