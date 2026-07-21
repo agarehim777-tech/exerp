@@ -1871,6 +1871,8 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["invoice_status"]
       }
+      check_my_access: { Args: never; Returns: Json }
+      check_project_access: { Args: { _project: string }; Returns: Json }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
       crm_pipeline_summary: {
