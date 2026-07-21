@@ -121,6 +121,7 @@ import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
 import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
 import { ProductionPage } from "./modules/production/ProductionPage.jsx";
 import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
+import AccessCheckPage from "./modules/settings/AccessCheckPage.jsx";
 import AccountingPageV2 from "./modules/accounting/AccountingPage.jsx";
 import CrmCustomersPageV2 from "./modules/crm/CrmCustomersPage.jsx";
 import CrmDealsPage from "./modules/crm/CrmDealsPage.jsx";
@@ -9752,6 +9753,8 @@ function App() {
 
           {active === "platform" && <PlatformAdminPage />}
           {active === "roles" && <RolesPermissionsPage />}
+          {active === "access-check" && <AccessCheckPage />}
+          
           
 
 

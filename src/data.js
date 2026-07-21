@@ -42,6 +42,7 @@ export const navItems = [
   { id: "api", label: "API" },
   { id: "settings", label: "Ayarlar" },
   { id: "roles", label: "Rollar" },
+  { id: "access-check", label: "İcazə yoxlaması" },
 ];
 
 export const initialState = {
