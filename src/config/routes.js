@@ -30,6 +30,7 @@ export const moduleRoutes = {
   notifications: "/bildirisler",
   api: "/api",
   settings: "/parametrler",
+  "access-check": "/icaze-yoxlama",
 };
 
 export const pathToModule = Object.fromEntries(
