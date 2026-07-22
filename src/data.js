@@ -122,6 +122,17 @@ export const initialState = {
       cooldownHours: 24,
     },
     {
+      id: "RULE-CREDIT-UPCOMING",
+      name: "Yaxınlaşan kredit ödənişi",
+      channel: "SMS",
+      providerId: "PROV-SMS",
+      trigger: "Kredit ödənişinə 1-3 gün qalıb",
+      template: "{customer}, {contractId} üzrə {dueDate} tarixli ödənişiniz {amount} AZN-dir.",
+      owner: "Kredit şöbəsi",
+      status: "Aktiv",
+      cooldownHours: 24,
+    },
+    {
       id: "RULE-LOW-STOCK",
       name: "Minimum stok xəbərdarlığı",
       channel: "Push",

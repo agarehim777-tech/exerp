@@ -298,8 +298,24 @@ function roundMoney(value) {
   return Math.round(Number(value || 0));
 }
 
+function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
+  const status = normalize(credit?.status);
+  const balance = Number(plan?.balance ?? credit?.balance ?? 0);
+  const months = Number(plan?.months || credit?.months || 0);
+  const paidMonths = Number(credit?.paidMonths || 0);
+
+  return (
+    status.includes("tamam") ||
+    status.includes("bağlan") ||
+    status.includes("baglan") ||
+    status.includes("closed") ||
+    balance <= 0 ||
+    (months > 0 && paidMonths >= months)
+  );
+}
+
 function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
-  if (normalize(credit.status).includes("tamam")) {
+  if (isCreditClosed(credit, plan)) {
     return {
       nextInstallment: null,
       dueDate: null,
@@ -353,15 +369,15 @@ function getCreditDebtFormula(item) {
 function getCreditRiskLabel(item) {
   if (item.paymentState.isOverdue) return `${item.paymentState.daysOverdue} gün gecikib`;
   if (item.paymentState.isDueToday) return "Bu gün yığım";
-  if (normalize(item.credit.status).includes("tamam")) return "Tamamlanıb";
+  if (isCreditClosed(item.credit, item.plan)) return "Tamamlanıb";
   return "Aktiv izləmə";
 }
 
 function matchesCreditDashboardFilter(item, filter) {
   if (filter === "Bu günə olan ödənişlər") return item.paymentState.isDueToday;
   if (filter === "Gecikən ödənişlər") return item.paymentState.isOverdue;
-  if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv");
-  if (filter === "Tamamlanan") return normalize(item.credit.status).includes("tamam");
+  if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan);
+  if (filter === "Tamamlanan") return isCreditClosed(item.credit, item.plan);
   if (filter === "Satışdan gələn") return getCreditSourceLabel(item.credit) === "Satışdan gələn";
   if (filter === "Yüksək qalıq") return Number(item.plan.balance || 0) >= 3000;
   return true;
@@ -391,16 +407,16 @@ function getCreditRowDate(item) {
 }
 
 function matchesCreditManagementFilter(item, filter) {
-  if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv");
+  if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan);
   if (filter === "Gözləyən") {
     return (
       !item.paymentState.isOverdue &&
       !item.paymentState.isDueToday &&
-      !normalize(item.credit.status).includes("tamam")
+      !isCreditClosed(item.credit, item.plan)
     );
   }
   if (filter === "Gecikmiş") return item.paymentState.isOverdue;
-  if (filter === "Bağlanmış") return normalize(item.credit.status).includes("tamam");
+  if (filter === "Bağlanmış") return isCreditClosed(item.credit, item.plan);
   if (filter === "Bugünkü") return item.paymentState.isDueToday;
   if (filter === "Cari ay") {
     const date = getCreditRowDate(item);
@@ -437,9 +453,9 @@ function getCreditInitials(name = "") {
 }
 
 function getCreditManagementStatus(item) {
+  if (isCreditClosed(item.credit, item.plan)) return "Bağlanmış";
   if (item.paymentState.isOverdue) return `${item.paymentState.daysOverdue} gün gecikib`;
   if (item.paymentState.isDueToday) return "Bugünkü ödəniş";
-  if (normalize(item.credit.status).includes("tamam")) return "Bağlanmış";
   return item.credit.status || "Aktiv";
 }
 
@@ -502,6 +518,11 @@ function buildSalesCreditRecord(order, storedCredit) {
   const months = Number(order.creditMonths || storedCredit?.months || 12);
   const basePlan = buildCreditPlan({ total: totalAmount, initialPayment, months });
   const productSummary = summarizeOrderProducts(order);
+  const balance = Number(storedCredit?.balance ?? order.creditBalance ?? basePlan.balance);
+  const paidMonths = Number(storedCredit?.paidMonths ?? (balance <= 0 ? months : 0));
+  const status = isCreditClosed({ ...(storedCredit || {}), balance, paidMonths, months }, { ...basePlan, balance })
+    ? "Tamamlandı"
+    : storedCredit?.status || "Aktiv";
 
   return {
     ...(storedCredit || {}),
@@ -519,14 +540,14 @@ function buildSalesCreditRecord(order, storedCredit) {
     warehouseName: order.warehouseName,
     total: totalAmount,
     initialPayment,
-    balance: storedCredit?.balance ?? order.creditBalance ?? basePlan.balance,
+    balance,
     monthly: storedCredit?.monthly ?? order.creditMonthly ?? basePlan.monthly,
     lastPayment: storedCredit?.lastPayment ?? order.creditLastPayment ?? basePlan.lastPayment,
     months,
-    paidMonths: storedCredit?.paidMonths ?? 0,
+    paidMonths,
     rate: storedCredit?.rate ?? 0,
     next: storedCredit?.next || basePlan.installments[0]?.due || "—",
-    status: storedCredit?.status || "Aktiv",
+    status,
     installments: storedCredit?.installments || basePlan.installments,
     payments: storedCredit?.payments || [],
   };
@@ -1018,7 +1039,7 @@ function buildCrmPipelineRows(customers, credits, orders) {
     const customerCredits = getCustomerRelatedCredits(customer, credits);
     const customerOrders = getCustomerOrders(customer, orders);
     const latestOrder = getLatestOrder(customerOrders);
-    const activeCreditCount = customerCredits.filter((credit) => !normalize(credit.status).includes("tamam")).length;
+    const activeCreditCount = customerCredits.filter((credit) => !isCreditClosed(credit, getCreditDisplayPlan(credit))).length;
     const totalBalance = customerCredits.reduce((sum, credit) => sum + Number(getCreditDisplayPlan(credit).balance || 0), 0);
     const overdueCredit = customerCredits.find((credit) =>
       getCreditPaymentState(credit, getCreditDisplayPlan(credit)).isOverdue,
@@ -2688,50 +2709,123 @@ function enrichReceivableRow(row) {
   };
 }
 
-function buildReceivableRows({ customers, orders, credits, vendors, purchaseOrders }) {
-  const customerRows = customers.map((customer) => {
-    const relatedOrders = getCustomerOrders(customer, orders);
-    const relatedCredits = getCustomerRelatedCredits(customer, credits);
-    const nonCreditOrders = relatedOrders.filter((order) => getOrderPaymentMethod(order) !== "Kredit" && !order.creditId);
-    const orderBalance = nonCreditOrders.reduce((sum, order) => sum + getOrderBalance(order), 0);
-    const creditBalance = relatedCredits.reduce((sum, credit) => sum + Number(getCreditDisplayPlan(credit).balance || 0), 0);
-    const creditStates = relatedCredits.map((credit) => getCreditPaymentState(credit, getCreditDisplayPlan(credit)));
-    const overdueCredit = creditStates.find((state) => state.isOverdue);
-    const amount = Number(customer.debt || 0) + orderBalance + creditBalance;
-    const latestOrder = getLatestOrder(relatedOrders);
-    const overdueDays = Math.max(
-      Number(customer.delay || 0),
-      ...creditStates.map((state) => Number(state.daysOverdue || 0)),
-      ...nonCreditOrders.map((order) => {
-        if (getOrderBalance(order) <= 0) return 0;
-        const dueDate = parsePaymentDate(order.dueDate) || addDays(order.date || currentBusinessDate, 7);
-        const today = parsePaymentDate(currentBusinessDate);
-        return dueDate && today ? Math.max(0, daysBetween(dueDate, today)) : 0;
-      }),
-    );
+function buildReceivableRows({ customers = [], orders = [], credits = [], vendors = [], purchaseOrders = [] }) {
+  const matchedCreditIds = new Set();
+
+  const createCreditDebtRow = (credit, customer = null) => {
+    const plan = getCreditDisplayPlan(credit);
+    const balance = Number(plan.balance || 0);
+    if (balance <= 0 || isCreditClosed(credit, plan)) return null;
+
+    const paymentState = getCreditPaymentState(credit, plan);
+    const relatedOrder = getCreditOrder(credit, orders);
+    const device = credit.device || credit.product || relatedOrder?.products || "Cihaz qeyd edilməyib";
 
     return enrichReceivableRow({
-      id: `DB-${customer.fin}`,
+      id: `DB-CR-${credit.id}`,
       type: "Debitor",
-      party: customer.name,
-      source: customer.fin,
-      amount,
-      orderBalance,
-      creditBalance,
-      customerDebt: Number(customer.debt || 0),
-      overdueDays,
-      owner: latestOrder?.sellerBonuses?.[0]?.seller || latestOrder?.seller || "Satış",
-      status: overdueCredit || Number(customer.delay || 0) > 0 ? "Gecikmə" : amount > 0 ? "Aktiv" : "Bağlı",
-      detail: `${relatedOrders.length} sifariş · ${relatedCredits.length} kredit`,
-      orderIds: relatedOrders.map((order) => order.id),
-      openOrderIds: nonCreditOrders.filter((order) => getOrderBalance(order) > 0).map((order) => order.id),
-      creditIds: relatedCredits.map((credit) => credit.id),
-      contractIds: relatedCredits.map((credit) => credit.contractId).filter(Boolean),
+      party: customer?.name || credit.customer || "Müştəri qeyd edilməyib",
+      source: credit.contractId || credit.id,
+      sourceType: "credit",
+      sourceTypeLabel: "Kredit müqaviləsi",
+      amount: balance,
+      orderBalance: 0,
+      creditBalance: balance,
+      customerDebt: 0,
+      overdueDays: Number(paymentState.daysOverdue || 0),
+      owner: credit.seller || relatedOrder?.sellerBonuses?.[0]?.seller || relatedOrder?.seller || "Kredit",
+      status: paymentState.isOverdue ? "Gecikmə" : "Aktiv",
+      detail: `${credit.id} · ${device} · ${plan.months} ay`,
+      orderIds: credit.orderId ? [credit.orderId] : [],
+      openOrderIds: [],
+      creditIds: [credit.id],
+      contractIds: [credit.contractId].filter(Boolean),
       closingMode: "cash-in",
     });
+  };
+
+  const customerRows = customers.flatMap((customer) => {
+    const relatedOrders = getCustomerOrders(customer, orders);
+    const relatedCredits = getCustomerRelatedCredits(customer, credits);
+    const rows = [];
+    const manualDebt = Math.max(0, Number(customer.debt || 0));
+
+    if (manualDebt > 0) {
+      rows.push(
+        enrichReceivableRow({
+          id: `DB-CUST-${customer.fin || normalize(customer.name)}`,
+          type: "Debitor",
+          party: customer.name,
+          source: customer.fin || customer.name,
+          sourceType: "manual",
+          sourceTypeLabel: "Manual borc",
+          amount: manualDebt,
+          orderBalance: 0,
+          creditBalance: 0,
+          customerDebt: manualDebt,
+          overdueDays: Number(customer.delay || 0),
+          owner: "CRM",
+          status: Number(customer.delay || 0) > 0 ? "Gecikmə" : "Aktiv",
+          detail: "Müştəri kartındakı ayrıca borc",
+          orderIds: [],
+          openOrderIds: [],
+          creditIds: [],
+          contractIds: [],
+          closingMode: "cash-in",
+        }),
+      );
+    }
+
+    relatedOrders
+      .filter((order) => getOrderPaymentMethod(order) !== "Kredit" && !order.creditId)
+      .forEach((order) => {
+        const balance = getOrderBalance(order);
+        if (balance <= 0) return;
+
+        const dueDate = parsePaymentDate(order.dueDate) || addDays(order.date || currentBusinessDate, 7);
+        const today = parsePaymentDate(currentBusinessDate);
+        const overdueDays = dueDate && today ? Math.max(0, daysBetween(dueDate, today)) : 0;
+
+        rows.push(
+          enrichReceivableRow({
+            id: `DB-ORD-${order.id}`,
+            type: "Debitor",
+            party: customer.name,
+            source: order.id,
+            sourceType: "order",
+            sourceTypeLabel: "Nağd/qalıqlı sifariş",
+            amount: balance,
+            orderBalance: balance,
+            creditBalance: 0,
+            customerDebt: 0,
+            overdueDays,
+            owner: order.sellerBonuses?.[0]?.seller || order.seller || "Satış",
+            status: overdueDays > 0 ? "Gecikmə" : "Aktiv",
+            detail: `${order.id} · ${summarizeOrderProducts(order)}`,
+            orderIds: [order.id],
+            openOrderIds: [order.id],
+            creditIds: [],
+            contractIds: [],
+            closingMode: "cash-in",
+          }),
+        );
+      });
+
+    relatedCredits.forEach((credit) => {
+      matchedCreditIds.add(credit.id);
+      const row = createCreditDebtRow(credit, customer);
+      if (row) rows.push(row);
+    });
+
+    return rows;
   });
 
-  const vendorRows = vendors.map((vendor) => {
+  const orphanCreditRows = credits
+    .filter((credit) => !matchedCreditIds.has(credit.id))
+    .map((credit) => createCreditDebtRow(credit))
+    .filter(Boolean);
+
+  const vendorRows = vendors.flatMap((vendor) => {
     const vendorPos = (purchaseOrders || []).filter((po) => po.vendor === vendor.name);
     const payablePos = vendorPos.filter((po) => {
       const status = normalize(po.status);
@@ -2753,11 +2847,16 @@ function buildReceivableRows({ customers, orders, credits, vendors, purchaseOrde
       }),
     );
 
-    return enrichReceivableRow({
+    if (pendingAmount <= 0) return [];
+
+    return [
+      enrichReceivableRow({
       id: `CR-${vendor.name}`,
       type: "Kreditor",
       party: vendor.name,
       source: vendor.country,
+      sourceType: "vendor",
+      sourceTypeLabel: "Vendor/PO",
       amount: pendingAmount,
       overdueDays,
       owner: "Vendor/Maliyyə",
@@ -2765,10 +2864,11 @@ function buildReceivableRows({ customers, orders, credits, vendors, purchaseOrde
       detail: latestPo ? `${vendorPos.length} PO · son: ${latestPo.id}` : `${vendor.sku} SKU · PO yoxdur`,
       poIds: payablePos.map((po) => po.id),
       closingMode: "cash-out",
-    });
+      }),
+    ];
   });
 
-  return [...customerRows, ...vendorRows].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  return [...customerRows, ...orphanCreditRows, ...vendorRows].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
 }
 
 function buildProjectPortfolioSource(projects = [], orders = [], expenses = [], products = []) {
@@ -2936,6 +3036,55 @@ function renderNotificationTemplate(template = "", values = {}) {
   return String(template || "").replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
 }
 
+function getNotificationEventKey(rule = {}, event = {}) {
+  return [
+    rule.id || "RULE",
+    event.entityId || event.id || event.target || event.recipient || "EVENT",
+  ].join(":");
+}
+
+function getNotificationLogTime(log = {}) {
+  const iso = Date.parse(log.sentAtIso || "");
+  if (!Number.isNaN(iso)) return iso;
+  const fallback = Date.parse(log.sentAt || "");
+  return Number.isNaN(fallback) ? 0 : fallback;
+}
+
+function splitNotificationEventsByCooldown(rule = {}, events = [], sendLog = [], now = new Date()) {
+  const cooldownMs = Math.max(0, Number(rule.cooldownHours || 0)) * 60 * 60 * 1000;
+  const ready = [];
+  const held = [];
+
+  events.forEach((event) => {
+    const dedupeKey = getNotificationEventKey(rule, event);
+    const enriched = { ...event, dedupeKey };
+    const recentLog = (sendLog || []).find(
+      (log) => log.dedupeKey === dedupeKey || (log.ruleId === rule.id && log.entityId === event.entityId),
+    );
+    const coolingDown = Boolean(cooldownMs > 0 && recentLog && now.getTime() - getNotificationLogTime(recentLog) < cooldownMs);
+
+    if (coolingDown) {
+      held.push({
+        ...enriched,
+        heldReason: `${rule.cooldownHours || 0} saat cooldown`,
+        lastSentAt: recentLog.sentAt || recentLog.sentAtIso || "",
+      });
+      return;
+    }
+
+    ready.push(enriched);
+  });
+
+  return { ready, held };
+}
+
+function getCreditPaymentLeadDays(paymentState) {
+  const today = parsePaymentDate(baseCreditDate);
+  const dueDate = paymentState?.dueDate;
+  if (!today || !dueDate) return null;
+  return daysBetween(today, dueDate);
+}
+
 function buildNotificationProviderRows(providers = [], settings = {}, sendLog = []) {
   return ensureNotificationProviders(providers).map((provider) => {
     const enabled = getNotificationChannelEnabled(provider.channel, settings);
@@ -2956,12 +3105,16 @@ function buildNotificationEvent(rule, values = {}) {
   return {
     id: values.id || `${rule.id}-${values.entityId || Date.now()}`,
     entityId: values.entityId || "",
+    dedupeKey: values.dedupeKey || "",
     recipient: values.recipient || values.customer || values.owner || "Daxili komanda",
     target: values.target || values.phone || values.email || "internal",
     subject: values.subject || rule.name,
     body: renderNotificationTemplate(rule.template, values) || values.body || rule.trigger,
     amount: Number(values.amount || 0),
     module: values.module || "notifications",
+    dueDate: values.dueDate || "",
+    context: values.context || values.contractId || values.orderId || values.poId || values.product || "",
+    actionTarget: values.actionTarget || "",
     priority: values.priority || "Orta",
   };
 }
@@ -2986,8 +3139,39 @@ function buildNotificationRuleEvents(rule, { credits = [], stock = [], warehouse
           target: item.credit.phone || item.credit.fin || item.credit.customer,
           contractId: item.credit.contractId || item.credit.id,
           amount: item.paymentState.nextInstallment?.amount || item.plan.monthly,
+          dueDate: item.paymentState.nextInstallment?.due || item.credit.next,
+          status: item.paymentState.isOverdue ? `${item.paymentState.daysOverdue} gün gecikib` : "bu gün ödənilməlidir",
+          context: `${item.credit.contractId || item.credit.id} · ${item.credit.device || item.credit.product || "Cihaz"}`,
+          actionTarget: item.credit.id,
           module: "credits",
           priority: item.paymentState.isOverdue ? "Yüksək" : "Orta",
+        }),
+      );
+  }
+
+  if (rule.id === "RULE-CREDIT-UPCOMING") {
+    return credits
+      .map((credit) => {
+        const plan = getCreditDisplayPlan(credit);
+        const paymentState = getCreditPaymentState(credit, plan);
+        return { credit, plan, paymentState, leadDays: getCreditPaymentLeadDays(paymentState) };
+      })
+      .filter((item) => Number(item.leadDays || 0) >= 1 && Number(item.leadDays || 0) <= 3)
+      .map((item) =>
+        buildNotificationEvent(rule, {
+          id: `${rule.id}-${item.credit.id}`,
+          entityId: item.credit.id,
+          customer: item.credit.customer,
+          recipient: item.credit.customer,
+          target: item.credit.phone || item.credit.fin || item.credit.customer,
+          contractId: item.credit.contractId || item.credit.id,
+          amount: item.paymentState.nextInstallment?.amount || item.plan.monthly,
+          dueDate: item.paymentState.nextInstallment?.due || item.credit.next,
+          leadDays: item.leadDays,
+          context: `${item.credit.contractId || item.credit.id} · ${item.credit.device || item.credit.product || "Cihaz"}`,
+          actionTarget: item.credit.id,
+          module: "credits",
+          priority: Number(item.leadDays) <= 1 ? "Yüksək" : "Orta",
         }),
       );
   }
@@ -3066,16 +3250,26 @@ function buildNotificationAutomationRows({ notificationRules, providers = [], se
   const providerById = new Map(providerRows.map((provider) => [provider.id, provider]));
   const productsByName = buildProductLookup(products);
   const overdueCredits = credits.filter((credit) => getCreditPaymentState(credit, getCreditDisplayPlan(credit)).isOverdue);
+  const dueSoonCredits = credits.filter((credit) => {
+    const paymentState = getCreditPaymentState(credit, getCreditDisplayPlan(credit));
+    const leadDays = getCreditPaymentLeadDays(paymentState);
+    return Number(leadDays || 0) >= 1 && Number(leadDays || 0) <= 3;
+  });
   const stockSource = [...(stock || []), ...flattenWarehouseStock(warehouseStock || {})];
   const lowStock = stockSource.filter((item) => isLowStockItem(item, productsByName));
   const pendingPo = (purchaseOrders || []).filter((po) => po.status === "Təsdiq gözləyir");
   const pendingPayroll = expenses.filter((expense) => expense.source === "HR Payroll" && expense.status === "Təsdiq gözləyir");
   const lateDeliveries = orders.filter((order) => order.status !== "Təhvil verilib" && getDeliveryAgeDays(order) >= 5);
+  const now = new Date();
 
   const queueByRule = {
     "RULE-CREDIT-OVERDUE": {
       count: overdueCredits.length,
       event: overdueCredits[0]?.customer || "Gecikmə yoxdur",
+    },
+    "RULE-CREDIT-UPCOMING": {
+      count: dueSoonCredits.length,
+      event: dueSoonCredits[0]?.customer || "Yaxınlaşan ödəniş yoxdur",
     },
     "RULE-LOW-STOCK": {
       count: lowStock.length,
@@ -3096,19 +3290,24 @@ function buildNotificationAutomationRows({ notificationRules, providers = [], se
   };
 
   return ensureNotificationRules(notificationRules).map((rule) => {
-    const events = buildNotificationRuleEvents(rule, { credits, stock, warehouseStock, products, purchaseOrders, expenses, orders });
+    const allEvents = buildNotificationRuleEvents(rule, { credits, stock, warehouseStock, products, purchaseOrders, expenses, orders });
+    const { ready: events, held: cooldownEvents } = splitNotificationEventsByCooldown(rule, allEvents, sendLog, now);
     const provider = providerById.get(rule.providerId) || providerRows.find((item) => item.channel === rule.channel);
     const channelEnabled = getNotificationChannelEnabled(rule.channel, settings);
     const lastLog = sendLog.find((log) => log.ruleId === rule.id);
-    const queueCount = events.length || queueByRule[rule.id]?.count || 0;
+    const queueCount = events.length;
+    const totalEventCount = allEvents.length || queueByRule[rule.id]?.count || 0;
 
     return {
       ...rule,
       provider,
       providerName: provider?.name || "Provider seçilməyib",
       queueCount,
+      totalEventCount,
+      cooldownCount: cooldownEvents.length,
       events,
-      lastEvent: events[0]?.recipient || queueByRule[rule.id]?.event || "Siqnal yoxdur",
+      cooldownEvents,
+      lastEvent: events[0]?.recipient || cooldownEvents[0]?.recipient || queueByRule[rule.id]?.event || "Siqnal yoxdur",
       lastRunAt: lastLog?.sentAt || rule.lastRunAt || "",
       sentCount: Number(rule.sentCount || 0),
       health:
@@ -3120,6 +3319,8 @@ function buildNotificationAutomationRows({ notificationRules, providers = [], se
               ? "Provider hazır deyil"
               : queueCount > 0
                 ? "Göndəriş hazırdır"
+                : cooldownEvents.length > 0
+                  ? "Cooldown-da saxlanıb"
                 : "Növbə boşdur",
     };
   });
@@ -3127,10 +3328,12 @@ function buildNotificationAutomationRows({ notificationRules, providers = [], se
 
 function createNotificationSendLogEntry({ rule = {}, event = {}, provider = {}, stamp, status = "Göndərildi", source = "Avtomatik" }) {
   const channel = rule.channel || provider.channel || event.channel || "Push";
+  const sentAtIso = new Date().toISOString();
   return {
     id: `NTF-${Date.now()}-${String(Math.random()).slice(2, 6)}`,
     ruleId: rule.id || "MANUAL",
     ruleName: rule.name || "Manual göndəriş",
+    dedupeKey: event.dedupeKey || getNotificationEventKey(rule, event),
     providerId: provider.id || rule.providerId || "",
     providerName: provider.name || "Provider seçilməyib",
     channel,
@@ -3142,10 +3345,36 @@ function createNotificationSendLogEntry({ rule = {}, event = {}, provider = {}, 
     subject: event.subject || rule.name || "Bildiriş",
     body: event.body || rule.template || "",
     amount: Number(event.amount || 0),
+    dueDate: event.dueDate || "",
+    context: event.context || "",
+    actionTarget: event.actionTarget || "",
     priority: event.priority || "Orta",
     status,
     sentAt: stamp || new Date().toLocaleString("az-AZ"),
+    sentAtIso,
   };
+}
+
+function buildNotificationDeliveriesForRules({ rules = [], providerRows = [], settings = {}, stamp, source = "Avtomatik qayda" }) {
+  return rules.flatMap((rule) => {
+    const provider =
+      providerRows.find((item) => item.id === rule.providerId) ||
+      providerRows.find((item) => item.channel === rule.channel) ||
+      {};
+    const channelEnabled = getNotificationChannelEnabled(rule.channel, settings);
+    const status = !channelEnabled || provider.status !== "Aktiv" ? "Bloklandı" : "Göndərildi";
+
+    return (rule.events || []).map((event) =>
+      createNotificationSendLogEntry({
+        rule,
+        event,
+        provider,
+        stamp,
+        status,
+        source,
+      }),
+    );
+  });
 }
 
 function buildProductionPlanRows(productionPlans, stock, warehouseStock = {}, products = [], warehouses = []) {
@@ -3475,6 +3704,10 @@ function buildSalesCreditForOrder(order, storedCredit) {
   const months = Number(order.creditMonths || storedCredit?.months || 12);
   const creditPlan = buildCreditPlan({ total: totalAmount, initialPayment, months });
   const payments = Array.isArray(storedCredit?.payments) ? storedCredit.payments : [];
+  const installments = creditPlan.installments.map((installment, index) => ({
+    ...installment,
+    due: storedCredit?.installments?.[index]?.due || installment.due,
+  }));
   const baseCredit = {
     ...(storedCredit || {}),
     id: order.creditId || storedCredit?.id || getCreditIdForOrder(order),
@@ -3497,13 +3730,17 @@ function buildSalesCreditForOrder(order, storedCredit) {
     months: creditPlan.months,
     paidMonths: 0,
     rate: 0,
-    next: creditPlan.installments[0]?.due || "—",
+    next: installments[0]?.due || "—",
     status: "Aktiv",
-    installments: creditPlan.installments,
+    installments,
     payments,
   };
   const paidPrincipal = payments.reduce((sum, payment) => sum + Number(payment.principal || 0), 0);
-  if (paidPrincipal <= 0) return baseCredit;
+  if (paidPrincipal <= 0) {
+    return isCreditClosed(storedCredit || baseCredit, { ...creditPlan, installments })
+      ? { ...baseCredit, balance: 0, paidMonths: creditPlan.months, rate: 100, status: "Tamamlandı" }
+      : baseCredit;
+  }
 
   const paymentResult = applyCreditPrincipalPayment(baseCredit, paidPrincipal);
   return {
@@ -3514,7 +3751,7 @@ function buildSalesCreditForOrder(order, storedCredit) {
     rate: Math.round((paymentResult.nextPaidMonths / Math.max(1, creditPlan.months)) * 100),
     next: paymentResult.nextDue,
     monthly: paymentResult.nextMonthly,
-    status: paymentResult.status,
+    status: paymentResult.nextBalance <= 0 ? "Tamamlandı" : paymentResult.status,
   };
 }
 
@@ -4361,7 +4598,7 @@ function buildStateIntegrityReport(snapshot = {}, creditRows = []) {
         fix: "Ödəniş tarixçəsini və əsas məbləğ silinməsini yoxlayın",
       });
     }
-    if (!normalize(credit.status).includes("tamam") && !getCreditPaymentState(credit, plan).nextInstallment) {
+    if (!isCreditClosed(credit, plan) && !getCreditPaymentState(credit, plan).nextInstallment) {
       issues.push({
         id: `CREDIT-NEXT-${credit.id}`,
         severity: "Xəbərdarlıq",
@@ -4976,6 +5213,7 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [remoteUser, setRemoteUser] = useState(null);
   const remoteSaveTimer = useRef(null);
+  const notificationAutoRunRef = useRef("");
   const creditRecords = useMemo(
     () => buildAllCreditRecords(state.orders, state.credits),
     [state.orders, state.credits],
@@ -5063,6 +5301,114 @@ function App() {
       }),
     [state.notificationRules, state.notificationProviders, state.settings, state.notificationSendLog, creditRecords, state.stock, state.warehouseStock, state.products, state.purchaseOrders, state.expenses, state.orders],
   );
+
+  useEffect(() => {
+    const creditRules = notificationAutomationRows.filter(
+      (rule) =>
+        ["RULE-CREDIT-OVERDUE", "RULE-CREDIT-UPCOMING"].includes(rule.id) &&
+        rule.status === "Aktiv" &&
+        Number(rule.queueCount || 0) > 0,
+    );
+    const autoKey = creditRules
+      .flatMap((rule) => (rule.events || []).map((event) => event.dedupeKey || getNotificationEventKey(rule, event)))
+      .sort()
+      .join("|");
+
+    if (!autoKey || notificationAutoRunRef.current === autoKey) return;
+    notificationAutoRunRef.current = autoKey;
+
+    const stamp = getActionStamp();
+    const deliveries = buildNotificationDeliveriesForRules({
+      rules: creditRules,
+      providerRows: notificationProviderRows,
+      settings: state.settings,
+      stamp,
+      source: "Avtomatik kredit monitoru",
+    });
+
+    if (deliveries.length === 0) return;
+
+    setState((current) => {
+      const existingKeys = new Set((current.notificationSendLog || []).map((log) => log.dedupeKey).filter(Boolean));
+      const freshDeliveries = deliveries.filter((delivery) => !delivery.dedupeKey || !existingKeys.has(delivery.dedupeKey));
+      if (freshDeliveries.length === 0) return current;
+
+      const sentCount = freshDeliveries.filter((item) => item.status === "Göndərildi").length;
+      const blockedCount = freshDeliveries.length - sentCount;
+      const touchedRuleIds = new Set(freshDeliveries.map((item) => item.ruleId));
+      const providerUse = freshDeliveries.reduce((map, item) => {
+        if (!item.providerId) return map;
+        map.set(item.providerId, (map.get(item.providerId) || 0) + (item.status === "Göndərildi" ? 1 : 0));
+        return map;
+      }, new Map());
+
+      return appendAudit(
+        {
+          ...current,
+          notificationSweepAt: stamp,
+          notificationSendLog: [...freshDeliveries, ...(current.notificationSendLog || [])].slice(0, 120),
+          notificationDispatchSnapshot: {
+            at: stamp,
+            total: freshDeliveries.length,
+            sent: sentCount,
+            blocked: blockedCount,
+            rules: creditRules.length,
+            source: "Avtomatik kredit monitoru",
+            autoRunKey: autoKey,
+          },
+          notificationRules: ensureNotificationRules(current.notificationRules || []).map((rule) =>
+            touchedRuleIds.has(rule.id)
+              ? {
+                  ...rule,
+                  lastRunAt: stamp,
+                  sentCount:
+                    Number(rule.sentCount || 0) +
+                    freshDeliveries.filter((item) => item.ruleId === rule.id && item.status === "Göndərildi").length,
+                  failedCount:
+                    Number(rule.failedCount || 0) +
+                    freshDeliveries.filter((item) => item.ruleId === rule.id && item.status !== "Göndərildi").length,
+                  lastStatus: freshDeliveries.some((item) => item.ruleId === rule.id && item.status !== "Göndərildi")
+                    ? "Qismən bloklandı"
+                    : "Göndərildi",
+                }
+              : rule,
+          ),
+          notificationProviders: ensureNotificationProviders(current.notificationProviders || []).map((provider) =>
+            providerUse.has(provider.id)
+              ? {
+                  ...provider,
+                  lastSentAt: stamp,
+                  sentCount: Number(provider.sentCount || 0) + providerUse.get(provider.id),
+                }
+              : provider,
+          ),
+          notifications: [
+            ...freshDeliveries.slice(0, 10).map((delivery) => ({
+              id: `IN-${delivery.id}`,
+              type: delivery.channel,
+              title: `${delivery.ruleName}: ${delivery.status}`,
+              body: `${delivery.recipient} · ${delivery.body}`,
+              time: stamp,
+              unread: true,
+              deliveryId: delivery.id,
+              module: delivery.module,
+              entityId: delivery.entityId,
+              actionTarget: delivery.actionTarget,
+            })),
+            ...(current.notifications || []),
+          ],
+        },
+        {
+          module: "Bildiriş",
+          action: "Avtomatik kredit monitoru işlədi",
+          detail: `${sentCount} göndərildi · ${blockedCount} bloklandı · ${creditRules.length} qayda`,
+          status: "Avtomatik",
+          role: "System",
+        },
+      );
+    });
+  }, [notificationAutomationRows, notificationProviderRows, state.settings]);
+
   const productionRows = useMemo(
     () => buildProductionPlanRows(state.productionPlans || [], state.stock, state.warehouseStock, state.products || [], state.warehouses),
     [state.productionPlans, state.stock, state.warehouseStock, state.products, state.warehouses],
@@ -6042,14 +6388,15 @@ function App() {
           ...closureBase,
           amount: cashEntry.amount,
           direction: "cash-in",
-          sourceIds: [...(targetRow.creditIds || []), ...(targetRow.openOrderIds || [])],
+          sourceIds: [...(targetRow.creditIds || []), ...(targetRow.openOrderIds || []), targetRow.source].filter(Boolean),
         };
 
         return auditCurrentState(
           {
             ...current,
             customers: (current.customers || []).map((customer) =>
-              customer.fin === targetRow.source || normalize(customer.name) === normalize(targetRow.party)
+              targetRow.sourceType === "manual" &&
+              (customer.fin === targetRow.source || normalize(customer.name) === normalize(targetRow.party))
                 ? { ...customer, debt: 0, delay: 0, receivableStatus: "Bağlandı" }
                 : customer,
             ),
@@ -6733,24 +7080,12 @@ function App() {
     }
 
     const stamp = getActionStamp();
-    const deliveries = readyRules.flatMap((rule) => {
-      const provider =
-        notificationProviderRows.find((item) => item.id === rule.providerId) ||
-        notificationProviderRows.find((item) => item.channel === rule.channel) ||
-        {};
-      const channelEnabled = getNotificationChannelEnabled(rule.channel, state.settings);
-      const status = !channelEnabled || provider.status !== "Aktiv" ? "Bloklandı" : "Göndərildi";
-
-      return (rule.events || []).map((event) =>
-        createNotificationSendLogEntry({
-          rule,
-          event,
-          provider,
-          stamp,
-          status,
-          source: "Avtomatik qayda",
-        }),
-      );
+    const deliveries = buildNotificationDeliveriesForRules({
+      rules: readyRules,
+      providerRows: notificationProviderRows,
+      settings: state.settings,
+      stamp,
+      source: "Manual növbə",
     });
 
     if (deliveries.length === 0) {
@@ -6771,13 +7106,15 @@ function App() {
       auditCurrentState(
         {
           ...current,
-          notificationSendLog: [...deliveries, ...(current.notificationSendLog || [])].slice(0, 100),
+          notificationSweepAt: stamp,
+          notificationSendLog: [...deliveries, ...(current.notificationSendLog || [])].slice(0, 120),
           notificationDispatchSnapshot: {
             at: stamp,
             total: deliveries.length,
             sent: sentCount,
             blocked: blockedCount,
             rules: readyRules.length,
+            source: "Manual növbə",
           },
           notificationRules: ensureNotificationRules(current.notificationRules || []).map((rule) =>
             touchedRuleIds.has(rule.id)
@@ -6808,6 +7145,9 @@ function App() {
               time: stamp,
               unread: true,
               deliveryId: delivery.id,
+              module: delivery.module,
+              entityId: delivery.entityId,
+              actionTarget: delivery.actionTarget,
             })),
             ...(current.notifications || []),
           ],
@@ -14111,8 +14451,8 @@ function FinancePage({
   const cashTotal = Number(openingBalance || 0) + inflowTotal - approvedExpenseTotal;
   const netFlow = inflowTotal - approvedExpenseTotal;
   const expectedCredit = credits.reduce((sum, credit) => {
-    if (normalize(credit.status).includes("tamam")) return sum;
     const plan = getCreditDisplayPlan(credit);
+    if (isCreditClosed(credit, plan)) return sum;
     const paymentState = getCreditPaymentState(credit, plan);
     return sum + Number(paymentState.nextInstallment?.amount || 0);
   }, 0);
@@ -15399,13 +15739,13 @@ function CreditsPage({
       }),
     [credits],
   );
-  const activeCredits = enrichedCredits.filter((item) => normalize(item.credit.status).includes("aktiv"));
+  const activeCredits = enrichedCredits.filter((item) => normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan));
   const todayCredits = enrichedCredits.filter((item) => item.paymentState.isDueToday);
   const overdueCredits = enrichedCredits.filter((item) => item.paymentState.isOverdue);
-  const completedCredits = enrichedCredits.filter((item) => normalize(item.credit.status).includes("tamam"));
+  const completedCredits = enrichedCredits.filter((item) => isCreditClosed(item.credit, item.plan));
   const salesCredits = enrichedCredits.filter((item) => getCreditSourceLabel(item.credit) === "Satışdan gələn");
   const monthlyDue = enrichedCredits.reduce((sum, item) => {
-    if (normalize(item.credit.status).includes("tamam")) return sum;
+    if (isCreditClosed(item.credit, item.plan)) return sum;
     return sum + Number(item.paymentState.nextInstallment?.amount || 0);
   }, 0);
   const overdueAmount = overdueCredits.reduce(
@@ -16162,6 +16502,7 @@ function CreditSchedule({ installments, onUpdatePaymentDate }) {
 
 function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
   const [typeFilter, setTypeFilter] = useState("Hamısı");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState("Hamısı");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [collectionFilter, setCollectionFilter] = useState("Hamısı");
   const [agingFilter, setAgingFilter] = useState("Hamısı");
@@ -16173,22 +16514,25 @@ function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
   const totalCreditor = total(creditorRows, "amount");
   const netPosition = totalDebitor - totalCreditor;
   const agingSummary = buildReceivableAgingSummary(rows);
+  const sourceTypeOptions = ["Hamısı", ...new Set(rows.map((row) => row.sourceTypeLabel || row.sourceType).filter(Boolean))];
   const riskOptions = ["Hamısı", ...new Set(rows.map((row) => row.riskCategory).filter(Boolean))];
   const collectionOptions = ["Hamısı", ...new Set(rows.map((row) => row.collectionStatus).filter(Boolean))];
   const agingOptions = ["Hamısı", ...agingSummary.map((row) => row.bucket)];
   const visibleRows = rows.filter((row) => {
     const matchesType = typeFilter === "Hamısı" || row.type === typeFilter;
+    const rowSourceType = row.sourceTypeLabel || row.sourceType;
+    const matchesSourceType = sourceTypeFilter === "Hamısı" || rowSourceType === sourceTypeFilter;
     const matchesRisk = riskFilter === "Hamısı" || row.riskCategory === riskFilter;
     const matchesCollection = collectionFilter === "Hamısı" || row.collectionStatus === collectionFilter;
     const matchesAging = agingFilter === "Hamısı" || row.agingBucket === agingFilter;
-    return matchesType && matchesRisk && matchesCollection && matchesAging;
+    return matchesType && matchesSourceType && matchesRisk && matchesCollection && matchesAging;
   });
 
   return (
     <div className="stack">
       <section className="metric-grid four">
-        <MetricCard label="Debitor borcu" value={money(totalDebitor)} trend={`${debtorRows.length} müştəri`} icon={Wallet} tone="primary" />
-        <MetricCard label="Kreditor borcu" value={money(totalCreditor)} trend={`${creditorRows.length} vendor`} icon={Building2} tone="warning" />
+        <MetricCard label="Debitor borcu" value={money(totalDebitor)} trend={`${debtorRows.length} borc sətri`} icon={Wallet} tone="primary" />
+        <MetricCard label="Kreditor borcu" value={money(totalCreditor)} trend={`${creditorRows.length} borc sətri`} icon={Building2} tone="warning" />
         <MetricCard label="Net mövqe" value={money(netPosition)} icon={TrendingUp} tone={netPosition >= 0 ? "success" : "danger"} />
         <MetricCard label="Risk portfeli" value={highRiskRows.length} trend={money(total(highRiskRows, "amount"))} icon={CircleAlert} tone={highRiskRows.length ? "danger" : "success"} />
       </section>
@@ -16197,7 +16541,7 @@ function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
           <div key={bucket.bucket} className={`aging-bucket ${bucket.count > 0 ? "active" : ""}`}>
             <span>{bucket.bucket}</span>
             <strong>{money(bucket.amount)}</strong>
-            <small>{bucket.count} tərəf</small>
+            <small>{bucket.count} borc sətri</small>
           </div>
         ))}
       </section>
@@ -16236,6 +16580,11 @@ function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
               <option key={item}>{item}</option>
             ))}
           </select>
+          <select value={sourceTypeFilter} onChange={(event) => setSourceTypeFilter(event.target.value)}>
+            {sourceTypeOptions.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
           <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
             {riskOptions.map((item) => (
               <option key={item}>{item}</option>
@@ -16258,7 +16607,7 @@ function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
           rows={visibleRows.map((row) => [
             <StatusBadge status={row.type} />,
             <TwoLine title={row.party} subtitle={row.detail} />,
-            row.source,
+            <TwoLine title={row.source} subtitle={row.sourceTypeLabel || row.sourceType || "Mənbə"} />,
             <strong>{money(row.amount)}</strong>,
             <TwoLine title={row.agingBucket} subtitle={Number(row.overdueDays || 0) > 0 ? `${row.overdueDays} gün` : "Gecikmə yoxdur"} />,
             <StatusBadge status={row.riskCategory} />,
@@ -18854,13 +19203,16 @@ function NotificationsPage({
   lastSweepAt,
   canManage = true,
 }) {
-  const filters = ["Cəmi", "Push", "SMS", "Email", "Oxunmamış"];
+  const filters = ["Cəmi", "Kredit", "Push", "SMS", "Email", "Oxunmamış"];
   const list = notifications.filter((item) => {
     if (filter === "Cəmi") return true;
     if (filter === "Oxunmamış") return item.unread;
+    if (filter === "Kredit") return item.module === "credits" || normalize(`${item.title} ${item.body}`).includes("kredit");
     return item.type === filter;
   });
   const queueTotal = automationRows.reduce((sum, row) => sum + Number(row.queueCount || 0), 0);
+  const eventTotal = automationRows.reduce((sum, row) => sum + Number(row.totalEventCount || 0), 0);
+  const cooldownTotal = automationRows.reduce((sum, row) => sum + Number(row.cooldownCount || 0), 0);
   const activeProviders = providerRows.filter((provider) => provider.status === "Aktiv" && provider.enabled);
   const sentCount = sendLog.filter((row) => row.status === "Göndərildi").length;
   const blockedCount = sendLog.filter((row) => row.status !== "Göndərildi").length;
@@ -18868,10 +19220,10 @@ function NotificationsPage({
   return (
     <div className="stack">
       <section className="metric-grid four">
-        <MetricCard label="Göndəriş növbəsi" value={queueTotal} trend={`${automationRows.length} qayda`} icon={Bell} tone={queueTotal ? "warning" : "success"} />
+        <MetricCard label="Hazır növbə" value={queueTotal} trend={`${eventTotal} hadisə · ${cooldownTotal} cooldown`} icon={Bell} tone={queueTotal ? "warning" : "success"} />
         <MetricCard label="Aktiv provider" value={activeProviders.length} trend={`${providerRows.length} kanal`} icon={ShieldCheck} tone="primary" />
         <MetricCard label="Göndərildi" value={sentCount} trend={dispatchSnapshot ? `Son: ${dispatchSnapshot.sent}` : "Log üzrə"} icon={Send} tone="success" />
-        <MetricCard label="Bloklandı" value={blockedCount} trend={dispatchSnapshot ? `Son: ${dispatchSnapshot.blocked}` : "Provider/kanal"} icon={CircleAlert} tone={blockedCount ? "danger" : "info"} />
+        <MetricCard label="Bloklandı" value={blockedCount} trend={dispatchSnapshot ? `${dispatchSnapshot.source || "Son"}: ${dispatchSnapshot.blocked}` : "Provider/kanal"} icon={CircleAlert} tone={blockedCount ? "danger" : "info"} />
       </section>
       <Panel>
         <div className="filter-bar">
@@ -18909,7 +19261,7 @@ function NotificationsPage({
             <Check size={16} />
             <span>
               {dispatchSnapshot
-                ? `Son göndəriş: ${dispatchSnapshot.at} · ${dispatchSnapshot.sent} göndərildi · ${dispatchSnapshot.blocked} bloklandı`
+                ? `Son göndəriş: ${dispatchSnapshot.at} · ${dispatchSnapshot.source || "Növbə"} · ${dispatchSnapshot.sent} göndərildi · ${dispatchSnapshot.blocked} bloklandı`
                 : `Son oxunma yoxlaması: ${lastSweepAt}`}
             </span>
           </div>
@@ -18942,14 +19294,15 @@ function NotificationsPage({
           icon={Bell}
         />
         <DataTable
-          columns={["Qayda", "Kanal", "Provider", "Trigger", "Növbə", "Son hadisə", "Son run", "Status"]}
+          columns={["Qayda", "Kanal", "Provider", "Trigger", "Hazır/Cooldown", "Son hadisə", "Prioritet", "Son run", "Status"]}
           rows={automationRows.map((rule) => [
             <TwoLine title={rule.name} subtitle={rule.id} />,
             <StatusBadge status={rule.channel} />,
             rule.providerName,
             rule.trigger,
-            <strong>{rule.queueCount}</strong>,
+            <TwoLine title={`${rule.queueCount} hazır`} subtitle={`${rule.cooldownCount || 0} cooldown / ${rule.totalEventCount || 0} hadisə`} />,
             rule.lastEvent,
+            rule.events?.[0]?.priority || rule.cooldownEvents?.[0]?.priority || "—",
             rule.lastRunAt || "—",
             <StatusBadge status={rule.health} />,
           ])}
@@ -18958,13 +19311,14 @@ function NotificationsPage({
       <Panel className="notification-sendlog-panel" data-testid="notification-sendlog-panel">
         <PanelHeader title="Göndəriş logu" subtitle="Provider cavabı, kanal, alıcı və bağlı modul üzrə son göndərişlər" icon={Send} />
         <DataTable
-          columns={["Tarix", "Kanal", "Provider", "Alıcı", "Mənbə", "Mətn", "Status"]}
+          columns={["Tarix", "Kanal", "Provider", "Alıcı", "Mənbə", "Son tarix", "Mətn", "Status"]}
           rows={sendLog.slice(0, 12).map((row) => [
             row.sentAt,
             <StatusBadge status={row.channel} />,
             row.providerName,
             <TwoLine title={row.recipient} subtitle={row.target} />,
-            <TwoLine title={row.ruleName} subtitle={row.entityId || row.source} />,
+            <TwoLine title={row.ruleName} subtitle={row.context || row.entityId || row.source} />,
+            row.dueDate || "—",
             row.body,
             <StatusBadge status={row.status} />,
           ])}
