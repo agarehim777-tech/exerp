@@ -5,9 +5,11 @@ import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 import ProtectedRoute from "./auth/ProtectedRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { initObservability } from "./lib/observability";
+import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
 
 initObservability();
+instrumentSupabase();
 
 
 const App = lazy(() => import("./App.jsx"));
