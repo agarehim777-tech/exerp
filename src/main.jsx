@@ -4,7 +4,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 import ProtectedRoute from "./auth/ProtectedRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { initObservability } from "./lib/observability";
 import "./styles.css";
+
+initObservability();
+
 
 const App = lazy(() => import("./App.jsx"));
 const Login = lazy(() => import("./auth/Login.jsx"));
