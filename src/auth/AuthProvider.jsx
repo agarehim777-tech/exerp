@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../integrations/supabase/client";
 import { logger } from "../lib/logger";
+import { setUser as setObsUser } from "../lib/observability";
+
 
 const AuthCtx = createContext(null);
 
@@ -33,14 +35,17 @@ export function AuthProvider({ children }) {
     // Register listener FIRST, then fetch initial session (recommended pattern)
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
+      setObsUser(s?.user ? { id: s.user.id, email: s.user.email } : null);
       // Defer supabase calls to avoid deadlock
       setTimeout(() => refresh(s?.user?.id), 0);
     });
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      setObsUser(data.session?.user ? { id: data.session.user.id, email: data.session.user.email } : null);
       refresh(data.session?.user?.id).finally(() => setLoading(false));
     });
+
 
     return () => sub.subscription.unsubscribe();
   }, [refresh]);
