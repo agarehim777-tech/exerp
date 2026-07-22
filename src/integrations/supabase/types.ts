@@ -1888,6 +1888,7 @@ export type Database = {
       }
       current_tenant_id: { Args: never; Returns: string }
       customer_360: { Args: { _customer: string }; Returns: Json }
+      ensure_rls_helper_grants: { Args: never; Returns: Json }
       evaluate_invoice_match: {
         Args: {
           _invoice_id: string
@@ -1953,6 +1954,7 @@ export type Database = {
         Returns: string
       }
       platform_delete_tenant: { Args: { _tenant: string }; Returns: undefined }
+      platform_health_check: { Args: never; Returns: Json }
       platform_list_tenants: {
         Args: never
         Returns: {
