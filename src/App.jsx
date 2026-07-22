@@ -133,6 +133,9 @@ import QuotesPage from "./modules/sales/QuotesPage.jsx";
 import SalesOrdersPage from "./modules/sales/SalesOrdersPage.jsx";
 import ShipmentsPage from "./modules/sales/ShipmentsPage.jsx";
 import AssistantPage from "./modules/assistant/AssistantPage.jsx";
+import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
+
+
 
 
 
@@ -10068,6 +10071,8 @@ function App() {
           )}
         </main>
       </div>
+
+      <FloatingAssistant />
 
       {modal && (
         <CreateModal
