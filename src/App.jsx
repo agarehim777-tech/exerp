@@ -10358,19 +10358,23 @@ function Topbar({
           <div
             className="sync-pill"
             title={
-              gitHubSync?.lastCommit
-                ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
-                : gitHubSync?.error || "GitHub sync status"
+              gitHubSync?.isLovableOnly
+                ? "Layihə Lovable Cloud ilə sinxronizasiya olunur"
+                : gitHubSync?.lastCommit
+                  ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
+                  : gitHubSync?.error || "GitHub sync status"
             }
           >
             <GitBranch size={16} />
             <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
             <span className="sync-label">
-              {gitHubSync?.status === "error"
-                ? "Sync xətası"
-                : gitHubSync?.lastSyncAt
-                  ? formatTimeAgo(gitHubSync.lastSyncAt)
-                  : "Yoxlanır..."}
+              {gitHubSync?.isLovableOnly
+                ? "Lovable Cloud"
+                : gitHubSync?.status === "error"
+                  ? "Sync xətası"
+                  : gitHubSync?.lastSyncAt
+                    ? formatTimeAgo(gitHubSync.lastSyncAt)
+                    : "Yoxlanır..."}
             </span>
           </div>
         )}
