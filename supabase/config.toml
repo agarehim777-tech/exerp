@@ -2,3 +2,6 @@ project_id = "rojwxgndtunssjdwngrh"
 
 [functions.platform-provision-admin]
 verify_jwt = true
+
+[functions.erp-chat]
+verify_jwt = false
