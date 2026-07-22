@@ -35,10 +35,10 @@ function Loading({ label = "Yüklənir…" }) {
 }
 
 function ProtectedApp() {
-  const { profile, memberships, loading } = useAuth();
+  const { profile, memberships, isPlatformAdmin, loading } = useAuth();
   if (loading) return <Loading />;
   const activeTenant = profile?.active_tenant_id ?? null;
-  if (!memberships?.length || !activeTenant) {
+  if (!isPlatformAdmin && (!memberships?.length || !activeTenant)) {
     return (
       <Suspense fallback={<Loading />}>
         <TenantBootstrap />
