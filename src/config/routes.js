@@ -1,6 +1,7 @@
 // Module ↔ URL path mapping. Keep in sync with navItems in src/data.js.
 export const moduleRoutes = {
   dashboard: "/",
+  assistant: "/ai-komekci",
   platform: "/platform/sirketler",
   crm: "/crm/musteriler",
   "sales-dashboard": "/satis/dashboard",

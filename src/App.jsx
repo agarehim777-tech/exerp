@@ -131,10 +131,13 @@ import SalesDashboardPage from "./modules/sales/SalesDashboardPage.jsx";
 import QuotesPage from "./modules/sales/QuotesPage.jsx";
 import SalesOrdersPage from "./modules/sales/SalesOrdersPage.jsx";
 import ShipmentsPage from "./modules/sales/ShipmentsPage.jsx";
+import AssistantPage from "./modules/assistant/AssistantPage.jsx";
+
 
 
 const navIcons = {
   dashboard: LayoutDashboard,
+  assistant: Sparkles,
   platform: Building2,
   crm: Users,
   "crm-deals": TrendingUp,
@@ -9753,6 +9756,7 @@ function App() {
           />
 
           {active === "platform" && <PlatformAdminPage />}
+          {active === "assistant" && <AssistantPage />}
           {active === "roles" && <RolesPermissionsPage />}
           {active === "access-check" && <AccessCheckPage />}
           

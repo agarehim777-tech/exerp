@@ -9,6 +9,7 @@ export const stages = [
 
 export const navItems = [
   { id: "dashboard", label: "Panel" },
+  { id: "assistant", label: "AI Köməkçi" },
   { id: "platform", label: "Şirkətlər" },
   { id: "crm", label: "Müştərilər", group: "crm" },
   { id: "crm-deals", label: "Sövdələşmələr", group: "crm" },
