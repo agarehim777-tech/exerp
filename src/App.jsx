@@ -10072,6 +10072,8 @@ function App() {
         </main>
       </div>
 
+      <FloatingAssistant />
+
       {modal && (
         <CreateModal
           type={modal.type}
