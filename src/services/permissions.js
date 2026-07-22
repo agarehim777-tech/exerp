@@ -20,6 +20,7 @@ export const permissionCatalog = [
   { key: "support.manage", label: "Support/Task" },
   { key: "onboarding.manage", label: "Onboarding" },
   { key: "messages.send", label: "Daxili mesaj göndərmək" },
+  { key: "messages.manage", label: "Mesaj qrupları və arxiv idarəsi" },
   { key: "notifications.manage", label: "Bildiriş idarəsi" },
   { key: "api.manage", label: "API/Webhook" },
   { key: "system.backup", label: "Backup və integrity" },
@@ -37,13 +38,13 @@ export const defaultRoles = [
     name: "Satış Meneceri",
     users: "12 istifadəçi",
     scope: "CRM, Satış, Kredit oxunuşu",
-    permissions: ["crm.manage", "sales.create", "contracts.manage", "reports.export", "messages.send", "notifications.manage"],
+    permissions: ["crm.manage", "sales.create", "contracts.manage", "reports.export", "messages.send", "messages.manage", "notifications.manage"],
   },
   {
     name: "Anbar İşçisi",
     users: "8 istifadəçi",
     scope: "Anbar və təhvil",
-    permissions: ["warehouse.manage", "delivery.complete", "production.manage", "support.manage", "messages.send", "notifications.manage"],
+    permissions: ["warehouse.manage", "delivery.complete", "production.manage", "support.manage", "messages.send", "messages.manage", "notifications.manage"],
   },
   {
     name: "Maliyyəçi",
@@ -61,6 +62,7 @@ export const defaultRoles = [
       "api.manage",
       "support.manage",
       "messages.send",
+      "messages.manage",
       "notifications.manage",
     ],
   },
@@ -68,7 +70,7 @@ export const defaultRoles = [
     name: "HR Mütəxəssisi",
     users: "3 istifadəçi",
     scope: "HR və KPI",
-    permissions: ["hr.manage", "kpi.manage", "support.manage", "onboarding.manage", "reports.export", "messages.send", "notifications.manage"],
+    permissions: ["hr.manage", "kpi.manage", "support.manage", "onboarding.manage", "reports.export", "messages.send", "messages.manage", "notifications.manage"],
   },
 ];
 
@@ -123,6 +125,7 @@ export const permissionModuleOverrides = {
   "vendors.po": "vendors",
   "reports.export": "reports",
   "messages.send": "messages",
+  "messages.manage": "messages",
   "notifications.manage": "notifications",
 };
 
