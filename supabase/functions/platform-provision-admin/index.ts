@@ -71,8 +71,13 @@ Deno.serve(async (req) => {
       created = true;
     }
 
-    // Ensure profile row exists (id references auth.users)
-    await admin.from("profiles").upsert({ id: userId, email: normalizedEmail }, { onConflict: "id" });
+    // Ensure profile row exists (id references auth.users) and set active tenant
+    await admin.from("profiles").upsert(
+      { id: userId, email: normalizedEmail, active_tenant_id: tenant_id },
+      { onConflict: "id" },
+    );
+    // If profile already existed without an active tenant, make sure it's set now
+    await admin.from("profiles").update({ active_tenant_id: tenant_id }).eq("id", userId).is("active_tenant_id", null);
 
     // Add tenant membership
     const { error: mErr } = await admin
