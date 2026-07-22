@@ -1,4 +1,8 @@
 export const pageMeta = {
+  assistant: {
+    title: "AI Köməkçi",
+    subtitle: "Şirkət datası ilə təbii dildə danışın — müştəri, məhsul, satış statistikası.",
+  },
   platform: {
     title: "Şirkətlər və SaaS idarəetməsi",
     subtitle: "Tenant-ları, tarifləri, statusları və şirkət administratorlarını idarə edin.",
