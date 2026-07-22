@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-const REPO = "agarehim777-tech/ERP--LOVABLE";
-const BRANCH = "main";
+const REPO = import.meta.env.VITE_GITHUB_REPO || "";
+const BRANCH = import.meta.env.VITE_GITHUB_BRANCH || "main";
+const TOKEN = import.meta.env.VITE_GITHUB_TOKEN || "";
 const POLL_MS = 60_000;
 
 export function useGitHubSync({ enabled = true, onPush } = {}) {
-  const [status, setStatus] = useState("idle");
-  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [status, setStatus] = useState(REPO ? "idle" : "ok");
+  const [lastSyncAt, setLastSyncAt] = useState(REPO ? null : new Date());
   const [lastCommit, setLastCommit] = useState(null);
   const [error, setError] = useState(null);
   const lastShaRef = useRef(null);
@@ -14,19 +15,36 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
   useEffect(() => {
     if (!enabled) return;
 
+    // No GitHub repo configured: the project is synced through Lovable's
+    // internal storage, so there is nothing to poll on GitHub. Show a calm
+    // "ok" state without calling an external API.
+    if (!REPO) {
+      setStatus("ok");
+      setLastSyncAt(new Date());
+      setError(null);
+      return;
+    }
+
     let cancelled = false;
     let timer = null;
 
     async function check() {
       try {
+        const headers = {
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        };
+        if (TOKEN) {
+          headers.Authorization = `Bearer ${TOKEN}`;
+        }
+
         const res = await fetch(
           `https://api.github.com/repos/${REPO}/commits/${BRANCH}`,
-          {
-            headers: { Accept: "application/vnd.github+json" },
-          }
+          { headers }
         );
         if (!res.ok) {
-          throw new Error(`GitHub ${res.status}`);
+          const body = await res.text();
+          throw new Error(`GitHub ${res.status}: ${body}`);
         }
         const data = await res.json();
         if (cancelled) return;
@@ -64,5 +82,13 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
     };
   }, [enabled, onPush]);
 
-  return { status, lastSyncAt, lastCommit, error, repo: REPO, branch: BRANCH };
+  return {
+    status,
+    lastSyncAt,
+    lastCommit,
+    error,
+    repo: REPO || "Lovable Cloud",
+    branch: BRANCH,
+    isLovableOnly: !REPO,
+  };
 }
