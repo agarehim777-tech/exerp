@@ -1,18 +1,27 @@
 import React from "react";
 import { logger } from "../lib/logger";
+import { captureError } from "../lib/observability";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, eventId: null };
   }
   static getDerivedStateFromError(error) {
     return { error };
   }
   componentDidCatch(error, info) {
-    logger.fatal(error?.message || "Render error", { componentStack: info?.componentStack }, error?.stack);
+    const componentStack = info?.componentStack;
+    // eslint-disable-next-line no-console
+    console.error("[ErrorBoundary]", error?.message, {
+      stack: error?.stack,
+      componentStack,
+    });
+    logger.fatal(error?.message || "Render error", { componentStack }, error?.stack);
+    captureError(error, { componentStack });
   }
   reset = () => this.setState({ error: null });
+
   render() {
     if (this.state.error) {
       return (
