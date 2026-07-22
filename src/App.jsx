@@ -38,6 +38,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   SlidersHorizontal,
   TrendingUp,
   Trash2,
