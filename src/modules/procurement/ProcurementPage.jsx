@@ -871,6 +871,18 @@ export default function ProcurementPage() {
           </Link>
           <h1 style={styles.title}>Satınalma</h1>
           <p style={styles.subtitle}>Vendor, zavod sifarişi, mədaxil, faktura və 3-way match axını.</p>
+          <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 8, fontFamily: "monospace", fontSize: 12, color: "#065f46" }}>
+            <strong>Aktiv tenant:</strong>
+            <span>{profile?.active_tenant_id ? `${profile.active_tenant_id}` : "—"}</span>
+            <span style={{ opacity: 0.6 }}>| sorğu: {tenantId || "—"}</span>
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard?.writeText(tenantId || ""); }}
+              style={{ marginLeft: 4, border: "none", background: "transparent", cursor: "pointer", color: "#047857", fontSize: 11 }}
+            >
+              copy
+            </button>
+          </div>
         </div>
         <div style={styles.headerActions}>
           <IconButton icon={RefreshCw} label={loading ? "Yüklənir" : "Yenilə"} onClick={load} disabled={loading || saving} />
