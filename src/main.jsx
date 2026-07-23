@@ -17,7 +17,6 @@ const Login = lazy(() => import("./auth/Login.jsx"));
 const Consent = lazy(() => import("./auth/Consent.jsx"));
 const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
-const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 const TenantSwitcher = lazy(() => import("./auth/TenantSwitcher.jsx"));
 const AcceptInvite = lazy(() => import("./auth/AcceptInvite.jsx"));
 
@@ -61,14 +60,6 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/.lovable/oauth/consent" element={<Consent />} />
         <Route path="/accept-invite" element={<AcceptInvite />} />
-        <Route
-          path="/satinalma/*"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<Loading />}><ProcurementPage /></Suspense>
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/*"
           element={

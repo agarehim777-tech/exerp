@@ -11,6 +11,11 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
   const [lastCommit, setLastCommit] = useState(null);
   const [error, setError] = useState(null);
   const lastShaRef = useRef(null);
+  const onPushRef = useRef(onPush);
+
+  useEffect(() => {
+    onPushRef.current = onPush;
+  }, [onPush]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -60,7 +65,7 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
 
         if (lastShaRef.current && lastShaRef.current !== sha) {
           setStatus("synced");
-          onPush?.({ sha, message, committedAt });
+          onPushRef.current?.({ sha, message, committedAt });
         } else {
           setStatus("ok");
         }
@@ -80,7 +85,7 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [enabled, onPush]);
+  }, [enabled]);
 
   return {
     status,
