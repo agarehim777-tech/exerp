@@ -1886,7 +1886,6 @@ export type Database = {
           total_amount: number
         }[]
       }
-      current_tenant_id: { Args: never; Returns: string }
       customer_360: { Args: { _customer: string }; Returns: Json }
       ensure_rls_helper_grants: { Args: never; Returns: Json }
       evaluate_invoice_match: {
@@ -1917,27 +1916,6 @@ export type Database = {
           _tenant: string
         }
         Returns: string
-      }
-      has_module_access: {
-        Args: { _action?: string; _module: string; _tenant: string }
-        Returns: boolean
-      }
-      has_tenant_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _tenant: string
-          _user: string
-        }
-        Returns: boolean
-      }
-      is_platform_admin: { Args: { _user: string }; Returns: boolean }
-      is_tenant_admin: {
-        Args: { _tenant: string; _user: string }
-        Returns: boolean
-      }
-      is_tenant_member: {
-        Args: { _tenant: string; _user: string }
-        Returns: boolean
       }
       platform_bootstrap_admin: { Args: never; Returns: boolean }
       platform_create_tenant: {
