@@ -57,9 +57,9 @@ import {
   stages,
 } from "./data.js";
 import { pageMeta } from "./config/page-meta.js";
-import { HelpCenterPage } from "./modules/help/HelpCenterPage.jsx";
-import { OnboardingPage } from "./modules/onboarding/OnboardingPage.jsx";
-import { ReportsPage } from "./modules/reports/ReportsPage.jsx";
+const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
+const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
+const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 import {
   changeRemotePassword,
   createRemoteCompany,
