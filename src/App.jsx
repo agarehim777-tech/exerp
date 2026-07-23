@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule } from "./config/routes.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
@@ -57,9 +57,9 @@ import {
   stages,
 } from "./data.js";
 import { pageMeta } from "./config/page-meta.js";
-import { HelpCenterPage } from "./modules/help/HelpCenterPage.jsx";
-import { OnboardingPage } from "./modules/onboarding/OnboardingPage.jsx";
-import { ReportsPage } from "./modules/reports/ReportsPage.jsx";
+const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
+const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
+const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 import {
   changeRemotePassword,
   createRemoteCompany,
@@ -118,23 +118,23 @@ import {
 } from "./services/persistence.js";
 import { total } from "./shared/utils/aggregate.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
-import { ContractsPage } from "./modules/contracts/ContractsPage.jsx";
-import { ProjectsPage } from "./modules/projects/ProjectsPage.jsx";
-import { ProductionPage } from "./modules/production/ProductionPage.jsx";
-import RolesPermissionsPage from "./modules/settings/RolesPermissionsPage.jsx";
-import AccessCheckPage from "./modules/settings/AccessCheckPage.jsx";
-import AccountingPageV2 from "./modules/accounting/AccountingPage.jsx";
-import CrmCustomersPageV2 from "./modules/crm/CrmCustomersPage.jsx";
-import CrmDealsPage from "./modules/crm/CrmDealsPage.jsx";
-import CrmActivitiesPage from "./modules/crm/CrmActivitiesPage.jsx";
-import CrmTasksPage from "./modules/crm/CrmTasksPage.jsx";
-import SalesDashboardPage from "./modules/sales/SalesDashboardPage.jsx";
-import QuotesPage from "./modules/sales/QuotesPage.jsx";
-import SalesOrdersPage from "./modules/sales/SalesOrdersPage.jsx";
-import ShipmentsPage from "./modules/sales/ShipmentsPage.jsx";
-import AssistantPage from "./modules/assistant/AssistantPage.jsx";
+const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
+const ProjectsPage = lazy(() => import("./modules/projects/ProjectsPage.jsx").then(m => ({ default: m.ProjectsPage })));
+const ProductionPage = lazy(() => import("./modules/production/ProductionPage.jsx").then(m => ({ default: m.ProductionPage })));
+const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
+const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.jsx"));
+const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
+const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
+const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
+const CrmActivitiesPage = lazy(() => import("./modules/crm/CrmActivitiesPage.jsx"));
+const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
+const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
+const QuotesPage = lazy(() => import("./modules/sales/QuotesPage.jsx"));
+const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx"));
+const ShipmentsPage = lazy(() => import("./modules/sales/ShipmentsPage.jsx"));
+const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
 import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
-import ProcurementPage from "./modules/procurement/ProcurementPage.jsx";
+const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 
 
 const navIcons = {
@@ -10426,6 +10426,7 @@ function App() {
             disabledReason={actionDeniedReason}
           />
 
+          <Suspense fallback={<div className="page-suspense-loader" style={{ padding: 32, opacity: 0.6 }}>Yüklənir…</div>}>
           {active === "platform" && <PlatformAdminPage />}
           {active === "assistant" && <AssistantPage />}
           {active === "roles" && <RolesPermissionsPage />}
@@ -10745,6 +10746,7 @@ function App() {
               canRunSystemBackup={can("system.backup")}
             />
           )}
+          </Suspense>
         </main>
       </div>
 

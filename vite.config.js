@@ -76,7 +76,8 @@ export default defineConfig({
           if (normalizedId.includes("/src/config/")) return "app-config";
           if (normalizedId.includes("/src/services/")) return "app-services";
           if (normalizedId.includes("/src/components/")) return "app-ui";
-          if (normalizedId.includes("/src/modules/")) return "app-modules";
+          // Note: /src/modules/ intentionally NOT bundled together — each lazy() import
+          // becomes its own route-based chunk for optimal code splitting.
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
           if (id.includes("node_modules/lucide-react")) return "icons";
           if (id.includes("node_modules")) return "vendor";

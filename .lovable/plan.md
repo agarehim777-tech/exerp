@@ -1,110 +1,67 @@
-## İdeal Satış Modulu
+# App.jsx tam parçalanması — route-based lazy loading
 
-Cari `SalesPage` sadəcə sifariş cədvəlidir. Onu tam satış idarəetmə modu­luna çeviririk: kotirovka (quote) → sifariş → çatdırılma → faktura axını, məhsul seçici, qiymət/endirim/ƏDV hesablama, satış analitikası və modern UI.
+Hazırda `src/App.jsx` **22,338 sətir** və **~25+ səhifə komponenti** (Dashboard, CRM, Sales, Warehouse, Finance, Invoices, Accounting, Tax, Credits, Receivables, Vendors, HR, KPI, Support, Messages, Notifications, Settings, Api, Platform, Projects, Production, Help, Onboarding, Deliveries...) yalnız `active === "..."` string switch-i ilə render olunur. Router yoxdur — hər şey tək state.
 
----
+## Məqsəd
 
-### 1. Data qatı (Supabase migration)
+- Hər səhifə → öz faylı → `React.lazy()` ilə yüklənən ayrı chunk
+- `active` state əvəzinə `react-router-dom` `<Routes>` və URL path-lar
+- App.jsx yalnız **shell** (AppProviders, Sidebar, TopBar, Outlet) — hədəf **< 1,500 sətir**
+- İlk bundle ölçüsü: `App-BJU_6pOi.js` 472 KB + `app-modules` 1.2 MB → hədəf **hər route < 200 KB gzip**
 
-**Yeni cədvəllər** (hamısı `tenant_id` + RLS + `owner_id`):
-- **`quotes`** — kotirovkalar: number, customer_id, status (draft/sent/accepted/rejected/expired), valid_until, currency, subtotal, discount_total, tax_total, total, notes, owner_id
-- **`quote_items`** — kotirovka sətrləri: quote_id, product_id, description, qty, unit_price, discount_pct, tax_rate, line_total
-- **`sales_shipments`** — çatdırılmalar: order_id, shipment_no, status (pending/packed/shipped/delivered), tracking_no, carrier, shipped_at, delivered_at
-- **`sales_shipment_items`** — sətrləri: shipment_id, order_item_id, qty_shipped
+## Yanaşma
 
-**Mövcud cədvəllərə əlavə:**
-- `orders`: `quote_id` (nullable FK), `discount_total`, `tax_total`, `payment_status` (unpaid/partial/paid), `paid_amount`, `due_date`
-- `order_items`: `discount_pct`, `tax_rate`, `line_total` (computed)
+Böyük refactoru risklə balanslaşdırmaq üçün **3 fazaya bölürəm**, hər faza sonunda build+preview yoxlanır.
 
-**Helper funksiyalar:**
-- `sales_dashboard(_tenant, _from, _to)` → RPC: ümumi dövriyyə, açıq sifariş sayı, orta çek, top 5 müştəri, top 5 məhsul
-- `convert_quote_to_order(_quote_id)` → kotirovkanı sifarişə çevirir, item-ları köçürür
-- `generate_order_number(_tenant)` → auto-inkrement (SO-2026-0001)
+### Faza 1 — İnfrastruktur (bu sprint)
 
----
+1. `src/pages/` qovluğu yarat, per-page fayl skeletləri
+2. Router qat: `src/router.jsx` — bütün route-lar `React.lazy()` ilə
+3. `App.jsx` içində `<Outlet />` göstərən shell komponenti çıxar (`AppShell.jsx`) — Sidebar + TopBar + kontekst provider-lər
+4. Mövcud `active` state-i `useLocation()` → path mapping ilə əvəzlə (backward compat üçün adapter)
+5. `src/main.jsx` routing tree-ni yenilə: `/`, `/crm`, `/satis`, `/anbar`, `/maliyyə`, `/muhasibat`, ...
 
-### 2. Hooks qatı (`src/shared/hooks/`)
+### Faza 2 — Səhifə köçürməsi (batched)
 
-- **`useQuotes.js`** — list/create/update/delete/send/accept, realtime
-- **`useSalesDashboard.js`** — RPC ilə KPI-lar, realtime refresh
-- **`useShipments.js`** — çatdırılma idarəetmə
-- **`useOrders.js`** genişləndirmək — line items ilə tam CRUD, ödəniş qeydiyyatı
+Hər batch-də 4-5 səhifə App.jsx-dən öz faylına köçürülür + shared helper-lər `src/shared/` altına:
 
----
+- **Batch A**: Dashboard, CRM (Customers/Deals/Activities/Tasks), Sales (Orders/Quotes/Shipments/Dashboard)
+- **Batch B**: Warehouse, Deliveries, Vendors, VendorManagement, Procurement (mövcud)
+- **Batch C**: Finance, Invoices, Accounting, Tax, Credits, Receivables
+- **Batch D**: HR, KPI, Support, Messages(V2), Notifications, Api
+- **Batch E**: Settings, Platform, Roles, AccessCheck, Help, Onboarding, Projects, Production
 
-### 3. UI qatı — `src/modules/sales/`
+Hər səhifə üçün props yerinə `useAppData()` custom hook (mövcud kontekstdən oxuyur) — App.jsx-dəki nəhəng prop-drilling-i sonlandırır.
 
-Sidebar-da **Satış** açılır (CRM kimi collapsible):
-- **Dashboard** — YENİ
-- **Kotirovkalar** — YENİ
-- **Sifarişlər** (redizayn)
-- **Çatdırılmalar** — YENİ
+### Faza 3 — Təmizləmə
 
-#### 3.1 `SalesDashboardPage.jsx`
-- 4 KPI kartı: Bu ay dövriyyə / Açıq sifariş / Orta çek / Konversiya %
-- 2 qrafik: son 30 gün gündəlik satış (line chart, recharts), status paylanması (donut)
-- Top müştərilər cədvəli (5 sətr), Top məhsullar (5 sətr)
-- Son 10 sifariş preview
+- App.jsx-dəki 200+ helper funksiya → `src/shared/lib/` altında domenlərə görə (`credits.js`, `invoices.js`, `accounting.js`, ...)
+- Ölü kod və dublikat helper-lər silinir
+- `manualChunks` vite config-də `per-route` chunk strategiyasına keçid
 
-#### 3.2 `QuotesPage.jsx`
-- Cədvəl: nömrə, müştəri, məbləğ, status çipi, etibarlıdır tarixi, sahib
-- Toolbar: axtarış, status filter, "Yeni kotirovka"
-- Sətrə klik → detal drawer
-- Sağdan sürüşən **`QuoteEditor`**: müştəri seçici, məhsul əlavə (autocomplete), qty/qiymət/endirim/ƏDV cədvəli, real-time cəm hesablama, PDF preview düyməsi, "Sifarişə çevir" düyməsi
+## Bu turda edəcəyim (Faza 1)
 
-#### 3.3 `OrdersPage.jsx` (redizayn)
-- Kanban görünüş toggle: statusa görə sütunlar (yeni/təsdiq/hazır/çatdırıldı/ləğv)
-- Cədvəl görünüşdə: nömrə, müştəri, məbləğ, ödəniş status badge, çatdırılma status, tarix
-- Sətr klik → **`OrderDrawer`**: items, ödəniş qeydi, çatdırılma yarat, faktura yarat, statuslar
+1. `src/router.jsx` — bütün route path → lazy component mapping
+2. `src/AppShell.jsx` — sidebar/topbar/providers, `<Outlet />` render edir
+3. `src/pages/` altında hər page üçün **wrapper faylı** — hələlik App.jsx-dən export edilən komponentləri re-export edir (əsas kod hərəkət etməyəcək, ancaq lazy split dərhal işləyəcək)
+4. App.jsx-dəki bütün `function XxxPage(...)` → `export function` çevriləcək ki, import olunsun
+5. `main.jsx` `<BrowserRouter>` altında `<AppShell>` + `<Routes>` render edir
+6. `active` state → `useNavigate()`/`useLocation()` adapter (sidebar click-ləri URL-i dəyişəcək)
 
-#### 3.4 `ShipmentsPage.jsx`
-- Sadə cədvəl + status axını (packed → shipped → delivered)
-- Tracking number, carrier, tarixlər
+Faza 1 sonunda:
+- Deep-link işləyir (`/crm-deals`, `/satis`, ...)
+- Back/forward düymələri işləyir
+- Hər səhifə ayrı chunk (initial bundle 200-300 KB gzip düşür)
+- Kod hələ App.jsx-də qalır — Faza 2-də fiziki çıxarılacaq
 
-#### 3.5 Ortaq komponentlər
-- **`ProductPicker.jsx`** — autocomplete + qiymət auto-doldurma
-- **`LineItemsTable.jsx`** — quote və order üçün ortaq item cədvəli (qty/price/discount/vat/total)
-- **`StatusBadge.jsx`** — rəngli status çipləri
-- **`MoneyDisplay.jsx`** — valyuta format
+Faza 2 və 3 sonrakı mesajlarda ardıcıl batch-lərlə.
 
----
+## Texniki qeydlər
 
-### 4. Görünüş
-- Mövcud "Emerald Prestige" temasına uyğun
-- Yeni CSS token: `--sales-status-*` (draft/sent/accepted/paid/shipped/cancelled)
-- Framer-motion: drawer slide-in, kanban card drag, KPI kartlarda count-up
+- Route path-lar hazırkı `active` açarları ilə eyni qalır (`/crm`, `/sales`, `/warehouse`...) — mövcud navigation state-ləri qırılmır
+- `AuthProvider`, `TenantBootstrap`, `ErrorBoundary`, `Suspense` shell-də saxlanılır
+- Sentry breadcrumbs-a route change event-i əlavə olunur
+- Sidebar navigation `<NavLink>` istifadə edir (aktiv route highlight avtomatik)
+- Vite `manualChunks` sadələşdirilir — Rollup route-based split-i özü tapır
 
----
-
-### 5. Fayl xülasəsi
-
-**Migration (1):**
-- yeni cədvəllər + ALTER orders/order_items + RPC-lər + RLS + GRANT
-
-**Yeni hooks (3):** `useQuotes`, `useSalesDashboard`, `useShipments`
-
-**Yeni komponentlər `src/modules/sales/`:**
-- `SalesDashboardPage.jsx`
-- `QuotesPage.jsx`, `QuoteEditor.jsx`
-- `OrdersPage.jsx` (redizayn), `OrderDrawer.jsx`
-- `ShipmentsPage.jsx`
-- `ProductPicker.jsx`, `LineItemsTable.jsx`, `StatusBadge.jsx`
-
-**Dəyişənlər:**
-- `src/App.jsx` — köhnə SalesPage-i əvəz + 3 yeni route + sidebar sub-menu
-- `src/data.js` — nav item-lar
-- `src/config/routes.js` və `src/config/page-meta.js` — yeni route-lar
-- `src/styles.css` — status token-ları
-
----
-
-### İcra sırası (təsdiqlədikdə)
-1. Migration
-2. Hooks + ortaq komponentlər (ProductPicker, LineItemsTable, StatusBadge)
-3. Dashboard səhifəsi (tez dəyər verir)
-4. Kotirovkalar + QuoteEditor
-5. Sifarişlər redizayn + OrderDrawer
-6. Çatdırılmalar
-7. Sidebar/route inteqrasiyası + polish
-
-Təsdiqləsən başlayıram.
+Faza 1-i başlayım?
