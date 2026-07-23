@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule } from "./config/routes.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
