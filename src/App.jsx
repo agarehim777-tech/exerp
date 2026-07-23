@@ -10426,6 +10426,7 @@ function App() {
             disabledReason={actionDeniedReason}
           />
 
+          <Suspense fallback={<div className="page-suspense-loader" style={{ padding: 32, opacity: 0.6 }}>Yüklənir…</div>}>
           {active === "platform" && <PlatformAdminPage />}
           {active === "assistant" && <AssistantPage />}
           {active === "roles" && <RolesPermissionsPage />}
