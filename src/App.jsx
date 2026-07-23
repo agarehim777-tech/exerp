@@ -10746,6 +10746,7 @@ function App() {
               canRunSystemBackup={can("system.backup")}
             />
           )}
+          </Suspense>
         </main>
       </div>
 
