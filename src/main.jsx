@@ -7,9 +7,11 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
+import { registerPWA } from "./lib/pwa.js";
 
 initObservability();
 instrumentSupabase();
+registerPWA();
 
 
 const App = lazy(() => import("./App.jsx"));
