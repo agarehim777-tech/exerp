@@ -19883,7 +19883,7 @@ function SettingsPage({
   );
 }
 
-function WorkflowSteps({ activeStage, compact = false }) {
+export function WorkflowSteps({ activeStage, compact = false }) {
   const activeIndex = stages.indexOf(activeStage);
   return (
     <div className={`workflow-steps ${compact ? "compact" : ""}`}>
