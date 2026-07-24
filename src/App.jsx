@@ -241,7 +241,7 @@ function buildCreditPlan({ total, initialPayment = 0, months = 12, startDate = b
   };
 }
 
-function getCreditDisplayPlan(credit) {
+export function getCreditDisplayPlan(credit) {
   const paidMonths = Number(credit.paidMonths || 0);
   const plan =
     Array.isArray(credit.installments) && credit.installments.length > 0
@@ -301,7 +301,7 @@ function roundMoney(value) {
   return Math.round(Number(value || 0));
 }
 
-function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
+export function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
   const status = normalize(credit?.status);
   const balance = Number(plan?.balance ?? credit?.balance ?? 0);
   const months = Number(plan?.months || credit?.months || 0);
@@ -317,7 +317,7 @@ function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
   );
 }
 
-function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
+export function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
   if (isCreditClosed(credit, plan)) {
     return {
       nextInstallment: null,
@@ -1375,7 +1375,7 @@ function buildProcurementRows(vendors, warehouseStock, orders, products = [], pu
     .sort((a, b) => b.recommendedQty - a.recommendedQty || a.available - b.available);
 }
 
-function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingBalance = 0 }) {
+export function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingBalance = 0 }) {
   const ledger = buildFinanceLedger({ orders, expenses, cashEntries });
   const inflow = ledger.filter((row) => row.direction === "in").reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const approvedExpense = expenses
@@ -1402,7 +1402,7 @@ function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingB
   };
 }
 
-function hasExpenseCashImpact(expense = {}) {
+export function hasExpenseCashImpact(expense = {}) {
   if (expense.cashImpact === false) return false;
   return expense.source !== "HR Payroll";
 }
@@ -3912,7 +3912,7 @@ function sortByFinanceDate(rows) {
   });
 }
 
-function buildFinanceLedger({ orders, expenses, cashEntries }) {
+export function buildFinanceLedger({ orders, expenses, cashEntries }) {
   const salesRows = orders
     .filter((order) => Number(order.paid || 0) > 0)
     .map((order) => {
@@ -4033,7 +4033,7 @@ function matchesFinanceSearch(row, query) {
   ].join(" ")).includes(normalize(query));
 }
 
-function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFinanceDate) {
+export function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFinanceDate) {
   const target = parsePaymentDate(targetDate);
   const targetKey = formatDateInput(target || new Date());
   const previousRows = ledger.filter((row) => {
@@ -4069,7 +4069,7 @@ function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFina
   };
 }
 
-function buildExpenseCategoryRows(expenses) {
+export function buildExpenseCategoryRows(expenses) {
   const byCategory = expenses.reduce((map, expense) => {
     const current = map.get(expense.category) || {
       category: expense.category,
