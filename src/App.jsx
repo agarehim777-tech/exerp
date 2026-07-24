@@ -135,9 +135,12 @@ const ShipmentsPage = lazy(() => import("./modules/sales/ShipmentsPage.jsx"));
 const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
 import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
+const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
+const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
 
 
-const navIcons = {
+export const navIcons = {
   dashboard: LayoutDashboard,
   assistant: Sparkles,
   platform: Building2,
@@ -178,7 +181,7 @@ const navIcons = {
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
 const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
-const currentBusinessDate = formatDateInput(new Date());
+export const currentBusinessDate = formatDateInput(new Date());
 const currentBusinessYear = currentBusinessDate.slice(0, 4);
 const currentBusinessQuarter = Math.floor(new Date().getMonth() / 3) + 1;
 const baseCreditDate = currentBusinessDate;
@@ -239,7 +242,7 @@ function buildCreditPlan({ total, initialPayment = 0, months = 12, startDate = b
   };
 }
 
-function getCreditDisplayPlan(credit) {
+export function getCreditDisplayPlan(credit) {
   const paidMonths = Number(credit.paidMonths || 0);
   const plan =
     Array.isArray(credit.installments) && credit.installments.length > 0
@@ -299,7 +302,7 @@ function roundMoney(value) {
   return Math.round(Number(value || 0));
 }
 
-function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
+export function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
   const status = normalize(credit?.status);
   const balance = Number(plan?.balance ?? credit?.balance ?? 0);
   const months = Number(plan?.months || credit?.months || 0);
@@ -315,7 +318,7 @@ function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
   );
 }
 
-function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
+export function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
   if (isCreditClosed(credit, plan)) {
     return {
       nextInstallment: null,
@@ -1201,7 +1204,7 @@ function isPurchaseOrderOpen(po = {}) {
   );
 }
 
-function buildPurchaseOrderCoverage(purchaseOrders = []) {
+export function buildPurchaseOrderCoverage(purchaseOrders = []) {
   return (purchaseOrders || []).filter(isPurchaseOrderOpen).reduce((map, po) => {
     const key = normalize(po.product);
     if (!key) return map;
@@ -1216,7 +1219,7 @@ function buildPurchaseOrderCoverage(purchaseOrders = []) {
   }, new Map());
 }
 
-function buildWarehouseWmsRows(items, products = []) {
+export function buildWarehouseWmsRows(items, products = []) {
   const productsByName = buildProductLookup(products);
 
   return items.map((item, index) => {
@@ -1373,7 +1376,7 @@ function buildProcurementRows(vendors, warehouseStock, orders, products = [], pu
     .sort((a, b) => b.recommendedQty - a.recommendedQty || a.available - b.available);
 }
 
-function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingBalance = 0 }) {
+export function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingBalance = 0 }) {
   const ledger = buildFinanceLedger({ orders, expenses, cashEntries });
   const inflow = ledger.filter((row) => row.direction === "in").reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const approvedExpense = expenses
@@ -1400,7 +1403,7 @@ function buildFinanceScenario({ orders, expenses, credits, cashEntries, openingB
   };
 }
 
-function hasExpenseCashImpact(expense = {}) {
+export function hasExpenseCashImpact(expense = {}) {
   if (expense.cashImpact === false) return false;
   return expense.source !== "HR Payroll";
 }
@@ -3602,7 +3605,7 @@ function normalizeOrderProductLines(rows = []) {
     }));
 }
 
-function isDeliveryQueueOrder(order) {
+export function isDeliveryQueueOrder(order) {
   return Boolean(
     order &&
       order.status !== "Təhvil verilib" &&
@@ -3910,7 +3913,7 @@ function sortByFinanceDate(rows) {
   });
 }
 
-function buildFinanceLedger({ orders, expenses, cashEntries }) {
+export function buildFinanceLedger({ orders, expenses, cashEntries }) {
   const salesRows = orders
     .filter((order) => Number(order.paid || 0) > 0)
     .map((order) => {
@@ -4031,7 +4034,7 @@ function matchesFinanceSearch(row, query) {
   ].join(" ")).includes(normalize(query));
 }
 
-function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFinanceDate) {
+export function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFinanceDate) {
   const target = parsePaymentDate(targetDate);
   const targetKey = formatDateInput(target || new Date());
   const previousRows = ledger.filter((row) => {
@@ -4067,7 +4070,7 @@ function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = baseFina
   };
 }
 
-function buildExpenseCategoryRows(expenses) {
+export function buildExpenseCategoryRows(expenses) {
   const byCategory = expenses.reduce((map, expense) => {
     const current = map.get(expense.category) || {
       category: expense.category,
@@ -4087,7 +4090,7 @@ function buildExpenseCategoryRows(expenses) {
   return [...byCategory.values()].sort((a, b) => b.total - a.total);
 }
 
-function filterRows(rows, query) {
+export function filterRows(rows, query) {
   if (!query.trim()) return rows;
   const q = normalize(query);
   return rows.filter((row) => normalize(Object.values(row).join(" ")).includes(q));
@@ -11538,201 +11541,7 @@ function PasswordLoginForm({ onLogin, isLoading, error }) {
   );
 }
 
-function DashboardPage({
-  stats,
-  orders,
-  stock,
-  expenses,
-  notifications,
-  actions = [],
-  moduleReadiness = { items: [] },
-  advanceOrder,
-  setActive,
-}) {
-  const chart = [
-    { month: "Yan", value: 145 },
-    { month: "Fev", value: 168 },
-    { month: "Mar", value: 192 },
-    { month: "Apr", value: 178 },
-    { month: "May", value: 249 },
-  ];
-  const pending = expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
-
-  return (
-    <div className="stack">
-      <section className="metric-grid">
-        <MetricCard
-          label="Aylıq gəlir"
-          value={money(stats.revenue)}
-          trend="+18.4% keçən aya"
-          icon={Wallet}
-          tone="success"
-        />
-        <MetricCard
-          label="Aktiv müştəri"
-          value={stats.activeCustomers}
-          trend="+62 bu ay"
-          icon={Users}
-          tone="primary"
-        />
-        <MetricCard
-          label="Açıq sifariş"
-          value={stats.openOrders}
-          trend="+12 bu həftə"
-          icon={ShoppingCart}
-          tone="info"
-        />
-        <MetricCard
-          label="Təsdiq gözləyir"
-          value={stats.pending}
-          trend={`${pending.length} maliyyə əməliyyatı`}
-          icon={CircleAlert}
-          tone="warning"
-        />
-      </section>
-
-      <section className="dashboard-grid">
-        <Panel className="span-2">
-          <PanelHeader
-            title="Aylıq Satış Dinamikası"
-            subtitle="Son 5 ay üzrə dövriyyə (min ₼)"
-            icon={TrendingUp}
-          />
-          <div className="bar-chart" aria-label="Aylıq satış qrafiki">
-            {chart.map((item) => {
-              const height = Math.max(9, (item.value / 249) * 100);
-              return (
-                <div className="bar-item" key={item.month}>
-                  <span>{item.value}k</span>
-                  <svg className="bar-visual" viewBox="0 0 58 100" preserveAspectRatio="none" aria-hidden="true">
-                    <rect x="0" y={100 - height} width="58" height={height} rx="6" />
-                  </svg>
-                  <small>{item.month}</small>
-                </div>
-              );
-            })}
-          </div>
-        </Panel>
-
-        <Panel>
-          <PanelHeader
-            title="Əməliyyat Axını"
-            subtitle={`${stats.reserved} rezerv · ${stats.available} satış üçün`}
-            icon={Package}
-          />
-          <WorkflowSteps activeStage="Yoldadır" compact />
-          <div className="mini-list">
-            {notifications.slice(0, 3).map((item) => (
-              <button key={item.id} className="mini-row" onClick={() => setActive("notifications")}>
-                <span className={`dot ${item.unread ? "danger" : ""}`} />
-                <span>{item.title}</span>
-                <ChevronRight size={14} />
-              </button>
-            ))}
-          </div>
-        </Panel>
-      </section>
-
-      <Panel className="module-handover-panel">
-        <PanelHeader
-          title="Modul təhvil xəritəsi"
-          subtitle={`${moduleReadiness.ready || 0} hazır · ${moduleReadiness.watch || 0} nəzarət · ${moduleReadiness.blockers || 0} bloker`}
-          icon={ShieldCheck}
-        />
-        <div className="module-handover-summary">
-          <div>
-            <span>Ümumi status</span>
-            <strong>{moduleReadiness.status || "Yoxlanılır"}</strong>
-            <small>{moduleReadiness.score || 0}% hazırlıq</small>
-          </div>
-          <div>
-            <span>Əsas prinsip</span>
-            <strong>Modullar bağlı işləyir</strong>
-            <small>Satış - Anbar - Təhvil - Kredit - Maliyyə - KPI</small>
-          </div>
-          <div>
-            <span>Növbəti yoxlama</span>
-            <strong>{formatPaymentDate(parsePaymentDate(currentBusinessDate))}</strong>
-            <small>Dashboard və Ayarlar panelindən izlənir</small>
-          </div>
-        </div>
-        <div className="module-handover-grid">
-          {(moduleReadiness.items || []).map((item) => {
-            const Icon = navIcons[item.module] || ShieldCheck;
-            return (
-              <button key={item.module} className="module-handover-card" type="button" onClick={() => setActive(item.module)}>
-                <span className="module-handover-icon"><Icon size={17} /></span>
-                <div>
-                  <div className="module-handover-title">
-                    <strong>{item.title}</strong>
-                    <StatusBadge status={item.status} />
-                  </div>
-                  <p>{item.detail}</p>
-                  <div className="module-handover-meta">
-                    <span>{item.primary}</span>
-                    <span>{item.secondary}</span>
-                  </div>
-                  <small>{item.next}</small>
-                </div>
-                <ChevronRight size={16} />
-              </button>
-            );
-          })}
-        </div>
-      </Panel>
-
-      <section className="dashboard-grid">
-        <Panel className="span-2">
-          <PanelHeader title="Son Sifarişlər" subtitle="Statusu dəyişmək üçün mərhələ düyməsini istifadə edin" />
-          <DataTable
-            columns={["№", "Müştəri", "Məhsul", "Məbləğ", "Status", "Əməliyyat"]}
-            rows={orders.slice(0, 6).map((order) => [
-              <strong>{order.id}</strong>,
-              <TwoLine title={order.customer} subtitle={order.fin} />,
-              order.products,
-              money(order.amount),
-              <StatusBadge status={order.status} />,
-              <button className="text-btn" onClick={() => advanceOrder(order.id)}>
-                Növbəti
-              </button>,
-            ])}
-          />
-        </Panel>
-
-        <Panel className="today-action-panel">
-          <PanelHeader
-            title="Bu gün görüləcək işlər"
-            subtitle={`${formatPaymentDate(parsePaymentDate(currentBusinessDate))} üzrə prioritet əməliyyatlar`}
-            icon={ShieldCheck}
-          />
-          <div className="today-action-list">
-            {actions.slice(0, 6).map((action) => {
-              const Icon = action.icon || CircleAlert;
-              return (
-                <button key={action.id} className="today-action-row" onClick={() => setActive(action.module)}>
-                  <span className={`today-action-icon ${action.priority === "Yüksək" ? "danger" : "info"}`}>
-                    <Icon size={16} />
-                  </span>
-                  <div>
-                    <strong>{action.title}</strong>
-                    <small>{action.detail}</small>
-                  </div>
-                  <TwoLine title={money(action.amount)} subtitle={action.status} />
-                </button>
-              );
-            })}
-            {actions.length === 0 && (
-              <div className="today-action-empty">
-                <Check size={16} />
-                Bu gün üçün kritik əməliyyat yoxdur
-              </div>
-            )}
-          </div>
-        </Panel>
-      </section>
-    </div>
-  );
-}
+// DashboardPage moved to ./pages/DashboardPage.jsx (lazy chunk)
 
 function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit, onDeleteCustomer }) {
   const [pipelineFilter, setPipelineFilter] = useState("Hamısı");
@@ -12741,7 +12550,7 @@ function SalesPage({
   );
 }
 
-function buildAggregateWarehouseStock(warehouses, warehouseStock) {
+export function buildAggregateWarehouseStock(warehouses, warehouseStock) {
   const warehouseById = new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const byProduct = new Map();
 
@@ -12770,11 +12579,11 @@ function buildAggregateWarehouseStock(warehouses, warehouseStock) {
   return [...byProduct.values()].sort((a, b) => a.product.localeCompare(b.product, "az"));
 }
 
-function getAvailableQuantity(item) {
+export function getAvailableQuantity(item) {
   return Math.max(0, Number(item.total || 0) - Number(item.reserved || 0));
 }
 
-function getWarehouseStockSummary(items, capacity = 0, products = []) {
+export function getWarehouseStockSummary(items, capacity = 0, products = []) {
   const productsByName = buildProductLookup(products);
   const totalQty = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const reservedQty = total(items, "reserved");
@@ -12792,14 +12601,14 @@ function getWarehouseStockSummary(items, capacity = 0, products = []) {
   };
 }
 
-function buildWarehouseSummaries(warehouses, warehouseStock, products = []) {
+export function buildWarehouseSummaries(warehouses, warehouseStock, products = []) {
   return warehouses.map((warehouse) => ({
     warehouse,
     ...getWarehouseStockSummary(warehouseStock[warehouse.id] || [], Number(warehouse.capacity || 0), products),
   }));
 }
 
-function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
+export function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
   const productsByName = buildProductLookup(products);
 
   return warehouses.flatMap((warehouse) =>
@@ -12823,7 +12632,7 @@ function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
   );
 }
 
-function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
+export function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
   const warehouseById = new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const byProduct = new Map();
 
@@ -12866,7 +12675,7 @@ function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
   });
 }
 
-function filterWarehouseItems(items, filter) {
+export function filterWarehouseItems(items, filter) {
   if (filter === "Satış üçün var") {
     return items.filter((item) => item.total - item.reserved > 0);
   }
@@ -12879,7 +12688,7 @@ function filterWarehouseItems(items, filter) {
   return items;
 }
 
-function WarehouseStockToolbar({ filter, setFilter }) {
+export function WarehouseStockToolbar({ filter, setFilter }) {
   const filters = ["Hamısı", "Satış üçün var", "Rezervdə", "Aşağı stok"];
   return (
     <div className="warehouse-stock-toolbar">
@@ -12898,7 +12707,7 @@ function WarehouseStockToolbar({ filter, setFilter }) {
   );
 }
 
-function WarehouseDistribution({ distribution }) {
+export function WarehouseDistribution({ distribution }) {
   return (
     <div className="warehouse-distribution">
       {distribution
@@ -12912,7 +12721,7 @@ function WarehouseDistribution({ distribution }) {
   );
 }
 
-function DeliveryOrdersPanel({ orders, isAllWarehouses, warehouseStock = {}, onCompleteDelivery }) {
+export function DeliveryOrdersPanel({ orders, isAllWarehouses, warehouseStock = {}, onCompleteDelivery }) {
   return (
     <div className="delivery-orders-panel">
       <PanelHeader
@@ -12967,7 +12776,7 @@ function OrderProductLines({ lines }) {
   );
 }
 
-function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses, onSelect }) {
+export function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses, onSelect }) {
   return (
     <Panel className="warehouse-control-panel">
       <PanelHeader
@@ -13020,7 +12829,7 @@ function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses
   );
 }
 
-function WarehouseTransferPanel({ suggestions, onTransferStock }) {
+export function WarehouseTransferPanel({ suggestions, onTransferStock }) {
   return (
     <div className="warehouse-transfer-panel">
       <PanelHeader
@@ -13045,7 +12854,7 @@ function WarehouseTransferPanel({ suggestions, onTransferStock }) {
   );
 }
 
-function BarcodeBadge({ barcode, qrPayload }) {
+export function BarcodeBadge({ barcode, qrPayload }) {
   const widths = String(barcode)
     .slice(0, 12)
     .split("")
@@ -13559,7 +13368,7 @@ function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProduct, onS
   );
 }
 
-function WarehouseBalancesWorkspace({
+export function WarehouseBalancesWorkspace({
   warehouses,
   warehouseStock,
   products,
@@ -13706,421 +13515,7 @@ function WarehouseBalancesWorkspace({
   );
 }
 
-function WarehousePage({
-  warehouses,
-  warehouseStock,
-  products,
-  orders,
-  purchaseOrders = [],
-  selectedWarehouseId,
-  query,
-  onSelect,
-  onEdit,
-  onDelete,
-  onCompleteDelivery,
-  onTransferStock,
-  onReceiveStock,
-  onOpenImport,
-  onCreateProduct,
-  onEditProduct,
-  onTrackAction,
-}) {
-  const [warehouseStatusFilter, setWarehouseStatusFilter] = useState("Hamısı");
-  const [stockFilter, setStockFilter] = useState("Hamısı");
-  const operationsRef = useRef(null);
-  const isAllWarehouses = selectedWarehouseId === "all";
-  const selectedWarehouse = isAllWarehouses
-    ? null
-    : warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) || warehouses[0];
-  const aggregateItems = buildAggregateWarehouseStock(warehouses, warehouseStock);
-  const warehouseSummaries = buildWarehouseSummaries(warehouses, warehouseStock, products);
-  const summaryByWarehouse = new Map(warehouseSummaries.map((summary) => [summary.warehouse.id, summary]));
-  const aggregateSummary = getWarehouseStockSummary(
-    aggregateItems,
-    warehouses.reduce((sum, warehouse) => sum + Number(warehouse.capacity || 0), 0),
-    products,
-  );
-  const selectedItems = isAllWarehouses
-    ? aggregateItems
-    : selectedWarehouse
-      ? warehouseStock[selectedWarehouse.id] || []
-      : [];
-  const selectedSummary = isAllWarehouses
-    ? aggregateSummary
-    : summaryByWarehouse.get(selectedWarehouse?.id) || getWarehouseStockSummary([], 0, products);
-  const stockAlerts = buildWarehouseStockAlerts(warehouses, warehouseStock, products);
-  const transferSuggestions = buildWarehouseTransferSuggestions(warehouses, warehouseStock);
-  const visibleWarehouses = filterRows(warehouses, query).filter((warehouse) =>
-    warehouseStatusFilter === "Hamısı" ? true : warehouse.status === warehouseStatusFilter,
-  );
-  const warehouseList = visibleWarehouses.length > 0 ? visibleWarehouses : [];
-  const visibleItems = filterWarehouseItems(filterRows(selectedItems, query), stockFilter);
-  const purchaseOrderCoverage = useMemo(() => buildPurchaseOrderCoverage(purchaseOrders), [purchaseOrders]);
-  const wmsRows = buildWarehouseWmsRows(visibleItems, products).map((row) => {
-    const coverage = purchaseOrderCoverage.get(normalize(row.product)) || { orderedQty: 0, count: 0, latest: null };
-    return {
-      ...row,
-      orderedQty: Number(coverage.orderedQty || 0),
-      openPoCount: Number(coverage.count || 0),
-      latestPoId: coverage.latest?.id || "",
-      procurementStatus:
-        row.reorderQty <= 0
-          ? "Normal"
-          : Number(coverage.orderedQty || 0) >= row.reorderQty
-            ? "Sifariş verilib"
-            : Number(coverage.orderedQty || 0) > 0
-              ? "Qismən sifarişdə"
-              : "Sifariş verilməyib",
-    };
-  });
-  const reorderRows = wmsRows.filter((row) => row.reorderQty > 0);
-  const deliveryOrders = orders.filter((order) => {
-    if (!isDeliveryQueueOrder(order)) return false;
-    if (isAllWarehouses) return true;
-    return order.warehouseId === selectedWarehouse?.id;
-  });
-  const visibleStockAlerts = isAllWarehouses
-    ? stockAlerts
-    : stockAlerts.filter((alert) => alert.warehouseId === selectedWarehouse?.id);
-  const visibleTransferSuggestions = isAllWarehouses
-    ? transferSuggestions
-    : transferSuggestions.filter(
-        (suggestion) =>
-          suggestion.fromWarehouseId === selectedWarehouse?.id || suggestion.toWarehouseId === selectedWarehouse?.id,
-      );
-
-  return (
-    <div className="stack warehouse-module">
-      <WarehouseBalancesWorkspace
-        warehouses={warehouses}
-        warehouseStock={warehouseStock}
-        products={products}
-        purchaseOrders={purchaseOrders}
-        query={query}
-        onReceiveStock={onReceiveStock}
-        onOpenImport={onOpenImport}
-        onCreateProduct={onCreateProduct}
-        onEditProduct={onEditProduct}
-        onSelectWarehouse={onSelect}
-        onOpenOperations={() => {
-          if (operationsRef.current) {
-            operationsRef.current.open = true;
-            operationsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }}
-        onTrackAction={onTrackAction}
-      />
-      <details className="warehouse-operations-drawer" ref={operationsRef}>
-        <summary>
-          <span><SlidersHorizontal size={17} /> Anbar əməliyyat nəzarəti</span>
-          <span>Anbarlar, transfer, təhvil və WMS görünüşü <ChevronRight size={16} /></span>
-        </summary>
-        <div className="warehouse-operations-body">
-      <section className="metric-grid four">
-        <MetricCard label="Anbar sayı" value={warehouses.length} icon={Warehouse} tone="primary" />
-        <MetricCard
-          label="Satış üçün"
-          value={`${aggregateSummary.available} ədəd`}
-          trend={`${aggregateSummary.total} ümumi stok`}
-          icon={Boxes}
-          tone="info"
-        />
-        <MetricCard
-          label="Rezervdə"
-          value={`${aggregateSummary.reserved} ədəd`}
-          trend={percent(aggregateSummary.reservedRate)}
-          icon={Package}
-          tone="warning"
-        />
-        <MetricCard
-          label="Risk siqnalı"
-          value={stockAlerts.length}
-          trend={`${deliveryOrders.length} təhvil növbəsi`}
-          icon={CircleAlert}
-          tone={stockAlerts.length > 0 ? "danger" : "success"}
-        />
-      </section>
-
-      <div className="warehouse-head-actions">
-        <button className="secondary-btn" onClick={onCreateProduct}>
-          <Plus size={16} />
-          Məhsul yarat
-        </button>
-        <button
-          className="primary-btn"
-          disabled={warehouses.length === 0}
-          title={warehouses.length === 0 ? "Əvvəl anbar yaradın" : "Anbara məhsul mədaxil edin"}
-          onClick={onReceiveStock}
-        >
-          <Plus size={16} />
-          Mədaxil et
-        </button>
-      </div>
-
-      <WarehouseControlPanel
-        summary={selectedSummary}
-        deliveryCount={deliveryOrders.length}
-        alerts={visibleStockAlerts}
-        isAllWarehouses={isAllWarehouses}
-        onSelect={onSelect}
-      />
-
-      <Panel className="wms-control-panel">
-        <PanelHeader
-          title="WMS əməliyyat nəzarəti"
-          subtitle="SKU, rəf/bin, serial izləmə, sayım dövrü və minimum stok nöqtələri"
-          icon={Boxes}
-        />
-        <div className="wms-summary-grid">
-          <div>
-            <span>Serial izlənən</span>
-            <strong>{wmsRows.filter((row) => row.serialMode === "IMEI/Serial").length}</strong>
-            <small>Bahalı cihazlar</small>
-          </div>
-          <div>
-            <span>Sayımda</span>
-            <strong>{wmsRows.filter((row) => row.cycleCount === "Bu həftə").length}</strong>
-            <small>Cycle count prioriteti</small>
-          </div>
-          <div>
-            <span>Satınalma siqnalı</span>
-            <strong>{reorderRows.length}</strong>
-            <small>Minimum stokdan aşağı</small>
-          </div>
-          <div>
-            <span>Rezerv yükü</span>
-            <strong>{selectedSummary.reserved}</strong>
-            <small>Təhvilə bağlı stok</small>
-          </div>
-        </div>
-        <DataTable
-          columns={["SKU", "Məhsul", "Barkod/QR", "Serial status", "Bin/Rəf", "İzləmə", "Sayım", "Satış üçün", "Reorder", "Sifarişdə", "Status"]}
-          rows={wmsRows.slice(0, 8).map((row) => [
-            <strong>{row.sku}</strong>,
-            row.product,
-            <BarcodeBadge barcode={row.barcode} qrPayload={row.qrPayload} />,
-            <TwoLine
-              title={row.sampleSerial}
-              subtitle={`${row.serialSummary.available} anbarda · ${row.serialSummary.reserved} rezerv · ${row.serialSummary.sold} satılıb`}
-            />,
-            row.bin,
-            row.serialMode,
-            row.cycleCount,
-            row.available,
-            row.reorderQty > 0 ? `${row.reorderQty} ədəd` : "Yoxdur",
-            row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "—",
-            <StatusBadge status={row.procurementStatus || row.status} />,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="product-catalog-panel">
-        <PanelHeader title="Məhsul kataloqu" subtitle="SKU, kateqoriya, qiymət və minimum stok nəzarəti" icon={Package} />
-        <DataTable
-          columns={["SKU", "Məhsul", "Kateqoriya", "Alış", "Satış", "Minimum stok", "Sifarişdə", "İzləmə", "Əməliyyat"]}
-          rows={products.map((product) => [
-            <strong>{product.sku}</strong>,
-            product.name,
-            product.category,
-            money(product.costPrice),
-            money(product.salePrice),
-            product.reorderLevel,
-            (() => {
-              const coverage = purchaseOrderCoverage.get(normalize(product.name));
-              return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
-            })(),
-            product.serialTracked ? "IMEI / Serial" : "Batch",
-            <button className="text-btn" onClick={() => onEditProduct(product.id)}>Redaktə</button>,
-          ])}
-        />
-      </Panel>
-
-      <section className="warehouse-layout">
-        <Panel>
-          <PanelHeader title="Anbarlar" subtitle="Ümumi və ya konkret anbar seçin" />
-          <div className="warehouse-filter-row">
-            <select
-              aria-label="Anbar status filteri"
-              value={warehouseStatusFilter}
-              onChange={(event) => setWarehouseStatusFilter(event.target.value)}
-            >
-              <option>Hamısı</option>
-              <option>Aktiv</option>
-              <option>Passiv</option>
-              <option>Təmir</option>
-            </select>
-          </div>
-          <div className="warehouse-card-list">
-            <article className={`warehouse-card ${isAllWarehouses ? "active" : ""}`}>
-              <button className="warehouse-main" onClick={() => onSelect("all")}>
-                <div className="warehouse-card-head">
-                  <div>
-                    <strong>Ümumi</strong>
-                    <span>Bütün anbarlar · Məcmu qalıq</span>
-                  </div>
-                  <StatusBadge status="Toplam" />
-                </div>
-                <p>Bütün anbarlar üzrə malların ümumi qalıq və satış üçün miqdarı.</p>
-                <div className="warehouse-stats">
-                  <span>{aggregateItems.length} məhsul</span>
-                  <span>{aggregateSummary.total} ədəd</span>
-                  <span>{aggregateSummary.available} satış üçün</span>
-                </div>
-                <ProgressRow label="" value={(aggregateSummary.available / Math.max(aggregateSummary.total, 1)) * 100} compact />
-              </button>
-              <div className="warehouse-actions">
-                <button className="text-btn" onClick={() => onSelect("all")}>
-                  Ümumiyə bax
-                </button>
-              </div>
-            </article>
-            {warehouseList.map((warehouse) => {
-              const items = warehouseStock[warehouse.id] || [];
-              const warehouseSummary = summaryByWarehouse.get(warehouse.id) || getWarehouseStockSummary(items, warehouse.capacity, products);
-              return (
-                <article
-                  className={`warehouse-card ${warehouse.id === selectedWarehouse?.id ? "active" : ""}`}
-                  key={warehouse.id}
-                >
-                  <button className="warehouse-main" onClick={() => onSelect(warehouse.id)}>
-                    <div className="warehouse-card-head">
-                      <div>
-                        <strong>{warehouse.name}</strong>
-                        <span>{warehouse.code} · {warehouse.city}</span>
-                      </div>
-                      <StatusBadge status={warehouse.status} />
-                    </div>
-                    <p>{warehouse.address}</p>
-                    <div className="warehouse-stats">
-                      <span>{items.length} məhsul</span>
-                      <span>{warehouseSummary.available} satış üçün</span>
-                      <span>{warehouseSummary.utilization}% doluluq</span>
-                    </div>
-                    <ProgressRow label="" value={warehouseSummary.utilization} compact />
-                  </button>
-                  <div className="warehouse-actions">
-                    <button className="text-btn" onClick={() => onSelect(warehouse.id)}>
-                      Daxil ol
-                    </button>
-                    <button className="text-btn" onClick={() => onEdit(warehouse.id)}>
-                      Redaktə
-                    </button>
-                    <button className="text-btn danger" onClick={() => onDelete(warehouse.id)}>
-                      Sil
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-            {warehouseList.length === 0 && <EmptyState title="Anbar tapılmadı" />}
-          </div>
-        </Panel>
-
-        <Panel className="warehouse-detail-panel">
-          {isAllWarehouses ? (
-            <>
-              <div className="warehouse-detail-head">
-                <div>
-                  <h2>Ümumi anbar qalığı</h2>
-                  <p>Bütün anbarlar üzrə məhsul qalıqları və anbar paylanması</p>
-                </div>
-              </div>
-              <div className="warehouse-info-grid">
-                <TwoLine title="Anbar sayı" subtitle={`${warehouses.length} anbar`} />
-                <TwoLine title="Unikal məhsul" subtitle={`${aggregateItems.length} məhsul`} />
-                <TwoLine title="Ümumi / rezerv" subtitle={`${aggregateSummary.total} / ${aggregateSummary.reserved} ədəd`} />
-                <TwoLine title="Satış üçün dəyər" subtitle={money(aggregateSummary.value)} />
-              </div>
-              <WarehouseStockToolbar filter={stockFilter} setFilter={setStockFilter} />
-              <DataTable
-                columns={["Məhsul", "Ümumi", "Rezerv", "Satış üçün", "Sifarişdə", "Anbar paylanması", "Dəyər", "Risk"]}
-                rows={visibleItems.map((item) => [
-                  <strong>{item.product}</strong>,
-                  item.total,
-                  item.reserved,
-                  getAvailableQuantity(item),
-                  (() => {
-                    const coverage = purchaseOrderCoverage.get(normalize(item.product));
-                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
-                  })(),
-                  <WarehouseDistribution distribution={item.distribution} />,
-                  money(getAvailableQuantity(item) * item.price),
-                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="Aşağı stok" /> : "Normal",
-                ])}
-              />
-              <WarehouseTransferPanel
-                suggestions={visibleTransferSuggestions}
-                onTransferStock={onTransferStock}
-              />
-              <DeliveryOrdersPanel
-                orders={deliveryOrders}
-                isAllWarehouses={isAllWarehouses}
-                warehouseStock={warehouseStock}
-                onCompleteDelivery={onCompleteDelivery}
-              />
-            </>
-          ) : selectedWarehouse ? (
-            <>
-              <div className="warehouse-detail-head">
-                <div>
-                  <h2>{selectedWarehouse.name}</h2>
-                  <p>
-                    {selectedWarehouse.code} · {selectedWarehouse.type} · {selectedWarehouse.city}
-                  </p>
-                </div>
-                <div className="warehouse-head-actions">
-                  <button className="secondary-btn" onClick={() => onEdit(selectedWarehouse.id)}>
-                    Redaktə et
-                  </button>
-                  <button className="secondary-btn danger-outline" onClick={() => onDelete(selectedWarehouse.id)}>
-                    Sil
-                  </button>
-                </div>
-              </div>
-              <div className="warehouse-info-grid">
-                <TwoLine title="Məsul şəxs" subtitle={selectedWarehouse.manager} />
-                <TwoLine title="Ünvan" subtitle={selectedWarehouse.address} />
-                <TwoLine title="Tutum" subtitle={`${selectedSummary.total} / ${selectedWarehouse.capacity} ədəd`} />
-                <TwoLine title="Satış üçün dəyər" subtitle={money(selectedSummary.value)} />
-              </div>
-              <WarehouseStockToolbar filter={stockFilter} setFilter={setStockFilter} />
-              <DataTable
-                columns={["Məhsul", "Ümumi", "Rezerv", "Satış üçün", "Sifarişdə", "Qiymət", "Dəyər", "Risk"]}
-                rows={visibleItems.map((item) => [
-                  <strong>{item.product}</strong>,
-                  item.total,
-                  item.reserved,
-                  getAvailableQuantity(item),
-                  (() => {
-                    const coverage = purchaseOrderCoverage.get(normalize(item.product));
-                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
-                  })(),
-                  money(item.price),
-                  money(getAvailableQuantity(item) * item.price),
-                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="Aşağı stok" /> : "Normal",
-                ])}
-              />
-              <WarehouseTransferPanel
-                suggestions={visibleTransferSuggestions}
-                onTransferStock={onTransferStock}
-              />
-              <DeliveryOrdersPanel
-                orders={deliveryOrders}
-                isAllWarehouses={isAllWarehouses}
-                warehouseStock={warehouseStock}
-                onCompleteDelivery={onCompleteDelivery}
-              />
-            </>
-          ) : (
-            <EmptyState title="Anbar seçilməyib" />
-          )}
-        </Panel>
-      </section>
-        </div>
-      </details>
-    </div>
-  );
-}
+// WarehousePage moved to ./pages/WarehousePage.jsx (lazy chunk)
 
 function DeliveriesPage({ orders, warehouseStock = {}, warehouses = [], onCompleteDelivery }) {
   const [deliveryFilter, setDeliveryFilter] = useState("Hamısı");
@@ -14405,607 +13800,7 @@ function DeliveriesPage({ orders, warehouseStock = {}, warehouses = [], onComple
   );
 }
 
-function FinancePage({
-  expenses,
-  cashEntries,
-  orders,
-  credits,
-  currencyRows = [],
-  setExpenseStatus,
-  accounts = [],
-  openingBalance = 0,
-  onCreateAccount,
-  onEditAccount,
-  onEditExpense,
-  onDeleteExpense,
-  onOpenSalesOrder,
-  onOpenCredit,
-  onOpenVendors,
-}) {
-  const [financeFilter, setFinanceFilter] = useState("Hamısı");
-  const [categoryFilter, setCategoryFilter] = useState("Bütün kateqoriyalar");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [ledgerSearch, setLedgerSearch] = useState("");
-  const pending = expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
-  const approvedExpenses = expenses.filter((expense) => expense.status === "Təsdiq edildi");
-  const approvedCashExpenses = approvedExpenses.filter((expense) => hasExpenseCashImpact(expense));
-  const pendingCashExpenses = pending.filter((expense) => hasExpenseCashImpact(expense));
-  const nonCashExpenseTotal = expenses
-    .filter((expense) => !hasExpenseCashImpact(expense))
-    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const ledger = useMemo(() => buildFinanceLedger({ orders, expenses, cashEntries }), [orders, expenses, cashEntries]);
-  const financeScenario = useMemo(
-    () => buildFinanceScenario({ orders, expenses, credits, cashEntries, openingBalance }),
-    [orders, expenses, credits, cashEntries, openingBalance],
-  );
-  const categoryRows = buildExpenseCategoryRows(expenses);
-  const approvedExpenseTotal = total(approvedCashExpenses, "amount");
-  const pendingExpenseTotal = total(pendingCashExpenses, "amount");
-  const inflowTotal = ledger
-    .filter((row) => row.direction === "in")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const salesCashTotal = ledger
-    .filter((row) => row.type === "Satış" && row.direction === "in")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const creditCashTotal = ledger
-    .filter((row) => row.type === "Kredit")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const penaltyIncome = ledger.reduce((sum, row) => sum + Number(row.penalty || 0), 0);
-  const cashTotal = Number(openingBalance || 0) + inflowTotal - approvedExpenseTotal;
-  const netFlow = inflowTotal - approvedExpenseTotal;
-  const expectedCredit = credits.reduce((sum, credit) => {
-    const plan = getCreditDisplayPlan(credit);
-    if (isCreditClosed(credit, plan)) return sum;
-    const paymentState = getCreditPaymentState(credit, plan);
-    return sum + Number(paymentState.nextInstallment?.amount || 0);
-  }, 0);
-  const filterItems = [
-    { label: "Hamısı", count: ledger.length },
-    { label: "Daxilolma", count: ledger.filter((row) => row.direction === "in").length },
-    { label: "Satış", count: ledger.filter((row) => row.type === "Satış").length },
-    { label: "Kredit", count: ledger.filter((row) => row.type === "Kredit").length },
-    { label: "Xərc", count: ledger.filter((row) => row.type === "Xərc").length },
-    { label: "Gecikmə gəliri", count: ledger.filter((row) => Number(row.penalty || 0) > 0).length },
-    { label: "Təsdiq gözləyir", count: pending.length },
-    { label: "Cash təsirsiz", count: ledger.filter((row) => row.direction === "accrual").length },
-  ];
-  const categoryOptions = ["Bütün kateqoriyalar", ...new Set(ledger.map((row) => row.category).filter(Boolean))];
-  const visibleLedger = ledger.filter((row) => {
-    const matchesFilter = matchesFinanceFilter(row, financeFilter);
-    const matchesCategory = categoryFilter === "Bütün kateqoriyalar" || row.category === categoryFilter;
-    return (
-      matchesFilter &&
-      matchesCategory &&
-      matchesFinanceDateRange(row, dateFrom, dateTo) &&
-      matchesFinanceSearch(row, ledgerSearch)
-    );
-  });
-  const visibleInflow = visibleLedger
-    .filter((row) => row.direction === "in")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const visibleOutflow = visibleLedger
-    .filter((row) => row.direction === "out")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const visiblePending = visibleLedger
-    .filter((row) => row.direction === "pending")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const visibleAccrual = visibleLedger
-    .filter((row) => row.direction === "accrual")
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const visiblePenalty = visibleLedger.reduce((sum, row) => sum + Number(row.penalty || 0), 0);
-  const visibleNet = visibleInflow - visibleOutflow;
-  const dailyCash = useMemo(() => buildDailyCashSummary(ledger, openingBalance, baseFinanceDate), [ledger, openingBalance]);
-  const dailyCreditRows = dailyCash.rows.filter((row) => row.type === "Kredit");
-  const dailySalesRows = dailyCash.rows.filter((row) => row.type === "Satış");
-  const dailyExpenseRows = dailyCash.rows.filter((row) => row.type === "Xərc");
-  const maxCategoryTotal = Math.max(1, ...categoryRows.map((row) => row.total));
-  const fxExposure = currencyRows.reduce((sum, row) => sum + Math.abs(Number(row.exposureAzn || 0)), 0);
-  const activeAccounts = accounts.filter((account) => account.status === "Aktiv");
-  const cashAccounts = activeAccounts.filter((account) => normalize(account.type).includes("kassa"));
-  const bankAccounts = activeAccounts.filter((account) => !normalize(account.type).includes("kassa"));
-  const accountOpeningBalance = total(activeAccounts, "openingBalance");
-  const resetLedgerFilters = () => {
-    setFinanceFilter("Hamısı");
-    setCategoryFilter("Bütün kateqoriyalar");
-    setDateFrom("");
-    setDateTo("");
-    setLedgerSearch("");
-  };
-  const exportVisibleLedger = () => {
-    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const rows = [
-      ["Tarix", "Tip", "Mənbə modul", "Kateqoriya", "Hesab", "Mənbə", "Tərəf", "Əsas", "Gecikmə", "Məbləğ", "Status"],
-      ...visibleLedger.map((row) => [
-        row.date,
-        row.type,
-        row.source,
-        row.category,
-        row.account,
-        row.title,
-        row.party,
-        row.principal,
-        row.penalty,
-        row.amount,
-        row.status,
-      ]),
-    ];
-    const blob = new Blob([`\uFEFF${rows.map((row) => row.map(escapeCsv).join(",")).join("\n")}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = `maliyye-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(downloadUrl);
-  };
-  const renderFinanceSource = (row) => {
-    if (row.type === "Satış" && row.orderId) {
-      return (
-        <div className="finance-source-cell">
-          <button
-            className="module-link-btn"
-            type="button"
-            onClick={() => onOpenSalesOrder?.(row.orderId)}
-            data-testid="finance-ledger-order-link"
-          >
-            {row.orderId}
-          </button>
-          <small>{row.description}</small>
-        </div>
-      );
-    }
-
-    if (row.type === "Kredit" && row.creditId) {
-      return (
-        <div className="finance-source-cell">
-          <div className="finance-source-links">
-            <button
-              className="module-link-btn"
-              type="button"
-              onClick={() => onOpenCredit?.(row.creditId)}
-              data-testid="finance-ledger-credit-link"
-            >
-              {row.creditId}
-            </button>
-            {row.orderId ? (
-              <button
-                className="module-link-btn subtle"
-                type="button"
-                onClick={() => onOpenSalesOrder?.(row.orderId)}
-                data-testid="finance-ledger-credit-order-link"
-              >
-                {row.orderId}
-              </button>
-            ) : null}
-          </div>
-          <small>{row.contractId || row.description}</small>
-        </div>
-      );
-    }
-
-    if (row.poId) {
-      return (
-        <div className="finance-source-cell">
-          <button
-            className="module-link-btn"
-            type="button"
-            onClick={() => onOpenVendors?.(row.poId)}
-            data-testid="finance-ledger-po-link"
-          >
-            {row.poId}
-          </button>
-          <small>{row.title}</small>
-        </div>
-      );
-    }
-
-    return <TwoLine title={row.title} subtitle={row.description} />;
-  };
-
-  return (
-    <div className="stack">
-      <section className="metric-grid four">
-        <MetricCard label="Cash balans" value={money(cashTotal)} icon={Wallet} tone="success" />
-        <MetricCard label="Daxilolma" value={money(inflowTotal)} trend={`${orders.length} satış/kredit mənbəyi`} icon={TrendingUp} tone="primary" />
-        <MetricCard label="Real cash çıxışı" value={money(approvedExpenseTotal)} trend={`${money(pendingExpenseTotal)} təsdiqdə · ${money(nonCashExpenseTotal)} cash təsirsiz`} icon={BarChart3} tone="warning" />
-        <MetricCard
-          label="Kredit kassası"
-          value={money(creditCashTotal)}
-          trend={`${money(penaltyIncome)} gecikmə gəliri`}
-          icon={CreditCard}
-          tone="info"
-        />
-      </section>
-
-      <Panel className="finance-control-panel">
-        <PanelHeader title="Maliyyə nəzarəti" subtitle="Kassa, satış, kredit və xərc axınlarının icmalı" icon={Wallet} />
-        <div className="finance-control-grid">
-          <div className="finance-control-tile">
-            <span>Başlanğıc balans</span>
-            <strong>{money(openingBalance)}</strong>
-            <small>{accounts.length} hesab üzrə</small>
-          </div>
-          <div className="finance-control-tile">
-            <span>Net axın</span>
-            <strong>{money(netFlow)}</strong>
-            <small>Daxilolma - təsdiqli xərclər</small>
-          </div>
-          <div className="finance-control-tile">
-            <span>Gözlənilən kredit</span>
-            <strong>{money(expectedCredit)}</strong>
-            <small>Növbəti aylıq ödənişlər</small>
-          </div>
-          <div className="finance-control-tile">
-            <span>Bugün</span>
-            <strong>{formatPaymentDate(parsePaymentDate(baseFinanceDate))}</strong>
-            <small>{pending.length} təsdiq gözləyir</small>
-          </div>
-        </div>
-        <div className="finance-cash-bridge">
-          <div>
-            <span>Satışdan kassa</span>
-            <strong>{money(salesCashTotal)}</strong>
-            <small>Nağd/kart/köçürmə yığımı</small>
-          </div>
-          <div>
-            <span>Kredit yığımı</span>
-            <strong>{money(creditCashTotal)}</strong>
-            <small>Əsas + gecikmə gəliri</small>
-          </div>
-          <div>
-            <span>Təsdiqli cash çıxışı</span>
-            <strong>{money(approvedExpenseTotal)}</strong>
-            <small>Real kassaya təsir edən xərclər</small>
-          </div>
-          <div>
-            <span>Cash təsirsiz uçot</span>
-            <strong>{money(nonCashExpenseTotal)}</strong>
-            <small>Payroll və accrual xərclər</small>
-          </div>
-        </div>
-        <div className="finance-signal-list">
-          {pending.slice(0, 4).map((expense) => (
-            <button key={expense.id} className="finance-signal-row" onClick={() => setExpenseStatus(expense.id, "Təsdiq edildi")}>
-              <div>
-                <strong>{expense.description}</strong>
-                <span>
-                  {expense.category} · {money(expense.amount)} · kliklə təsdiqlə
-                </span>
-              </div>
-              <StatusBadge status={expense.status} />
-            </button>
-          ))}
-          {pending.length === 0 && (
-            <div className="finance-signal-empty">
-              <Check size={16} />
-              Təsdiq gözləyən xərc yoxdur
-            </div>
-          )}
-        </div>
-      </Panel>
-
-      <Panel className="finance-daily-close-panel" data-testid="finance-daily-close">
-        <PanelHeader
-          title="Günlük kassa bağlanışı"
-          subtitle={`${dailyCash.label} üzrə real kassa hərəkəti, pending öhdəlik və cash-neutral uçot ayrımı`}
-          icon={CalendarClock}
-        />
-        <div className="finance-daily-grid">
-          <div>
-            <span>Açılış</span>
-            <strong>{money(dailyCash.opening)}</strong>
-            <small>Əvvəlki günlərdən gələn balans</small>
-          </div>
-          <div>
-            <span>Bugünkü giriş</span>
-            <strong>{money(dailyCash.inflow)}</strong>
-            <small>{dailySalesRows.length} satış · {dailyCreditRows.length} kredit</small>
-          </div>
-          <div>
-            <span>Bugünkü çıxış</span>
-            <strong>{money(dailyCash.outflow)}</strong>
-            <small>Təsdiqli real xərc</small>
-          </div>
-          <div>
-            <span>Bağlanış</span>
-            <strong>{money(dailyCash.closing)}</strong>
-            <small>Faktiki cash qalığı</small>
-          </div>
-          <div>
-            <span>Gözləyən çıxış</span>
-            <strong>{money(dailyCash.pendingOutflow)}</strong>
-            <small>{dailyExpenseRows.filter((row) => row.direction === "pending").length} təsdiq gözləyir</small>
-          </div>
-          <div>
-            <span>Proqnoz qalıq</span>
-            <strong>{money(dailyCash.projectedClosing)}</strong>
-            <small>{money(dailyCash.penalty)} gecikmə gəliri · {money(dailyCash.accrual)} accrual</small>
-          </div>
-        </div>
-        <DataTable
-          columns={["Mənbə", "Tip", "Tərəf", "Əsas", "Gecikmə", "Kassa", "Status"]}
-          rows={dailyCash.rows.slice(0, 6).map((row) => [
-            renderFinanceSource(row),
-            <StatusBadge status={row.type} />,
-            row.party,
-            row.principal > 0 ? money(row.principal) : "—",
-            row.penalty > 0 ? money(row.penalty) : "—",
-            <strong className={`finance-amount ${row.direction}`}>
-              {row.direction === "out" ? "-" : row.direction === "in" ? "+" : ""}
-              {money(row.amount)}
-            </strong>,
-            <StatusBadge status={row.status} />,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="finance-account-panel">
-        <div className="warehouse-detail-head">
-          <div>
-            <h2>Kassa və bank hesabları</h2>
-            <p>Açılış balansları hesablar üzrə mühasibat və kassa proqnozuna daxil edilir.</p>
-          </div>
-          <button className="secondary-btn" onClick={onCreateAccount}>
-            <Plus size={16} />
-            Hesab əlavə et
-          </button>
-        </div>
-        <div className="finance-account-summary">
-          <div>
-            <span>Aktiv hesablar</span>
-            <strong>{activeAccounts.length}</strong>
-            <small>{cashAccounts.length} kassa · {bankAccounts.length} bank</small>
-          </div>
-          <div>
-            <span>Açılış balansı</span>
-            <strong>{money(accountOpeningBalance)}</strong>
-            <small>Kassa proqnozuna daxildir</small>
-          </div>
-          <div>
-            <span>Cari cash balans</span>
-            <strong>{money(cashTotal)}</strong>
-            <small>Açılış + daxilolma - təsdiqli çıxış</small>
-          </div>
-        </div>
-        <DataTable
-          columns={["Hesab", "Tip", "Valyuta", "Açılış balansı", "Status", "Əməliyyat"]}
-          rows={accounts.map((account) => [
-            <TwoLine title={account.name} subtitle={account.code} />,
-            account.type,
-            account.currency,
-            <strong>{money(account.openingBalance)}</strong>,
-            <StatusBadge status={account.status} />,
-            <button className="text-btn" onClick={() => onEditAccount(account.id)}>Redaktə</button>,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="finance-scenario-panel">
-        <PanelHeader
-          title="İdarəetmə uçotu"
-          subtitle="P&L, debitor qalıqları və təsdiq gözləyən xərclərin kassaya təsiri"
-          icon={BarChart3}
-        />
-        <div className="finance-scenario-grid">
-          <div>
-            <span>Brüt satış</span>
-            <strong>{money(financeScenario.grossSales)}</strong>
-            <small>Satış modulu üzrə</small>
-          </div>
-          <div>
-            <span>Təxmini maya</span>
-            <strong>{money(financeScenario.estimatedCost)}</strong>
-            <small>68% məhsul maya modeli</small>
-          </div>
-          <div>
-            <span>Brüt mənfəət</span>
-            <strong>{money(financeScenario.grossProfit)}</strong>
-            <small>{percent(financeScenario.margin)} marja</small>
-          </div>
-          <div>
-            <span>Debitor portfeli</span>
-            <strong>{money(financeScenario.creditBalance)}</strong>
-            <small>Kredit qalıqları</small>
-          </div>
-          <div>
-            <span>Gözləyən xərclərdən sonra</span>
-            <strong>{money(financeScenario.cashAfterPending)}</strong>
-            <small>Kassa proqnozu</small>
-          </div>
-        </div>
-      </Panel>
-
-      <Panel className="finance-currency-panel">
-        <PanelHeader
-          title="Multi-valyuta nəzarəti"
-          subtitle="Satış, yığım və açıq kredit portfeli üzrə AZN/USD/EUR ekvivalenti"
-          icon={Wallet}
-        />
-        <div className="finance-scenario-grid">
-          <div>
-            <span>FX risk</span>
-            <strong>{money(fxExposure)}</strong>
-            <small>Açıq portfel üzrə təxmini təsir</small>
-          </div>
-          <div>
-            <span>Valyuta sayı</span>
-            <strong>{currencyRows.length}</strong>
-            <small>Aktiv kurs masası</small>
-          </div>
-          <div>
-            <span>Baza valyuta</span>
-            <strong>AZN</strong>
-            <small>Kassa və mühasibat bazası</small>
-          </div>
-        </div>
-        <DataTable
-          columns={["Valyuta", "Kurs", "Satış ekvivalenti", "Yığım ekvivalenti", "FX təsir", "Status"]}
-          rows={currencyRows.map((row) => [
-            <TwoLine title={row.code} subtitle={row.name} />,
-            row.rate,
-            `${row.salesEquivalent} ${row.code}`,
-            `${row.collectedEquivalent} ${row.code}`,
-            money(row.exposureAzn),
-            <StatusBadge status={row.status} />,
-          ])}
-        />
-      </Panel>
-
-      <section className="dashboard-grid">
-        <Panel>
-          <PanelHeader title="Xərc kateqoriyaları" subtitle="Təsdiqli, gözləyən və imtina edilmiş xərclər" />
-          <div className="finance-category-list">
-            {categoryRows.map((row) => (
-              <div className="finance-category-row" key={row.category}>
-                <div className="finance-category-main">
-                  <TwoLine title={row.category} subtitle={`${money(row.approved)} təsdiqli · ${money(row.pending)} gözləyir`} />
-                  <strong>{money(row.total)}</strong>
-                </div>
-                <ProgressRow value={(row.total / maxCategoryTotal) * 100} compact />
-              </div>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel className="finance-expense-queue-panel span-2">
-          <PanelHeader title="Xərc təsdiq növbəsi" subtitle="Rəhbərlik təsdiqi və imtina axını" />
-          <DataTable
-            columns={["Təsvir", "Kateqoriya", "Tarix", "Məbləğ", "Status", "Əməliyyat"]}
-            rows={expenses.map((expense) => [
-              <strong>{expense.description}</strong>,
-              expense.category,
-              expense.date,
-              money(expense.amount),
-              <StatusBadge status={expense.status} />,
-              <div className="row-actions operation-table-actions">
-                {expense.status === "Təsdiq gözləyir" && (
-                  <>
-                    <button className="text-btn" onClick={() => setExpenseStatus(expense.id, "Təsdiq edildi")}>
-                      Təsdiq
-                    </button>
-                    <button className="text-btn danger" onClick={() => setExpenseStatus(expense.id, "İmtina edildi")}>
-                      İmtina
-                    </button>
-                  </>
-                )}
-                <button className="text-btn" onClick={() => onEditExpense(expense.id)}>Redaktə</button>
-                <button className="text-btn danger" onClick={() => onDeleteExpense(expense.id)}>Sil</button>
-              </div>,
-            ])}
-          />
-        </Panel>
-      </section>
-
-      <Panel className="finance-ledger-panel">
-        <PanelHeader title="Kassa axını" subtitle="Satış, kredit ödənişi və xərclər vahid reyestrdə" />
-        <div className="finance-filter-toolbar">
-          <div className="tabs finance-filter-tabs">
-            {filterItems.map((item) => (
-              <button
-                key={item.label}
-                className={financeFilter === item.label ? "active" : ""}
-                onClick={() => setFinanceFilter(item.label)}
-              >
-                {item.label}
-                <span>{item.count}</span>
-              </button>
-            ))}
-          </div>
-          <div className="finance-filter-controls">
-            <label className="finance-search-filter">
-              <span>Axtarış</span>
-              <input
-                value={ledgerSearch}
-                onChange={(event) => setLedgerSearch(event.target.value)}
-                placeholder="Mənbə, tərəf, status..."
-              />
-            </label>
-            <label className="finance-category-filter">
-              <span>Kateqoriya</span>
-              <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-                {categoryOptions.map((category) => (
-                  <option key={category}>{category}</option>
-                ))}
-              </select>
-            </label>
-            <label className="finance-date-filter">
-              <span>Başlanğıc</span>
-              <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-            </label>
-            <label className="finance-date-filter">
-              <span>Son</span>
-              <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-            </label>
-            <button className="secondary-btn icon-only" type="button" title="Filterləri sıfırla" onClick={resetLedgerFilters}>
-              <RefreshCw size={16} />
-            </button>
-            <button className="secondary-btn finance-export-btn" type="button" onClick={exportVisibleLedger}>
-              <Download size={16} />
-              Export
-            </button>
-          </div>
-        </div>
-        <div className="finance-ledger-summary">
-          <div>
-            <span>Görünən daxilolma</span>
-            <strong>{money(visibleInflow)}</strong>
-          </div>
-          <div>
-            <span>Görünən çıxış</span>
-            <strong>{money(visibleOutflow)}</strong>
-          </div>
-          <div>
-            <span>Net</span>
-            <strong>{money(visibleNet)}</strong>
-          </div>
-          <div>
-            <span>Gözləyən / accrual</span>
-            <strong>{money(visiblePending + visibleAccrual)}</strong>
-          </div>
-          <div>
-            <span>Gecikmə gəliri</span>
-            <strong>{money(visiblePenalty)}</strong>
-          </div>
-        </div>
-        <DataTable
-          columns={["Tarix", "Tip", "Hesab", "Mənbə", "Müştəri/Təsvir", "Əsas", "Gecikmə", "Məbləğ", "Status"]}
-          rows={visibleLedger.map((row) => [
-            row.date,
-            <StatusBadge status={row.type} />,
-            row.account || "—",
-            renderFinanceSource(row),
-            row.party,
-            row.principal > 0 ? money(row.principal) : "—",
-            row.penalty > 0 ? money(row.penalty) : "—",
-            <strong className={`finance-amount ${row.direction}`}>
-              {row.direction === "out" ? "-" : row.direction === "in" ? "+" : ""}
-              {money(row.amount)}
-            </strong>,
-            <StatusBadge status={row.status} />,
-          ])}
-        />
-      </Panel>
-
-      <Panel>
-        <PanelHeader title="Kredit kassa daxilolmaları" subtitle="Əsas məbləğ və gecikmə gəliri ayrı izlənir" />
-        <DataTable
-          columns={["Tarix", "Müştəri", "Kredit", "Müqavilə", "Əsas", "Gecikmə", "Kassa"]}
-          rows={cashEntries.map((entry) => [
-            entry.date,
-            <strong>{entry.customer}</strong>,
-            entry.creditId,
-            entry.contractId || "—",
-            money(entry.principal),
-            money(entry.penalty),
-            <StatusBadge status={money(entry.amount)} />,
-          ])}
-        />
-      </Panel>
-    </div>
-  );
-}
+// FinancePage moved to ./pages/FinancePage.jsx (lazy chunk)
 
 function InvoicesPage({ invoices, summary, invoiceSettings = {}, onExport, onOpenSalesOrder }) {
   const [invoiceFilter, setInvoiceFilter] = useState("Hamısı");
@@ -19883,7 +18678,7 @@ function SettingsPage({
   );
 }
 
-function WorkflowSteps({ activeStage, compact = false }) {
+export function WorkflowSteps({ activeStage, compact = false }) {
   const activeIndex = stages.indexOf(activeStage);
   return (
     <div className={`workflow-steps ${compact ? "compact" : ""}`}>

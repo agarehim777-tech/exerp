@@ -1,67 +1,57 @@
-# App.jsx tam parçalanması — route-based lazy loading
 
-Hazırda `src/App.jsx` **22,338 sətir** və **~25+ səhifə komponenti** (Dashboard, CRM, Sales, Warehouse, Finance, Invoices, Accounting, Tax, Credits, Receivables, Vendors, HR, KPI, Support, Messages, Notifications, Settings, Api, Platform, Projects, Production, Help, Onboarding, Deliveries...) yalnız `active === "..."` string switch-i ilə render olunur. Router yoxdur — hər şey tək state.
+# Batch A: Dashboard, Warehouse, Finance → src/pages/ (lazy chunks)
 
-## Məqsəd
+## Vəziyyət
 
-- Hər səhifə → öz faylı → `React.lazy()` ilə yüklənən ayrı chunk
-- `active` state əvəzinə `react-router-dom` `<Routes>` və URL path-lar
-- App.jsx yalnız **shell** (AppProviders, Sidebar, TopBar, Outlet) — hədəf **< 1,500 sətir**
-- İlk bundle ölçüsü: `App-BJU_6pOi.js` 472 KB + `app-modules` 1.2 MB → hədəf **hər route < 200 KB gzip**
+`src/App.jsx` (22,340 sətir) daxilində:
+- `DashboardPage` — sətir 11541–11736 (~196 sətir, 10 prop)
+- `WarehousePage` — sətir 13709–14124 (~416 sətir, 15+ prop)
+- `FinancePage` — sətir 14408–15009 (~602 sətir, 20+ prop)
 
-## Yanaşma
+Bu komponentlər App.jsx-də lokal təyin olunan UI helper-lərdən (`MetricCard`, `money`, `Section`, `Table` və s.) və 200+ helper funksiyadan asılıdır. **Sadə "wrapper faylı yarat və re-export et" yanaşması** chunk-splitting-ə fayda vermir, çünki bütün kod hələ App.jsx-də qalır və Rollup ayrı chunk yaratmır.
 
-Böyük refactoru risklə balanslaşdırmaq üçün **3 fazaya bölürəm**, hər faza sonunda build+preview yoxlanır.
+## Yanaşma — 2 addım
 
-### Faza 1 — İnfrastruktur (bu sprint)
+### Addım 1: Shared kitabxana çıxarışı (prerequisite)
 
-1. `src/pages/` qovluğu yarat, per-page fayl skeletləri
-2. Router qat: `src/router.jsx` — bütün route-lar `React.lazy()` ilə
-3. `App.jsx` içində `<Outlet />` göstərən shell komponenti çıxar (`AppShell.jsx`) — Sidebar + TopBar + kontekst provider-lər
-4. Mövcud `active` state-i `useLocation()` → path mapping ilə əvəzlə (backward compat üçün adapter)
-5. `src/main.jsx` routing tree-ni yenilə: `/`, `/crm`, `/satis`, `/anbar`, `/maliyyə`, `/muhasibat`, ...
+`src/shared/lib/` altında ayrıla bilən helper qrupları:
+- `src/shared/ui/primitives.jsx` — `MetricCard`, `Section`, `Table`, `StatusPill`, `Toolbar`, ... (App.jsx-də inline təyin olunmuş atomik UI komponentləri)
+- `src/shared/format/money.js` — `money`, `percent`, `date` format-erləri
+- `src/shared/lib/warehouse.js` — `buildProductLookup`, `getReorderPoint`, `isLowStockItem`, `buildWarehouseWmsRows` (App.jsx 1172–1250)
+- `src/shared/lib/finance.js` — `buildFinanceScenario`, `hasExpenseCashImpact`, `buildCurrencyExposureRows` (App.jsx 1376–1547)
+- `src/shared/lib/dashboard.js` — `buildTodayActionRows`, `buildExecutiveInsights` (App.jsx 1963–2092)
 
-### Faza 2 — Səhifə köçürməsi (batched)
+App.jsx içindən bu helper-lər silinir və `import` ilə əvəzlənir.
 
-Hər batch-də 4-5 səhifə App.jsx-dən öz faylına köçürülür + shared helper-lər `src/shared/` altına:
+### Addım 2: Səhifə komponentlərinin köçürülməsi
 
-- **Batch A**: Dashboard, CRM (Customers/Deals/Activities/Tasks), Sales (Orders/Quotes/Shipments/Dashboard)
-- **Batch B**: Warehouse, Deliveries, Vendors, VendorManagement, Procurement (mövcud)
-- **Batch C**: Finance, Invoices, Accounting, Tax, Credits, Receivables
-- **Batch D**: HR, KPI, Support, Messages(V2), Notifications, Api
-- **Batch E**: Settings, Platform, Roles, AccessCheck, Help, Onboarding, Projects, Production
+- `src/pages/DashboardPage.jsx` — `export default function DashboardPage(props)`; ancaq shared/ import-ları
+- `src/pages/WarehousePage.jsx` — eyni
+- `src/pages/FinancePage.jsx` — eyni
 
-Hər səhifə üçün props yerinə `useAppData()` custom hook (mövcud kontekstdən oxuyur) — App.jsx-dəki nəhəng prop-drilling-i sonlandırır.
+App.jsx-də mövcud lokal təyinatlar silinir, əvəzinə üç `lazy()` import əlavə olunur:
 
-### Faza 3 — Təmizləmə
+```jsx
+const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
+const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
+const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
+```
 
-- App.jsx-dəki 200+ helper funksiya → `src/shared/lib/` altında domenlərə görə (`credits.js`, `invoices.js`, `accounting.js`, ...)
-- Ölü kod və dublikat helper-lər silinir
-- `manualChunks` vite config-də `per-route` chunk strategiyasına keçid
+Prop-drilling saxlanılır (indi olduğu kimi) — hər üç səhifə hazırkı JSX-dəki eyni prop-larla çağırılır. `useAppData()` hook-a keçid Faza 2-nin sonrakı batch-ində.
 
-## Bu turda edəcəyim (Faza 1)
+## Risk və doğrulama
 
-1. `src/router.jsx` — bütün route path → lazy component mapping
-2. `src/AppShell.jsx` — sidebar/topbar/providers, `<Outlet />` render edir
-3. `src/pages/` altında hər page üçün **wrapper faylı** — hələlik App.jsx-dən export edilən komponentləri re-export edir (əsas kod hərəkət etməyəcək, ancaq lazy split dərhal işləyəcək)
-4. App.jsx-dəki bütün `function XxxPage(...)` → `export function` çevriləcək ki, import olunsun
-5. `main.jsx` `<BrowserRouter>` altında `<AppShell>` + `<Routes>` render edir
-6. `active` state → `useNavigate()`/`useLocation()` adapter (sidebar click-ləri URL-i dəyişəcək)
+- **Risk**: helper-lərin bəziləri App.jsx daxilindəki başqa səhifələr tərəfindən də istifadə olunur → çıxarış zamanı hamısını import etmək lazımdır. Fayl silinmədən əvvəl `rg` ilə hər helper-in bütün istifadə yerləri yoxlanılır.
+- **Doğrulama**:
+  1. `bun run build` — səhv olmadan tamamlansın
+  2. `dist/assets/` altında `DashboardPage-*.js`, `WarehousePage-*.js`, `FinancePage-*.js` ayrı chunk-lar mövcud olsun
+  3. Preview-da `/`, `/anbar/mehsullar`, `/maliyye/jurnal` route-ları açılıb data göstərsin
 
-Faza 1 sonunda:
-- Deep-link işləyir (`/crm-deals`, `/satis`, ...)
-- Back/forward düymələri işləyir
-- Hər səhifə ayrı chunk (initial bundle 200-300 KB gzip düşür)
-- Kod hələ App.jsx-də qalır — Faza 2-də fiziki çıxarılacaq
+## Gözlənilən nəticə
 
-Faza 2 və 3 sonrakı mesajlarda ardıcıl batch-lərlə.
+- App.jsx ~1,200 sətir azalır (təxminən 21,100-ə düşür)
+- 3 yeni route chunk (~50–150 KB gzip hər biri)
+- Initial `App-*.js` bundle-i ~100 KB azalır (helper-lər ayrılır)
+- Batch B–E eyni pattern ilə davam etdirilə bilər
 
-## Texniki qeydlər
-
-- Route path-lar hazırkı `active` açarları ilə eyni qalır (`/crm`, `/sales`, `/warehouse`...) — mövcud navigation state-ləri qırılmır
-- `AuthProvider`, `TenantBootstrap`, `ErrorBoundary`, `Suspense` shell-də saxlanılır
-- Sentry breadcrumbs-a route change event-i əlavə olunur
-- Sidebar navigation `<NavLink>` istifadə edir (aktiv route highlight avtomatik)
-- Vite `manualChunks` sadələşdirilir — Rollup route-based split-i özü tapır
-
-Faza 1-i başlayım?
+Təsdiqlə, başlayım?
