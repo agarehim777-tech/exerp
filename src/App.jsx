@@ -137,6 +137,7 @@ import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
+const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
 
 
 export const navIcons = {
