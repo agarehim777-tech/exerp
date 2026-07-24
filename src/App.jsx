@@ -137,7 +137,7 @@ import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 
 
-const navIcons = {
+export const navIcons = {
   dashboard: LayoutDashboard,
   assistant: Sparkles,
   platform: Building2,
