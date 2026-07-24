@@ -178,7 +178,7 @@ export const navIcons = {
 
 const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
 const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
-const currentBusinessDate = formatDateInput(new Date());
+export const currentBusinessDate = formatDateInput(new Date());
 const currentBusinessYear = currentBusinessDate.slice(0, 4);
 const currentBusinessQuarter = Math.floor(new Date().getMonth() / 3) + 1;
 const baseCreditDate = currentBusinessDate;
