@@ -135,6 +135,7 @@ const ShipmentsPage = lazy(() => import("./modules/sales/ShipmentsPage.jsx"));
 const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
 import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 
 
 export const navIcons = {
