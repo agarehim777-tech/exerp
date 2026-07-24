@@ -1202,7 +1202,7 @@ function isPurchaseOrderOpen(po = {}) {
   );
 }
 
-function buildPurchaseOrderCoverage(purchaseOrders = []) {
+export function buildPurchaseOrderCoverage(purchaseOrders = []) {
   return (purchaseOrders || []).filter(isPurchaseOrderOpen).reduce((map, po) => {
     const key = normalize(po.product);
     if (!key) return map;
@@ -1217,7 +1217,7 @@ function buildPurchaseOrderCoverage(purchaseOrders = []) {
   }, new Map());
 }
 
-function buildWarehouseWmsRows(items, products = []) {
+export function buildWarehouseWmsRows(items, products = []) {
   const productsByName = buildProductLookup(products);
 
   return items.map((item, index) => {
@@ -3603,7 +3603,7 @@ function normalizeOrderProductLines(rows = []) {
     }));
 }
 
-function isDeliveryQueueOrder(order) {
+export function isDeliveryQueueOrder(order) {
   return Boolean(
     order &&
       order.status !== "Təhvil verilib" &&
@@ -4088,7 +4088,7 @@ function buildExpenseCategoryRows(expenses) {
   return [...byCategory.values()].sort((a, b) => b.total - a.total);
 }
 
-function filterRows(rows, query) {
+export function filterRows(rows, query) {
   if (!query.trim()) return rows;
   const q = normalize(query);
   return rows.filter((row) => normalize(Object.values(row).join(" ")).includes(q));
@@ -12548,7 +12548,7 @@ function SalesPage({
   );
 }
 
-function buildAggregateWarehouseStock(warehouses, warehouseStock) {
+export function buildAggregateWarehouseStock(warehouses, warehouseStock) {
   const warehouseById = new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const byProduct = new Map();
 
@@ -12577,11 +12577,11 @@ function buildAggregateWarehouseStock(warehouses, warehouseStock) {
   return [...byProduct.values()].sort((a, b) => a.product.localeCompare(b.product, "az"));
 }
 
-function getAvailableQuantity(item) {
+export function getAvailableQuantity(item) {
   return Math.max(0, Number(item.total || 0) - Number(item.reserved || 0));
 }
 
-function getWarehouseStockSummary(items, capacity = 0, products = []) {
+export function getWarehouseStockSummary(items, capacity = 0, products = []) {
   const productsByName = buildProductLookup(products);
   const totalQty = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const reservedQty = total(items, "reserved");
@@ -12599,14 +12599,14 @@ function getWarehouseStockSummary(items, capacity = 0, products = []) {
   };
 }
 
-function buildWarehouseSummaries(warehouses, warehouseStock, products = []) {
+export function buildWarehouseSummaries(warehouses, warehouseStock, products = []) {
   return warehouses.map((warehouse) => ({
     warehouse,
     ...getWarehouseStockSummary(warehouseStock[warehouse.id] || [], Number(warehouse.capacity || 0), products),
   }));
 }
 
-function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
+export function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
   const productsByName = buildProductLookup(products);
 
   return warehouses.flatMap((warehouse) =>
@@ -12630,7 +12630,7 @@ function buildWarehouseStockAlerts(warehouses, warehouseStock, products = []) {
   );
 }
 
-function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
+export function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
   const warehouseById = new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const byProduct = new Map();
 
@@ -12673,7 +12673,7 @@ function buildWarehouseTransferSuggestions(warehouses, warehouseStock) {
   });
 }
 
-function filterWarehouseItems(items, filter) {
+export function filterWarehouseItems(items, filter) {
   if (filter === "Satış üçün var") {
     return items.filter((item) => item.total - item.reserved > 0);
   }
@@ -12686,7 +12686,7 @@ function filterWarehouseItems(items, filter) {
   return items;
 }
 
-function WarehouseStockToolbar({ filter, setFilter }) {
+export function WarehouseStockToolbar({ filter, setFilter }) {
   const filters = ["Hamısı", "Satış üçün var", "Rezervdə", "Aşağı stok"];
   return (
     <div className="warehouse-stock-toolbar">
@@ -12705,7 +12705,7 @@ function WarehouseStockToolbar({ filter, setFilter }) {
   );
 }
 
-function WarehouseDistribution({ distribution }) {
+export function WarehouseDistribution({ distribution }) {
   return (
     <div className="warehouse-distribution">
       {distribution
@@ -12719,7 +12719,7 @@ function WarehouseDistribution({ distribution }) {
   );
 }
 
-function DeliveryOrdersPanel({ orders, isAllWarehouses, warehouseStock = {}, onCompleteDelivery }) {
+export function DeliveryOrdersPanel({ orders, isAllWarehouses, warehouseStock = {}, onCompleteDelivery }) {
   return (
     <div className="delivery-orders-panel">
       <PanelHeader
@@ -12774,7 +12774,7 @@ function OrderProductLines({ lines }) {
   );
 }
 
-function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses, onSelect }) {
+export function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses, onSelect }) {
   return (
     <Panel className="warehouse-control-panel">
       <PanelHeader
@@ -12827,7 +12827,7 @@ function WarehouseControlPanel({ summary, deliveryCount, alerts, isAllWarehouses
   );
 }
 
-function WarehouseTransferPanel({ suggestions, onTransferStock }) {
+export function WarehouseTransferPanel({ suggestions, onTransferStock }) {
   return (
     <div className="warehouse-transfer-panel">
       <PanelHeader
@@ -12852,7 +12852,7 @@ function WarehouseTransferPanel({ suggestions, onTransferStock }) {
   );
 }
 
-function BarcodeBadge({ barcode, qrPayload }) {
+export function BarcodeBadge({ barcode, qrPayload }) {
   const widths = String(barcode)
     .slice(0, 12)
     .split("")
@@ -13366,7 +13366,7 @@ function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProduct, onS
   );
 }
 
-function WarehouseBalancesWorkspace({
+export function WarehouseBalancesWorkspace({
   warehouses,
   warehouseStock,
   products,
