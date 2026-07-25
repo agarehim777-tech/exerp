@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  BarChart3,
   CalendarClock,
   Check,
   CreditCard,
@@ -7,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import {
   DataTable,
