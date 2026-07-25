@@ -1917,6 +1917,15 @@ export type Database = {
         }
         Returns: string
       }
+      is_platform_admin: { Args: { _user: string }; Returns: boolean }
+      is_tenant_admin: {
+        Args: { _tenant: string; _user: string }
+        Returns: boolean
+      }
+      is_tenant_member: {
+        Args: { _tenant: string; _user: string }
+        Returns: boolean
+      }
       platform_bootstrap_admin: { Args: never; Returns: boolean }
       platform_create_tenant: {
         Args: {

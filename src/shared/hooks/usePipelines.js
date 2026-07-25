@@ -23,7 +23,7 @@ export function usePipelines(tenantId) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const ch = supabase.channel(`pipelines:${tenantId}`)
+    const ch = supabase.channel(`pipelines:${tenantId}:${Math.random().toString(36).slice(2,10)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_stages', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_pipelines', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
       .subscribe();
