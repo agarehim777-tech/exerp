@@ -4,6 +4,9 @@ export const moduleRoutes = {
   assistant: "/ai-komekci",
   platform: "/platform/sirketler",
   crm: "/crm/musteriler",
+  "crm-deals": "/crm/sovdelesmeler",
+  "crm-activities": "/crm/aktivlikler",
+  "crm-tasks": "/crm/tapsiriqlar",
   "sales-dashboard": "/satis/dashboard",
   "sales-quotes": "/satis/kotirovka",
   sales: "/satis/sifarisler",
@@ -31,6 +34,7 @@ export const moduleRoutes = {
   notifications: "/bildirisler",
   api: "/api",
   settings: "/parametrler",
+  roles: "/rollar",
   "access-check": "/icaze-yoxlama",
 };
 
