@@ -2,6 +2,9 @@ import React from "react";
 import { logger } from "../lib/logger";
 import { captureError } from "../lib/observability";
 
+const chunkErrorPattern = /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk .* failed/i;
+const chunkRecoveryKey = "erp.chunk-recovery";
+
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -19,6 +22,21 @@ export default class ErrorBoundary extends React.Component {
     });
     logger.fatal(error?.message || "Render error", { componentStack }, error?.stack);
     captureError(error, { componentStack });
+
+    if (chunkErrorPattern.test(String(error?.message || error))) {
+      const lastRecovery = Number(sessionStorage.getItem(chunkRecoveryKey) || 0);
+      if (Date.now() - lastRecovery > 30_000) {
+        sessionStorage.setItem(chunkRecoveryKey, String(Date.now()));
+        Promise.resolve()
+          .then(async () => {
+            if ("serviceWorker" in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.allSettled(registrations.map((registration) => registration.update()));
+            }
+          })
+          .finally(() => window.location.reload());
+      }
+    }
   }
   reset = () => this.setState({ error: null });
 
@@ -36,7 +54,7 @@ export default class ErrorBoundary extends React.Component {
             <pre style={pre}>{String(this.state.error?.message || this.state.error)}</pre>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
               <button onClick={this.reset} style={btn}>Yenidən cəhd</button>
-              <button onClick={() => (window.location.href = "/")} style={{ ...btn, background: "#fff", color: "#064e3b", border: "1px solid #d4c9a3" }}>Ana səhifə</button>
+              <button onClick={() => (window.location.href = import.meta.env.BASE_URL || "/")} style={{ ...btn, background: "#fff", color: "#064e3b", border: "1px solid #d4c9a3" }}>Ana səhifə</button>
             </div>
           </div>
         </main>

@@ -32,13 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Unit tests
+        run: npm test
+
+      - name: Deployment checks
+        run: npm run verify:deploy
+
       - name: Build
         run: npm run build:pages
         env:
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-          VITE_DB_PROVIDER: ${{ vars.VITE_DB_PROVIDER || 'postgres' }}
-          VITE_AUDIT_MODE: ${{ vars.VITE_AUDIT_MODE || 'immutable' }}
-          VITE_RELEASE_VERSION: github-pages
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ vars.VITE_SUPABASE_PROJECT_ID }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_RELEASE_VERSION: ${{ github.sha }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

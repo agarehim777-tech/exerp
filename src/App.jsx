@@ -206,7 +206,7 @@ function getCreditPlanStartDate(credit) {
   return shiftPaymentDate(formatDateInput(nextDate), -nextInstallmentNumber);
 }
 
-function buildCreditPlan({ total, initialPayment = 0, months = 12, startDate = baseCreditDate }) {
+export function buildCreditPlan({ total, initialPayment = 0, months = 12, startDate = baseCreditDate }) {
   const term = creditTermOptions.includes(Number(months)) ? Number(months) : 12;
   const totalAmount = Math.max(0, Math.round(Number(total || 0)));
   const upfront = Math.min(totalAmount, Math.max(0, Math.round(Number(initialPayment || 0))));
@@ -463,7 +463,7 @@ function getCreditManagementStatus(item) {
   return item.credit.status || "Aktiv";
 }
 
-function applyCreditPrincipalPayment(credit, principalAmount) {
+export function applyCreditPrincipalPayment(credit, principalAmount) {
   const plan = getCreditDisplayPlan(credit);
   const requestedPrincipal = Math.max(0, Math.round(Number(principalAmount || 0)));
   const appliedPrincipal = Math.min(requestedPrincipal, plan.balance);
@@ -501,6 +501,10 @@ function applyCreditPrincipalPayment(credit, principalAmount) {
     nextMonthly: nextInstallment?.amount || 0,
     status: nextBalance <= 0 ? "Tamamlandı" : "Aktiv",
   };
+}
+
+export function getReceivableClosureAmount(row) {
+  return Math.max(0, Number(row?.amount || 0));
 }
 
 function summarizeOrderProducts(order) {
@@ -2333,6 +2337,7 @@ function buildReportPackage({
   warehouseStock = {},
   products = [],
   purchaseOrders = [],
+  productionPlans = [],
   invoices = [],
   cashEntries = [],
 }) {
@@ -2371,6 +2376,7 @@ function buildReportPackage({
     expenses.length +
     products.length +
     (purchaseOrders || []).length +
+    (productionPlans || []).length +
     invoices.length +
     cashEntries.length;
 
@@ -3623,7 +3629,7 @@ function getDeliveryTotalQuantity(order) {
   return normalizeOrderProductLines(order?.productLines || []).reduce((sum, line) => sum + Number(line.qty || 0), 0);
 }
 
-function getDeliveryStockCheck(order, warehouseStock = {}) {
+export function getDeliveryStockCheck(order, warehouseStock = {}) {
   if (!order) {
     return { ok: false, status: "Sifariş yoxdur", reason: "Sifariş tapılmadı.", issues: [] };
   }
@@ -5170,15 +5176,53 @@ function userHasEffectivePermission(user, roles, permission) {
 }
 
 function App() {
-  const [state, setState] = useState(() => loadPersistentState());
-  const { activeTenantId, isPlatformAdmin } = useAuth();
+  const [state, setState] = useState(() => hydrateState(initialState));
+  const [tenantStateReady, setTenantStateReady] = useState(false);
+  const tenantSnapshotUnavailable = useRef(false);
+  const { activeTenantId, isPlatformAdmin, user: authUser } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
 
+  useEffect(() => {
+    let cancelled = false;
+    setTenantStateReady(false);
+    if (!activeTenantId) return () => { cancelled = true; };
+
+    supabase
+      .from("tenant_state_snapshots")
+      .select("state, schema_version")
+      .eq("tenant_id", activeTenantId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          tenantSnapshotUnavailable.current = true;
+          const cacheKey = `${localDbKey}.${activeTenantId}`;
+          let cachedState = null;
+          try {
+            cachedState = JSON.parse(window.localStorage.getItem(cacheKey) || "null");
+          } catch {
+            cachedState = null;
+          }
+          console.warn("[tenant-state] server snapshot unavailable; tenant cache is active", {
+            code: error.code,
+            message: error.message,
+          });
+          setState(hydrateState(cachedState || initialState));
+        } else {
+          tenantSnapshotUnavailable.current = false;
+          setState(hydrateState(data?.state || initialState));
+        }
+        setTenantStateReady(true);
+      });
+
+    return () => { cancelled = true; };
+  }, [activeTenantId]);
+
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
-    if (!activeTenantId) return;
+    if (!activeTenantId || !tenantStateReady) return;
     if (dbCustomers.length === 0 && dbProducts.length === 0 && dbOrders.length === 0) return;
     setState((prev) => ({
       ...prev,
@@ -5186,7 +5230,7 @@ function App() {
       ...(dbProducts.length ? { products: dbProducts.map(dbProductToLegacy) } : {}),
       ...(dbOrders.length ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
     }));
-  }, [activeTenantId, dbCustomers, dbProducts, dbOrders]);
+  }, [activeTenantId, tenantStateReady, dbCustomers, dbProducts, dbOrders]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -5217,6 +5261,8 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [remoteUser, setRemoteUser] = useState(null);
   const remoteSaveTimer = useRef(null);
+  const tenantSaveTimer = useRef(null);
+  const syncedAuditIds = useRef(new Set());
   const notificationAutoRunRef = useRef("");
   const creditRecords = useMemo(
     () => buildAllCreditRecords(state.orders, state.credits),
@@ -5621,19 +5667,82 @@ function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(localDbKey, JSON.stringify(state));
+      const cacheKey = activeTenantId ? `${localDbKey}.${activeTenantId}` : localDbKey;
+      window.localStorage.setItem(cacheKey, JSON.stringify(state));
     } catch {
       notify("Local DB yazılışı mümkün olmadı.", "warning");
     }
-    if (!remoteApiEnabled || !getRemoteToken()) return undefined;
+    if (activeTenantId && authUser?.id && tenantStateReady && !tenantSnapshotUnavailable.current) {
+      window.clearTimeout(tenantSaveTimer.current);
+      tenantSaveTimer.current = window.setTimeout(() => {
+        supabase
+          .from("tenant_state_snapshots")
+          .upsert(
+            {
+              tenant_id: activeTenantId,
+              state,
+              schema_version: localDbSchemaVersion,
+              updated_at: new Date().toISOString(),
+              updated_by: authUser.id,
+            },
+            { onConflict: "tenant_id" },
+          )
+          .then(({ error }) => {
+            if (error) {
+              console.error("[tenant-state] save failed", error);
+              setAuthError("Şirkət datası serverdə saxlanmadı. Administrator icazəsini yoxlayın.");
+            }
+          });
+      }, 800);
+    }
+
+    if (!remoteApiEnabled || !getRemoteToken()) {
+      return () => window.clearTimeout(tenantSaveTimer.current);
+    }
     window.clearTimeout(remoteSaveTimer.current);
     remoteSaveTimer.current = window.setTimeout(() => {
       saveRemoteState(state).catch((error) => {
         setAuthError(error instanceof Error ? error.message : "Serverə yazılış alınmadı.");
       });
     }, 500);
-    return () => window.clearTimeout(remoteSaveTimer.current);
-  }, [state, remoteUser?.role]);
+    return () => {
+      window.clearTimeout(remoteSaveTimer.current);
+      window.clearTimeout(tenantSaveTimer.current);
+    };
+  }, [state, remoteUser?.role, activeTenantId, authUser?.id, tenantStateReady]);
+
+  useEffect(() => {
+    const entry = state.auditLog?.[0];
+    if (!entry?.id || !activeTenantId || !authUser?.id || syncedAuditIds.current.has(entry.id)) return;
+
+    syncedAuditIds.current.add(entry.id);
+    supabase
+      .from("audit_events")
+      .upsert(
+        {
+          id: entry.id,
+          tenant_id: activeTenantId,
+          actor_id: authUser.id,
+          actor_role: entry.role || activeRoleInfo?.name || "System",
+          module: entry.module || "Sistem",
+          action: entry.action || "Əməliyyat",
+          detail: entry.detail || "",
+          status: entry.status || "Tamamlandı",
+          payload: entry,
+          occurred_at: entry.date || new Date().toISOString(),
+        },
+        { onConflict: "id", ignoreDuplicates: true },
+      )
+      .then(({ error }) => {
+        if (error) {
+          syncedAuditIds.current.delete(entry.id);
+          console.warn("[audit] immutable server log unavailable", {
+            code: error.code,
+            message: error.message,
+          });
+        }
+      });
+  }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name]);
 
   useEffect(() => {
     if (state.employees.length === 0) return;
@@ -6302,7 +6411,7 @@ function App() {
         const updatedCredits = new Map();
         const paymentByOrderId = new Map();
         const paymentByCreditId = new Map();
-        let closedAmount = Math.max(0, Number(targetRow.customerDebt || 0) + Number(targetRow.orderBalance || 0));
+        const closedAmount = getReceivableClosureAmount(targetRow);
 
         currentCredits
           .filter((credit) => creditIds.has(credit.id))
@@ -6312,7 +6421,6 @@ function App() {
             if (balance <= 0) return;
 
             const paymentResult = applyCreditPrincipalPayment(credit, balance);
-            closedAmount += Number(paymentResult.appliedPrincipal || 0);
             paymentByCreditId.set(credit.id, paymentResult);
             if (credit.orderId) paymentByOrderId.set(credit.orderId, paymentResult);
 
@@ -6419,7 +6527,7 @@ function App() {
 
       const poIds = new Set(targetRow.poIds || []);
       const payablePos = (current.purchaseOrders || []).filter((po) => poIds.has(po.id));
-      const closedAmount = payablePos.reduce((sum, po) => sum + Number(po.amount || 0), 0);
+      const closedAmount = getReceivableClosureAmount(targetRow);
       const existingExpenseIds = new Set((current.expenses || []).map((expense) => expense.id));
       const paymentExpenses = payablePos
         .filter((po) => !existingExpenseIds.has(`EXP-${po.id}`))
@@ -6496,6 +6604,7 @@ function App() {
       warehouseStock: state.warehouseStock,
       products: state.products || [],
       purchaseOrders: state.purchaseOrders || [],
+      productionPlans: productionRows,
       invoices: invoiceRows,
       cashEntries: state.cashEntries || [],
     });
@@ -6661,6 +6770,151 @@ function App() {
       );
     });
     notify("Yeni istehsal planı yaradıldı.");
+  }
+
+  function createProductionPlan(values) {
+    if (!requirePermission("production.manage", "istehsal planı yaratmaq")) return;
+    const stamp = getActionStamp();
+
+    setState((current) => {
+      const warehouse = current.warehouses.find((item) => item.id === values.warehouseId);
+      const plan = {
+        id: `BOM-${Date.now().toString().slice(-6)}`,
+        product: values.product.trim(),
+        plannedQty: Math.max(1, Number(values.plannedQty || 1)),
+        warehouseId: values.warehouseId,
+        warehouseName: warehouse?.name || "Anbar seçilməyib",
+        salePrice: Math.max(0, Number(values.salePrice || 0)),
+        laborCost: Math.max(0, Number(values.laborCost || 0)),
+        overheadCost: Math.max(0, Number(values.overheadCost || 0)),
+        wasteRate: Math.max(0, Number(values.wasteRate || 0)),
+        dueDate: values.dueDate || "",
+        note: values.note?.trim() || "",
+        status: "Planlandı",
+        createdAt: stamp,
+        updatedAt: stamp,
+        materials: (values.materials || []).map((material) => ({
+          product: material.product,
+          qty: Math.max(0.01, Number(material.qty || 0)),
+          unitCost: Math.max(0, Number(material.unitCost || 0)),
+        })),
+      };
+
+      return auditCurrentState(
+        { ...current, productionPlans: [plan, ...(current.productionPlans || [])] },
+        {
+          module: "İstehsalat",
+          action: "İstehsal planı yaradıldı",
+          detail: `${plan.id} · ${plan.product} · ${plan.plannedQty} ədəd · ${plan.warehouseName}`,
+        },
+      );
+    });
+    notify("İstehsal planı və BOM yaradıldı.");
+  }
+
+  function updateProductionPlan(planId, values) {
+    if (!requirePermission("production.manage", "istehsal planını redaktə etmək")) return;
+    const stamp = getActionStamp();
+
+    setState((current) => {
+      const existing = (current.productionPlans || []).find((item) => item.id === planId);
+      if (!existing) return current;
+      if (normalize(existing.status).includes("istehsal edildi") || normalize(existing.status).includes("istehsaldadır")) {
+        notify("Başlanmış və ya tamamlanmış istehsal planı redaktə edilə bilməz.", "warning");
+        return current;
+      }
+      const warehouse = current.warehouses.find((item) => item.id === values.warehouseId);
+      const updated = {
+        ...existing,
+        product: values.product.trim(),
+        plannedQty: Math.max(1, Number(values.plannedQty || 1)),
+        warehouseId: values.warehouseId,
+        warehouseName: warehouse?.name || existing.warehouseName,
+        salePrice: Math.max(0, Number(values.salePrice || 0)),
+        laborCost: Math.max(0, Number(values.laborCost || 0)),
+        overheadCost: Math.max(0, Number(values.overheadCost || 0)),
+        wasteRate: Math.max(0, Number(values.wasteRate || 0)),
+        dueDate: values.dueDate || "",
+        note: values.note?.trim() || "",
+        updatedAt: stamp,
+        materials: (values.materials || []).map((material) => ({
+          product: material.product,
+          qty: Math.max(0.01, Number(material.qty || 0)),
+          unitCost: Math.max(0, Number(material.unitCost || 0)),
+        })),
+      };
+
+      return auditCurrentState(
+        {
+          ...current,
+          productionPlans: (current.productionPlans || []).map((item) => (item.id === planId ? updated : item)),
+        },
+        {
+          module: "İstehsalat",
+          action: "İstehsal planı redaktə edildi",
+          detail: `${planId} · ${updated.product} · ${updated.plannedQty} ədəd`,
+        },
+      );
+    });
+    notify("İstehsal planındakı dəyişikliklər saxlanıldı.");
+  }
+
+  function deleteProductionPlan(planId) {
+    if (!requirePermission("production.manage", "istehsal planını silmək")) return;
+    setState((current) => {
+      const existing = (current.productionPlans || []).find((item) => item.id === planId);
+      if (!existing) return current;
+      if (normalize(existing.status).includes("istehsal edildi") || normalize(existing.status).includes("istehsaldadır")) {
+        notify("Başlanmış və ya tamamlanmış plan audit və stok izi səbəbilə silinə bilməz.", "warning");
+        return current;
+      }
+      return auditCurrentState(
+        {
+          ...current,
+          productionPlans: (current.productionPlans || []).filter((item) => item.id !== planId),
+        },
+        {
+          module: "İstehsalat",
+          action: "İstehsal planı silindi",
+          detail: `${planId} · ${existing.product}`,
+          status: "Silindi",
+        },
+      );
+    });
+    notify("İstehsal planı silindi.");
+  }
+
+  function startProductionPlan(planId) {
+    if (!requirePermission("production.manage", "istehsala başlamaq")) return;
+    const stamp = getActionStamp();
+    setState((current) => {
+      const rows = buildProductionPlanRows(
+        current.productionPlans || [],
+        current.stock,
+        current.warehouseStock,
+        current.products || [],
+        current.warehouses || [],
+      );
+      const plan = rows.find((item) => item.id === planId);
+      if (!plan || !plan.canProduce) {
+        notify(`İstehsala başlamaq mümkün deyil: ${plan?.bottleneck || "plan tapılmadı"}.`, "warning");
+        return current;
+      }
+      return auditCurrentState(
+        {
+          ...current,
+          productionPlans: (current.productionPlans || []).map((item) =>
+            item.id === planId ? { ...item, status: "İstehsaldadır", startedAt: stamp, updatedAt: stamp } : item,
+          ),
+        },
+        {
+          module: "İstehsalat",
+          action: "İstehsala başlandı",
+          detail: `${plan.id} · ${plan.product} · ${plan.plannedQty} ədəd`,
+        },
+      );
+    });
+    notify(`${planId} istehsala buraxıldı.`);
   }
 
   function completeProductionPlan(planId) {
@@ -10573,6 +10827,12 @@ function App() {
           {active === "production" && (
             <ProductionPage
               plans={filtered.productionPlans}
+              warehouses={state.warehouses}
+              warehouseStock={state.warehouseStock}
+              onCreatePlan={createProductionPlan}
+              onUpdatePlan={updateProductionPlan}
+              onDeletePlan={deleteProductionPlan}
+              onStartPlan={startProductionPlan}
               onCompletePlan={completeProductionPlan}
               canManage={can("production.manage")}
             />
@@ -10621,8 +10881,10 @@ function App() {
               employees={state.employees}
               expenses={state.expenses}
               warehouseStock={state.warehouseStock}
+              warehouses={state.warehouses}
               products={state.products || []}
               purchaseOrders={state.purchaseOrders || []}
+              productionPlans={productionRows}
               invoices={invoiceRows}
               cashEntries={state.cashEntries || []}
               exports={state.reportExports || []}

@@ -4810,6 +4810,164 @@ tr:hover td {
   background: #eefbf5;
 }
 
+.reports-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(3, minmax(150px, 190px)) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.reports-filter-bar > div {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.reports-filter-bar label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.reports-filter-bar label > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.reports-filter-bar select {
+  width: 100%;
+  min-height: 38px;
+}
+
+.reports-analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 12px;
+}
+
+.reports-trend-chart {
+  height: 230px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(42px, 1fr));
+  align-items: end;
+  gap: 14px;
+  padding: 22px 12px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.reports-trend-column {
+  height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 8px;
+  text-align: center;
+}
+
+.reports-trend-column > strong {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.reports-trend-bars {
+  height: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 5px;
+}
+
+.reports-trend-bars span {
+  width: min(22px, 42%);
+  min-height: 4px;
+  border-radius: 3px 3px 0 0;
+}
+
+.reports-trend-bars .revenue {
+  background: #16836c;
+}
+
+.reports-trend-bars .expense {
+  background: #d26c58;
+}
+
+.reports-chart-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding-top: 10px;
+}
+
+.reports-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reports-chart-legend span::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  content: "";
+}
+
+.reports-chart-legend .revenue::before {
+  background: #16836c;
+}
+
+.reports-chart-legend .expense::before {
+  background: #d26c58;
+}
+
+.reports-insights {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1050px) {
+  .reports-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reports-filter-bar > div {
+    grid-column: 1 / -1;
+  }
+
+  .reports-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .reports-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-filter-bar > div {
+    grid-column: auto;
+  }
+
+  .reports-trend-chart {
+    gap: 7px;
+    padding-inline: 0;
+  }
+
+  .reports-insights {
+    grid-template-columns: 1fr;
+  }
+}
+
 .report-checklist {
   display: grid;
   gap: 8px;
@@ -5025,6 +5183,182 @@ tr:hover td {
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.production-module {
+  --production-accent: #167a66;
+}
+
+.production-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.production-toolbar .segmented-control {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.production-plan-link {
+  min-width: 180px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.production-plan-link:hover strong {
+  color: var(--production-accent);
+}
+
+.production-row-actions {
+  min-width: 128px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.icon-btn.success {
+  color: #08795f;
+  background: #e5f7f0;
+}
+
+.production-plan-modal {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.production-form-grid,
+.production-cost-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.production-plan-modal label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.production-plan-modal label > span,
+.production-material-editor .section-title-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.production-material-editor {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.production-material-editor .section-title-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.production-material-lines {
+  display: grid;
+  gap: 8px;
+}
+
+.production-material-line {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) 110px 140px 38px;
+  align-items: end;
+  gap: 8px;
+}
+
+.production-note-field {
+  grid-column: span 1;
+}
+
+.production-cost-preview,
+.production-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #cfe1dc;
+  border-radius: var(--radius);
+  background: #cfe1dc;
+}
+
+.production-cost-preview > *,
+.production-detail-summary > * {
+  min-width: 0;
+  padding: 11px;
+  background: #f3faf7;
+}
+
+.production-cost-preview strong,
+.production-detail-summary strong {
+  color: #0a5f50;
+}
+
+.production-detail-modal {
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.production-detail-modal .data-table {
+  margin-top: 14px;
+}
+
+.production-detail-note {
+  margin: 14px 0 0;
+  padding: 12px;
+  border-left: 3px solid var(--production-accent);
+  color: var(--muted);
+  background: #f5faf8;
+}
+
+@media (max-width: 900px) {
+  .production-form-grid,
+  .production-cost-inputs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-material-line {
+    grid-template-columns: minmax(180px, 1fr) 90px 120px 38px;
+  }
+
+  .production-cost-preview,
+  .production-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .production-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .production-form-grid,
+  .production-cost-inputs,
+  .production-material-line {
+    grid-template-columns: 1fr;
+  }
+
+  .production-material-line .icon-btn {
+    justify-self: end;
+  }
+
+  .production-cost-preview,
+  .production-detail-summary {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .rank-row {

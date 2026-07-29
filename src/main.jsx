@@ -13,6 +13,7 @@ initObservability();
 instrumentSupabase();
 registerPWA();
 
+const routerBase = (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "/";
 
 const App = lazy(() => import("./App.jsx"));
 const Login = lazy(() => import("./auth/Login.jsx"));
@@ -78,7 +79,7 @@ function AppRoutes() {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBase}>
         <AuthProvider>
           <AppRoutes />
         </AuthProvider>

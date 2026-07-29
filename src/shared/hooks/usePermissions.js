@@ -5,10 +5,10 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 /**
  * DB-based RBAC hook.
  * Reads role_permissions table + current user's role in active tenant.
- * Fails OPEN when no data yet (so legacy in-memory permissions still apply).
+ * Fails closed while permissions are loading or unavailable.
  */
 export function usePermissions() {
-  const { activeMembership, loading: authLoading } = useAuth();
+  const { activeMembership, isPlatformAdmin, loading: authLoading } = useAuth();
   const role = activeMembership?.role || null;
   const [matrix, setMatrix] = useState(null); // { [module]: { can_view, can_edit } }
   const [loading, setLoading] = useState(true);
@@ -33,11 +33,12 @@ export function usePermissions() {
   }, [role]);
 
   const can = useCallback((module, action = "view") => {
-    if (!matrix) return true; // fail-open until loaded
+    if (isPlatformAdmin) return true;
+    if (loading || authLoading || !role || !matrix) return false;
     const entry = matrix[module];
-    if (!entry) return true;
+    if (!entry) return false;
     return action === "edit" ? !!entry.edit : !!entry.view;
-  }, [matrix]);
+  }, [matrix, role, loading, authLoading, isPlatformAdmin]);
 
   return useMemo(() => ({
     role,

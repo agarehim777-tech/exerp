@@ -2,7 +2,8 @@
 // Never registers in dev, iframe previews, or Lovable preview hosts.
 // Kill switch: append ?sw=off to any URL to unregister.
 
-const SW_URL = "/sw.js";
+const APP_BASE = import.meta.env.BASE_URL || "/";
+const SW_URL = new URL("sw.js", new URL(APP_BASE, window.location.origin)).pathname;
 
 function isRefusedContext() {
   try {
@@ -43,7 +44,12 @@ export async function registerPWA() {
   }
   try {
     const { registerSW } = await import("virtual:pwa-register");
-    registerSW({ immediate: true });
+    registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        window.dispatchEvent(new CustomEvent("erp:pwa-update"));
+      },
+    });
   } catch (err) {
     console.warn("[pwa] registration failed", err);
   }
