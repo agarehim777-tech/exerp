@@ -138,6 +138,9 @@ const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage
 const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
 const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
+const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
+const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
+const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
 
 
 export const navIcons = {
