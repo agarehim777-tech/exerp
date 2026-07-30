@@ -11115,8 +11115,24 @@ function App() {
   );
 }
 
-const GROUP_LABELS = { crm: "CRM", sales: "Satış" };
-const GROUP_ICONS = { crm: Users, sales: ShoppingCart };
+const GROUP_LABELS = {
+  crm: "CRM",
+  sales: "Satış",
+  supply: "Təchizat & Anbar",
+  finance: "Maliyyə",
+  ops: "Əməliyyat",
+  analytics: "Analitika",
+  system: "Sistem",
+};
+const GROUP_ICONS = {
+  crm: Users,
+  sales: ShoppingCart,
+  supply: Warehouse,
+  finance: Wallet,
+  ops: Package,
+  analytics: BarChart3,
+  system: Settings,
+};
 
 function SidebarNav({ items, active, onSelect }) {
   const groups = [];
