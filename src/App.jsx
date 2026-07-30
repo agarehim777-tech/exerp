@@ -5254,16 +5254,13 @@ function App() {
   useEffect(() => {
     const fromUrl = moduleFromPath(location.pathname);
     setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-    // Köhnə modul URL-lərini kanonik yeni ünvana yönləndir.
-    const canonical = pathForModule(fromUrl);
-    if (
-      canonical !== "/" &&
-      location.pathname !== canonical &&
-      !location.pathname.startsWith(canonical + "/")
-    ) {
-      navigate(canonical, { replace: true });
+    // Köhnə/alias URL-lərini kanonik yeni ünvana yönləndir.
+    const target = canonicalPath(location.pathname);
+    if (target && target !== "/") {
+      navigate(target + location.search + location.hash, { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.search, location.hash, navigate]);
+
 
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
