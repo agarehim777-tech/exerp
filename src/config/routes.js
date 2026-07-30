@@ -45,10 +45,20 @@ export const pathToModule = Object.fromEntries(
   Object.entries(moduleRoutes).map(([k, v]) => [v, k]),
 );
 
+// Köhnə blob-əsaslı modullar → DB-əsaslı ekvivalentləri.
+export const legacyModuleAliases = {
+  finance: "accounting",
+  invoices: "ar-invoices",
+};
+
+function resolveModule(id) {
+  return legacyModuleAliases[id] || id;
+}
+
 export function moduleFromPath(pathname) {
   if (!pathname || pathname === "/") return "dashboard";
   // exact match first
-  if (pathToModule[pathname]) return pathToModule[pathname];
+  if (pathToModule[pathname]) return resolveModule(pathToModule[pathname]);
   // longest-prefix match (handles /satis/sifarisler/:id etc.)
   let match = null;
   for (const [path, id] of Object.entries(pathToModule)) {
@@ -57,8 +67,9 @@ export function moduleFromPath(pathname) {
       if (!match || path.length > match.path.length) match = { path, id };
     }
   }
-  return match?.id || "dashboard";
+  return resolveModule(match?.id) || "dashboard";
 }
+
 
 export function pathForModule(moduleId) {
   return moduleRoutes[moduleId] || "/";

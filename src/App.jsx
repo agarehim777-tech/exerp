@@ -159,8 +159,11 @@ export const navIcons = {
   "sales-quotes": FileText,
   "sales-shipments": Truck,
   warehouse: Warehouse,
+  stock: Boxes,
   deliveries: Truck,
   finance: Wallet,
+  cashbook: Wallet,
+  "ar-invoices": FileText,
   invoices: FileText,
   accounting: BarChart3,
   tax: CalendarClock,
@@ -5251,7 +5254,17 @@ function App() {
   useEffect(() => {
     const fromUrl = moduleFromPath(location.pathname);
     setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-  }, [location.pathname]);
+    // Köhnə modul URL-lərini kanonik yeni ünvana yönləndir.
+    const canonical = pathForModule(fromUrl);
+    if (
+      canonical !== "/" &&
+      location.pathname !== canonical &&
+      !location.pathname.startsWith(canonical + "/")
+    ) {
+      navigate(canonical, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
@@ -11115,8 +11128,24 @@ function App() {
   );
 }
 
-const GROUP_LABELS = { crm: "CRM", sales: "Satış" };
-const GROUP_ICONS = { crm: Users, sales: ShoppingCart };
+const GROUP_LABELS = {
+  crm: "CRM",
+  sales: "Satış",
+  supply: "Təchizat & Anbar",
+  finance: "Maliyyə",
+  ops: "Əməliyyat",
+  analytics: "Analitika",
+  system: "Sistem",
+};
+const GROUP_ICONS = {
+  crm: Users,
+  sales: ShoppingCart,
+  supply: Warehouse,
+  finance: Wallet,
+  ops: Package,
+  analytics: BarChart3,
+  system: Settings,
+};
 
 function SidebarNav({ items, active, onSelect }) {
   const groups = [];
