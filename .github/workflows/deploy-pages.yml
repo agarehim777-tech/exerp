@@ -55,9 +55,9 @@ jobs:
       - name: Build
         run: npm run build:pages
         env:
-          VITE_SUPABASE_URL: https://admdjlqveqikxfkuatyl.supabase.co
+          VITE_SUPABASE_URL: https://tcqdhwtnjrwpfdxojimv.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_SUPABASE_PROJECT_ID: admdjlqveqikxfkuatyl
+          VITE_SUPABASE_PROJECT_ID: tcqdhwtnjrwpfdxojimv
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
           VITE_RELEASE_VERSION: ${{ github.sha }}
 
