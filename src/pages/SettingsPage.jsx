@@ -1,4 +1,4 @@
-import { defaultRoles } from "../data.js";
+import { defaultRoles } from "../services/permissions.js";
 import { useState } from "react";
 import { Bell, Check, CircleAlert, Database, Download, Plus, ShieldCheck, Upload, UserCog, X } from "lucide-react";
 import { DataTable, EmptyState, Field, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
