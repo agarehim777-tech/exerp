@@ -1,4 +1,4 @@
-project_id = "tcqdhwtnjrwpfdxojimv"
+project_id = "tcqdhwtnjrwpfdxoijmv"
 
 [functions.platform-provision-admin]
 verify_jwt = true
