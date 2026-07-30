@@ -36,7 +36,7 @@ jobs:
         run: npm test
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-anon-key
           VITE_SUPABASE_PROJECT_ID: test-project
 
       - name: Deployment checks
@@ -56,7 +56,7 @@ jobs:
         run: npm run build:pages
         env:
           VITE_SUPABASE_URL: https://admdjlqveqikxfkuatyl.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: admdjlqveqikxfkuatyl
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
           VITE_RELEASE_VERSION: ${{ github.sha }}
