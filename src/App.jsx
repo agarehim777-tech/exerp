@@ -5254,7 +5254,17 @@ function App() {
   useEffect(() => {
     const fromUrl = moduleFromPath(location.pathname);
     setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-  }, [location.pathname]);
+    // Köhnə modul URL-lərini kanonik yeni ünvana yönləndir.
+    const canonical = pathForModule(fromUrl);
+    if (
+      canonical !== "/" &&
+      location.pathname !== canonical &&
+      !location.pathname.startsWith(canonical + "/")
+    ) {
+      navigate(canonical, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
