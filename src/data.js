@@ -61,12 +61,6 @@ export const navItems = [
   { id: "support", label: "Dəstək", group: "system" },
 ];
 
-// Köhnə (blob əsaslı) modullar DB əsaslı modullarla əvəz olundu.
-// URL-lər işləkdir, amma menyuda göstərilmir və yeni ekvivalentinə yönləndirilir.
-export const legacyModuleAliases = {
-  finance: "accounting",
-  invoices: "ar-invoices",
-};
 
 
 export const initialState = {
