@@ -38,14 +38,14 @@ Deno.serve(async (req) => {
 
     const tools = {
       list_customers: tool({
-        description: "Aktiv tenant üçün müştəri siyahısını qaytarır. Ad, e-poçt, telefon, kateqoriya, cari borc.",
+        description: "Aktiv tenant üçün müştəri siyahısını qaytarır. Ad, e-poçt, telefon, seqment.",
         inputSchema: z.object({
           search: z.string().optional().describe("Ad və ya e-poçt üzrə axtarış"),
           limit: z.number().int().min(1).max(50).default(20),
         }),
         execute: async ({ search, limit }) => {
           let q = supabase.from("customers")
-            .select("id,name,email,phone,category,current_debt,tax_id")
+            .select("id,name,email,phone,segment,tax_id,last_activity_at")
             .order("created_at", { ascending: false })
             .limit(limit);
           if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -55,17 +55,17 @@ Deno.serve(async (req) => {
         },
       }),
       list_products: tool({
-        description: "Məhsul/anbar siyahısı: qiymət, qalıq, kateqoriya.",
+        description: "Məhsul siyahısı: qiymət, ölçü vahidi, ƏDV dərəcəsi.",
         inputSchema: z.object({
           search: z.string().optional(),
-          low_stock_only: z.boolean().default(false).describe("Yalnız az qalan (stock < 10)"),
           limit: z.number().int().min(1).max(50).default(20),
         }),
-        execute: async ({ search, low_stock_only, limit }) => {
-          let q = supabase.from("products").select("id,name,sku,price,stock,category,unit").limit(limit);
+        execute: async ({ search, limit }) => {
+          let q = supabase.from("products")
+            .select("id,name,sku,price,currency,unit,vat_rate,is_active")
+            .limit(limit);
           if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
-          if (low_stock_only) q = q.lt("stock", 10);
-          q = q.order("stock", { ascending: true });
+          q = q.order("name", { ascending: true });
           const { data, error } = await q;
           if (error) return { error: error.message };
           return { products: data ?? [] };
@@ -79,8 +79,8 @@ Deno.serve(async (req) => {
         }),
         execute: async ({ status, limit }) => {
           let q = supabase.from("orders")
-            .select("id,order_number,customer_name,status,total_amount,created_at,payment_status")
-            .order("created_at", { ascending: false })
+            .select("id,order_no,order_date,status,total,currency,payment_status,customer:customers(name)")
+            .order("order_date", { ascending: false })
             .limit(limit);
           if (status) q = q.eq("status", status);
           const { data, error } = await q;
@@ -95,9 +95,14 @@ Deno.serve(async (req) => {
         }),
         execute: async ({ days }) => {
           if (!tenantId) return { error: "Aktiv şirkət yoxdur" };
+          const to = new Date();
+          const from = new Date();
+          from.setDate(from.getDate() - days);
+          const iso = (d: Date) => d.toISOString().slice(0, 10);
           const { data, error } = await supabase.rpc("sales_dashboard", {
             _tenant: tenantId,
-            _days: days,
+            _from: iso(from),
+            _to: iso(to),
           });
           if (error) return { error: error.message };
           return { summary: data };
