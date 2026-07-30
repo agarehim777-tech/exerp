@@ -138,6 +138,12 @@ const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage
 const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
 const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
+const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
+const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
+const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
+const VendorManagementPage = lazy(() => import("./pages/VendorManagementPage.jsx"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
+const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
 
 
 export const navIcons = {
@@ -179,17 +185,17 @@ export const navIcons = {
   "access-check": ShieldCheck,
 };
 
-const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
+export const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
 const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
 export const currentBusinessDate = formatDateInput(new Date());
-const currentBusinessYear = currentBusinessDate.slice(0, 4);
-const currentBusinessQuarter = Math.floor(new Date().getMonth() / 3) + 1;
-const baseCreditDate = currentBusinessDate;
+export const currentBusinessYear = currentBusinessDate.slice(0, 4);
+export const currentBusinessQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+export const baseCreditDate = currentBusinessDate;
 const baseDeliveryDate = currentBusinessDate;
 const baseCashBalance = 0;
 export const baseFinanceDate = currentBusinessDate;
 const dayInMs = 24 * 60 * 60 * 1000;
-const targetDbProvider = String(import.meta.env?.VITE_DB_PROVIDER || "sqlite").trim();
+export const targetDbProvider = String(import.meta.env?.VITE_DB_PROVIDER || "sqlite").trim();
 const deploymentToolkitReady = true;
 
 function shiftPaymentDate(value, months) {
@@ -347,11 +353,11 @@ export function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit
   };
 }
 
-function getCreditSourceLabel(credit) {
+export function getCreditSourceLabel(credit) {
   return credit.salesSource || credit.orderId ? "Satışdan gələn" : "Manual kredit";
 }
 
-function getCreditPaidTotal(plan) {
+export function getCreditPaidTotal(plan) {
   return Math.max(0, Number(plan.total || 0) - Number(plan.balance || 0));
 }
 
@@ -359,7 +365,7 @@ function getCreditRemainingMonths(plan) {
   return (plan.installments || []).filter((installment) => Number(installment.amount || 0) > 0).length;
 }
 
-function getCreditDebtFormula(item) {
+export function getCreditDebtFormula(item) {
   const paidTotal = getCreditPaidTotal(item.plan);
   return {
     total: Number(item.plan.total || 0),
@@ -387,11 +393,11 @@ function matchesCreditDashboardFilter(item, filter) {
   return true;
 }
 
-function matchesCreditSourceFilter(item, sourceFilter) {
+export function matchesCreditSourceFilter(item, sourceFilter) {
   return sourceFilter === "Bütün mənbələr" || getCreditSourceLabel(item.credit) === sourceFilter;
 }
 
-const monthNamesAz = [
+export const monthNamesAz = [
   "Yanvar",
   "Fevral",
   "Mart",
@@ -406,11 +412,11 @@ const monthNamesAz = [
   "Dekabr",
 ];
 
-function getCreditRowDate(item) {
+export function getCreditRowDate(item) {
   return parsePaymentDate(item.paymentState.nextInstallment?.due || item.credit.next || item.credit.date);
 }
 
-function matchesCreditManagementFilter(item, filter) {
+export function matchesCreditManagementFilter(item, filter) {
   if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan);
   if (filter === "Gözləyən") {
     return (
@@ -430,7 +436,7 @@ function matchesCreditManagementFilter(item, filter) {
   return true;
 }
 
-function matchesCreditSearch(item, query) {
+export function matchesCreditSearch(item, query) {
   if (!query.trim()) return true;
   const q = normalize(query);
   const credit = item.credit;
@@ -446,7 +452,7 @@ function matchesCreditSearch(item, query) {
   ].join(" ")).includes(q);
 }
 
-function getCreditInitials(name = "") {
+export function getCreditInitials(name = "") {
   return String(name || "?")
     .trim()
     .split(/\s+/)
@@ -456,7 +462,7 @@ function getCreditInitials(name = "") {
     .toLocaleUpperCase("az-AZ");
 }
 
-function getCreditManagementStatus(item) {
+export function getCreditManagementStatus(item) {
   if (isCreditClosed(item.credit, item.plan)) return "Bağlanmış";
   if (item.paymentState.isOverdue) return `${item.paymentState.daysOverdue} gün gecikib`;
   if (item.paymentState.isDueToday) return "Bugünkü ödəniş";
@@ -1195,7 +1201,7 @@ function isLowStockItem(item, productsByName = new Map()) {
   return reorderPoint > 0 && getAvailableQuantity(item) <= reorderPoint;
 }
 
-function isPurchaseOrderOpen(po = {}) {
+export function isPurchaseOrderOpen(po = {}) {
   const status = normalize(po.status);
   return (
     !status.includes("edildi") &&
@@ -1262,7 +1268,7 @@ function getPreferredVendorName(product, vendors) {
   return vendors[0]?.name || "Vendor təyin edilməyib";
 }
 
-function getVendorKey(vendor = {}) {
+export function getVendorKey(vendor = {}) {
   return vendor.id || `VND-${normalize(vendor.name).replace(/[^a-z0-9]+/g, "-") || "vendor"}`;
 }
 
@@ -1285,7 +1291,7 @@ function normalizeVendor(values = {}, fallback = {}) {
   };
 }
 
-function getNormalizedVendor(vendor = {}) {
+export function getNormalizedVendor(vendor = {}) {
   const key = getVendorKey(vendor);
   return {
     ...normalizeVendor({ ...vendor, id: key }, vendor),
@@ -1293,7 +1299,7 @@ function getNormalizedVendor(vendor = {}) {
   };
 }
 
-function buildProcurementRows(vendors, warehouseStock, orders, products = [], purchaseOrders = []) {
+export function buildProcurementRows(vendors, warehouseStock, orders, products = [], purchaseOrders = []) {
   const productsByName = buildProductLookup(products);
   const orderCoverage = buildPurchaseOrderCoverage(purchaseOrders);
   const byProduct = new Map();
@@ -4288,15 +4294,15 @@ function mergeRoles(savedRoles = []) {
   });
 }
 
-function uniqueModuleIds(moduleIds = []) {
+export function uniqueModuleIds(moduleIds = []) {
   return uniquePermissionModuleIds(moduleIds, navItems);
 }
 
-function getDefaultModuleAccessForRole(roleName, roles = defaultRoles) {
+export function getDefaultModuleAccessForRole(roleName, roles = defaultRoles) {
   return getDefaultModuleAccessForRoleFromCatalog(roleName, roles, navItems);
 }
 
-function normalizeUserModuleAccess(user, roles) {
+export function normalizeUserModuleAccess(user, roles) {
   return normalizeUserModuleAccessFromCatalog(user, roles, navItems);
 }
 
@@ -4426,7 +4432,7 @@ function getCurrentUser(settings = {}) {
   return safeSettings.users.find((user) => user.id === safeSettings.sessionUserId) || null;
 }
 
-function getActiveRole(settings = {}) {
+export function getActiveRole(settings = {}) {
   const safeSettings = ensureSettings(settings);
   const user = safeSettings.users.find((item) => item.id === safeSettings.sessionUserId);
   if (user?.role === "Platform Super Admin") {
@@ -5142,7 +5148,7 @@ function buildPayrollExpense(employees) {
   };
 }
 
-function getModuleForPermission(permission) {
+export function getModuleForPermission(permission) {
   return getModuleForPermissionFromCatalog(permission, modulePermissionCatalog);
 }
 
@@ -5164,7 +5170,7 @@ function hasPageAction(moduleId) {
   return Boolean(pageMeta[moduleId]?.action) && !pageActionlessModules.has(moduleId);
 }
 
-function userHasEffectivePermission(user, roles, permission) {
+export function userHasEffectivePermission(user, roles, permission) {
   if (!permission) return true;
   if (!user) return false;
   if (user.role === "Super Admin" || user.role === "Platform Super Admin") return true;
@@ -10716,6 +10722,9 @@ function App() {
           {active === "sales-quotes" && <QuotesPage />}
           {active === "sales-shipments" && <ShipmentsPage />}
           {active === "sales" && <SalesOrdersPage />}
+          {active === "stock" && <StockPage />}
+          {active === "cashbook" && <CashbookPage />}
+          {active === "ar-invoices" && <SalesInvoicesPage />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}
@@ -14771,367 +14780,7 @@ function ApiPage({
   );
 }
 
-function CreditsPage({
-  credits,
-  sendCreditSms,
-  onUpdatePaymentDate,
-  onReceivePayment,
-  onCreateCredit,
-  onOpenSalesOrder,
-  selectedCreditId,
-  onClearSelectedCredit,
-}) {
-  const [creditFilter, setCreditFilter] = useState("Hamısı");
-  const [sourceFilter, setSourceFilter] = useState("Bütün mənbələr");
-  const [monthFilter, setMonthFilter] = useState("Bütün aylar");
-  const [yearFilter, setYearFilter] = useState(String(currentBusinessYear));
-  const [searchTerm, setSearchTerm] = useState("");
-  const [pageSize, setPageSize] = useState(10);
-  const [detailCreditId, setDetailCreditId] = useState("");
-  const enrichedCredits = useMemo(
-    () =>
-      credits.map((credit) => {
-        const plan = getCreditDisplayPlan(credit);
-        const paymentState = getCreditPaymentState(credit, plan);
-        const progress =
-          credit.rate ?? Math.round((Number(credit.paidMonths || 0) / Math.max(1, plan.months)) * 100);
-
-        return { credit, plan, paymentState, progress };
-      }),
-    [credits],
-  );
-  const activeCredits = enrichedCredits.filter((item) => normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan));
-  const todayCredits = enrichedCredits.filter((item) => item.paymentState.isDueToday);
-  const overdueCredits = enrichedCredits.filter((item) => item.paymentState.isOverdue);
-  const completedCredits = enrichedCredits.filter((item) => isCreditClosed(item.credit, item.plan));
-  const salesCredits = enrichedCredits.filter((item) => getCreditSourceLabel(item.credit) === "Satışdan gələn");
-  const monthlyDue = enrichedCredits.reduce((sum, item) => {
-    if (isCreditClosed(item.credit, item.plan)) return sum;
-    return sum + Number(item.paymentState.nextInstallment?.amount || 0);
-  }, 0);
-  const overdueAmount = overdueCredits.reduce(
-    (sum, item) => sum + Number(item.paymentState.nextInstallment?.amount || 0),
-    0,
-  );
-  const portfolioBalance = enrichedCredits.reduce((sum, item) => sum + Number(item.plan.balance || 0), 0);
-  const paidTotal = enrichedCredits.reduce((sum, item) => sum + getCreditPaidTotal(item.plan), 0);
-  const averageMonthly = activeCredits.length ? Math.round(monthlyDue / activeCredits.length) : 0;
-  const currentMonthCredits = enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Cari ay"));
-  const linkedSalesCredits = salesCredits.filter((item) => item.credit.orderId && item.credit.contractId);
-  const uniqueContractCount = new Set(enrichedCredits.map((item) => item.credit.contractId || item.credit.id)).size;
-  const collectionQueueCount = todayCredits.length + overdueCredits.length;
-  const handoverItems = [
-    {
-      label: "Satış bağlantısı",
-      value: `${linkedSalesCredits.length}/${salesCredits.length}`,
-      hint: "Sifariş və müqavilə ilə gələn kreditlər",
-      tone: linkedSalesCredits.length === salesCredits.length ? "success" : "warning",
-    },
-    {
-      label: "Ayrı borc məntiqi",
-      value: uniqueContractCount,
-      hint: "Hər kredit ayrıca müqavilə kimi saxlanır",
-      tone: uniqueContractCount === enrichedCredits.length ? "success" : "warning",
-    },
-    {
-      label: "Yığım növbəsi",
-      value: collectionQueueCount,
-      hint: "Bu gün və gecikmiş ödənişlər",
-      tone: collectionQueueCount > 0 ? "danger" : "success",
-    },
-    {
-      label: "Maliyyə sinxronu",
-      value: money(paidTotal),
-      hint: "Əsas ödəniş borcdan, cərimə kassadan izlənir",
-      tone: "info",
-    },
-  ];
-  const filterItems = [
-    { label: "Hamısı", title: "Hamısı", count: enrichedCredits.length, tone: "primary" },
-    { label: "Aktiv", title: "Aktiv", count: activeCredits.length, tone: "success" },
-    { label: "Gözləyən", title: "Gözləyən", count: enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Gözləyən")).length, tone: "warning" },
-    { label: "Gecikmiş", title: "Gecikmiş", count: overdueCredits.length, tone: "danger" },
-    { label: "Bağlanmış", title: "Bağlanmış", count: completedCredits.length, tone: "info" },
-    { label: "Bugünkü", title: "Bugünkü", count: todayCredits.length, tone: "neutral" },
-    { label: "Cari ay", title: "Cari ay", count: currentMonthCredits.length, tone: "neutral" },
-  ];
-  const sourceFilters = ["Bütün mənbələr", "Satışdan gələn", "Manual kredit"];
-  const yearOptions = [
-    ...new Set(
-      enrichedCredits
-        .map((item) => getCreditRowDate(item)?.getFullYear())
-        .filter(Boolean)
-        .map((year) => String(year))
-        .concat(String(currentBusinessYear)),
-    ),
-  ].sort((a, b) => Number(b) - Number(a));
-  const visibleCredits = enrichedCredits
-    .filter((item) => {
-      const date = getCreditRowDate(item);
-      const matchesMonth = monthFilter === "Bütün aylar" || (date && monthNamesAz[date.getMonth()] === monthFilter);
-      const matchesYear = yearFilter === "Bütün illər" || (date && String(date.getFullYear()) === String(yearFilter));
-      return (
-        matchesCreditManagementFilter(item, creditFilter) &&
-        matchesCreditSourceFilter(item, sourceFilter) &&
-        matchesCreditSearch(item, searchTerm) &&
-        matchesMonth &&
-        matchesYear
-      );
-    })
-    .sort((a, b) => {
-      if (a.paymentState.isOverdue !== b.paymentState.isOverdue) return a.paymentState.isOverdue ? -1 : 1;
-      const dateA = getCreditRowDate(a)?.getTime() || 0;
-      const dateB = getCreditRowDate(b)?.getTime() || 0;
-      return dateA - dateB;
-    });
-  const tableCredits = visibleCredits.slice(0, pageSize);
-  const detailItem = detailCreditId ? enrichedCredits.find((item) => item.credit.id === detailCreditId) : null;
-  const todayLabel = formatPaymentDate(parsePaymentDate(baseCreditDate));
-
-  useEffect(() => {
-    if (!selectedCreditId) return;
-    if (credits.some((credit) => credit.id === selectedCreditId)) {
-      setDetailCreditId(selectedCreditId);
-    }
-  }, [credits, selectedCreditId]);
-
-  const closeDetail = () => {
-    setDetailCreditId("");
-    onClearSelectedCredit?.();
-  };
-  const resetFilters = () => {
-    setCreditFilter("Hamısı");
-    setSourceFilter("Bütün mənbələr");
-    setMonthFilter("Bütün aylar");
-    setYearFilter(String(currentBusinessYear));
-    setSearchTerm("");
-    setPageSize(10);
-  };
-  const applyFilters = () => {
-    setSearchTerm((value) => value.trim());
-  };
-  const exportVisibleCredits = () => {
-    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const rows = [
-      ["Kod", "Müştəri", "FIN", "Müqavilə", "Cihaz", "Məbləğ", "Qalıq", "Aylıq", "Növbəti tarix", "Status", "Gecikmə", "Mənbə"],
-      ...visibleCredits.map((item) => {
-        const { credit, plan, paymentState } = item;
-        return [
-          credit.id,
-          credit.customer,
-          credit.fin,
-          credit.contractId,
-          credit.device || credit.product,
-          plan.total,
-          plan.balance,
-          paymentState.nextInstallment?.amount || plan.monthly,
-          paymentState.nextInstallment?.due || credit.next,
-          getCreditManagementStatus(item),
-          paymentState.isOverdue ? `${paymentState.daysOverdue} gün` : "",
-          getCreditSourceLabel(credit),
-        ];
-      }),
-    ];
-    const blob = new Blob([`\uFEFF${rows.map((row) => row.map(escapeCsv).join(",")).join("\n")}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = `kreditler-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(downloadUrl);
-  };
-
-  return (
-    <div className="stack">
-      <section className="metric-grid four">
-        <MetricCard label="Aktiv kreditlər" value={activeCredits.length} icon={CreditCard} tone="primary" />
-        <MetricCard label="Portfel qalığı" value={money(portfolioBalance)} trend={`${money(paidTotal)} ödənilib`} icon={Wallet} tone="success" />
-        <MetricCard label="Bu ay yığım" value={money(monthlyDue)} trend={`Orta ${money(averageMonthly)}`} icon={CalendarClock} tone="info" />
-        <MetricCard label="Gecikmiş" value={overdueCredits.length} trend={money(overdueAmount)} icon={CircleAlert} tone="danger" />
-      </section>
-
-      <section className="credit-handover-strip" aria-label="Kredit modulunun təhvil statusu">
-        {handoverItems.map((item) => (
-          <div className={`credit-handover-item ${item.tone}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <small>{item.hint}</small>
-          </div>
-        ))}
-      </section>
-
-      <section className="credit-management-shell">
-        <div className="credit-management-topline">
-          <div>
-            <h2>Portfel siyahısı</h2>
-            <p>Kreditləri prioritet, tarix və mənbə üzrə idarə edin.</p>
-          </div>
-          <div className="credit-management-summary" aria-label="Kredit portfeli xülasəsi">
-            <span><strong>{visibleCredits.length}</strong> nəticə</span>
-            <span><strong>{todayCredits.length}</strong> bu gün</span>
-            <span><strong>{salesCredits.length}</strong> satışdan</span>
-          </div>
-        </div>
-
-        <div className="credit-status-strip">
-          {filterItems.map((item) => (
-            <button
-              key={item.label}
-              className={`credit-status-chip ${item.tone} ${creditFilter === item.label ? "active" : ""}`}
-              onClick={() => setCreditFilter(item.label)}
-            >
-              <span>{item.title}</span>
-              <strong>{item.count}</strong>
-            </button>
-          ))}
-        </div>
-
-        <Panel className="credit-directory-panel">
-          <div className="credit-directory-head">
-            <div>
-              <h3>
-                <CreditCard size={17} />
-                Kredit siyahısı
-              </h3>
-              <span>{todayLabel} tarixinə portfel icmalı</span>
-            </div>
-            <strong>{visibleCredits.length} kredit</strong>
-          </div>
-
-          <div className="credit-directory-filters">
-            <label>
-              <span>Göstər</span>
-              <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
-                {[10, 25, 50, 100].map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Ay</span>
-              <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
-                <option>Bütün aylar</option>
-                {monthNamesAz.map((month) => (
-                  <option key={month}>{month}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>İl</span>
-              <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
-                <option>Bütün illər</option>
-                {yearOptions.map((year) => (
-                  <option key={year}>{year}</option>
-                ))}
-              </select>
-            </label>
-            <label className="credit-search-field">
-              <span>Axtarış</span>
-              <div>
-                <Search size={15} />
-                <input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Müştəri, kredit kodu, müqavilə..."
-                />
-              </div>
-            </label>
-            <label>
-              <span>Mənbə</span>
-              <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
-                {sourceFilters.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-            <button className="primary-btn icon-only" title="Filterləri tətbiq et" type="button" onClick={applyFilters}>
-              <Filter size={16} />
-            </button>
-            <button className="secondary-btn icon-only" title="Filterləri sıfırla" type="button" onClick={resetFilters}>
-              <RefreshCw size={16} />
-            </button>
-            <button className="secondary-btn credit-excel-btn" type="button" onClick={exportVisibleCredits}>
-              <Download size={16} />
-              Excel
-            </button>
-          </div>
-
-          <DataTable
-            columns={["#", "Müştəri", "Müqavilə / cihaz", "Müqavilə məbləği", "Ödənilib", "Qalıq", "Növbəti", "Status", "Əməl."]}
-            rows={tableCredits.map((item, index) => {
-              const { credit, plan, paymentState } = item;
-              const nextAmount = Number(paymentState.nextInstallment?.amount || 0);
-              const debt = getCreditDebtFormula(item);
-              const compactCode = String(credit.id || "").replace(/\D/g, "").slice(-4) || credit.id;
-              const customerMeta = [credit.fin, getCreditSourceLabel(credit)].filter(Boolean).join(" · ");
-              return [
-                index + 1,
-                <div className="credit-customer-cell">
-                  <span className="credit-avatar">{getCreditInitials(credit.customer)}</span>
-                  <div className="credit-customer-copy">
-                    <strong>{credit.customer}</strong>
-                    <span>
-                      <b>#{compactCode}</b>
-                      {customerMeta ? ` · ${customerMeta}` : ""}
-                    </span>
-                  </div>
-                </div>,
-                <div className="credit-contract-cell" data-testid="credit-contract-cell">
-                  <strong>{credit.contractId || credit.id}</strong>
-                  <span>{credit.device || credit.product || "Cihaz qeyd edilməyib"}</span>
-                  <em>
-                    {credit.orderId ? (
-                      <button
-                        className="inline-module-link"
-                        type="button"
-                        onClick={() => onOpenSalesOrder?.(credit.orderId)}
-                        data-testid="credit-row-order-link"
-                      >
-                        {credit.orderId} sifarişi
-                      </button>
-                    ) : (
-                      "Manual qeyd"
-                    )}{" "}
-                    · {debt.remainingMonths} ay qalıb
-                  </em>
-                </div>,
-                <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay · ${credit.date || "tarixsiz"}`} />,
-                <TwoLine title={money(debt.paid)} subtitle={`${credit.paidMonths || 0}/${plan.months} ay bağlanıb`} />,
-                <TwoLine title={money(debt.balance)} subtitle={`Növbəti ${money(debt.nextAmount)}`} />,
-                <TwoLine title={paymentState.nextInstallment?.due || credit.next || "—"} subtitle={nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
-                <div className="credit-status-stack">
-                  <StatusBadge status={getCreditManagementStatus(item)} />
-                  {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
-                </div>,
-                <div className="credit-table-actions">
-                  <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
-                    <Eye size={16} />
-                  </button>
-                  <button className="icon-btn" title="Ödəniş tarixçəsi" onClick={() => setDetailCreditId(credit.id)}>
-                    <RefreshCw size={16} />
-                  </button>
-                </div>,
-              ];
-            })}
-          />
-        </Panel>
-
-        {detailItem ? (
-          <CreditDetailModal
-            item={detailItem}
-            sendCreditSms={sendCreditSms}
-            onUpdatePaymentDate={onUpdatePaymentDate}
-            onReceivePayment={onReceivePayment}
-            onOpenSalesOrder={onOpenSalesOrder}
-            onClose={closeDetail}
-          />
-        ) : null}
-      </section>
-    </div>
-  );
-}
+// CreditsPage extracted to src/pages/CreditsPage.jsx
 
 function CreditListRow({ item, active, onSelect }) {
   const { credit, plan, paymentState } = item;
@@ -15166,7 +14815,7 @@ function CreditListRow({ item, active, onSelect }) {
   );
 }
 
-function CreditDetailModal({ item, sendCreditSms, onUpdatePaymentDate, onReceivePayment, onOpenSalesOrder, onClose }) {
+export function CreditDetailModal({ item, sendCreditSms, onUpdatePaymentDate, onReceivePayment, onOpenSalesOrder, onClose }) {
   const { credit } = item;
 
   return (
@@ -15859,335 +15508,7 @@ function VendorsPage({
   );
 }
 
-function VendorManagementPage({
-  vendors,
-  warehouseStock = {},
-  products = [],
-  warehouses = [],
-  orders = [],
-  purchaseOrders = [],
-  onCreateVendor,
-  onEditVendor,
-  onDeleteVendor,
-  onCreatePurchaseOrder,
-  onOpenPurchaseOrderModal,
-  onApprovePurchaseOrder,
-  canManagePo = false,
-  canManageVendors = false,
-}) {
-  const [vendorQuery, setVendorQuery] = useState("");
-  const [vendorStatusFilter, setVendorStatusFilter] = useState("all");
-  const [poStatusFilter, setPoStatusFilter] = useState("all");
-  const [selectedVendorKey, setSelectedVendorKey] = useState("");
-  const normalizedVendors = useMemo(() => vendors.map(getNormalizedVendor), [vendors]);
-  const procurementRows = useMemo(
-    () => buildProcurementRows(normalizedVendors, warehouseStock, orders, products, purchaseOrders),
-    [normalizedVendors, warehouseStock, orders, products, purchaseOrders],
-  );
-  const visibleVendors = useMemo(() => {
-    const query = normalize(vendorQuery);
-    return normalizedVendors.filter((vendor) => {
-      const matchesStatus = vendorStatusFilter === "all" || vendor.status === vendorStatusFilter;
-      const matchesQuery =
-        !query ||
-        normalize(`${vendor.name} ${vendor.country} ${vendor.contact} ${vendor.phone} ${vendor.email}`).includes(query);
-      return matchesStatus && matchesQuery;
-    });
-  }, [normalizedVendors, vendorQuery, vendorStatusFilter]);
-  const purchaseNeed = useMemo(
-    () => procurementRows.filter((row) => Number(row.recommendedQty || 0) > 0 || Number(row.orderGap || 0) > 0),
-    [procurementRows],
-  );
-  const filteredPurchaseOrders = useMemo(() => {
-    if (poStatusFilter === "all") return purchaseOrders;
-    if (poStatusFilter === "open") return purchaseOrders.filter(isPurchaseOrderOpen);
-    if (poStatusFilter === "approved") return purchaseOrders.filter((po) => !isPurchaseOrderOpen(po));
-    return purchaseOrders.filter((po) => po.status === poStatusFilter);
-  }, [purchaseOrders, poStatusFilter]);
-
-  useEffect(() => {
-    const pool = visibleVendors.length > 0 ? visibleVendors : normalizedVendors;
-    if (pool.length === 0) {
-      if (selectedVendorKey) setSelectedVendorKey("");
-      return;
-    }
-    if (!selectedVendorKey || !pool.some((vendor) => getVendorKey(vendor) === selectedVendorKey)) {
-      setSelectedVendorKey(getVendorKey(pool[0]));
-    }
-  }, [normalizedVendors, selectedVendorKey, visibleVendors]);
-
-  const selectedVendor =
-    normalizedVendors.find((vendor) => getVendorKey(vendor) === selectedVendorKey) || visibleVendors[0] || normalizedVendors[0] || null;
-  const selectedVendorPurchaseOrders = selectedVendor
-    ? purchaseOrders.filter(
-        (po) => normalize(po.vendor) === normalize(selectedVendor.name) || normalize(po.supplierSource) === normalize(selectedVendor.name),
-      )
-    : [];
-  const selectedVendorProcurementRows = selectedVendor
-    ? procurementRows.filter((row) => normalize(row.vendor) === normalize(selectedVendor.name)).slice(0, 5)
-    : [];
-  const procurementBudget = purchaseNeed.reduce((sum, row) => sum + Number(row.estimatedCost || 0), 0);
-  const openPoQty = purchaseOrders.filter(isPurchaseOrderOpen).reduce((sum, po) => sum + Number(po.qty || 0), 0);
-  const vendorRiskCount = normalizedVendors.filter((vendor) => {
-    const status = normalize(vendor.status);
-    return status.includes("risk") || status.includes("nəzarət") || status.includes("nezaret");
-  }).length;
-  const pendingPoCount = purchaseOrders.filter((po) => po.status === "Təsdiq gözləyir").length;
-  const activeVendorCount = normalizedVendors.filter((vendor) => !normalize(vendor.status).includes("passiv")).length;
-  const quotaTotal = total(normalizedVendors, "quota");
-  const quotaRatio = quotaTotal > 0 ? (total(normalizedVendors, "sold") / quotaTotal) * 100 : 0;
-  const selectedVendorQuota = selectedVendor?.quota > 0 ? (selectedVendor.sold / selectedVendor.quota) * 100 : 0;
-  const selectedVendorHasOpenPo = selectedVendorPurchaseOrders.some(isPurchaseOrderOpen);
-  const vendorStatuses = ["all", ...new Set(normalizedVendors.map((vendor) => vendor.status).filter(Boolean))];
-
-  return (
-    <div className="stack vendor-module">
-      <section className="metric-grid four">
-        <MetricCard label="Aktiv vendorlar" value={activeVendorCount} trend={`${normalizedVendors.length} ümumi`} icon={Building2} tone="primary" />
-        <MetricCard label="Ümumi SKU" value={total(normalizedVendors, "sku")} trend={`${warehouses.length} anbar`} icon={Boxes} tone="info" />
-        <MetricCard label="Kvota icrası" value={percent(quotaRatio)} trend={`Q${currentBusinessQuarter} ${currentBusinessYear}`} icon={TrendingUp} tone="success" />
-        <MetricCard
-          label="PO tövsiyəsi"
-          value={pendingPoCount || purchaseNeed.length}
-          trend={pendingPoCount > 0 ? `${pendingPoCount} təsdiq gözləyir` : money(procurementBudget)}
-          icon={Package}
-          tone={purchaseNeed.length > 0 ? "warning" : "success"}
-        />
-      </section>
-
-      <Panel className="vendor-command-panel">
-        <div className="vendor-command-head">
-          <PanelHeader title="Vendor idarəetməsi" subtitle="Təchizatçı profili, kontakt, kvota, PO və anbar mədaxil axını bir ekrandadır" icon={Building2} />
-          <div className="vendor-command-actions">
-            <button className="secondary-btn" type="button" disabled={!canManagePo || products.length === 0 || warehouses.length === 0} onClick={onOpenPurchaseOrderModal}>
-              <Package size={16} />
-              Zavod sifarişi
-            </button>
-            <button className="primary-btn" type="button" disabled={!canManageVendors} onClick={onCreateVendor}>
-              <Plus size={16} />
-              Yeni vendor
-            </button>
-          </div>
-        </div>
-        <div className="vendor-toolbar">
-          <label className="vendor-search">
-            <Search size={16} />
-            <input value={vendorQuery} placeholder="Vendor, ölkə, kontakt üzrə axtar" onChange={(event) => setVendorQuery(event.target.value)} />
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={vendorStatusFilter} onChange={(event) => setVendorStatusFilter(event.target.value)}>
-              {vendorStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status === "all" ? "Bütün statuslar" : status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>PO</span>
-            <select value={poStatusFilter} onChange={(event) => setPoStatusFilter(event.target.value)}>
-              <option value="all">Bütün PO-lar</option>
-              <option value="open">Açıq PO</option>
-              <option value="approved">Mədaxil edilmiş</option>
-              <option value="Təsdiq gözləyir">Təsdiq gözləyir</option>
-            </select>
-          </label>
-        </div>
-      </Panel>
-
-      <section className="vendor-workspace">
-        <Panel className="vendor-registry-panel">
-          <PanelHeader title="Vendor reyestri" subtitle={`${visibleVendors.length} nəticə`} icon={FileText} />
-          <DataTable
-            columns={["Vendor", "Kontakt", "SKU", "Kvota", "Lead time", "Status", "Əməliyyat"]}
-            rows={visibleVendors.map((vendor) => {
-              const key = getVendorKey(vendor);
-              const ratio = vendor.quota > 0 ? (vendor.sold / vendor.quota) * 100 : 0;
-              const vendorHasOpenPo = purchaseOrders.some(
-                (po) =>
-                  isPurchaseOrderOpen(po) &&
-                  (normalize(po.vendor) === normalize(vendor.name) || normalize(po.supplierSource) === normalize(vendor.name)),
-              );
-              return [
-                <button
-                  className={`vendor-row-button ${selectedVendor && getVendorKey(selectedVendor) === key ? "active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedVendorKey(key)}
-                >
-                  <TwoLine title={vendor.name} subtitle={vendor.country || "Ölkə qeyd edilməyib"} />
-                </button>,
-                <TwoLine title={vendor.contact || "Kontakt yoxdur"} subtitle={vendor.phone || vendor.email || "Əlaqə əlavə edilməyib"} />,
-                <TwoLine title={`${vendor.sku} SKU`} subtitle={vendor.note || "Məhsul qrupu qeyd edilməyib"} />,
-                <div className="vendor-quota-cell">
-                  <ProgressRow label={percent(ratio)} value={ratio} caption={`${vendor.sold}/${vendor.quota}`} compact />
-                </div>,
-                <TwoLine title={`${vendor.leadTimeDays || 0} gün`} subtitle={vendor.paymentTerms || "Şərt yoxdur"} />,
-                <StatusBadge status={vendor.status} />,
-                <div className="row-actions vendor-row-actions">
-                  <button className="text-btn" type="button" disabled={!canManageVendors} onClick={() => onEditVendor(key)}>
-                    Redaktə
-                  </button>
-                  <button
-                    className="text-btn danger"
-                    type="button"
-                    disabled={!canManageVendors || vendorHasOpenPo}
-                    title={vendorHasOpenPo ? "Açıq PO olan vendor silinə bilməz" : "Vendoru sil"}
-                    onClick={() => onDeleteVendor(key)}
-                  >
-                    Sil
-                  </button>
-                </div>,
-              ];
-            })}
-          />
-        </Panel>
-
-        <Panel className="vendor-profile-panel">
-          <PanelHeader title="Vendor profili" subtitle="Seçilən vendor üzrə əməliyyat görünüşü" icon={Eye} />
-          {selectedVendor ? (
-            <div className="vendor-profile-card">
-              <div className="vendor-profile-head">
-                <div>
-                  <h3>{selectedVendor.name}</h3>
-                  <p>{selectedVendor.country || "Ölkə qeyd edilməyib"}</p>
-                </div>
-                <StatusBadge status={selectedVendor.status} />
-              </div>
-              <div className="vendor-profile-grid">
-                <TwoLine title={selectedVendor.contact || "Kontakt yoxdur"} subtitle={selectedVendor.phone || selectedVendor.email || "Əlaqə əlavə edilməyib"} />
-                <TwoLine title={`${selectedVendor.leadTimeDays || 0} gün`} subtitle="Orta lead time" />
-                <TwoLine title={selectedVendor.paymentTerms || "Şərt yoxdur"} subtitle="Ödəniş şərti" />
-                <TwoLine title={`${selectedVendorPurchaseOrders.length} PO`} subtitle={`${selectedVendorPurchaseOrders.filter(isPurchaseOrderOpen).length} açıq`} />
-              </div>
-              <div className="vendor-profile-quota">
-                <div>
-                  <span>Kvota icrası</span>
-                  <strong>{percent(selectedVendorQuota)}</strong>
-                </div>
-                <ProgressRow label={`${selectedVendor.sold}/${selectedVendor.quota}`} value={selectedVendorQuota} compact />
-              </div>
-              {selectedVendor.note && <p className="vendor-note">{selectedVendor.note}</p>}
-              <div className="vendor-profile-actions">
-                <button className="secondary-btn" type="button" disabled={!canManageVendors} onClick={() => onEditVendor(getVendorKey(selectedVendor))}>
-                  <Pencil size={16} />
-                  Redaktə et
-                </button>
-                <button
-                  className="secondary-btn danger-outline"
-                  type="button"
-                  disabled={!canManageVendors || selectedVendorHasOpenPo}
-                  title={selectedVendorHasOpenPo ? "Açıq PO olan vendor silinə bilməz" : "Vendoru sil"}
-                  onClick={() => onDeleteVendor(getVendorKey(selectedVendor))}
-                >
-                  <Trash2 size={16} />
-                  Sil
-                </button>
-              </div>
-              <div className="vendor-profile-subsection">
-                <h4>Tövsiyə olunan məhsullar</h4>
-                {selectedVendorProcurementRows.length > 0 ? (
-                  <div className="vendor-recommendation-list">
-                    {selectedVendorProcurementRows.map((row) => (
-                      <div key={row.product}>
-                        <TwoLine title={row.product} subtitle={`Anbarda: ${row.available} · Minimum: ${row.reorderPoint}`} />
-                        <button className="text-btn" type="button" disabled={!canManagePo || row.orderGap <= 0} onClick={() => onCreatePurchaseOrder(row)}>
-                          {row.orderGap > 0 ? `${row.orderGap} ədəd PO` : "Bağlıdır"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState title="Bu vendor üzrə təcili satınalma ehtiyacı yoxdur" />
-                )}
-              </div>
-            </div>
-          ) : (
-            <EmptyState title="Vendor seçilməyib" />
-          )}
-        </Panel>
-      </section>
-
-      <Panel className="procurement-panel">
-        <PanelHeader title="Procurement planı" subtitle="Anbar qalığı və satış tempinə görə vendor üzrə sifariş tövsiyələri" icon={Package} />
-        <div className="procurement-actions">
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={!canManagePo || products.length === 0 || warehouses.length === 0}
-            title={products.length === 0 || warehouses.length === 0 ? "Əvvəl məhsul və anbar yaradın" : "Zavoddan məhsul sifarişi yaradın"}
-            onClick={onOpenPurchaseOrderModal}
-          >
-            <Plus size={16} />
-            PO yarat
-          </button>
-        </div>
-        <div className="procurement-summary-grid">
-          <div>
-            <span>Satınalma büdcəsi</span>
-            <strong>{money(procurementBudget)}</strong>
-            <small>{purchaseNeed.length} məhsul üçün PO açıla bilər</small>
-          </div>
-          <div>
-            <span>Vendor riski</span>
-            <strong>{vendorRiskCount}</strong>
-            <small>Kvota və icra nəzarəti</small>
-          </div>
-          <div>
-            <span>Sifarişdə</span>
-            <strong>{openPoQty}</strong>
-            <small>Açıq PO üzrə yolda olan məhsul</small>
-          </div>
-        </div>
-        <DataTable
-          columns={["Məhsul", "Vendor", "Satış", "Satış üçün", "Minimum", "Tövsiyə", "Sifarişdə", "Büdcə", "Status", "PO"]}
-          rows={procurementRows.slice(0, 10).map((row) => [
-            <strong>{row.product}</strong>,
-            row.vendor,
-            `${row.sold} ədəd`,
-            `${row.available} ədəd`,
-            row.reorderPoint > 0 ? `${row.reorderPoint} ədəd` : "—",
-            row.recommendedQty > 0 ? `${row.recommendedQty} ədəd` : "Yoxdur",
-            row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "Yoxdur",
-            row.estimatedCost > 0 ? money(row.estimatedCost) : "—",
-            <StatusBadge status={row.status} />,
-            <button className="text-btn" disabled={!canManagePo || row.orderGap <= 0} onClick={() => onCreatePurchaseOrder(row)}>
-              {row.orderGap > 0 ? "PO yarat" : "Bağlıdır"}
-            </button>,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="po-action-panel">
-        <div className="po-panel-head">
-          <PanelHeader title="Purchase Order axını" subtitle="PO təsdiqlənəndə məhsul avtomatik anbara mədaxil edilir və alış xərci maliyyəyə düşür" icon={FileText} />
-          <span>{filteredPurchaseOrders.length}/{purchaseOrders.length} PO</span>
-        </div>
-        <DataTable
-          columns={["PO", "Mənbə", "Məhsul", "Anbar", "Say", "Alış", "Məbləğ", "Gözlənən", "Status", "Əməliyyat"]}
-          rows={filteredPurchaseOrders.map((po) => [
-            <strong>{po.id}</strong>,
-            <TwoLine title={po.vendor} subtitle={po.supplierSource || po.procurementType || "Vendor PO"} />,
-            po.product,
-            po.warehouseName,
-            `${po.qty} ədəd`,
-            money(Number(po.unitCost || (Number(po.amount || 0) / Math.max(1, Number(po.qty || 1))) || 0)),
-            money(po.amount),
-            po.expectedAt || "—",
-            <StatusBadge status={po.status} />,
-            po.status === "Təsdiq gözləyir" ? (
-              <button className="text-btn" disabled={!canManagePo} onClick={() => onApprovePurchaseOrder(po.id)}>
-                Təsdiq et
-              </button>
-            ) : (
-              <TwoLine title="Mədaxil edilib" subtitle={po.receivedAt || po.approvedAt} />
-            ),
-          ])}
-        />
-      </Panel>
-    </div>
-  );
-}
+// VendorManagementPage extracted to src/pages/VendorManagementPage.jsx
 
 const hrLevelOptions = ["Rəhbərlik", "Şöbə rəhbəri", "Komanda lideri", "Komanda üzvü", "Təcrübəçi"];
 const hrPlatformTabs = ["Komanda", "İş vaxtı", "Məzuniyyət", "Payroll", "Recruitment"];
@@ -18408,537 +17729,7 @@ function NotificationsPage({
   );
 }
 
-function SettingsPage({
-  settings,
-  activeRole,
-  auditLog = [],
-  dbMeta = {},
-  integrityReport = {},
-  integritySnapshot = null,
-  goLiveReport = {},
-  goLiveSnapshot = null,
-  productionHardeningReport = {},
-  productionHardeningSnapshot = null,
-  permissionCatalog = [],
-  modulePermissionCatalog = [],
-  users = [],
-  toggleSetting,
-  updateCompany,
-  onSaveSettings,
-  onChangeRole,
-  onCreateUser,
-  onUpdateUserStatus,
-  onToggleUserModule,
-  onRunIntegrityCheck,
-  onRunGoLiveCheck,
-  onRunProductionHardeningCheck,
-  onExportBackup,
-  onImportBackup,
-  notify,
-  requiresPassword = false,
-  canManageSettings = true,
-  canRunSystemBackup = true,
-}) {
-  const [userDraft, setUserDraft] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: activeRole?.name || defaultRoles[0].name,
-    moduleAccess: getDefaultModuleAccessForRole(activeRole?.name || defaultRoles[0].name, defaultRoles),
-  });
-  const integrations = [
-    ["AKB", "Müştəri kredit tarixçəsi sorğusu", "Aktiv"],
-    ["SMS Gateway", "Bildirişlər və OTP üçün", "Aktiv"],
-    ["1C Mühasibat", "Maliyyə məlumatlarının sinxronizasiyası", "Gözləyir"],
-    ["ASAN İmza", "Müqavilələrin rəqəmsal imzalanması", "Gözləyir"],
-    ["E-Qaimə Sistemi", "Elektron qaimələrin avtomatik göndərilməsi", "Aktiv"],
-  ];
-  const roles = settings.roles || defaultRoles;
-  const currentRole = activeRole || getActiveRole(settings);
-  const draftRole = roles.find((role) => role.name === userDraft.role);
-  const draftIsSuperAdmin = userDraft.role === "Super Admin";
-  const shownIntegrity = integritySnapshot || integrityReport;
-  const integrityIssues = shownIntegrity.issues || [];
-  const shownGoLive = goLiveSnapshot || goLiveReport;
-  const goLiveItems = shownGoLive.items || [];
-  const shownHardening = productionHardeningSnapshot || productionHardeningReport;
-  const hardeningItems = shownHardening.items || [];
-  const formatAuditDate = (value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value || "—";
-    return new Intl.DateTimeFormat("az-AZ", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-  const getUserPermissionSummary = (user) => {
-    const role = roles.find((item) => item.name === user.role);
-    const rolePermissions = new Set(role?.permissions || []);
-    const effectivePermissions = permissionCatalog.filter((permission) =>
-      userHasEffectivePermission(user, roles, permission.key),
-    );
-    const blockedByModule = permissionCatalog.filter((permission) => {
-      const moduleId = getModuleForPermission(permission.key);
-      return rolePermissions.has(permission.key) && moduleId && !normalizeUserModuleAccess(user, roles).includes(moduleId);
-    });
-    return {
-      effectivePermissions,
-      blockedByModule,
-      total: permissionCatalog.length,
-    };
-  };
-
-  function submitUser(event) {
-    event.preventDefault();
-    onCreateUser(userDraft);
-    setUserDraft({
-      name: "",
-      email: "",
-      password: "",
-      role: roles[0]?.name || defaultRoles[0].name,
-      moduleAccess: getDefaultModuleAccessForRole(roles[0]?.name || defaultRoles[0].name, roles),
-    });
-  }
-
-  function changeDraftRole(roleName) {
-    setUserDraft((current) => ({
-      ...current,
-      role: roleName,
-      moduleAccess: getDefaultModuleAccessForRole(roleName, roles),
-    }));
-  }
-
-  function toggleDraftModule(moduleId) {
-    setUserDraft((current) => {
-      const currentAccess = uniqueModuleIds(current.moduleAccess || []);
-      const nextAccess = currentAccess.includes(moduleId)
-        ? currentAccess.filter((id) => id !== moduleId)
-        : [...currentAccess, moduleId];
-      return {
-        ...current,
-        moduleAccess: nextAccess.length > 0 ? nextAccess : ["dashboard"],
-      };
-    });
-  }
-
-  return (
-    <div className="settings-grid">
-      <Panel>
-        <PanelHeader title="Şirkət Məlumatları" subtitle="Əsas hüquqi və əlaqə məlumatları" />
-        <div className="form-grid">
-          <Field label="Şirkət adı" value={settings.company} onChange={(value) => updateCompany("company", value)} disabled={!canManageSettings} />
-          <Field label="VÖEN" value={settings.voen} onChange={(value) => updateCompany("voen", value)} disabled={!canManageSettings} />
-          <Field label="Telefon" value={settings.phone} onChange={(value) => updateCompany("phone", value)} disabled={!canManageSettings} />
-          <Field label="Email" value={settings.email} onChange={(value) => updateCompany("email", value)} disabled={!canManageSettings} />
-          <Field label="Ünvan" value={settings.address} onChange={(value) => updateCompany("address", value)} full disabled={!canManageSettings} />
-        </div>
-        <button
-          className="primary-btn"
-          onClick={onSaveSettings}
-          disabled={!canManageSettings}
-          title={!canManageSettings ? "Ayarları dəyişmək üçün icazə yoxdur" : ""}
-        >
-          <Check size={16} />
-          Yadda saxla
-        </button>
-      </Panel>
-
-      <Panel>
-        <PanelHeader title="Bildiriş Tənzimləmələri" subtitle="Kanallar və avtomatik xəbərdarlıqlar" />
-        <div className="toggle-list">
-          <Toggle label="Push bildirişlər" checked={settings.toggles.push} disabled={!canManageSettings} onChange={() => toggleSetting("push")} />
-          <Toggle label="SMS bildirişlər" checked={settings.toggles.sms} disabled={!canManageSettings} onChange={() => toggleSetting("sms")} />
-          <Toggle label="Email bildirişlər" checked={settings.toggles.email} disabled={!canManageSettings} onChange={() => toggleSetting("email")} />
-          <Toggle
-            label="Kredit ödəniş xəbərdarlığı"
-            checked={settings.toggles.creditWarnings}
-            disabled={!canManageSettings}
-            onChange={() => toggleSetting("creditWarnings")}
-          />
-          <Toggle
-            label="Anbar stok aşağı həddi"
-            checked={settings.toggles.lowStock}
-            disabled={!canManageSettings}
-            onChange={() => toggleSetting("lowStock")}
-          />
-        </div>
-      </Panel>
-
-      <Panel>
-        <PanelHeader title="İnteqrasiyalar" subtitle="Aktiv servis bağlantıları" />
-        <div className="integration-list">
-          {integrations.map(([name, desc, status]) => (
-            <div className="integration-row" key={name}>
-              <TwoLine title={name} subtitle={desc} />
-              <StatusBadge status={status} />
-            </div>
-          ))}
-        </div>
-      </Panel>
-
-      <Panel className="settings-security-panel">
-        <PanelHeader title="İstifadəçilər & Login" subtitle="İstifadəçi yaradın, rol bağlayın və real permission görünüşünü yoxlayın" icon={UserCog} />
-        <form className="user-create-form" onSubmit={submitUser}>
-          <label>
-            <span>Ad Soyad</span>
-            <input
-              value={userDraft.name}
-              onChange={(event) => setUserDraft((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Yeni istifadəçi"
-            />
-          </label>
-          <label>
-            <span>Email</span>
-            <input
-              type="email"
-              value={userDraft.email}
-              onChange={(event) => setUserDraft((current) => ({ ...current, email: event.target.value }))}
-              placeholder="user@sirket.az"
-            />
-          </label>
-          {requiresPassword && (
-            <label>
-              <span>İlkin parol</span>
-              <input
-                type="password"
-                minLength="8"
-                value={userDraft.password}
-                onChange={(event) => setUserDraft((current) => ({ ...current, password: event.target.value }))}
-                placeholder="Minimum 8 simvol"
-                required
-              />
-            </label>
-          )}
-          <label>
-            <span>Rol</span>
-            <select
-              value={userDraft.role}
-              onChange={(event) => changeDraftRole(event.target.value)}
-            >
-              {roles.map((role) => (
-                <option key={role.name}>{role.name}</option>
-              ))}
-            </select>
-          </label>
-          <div className="user-module-picker">
-            <span>Modul icazələri</span>
-            <div className="module-access-grid compact">
-              {modulePermissionCatalog.map((module) => {
-                const roleAllowsModule =
-                  draftIsSuperAdmin || !module.permission || (draftRole?.permissions || []).includes(module.permission);
-                return (
-                  <label key={`draft-${module.id}`} className="module-access-check" title={!roleAllowsModule ? "Seçilmiş rol bu modulun permission-unu daşımır" : ""}>
-                    <input
-                      type="checkbox"
-                      checked={draftIsSuperAdmin || (roleAllowsModule && (userDraft.moduleAccess || []).includes(module.id))}
-                      disabled={draftIsSuperAdmin || !canManageSettings || !roleAllowsModule}
-                      onChange={() => toggleDraftModule(module.id)}
-                    />
-                    <span>{module.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          <button
-            className="primary-btn"
-            type="submit"
-            disabled={!canManageSettings}
-            title={!canManageSettings ? "İstifadəçi yaratmaq üçün icazə yoxdur" : ""}
-          >
-            <Plus size={16} />
-            İstifadəçi yarat
-          </button>
-        </form>
-        <DataTable
-          columns={["İstifadəçi", "Rol", "Scope", "Modullar", "Effective permission", "Status", "Əməliyyat"]}
-          rows={users.map((user) => {
-            const role = roles.find((item) => item.name === user.role);
-            const isCurrent = user.id === settings.sessionUserId;
-            const userModuleAccess = normalizeUserModuleAccess(user, roles);
-            const isSuperAdmin = user.role === "Super Admin";
-            const permissionSummary = getUserPermissionSummary(user);
-
-            return [
-              <TwoLine title={user.name} subtitle={user.email} />,
-              <StatusBadge status={user.role} />,
-              role?.scope || "Scope yoxdur",
-              <div className="module-access-grid">
-                {modulePermissionCatalog.map((module) => (
-                  (() => {
-                    const roleAllowsModule =
-                      isSuperAdmin || !module.permission || (role?.permissions || []).includes(module.permission);
-                    return (
-                      <label key={`${user.id}-${module.id}`} className="module-access-check" title={!roleAllowsModule ? "Rol bu modulun permission-unu daşımır" : ""}>
-                        <input
-                          type="checkbox"
-                          checked={isSuperAdmin || (roleAllowsModule && userModuleAccess.includes(module.id))}
-                          disabled={isSuperAdmin || !canManageSettings || !roleAllowsModule}
-                          onChange={() => onToggleUserModule(user.id, module.id)}
-                        />
-                        <span>{module.label}</span>
-                      </label>
-                    );
-                  })()
-                ))}
-              </div>,
-              <div className="permission-effective-cell" data-testid={`permission-effective-${user.id}`}>
-                <strong>{permissionSummary.effectivePermissions.length}/{permissionSummary.total}</strong>
-                <span>aktiv permission</span>
-                {permissionSummary.blockedByModule.length > 0 && (
-                  <small>{permissionSummary.blockedByModule.length} permission modul access ilə bloklanıb</small>
-                )}
-              </div>,
-              <StatusBadge status={isCurrent ? "Aktiv sessiya" : user.status} />,
-              <button
-                className={`text-btn ${user.status === "Aktiv" ? "danger" : ""}`}
-                disabled={isCurrent || !canManageSettings}
-                title={!canManageSettings ? "İstifadəçi statusu dəyişmək üçün icazə yoxdur" : ""}
-                onClick={() => onUpdateUserStatus(user.id, user.status === "Aktiv" ? "Bloklanıb" : "Aktiv")}
-              >
-                {user.status === "Aktiv" ? "Blokla" : "Aktiv et"}
-              </button>,
-            ];
-          })}
-        />
-      </Panel>
-
-      <Panel className="settings-security-panel">
-        <PanelHeader title="Rollar & İcazələr" subtitle="Modul səviyyəli girişlər" />
-        <label className="role-selector">
-          <span>Aktiv rol</span>
-          <select
-            value={currentRole?.name || ""}
-            disabled={!canManageSettings}
-            title={!canManageSettings ? "Aktiv rolu dəyişmək üçün icazə yoxdur" : ""}
-            onChange={(event) => onChangeRole(event.target.value)}
-          >
-            {roles.map((role) => (
-              <option key={role.name}>{role.name}</option>
-            ))}
-          </select>
-        </label>
-        <DataTable
-          columns={["Rol", "İstifadəçi", "Scope", "Real permission"]}
-          rows={roles.map((role) => [
-            <TwoLine title={role.name} subtitle={role.name === currentRole?.name ? "Aktiv rol" : "Passiv"} />,
-            role.users,
-            role.scope,
-            <div className="permission-chip-list">
-              {permissionCatalog.map((permission) => (
-                <span
-                  key={`${role.name}-${permission.key}`}
-                  className={role.permissions?.includes(permission.key) ? "permission-chip allowed" : "permission-chip"}
-                >
-                  {role.permissions?.includes(permission.key) ? "✓" : "—"} {permission.label}
-                </span>
-              ))}
-            </div>,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="settings-security-panel system-health-panel">
-        <PanelHeader
-          title="Sistem Sağlamlığı & Backup"
-          subtitle="DB bütövlüyü, schema versiyası, backup/export və bərpa əməliyyatları"
-          icon={ShieldCheck}
-        />
-        <section className="metric-grid four">
-          <MetricCard
-            label="Integrity score"
-            value={`${shownIntegrity.score ?? 100}%`}
-            trend={shownIntegrity.status || "Yoxlanmayıb"}
-            icon={ShieldCheck}
-            tone={shownIntegrity.critical > 0 ? "danger" : shownIntegrity.warnings > 0 ? "warning" : "success"}
-          />
-          <MetricCard label="Kritik siqnal" value={shownIntegrity.critical || 0} icon={CircleAlert} tone={shownIntegrity.critical > 0 ? "danger" : "success"} />
-          <MetricCard label="Xəbərdarlıq" value={shownIntegrity.warnings || 0} icon={Bell} tone={shownIntegrity.warnings > 0 ? "warning" : "info"} />
-          <MetricCard label="Schema" value={`v${dbMeta.schemaVersion || localDbSchemaVersion}`} trend={formatAuditDate(shownIntegrity.checkedAt)} icon={Database} tone="primary" />
-        </section>
-        <div className="backup-toolbar">
-          <button
-            type="button"
-            className="primary-btn"
-            onClick={onRunIntegrityCheck}
-            disabled={!canRunSystemBackup}
-            title={!canRunSystemBackup ? "Backup və integrity üçün icazə yoxdur" : ""}
-          >
-            <ShieldCheck size={16} />
-            Integrity yoxla
-          </button>
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={onExportBackup}
-            disabled={!canRunSystemBackup}
-            title={!canRunSystemBackup ? "Backup export üçün icazə yoxdur" : ""}
-          >
-            <Download size={16} />
-            Backup export
-          </button>
-          <label className={`secondary-btn file-import-btn ${!canRunSystemBackup ? "disabled" : ""}`} title={!canRunSystemBackup ? "Backup import üçün icazə yoxdur" : ""}>
-            <Upload size={16} />
-            Backup import
-            <input
-              type="file"
-              accept="application/json"
-              disabled={!canRunSystemBackup}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onImportBackup(file);
-                event.target.value = "";
-              }}
-            />
-          </label>
-        </div>
-        <DataTable
-          columns={["Sahə", "Siqnal", "Detal", "Təklif", "Səviyyə"]}
-          rows={integrityIssues.slice(0, 8).map((issue) => [
-            issue.area,
-            <strong>{issue.title}</strong>,
-            issue.detail,
-            issue.fix,
-            <StatusBadge status={issue.severity} />,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="settings-security-panel go-live-panel">
-        <PanelHeader
-          title="Real Mühitə Çıxış"
-          subtitle="Production ERP üçün blokerlər, nəzarət maddələri və deploy öncəsi yoxlama"
-          icon={Database}
-        />
-        <section className="metric-grid four">
-          <MetricCard
-            label="Go-live score"
-            value={`${shownGoLive.score ?? 0}%`}
-            trend={shownGoLive.status || "Yoxlanmayıb"}
-            icon={ShieldCheck}
-            tone={shownGoLive.blockers > 0 ? "danger" : shownGoLive.watch > 0 ? "warning" : "success"}
-          />
-          <MetricCard label="Bloker" value={shownGoLive.blockers || 0} icon={CircleAlert} tone={shownGoLive.blockers > 0 ? "danger" : "success"} />
-          <MetricCard label="Nəzarətdə" value={shownGoLive.watch || 0} icon={Bell} tone={shownGoLive.watch > 0 ? "warning" : "success"} />
-          <MetricCard label="Hazır qat" value={shownGoLive.ready || 0} icon={Check} tone="success" />
-        </section>
-        <div className="backup-toolbar">
-          <button type="button" className="primary-btn" onClick={onRunGoLiveCheck}>
-            <ShieldCheck size={16} />
-            Go-live yoxla
-          </button>
-          <StatusBadge status={shownGoLive.status || "Yoxlanmayıb"} />
-          <span className="module-action-note">
-            Son yoxlama: {formatAuditDate(shownGoLive.checkedAt)}
-          </span>
-        </div>
-        <DataTable
-          columns={["Qat", "Tələb", "Status", "Risk", "Növbəti addım"]}
-          rows={goLiveItems.map((item) => [
-            <strong>{item.area}</strong>,
-            item.requirement,
-            <StatusBadge status={item.status} />,
-            <StatusBadge status={item.risk} />,
-            item.next,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="settings-security-panel production-hardening-panel" data-testid="production-hardening-panel">
-        <PanelHeader
-          title="Production Hardening"
-          subtitle="Backend, backup/restore, deployment monitorinqi, provider inteqrasiyaları və kod parçalanması"
-          icon={ShieldCheck}
-        />
-        <section className="metric-grid four">
-          <MetricCard
-            label="Hardening score"
-            value={`${shownHardening.score ?? 0}%`}
-            trend={shownHardening.status || "Yoxlanmayıb"}
-            icon={ShieldCheck}
-            tone={shownHardening.score >= 85 ? "success" : shownHardening.score >= 70 ? "warning" : "danger"}
-          />
-          <MetricCard label="Hazır qat" value={shownHardening.ready || 0} icon={Check} tone="success" />
-          <MetricCard label="Nəzarətdə" value={shownHardening.watch || 0} icon={Bell} tone={shownHardening.watch > 0 ? "warning" : "success"} />
-          <MetricCard label="Bloker" value={shownHardening.blockers || 0} icon={CircleAlert} tone={shownHardening.blockers > 0 ? "danger" : "success"} />
-        </section>
-        <div className="backup-toolbar">
-          <button
-            type="button"
-            className="primary-btn"
-            data-testid="production-hardening-check"
-            onClick={onRunProductionHardeningCheck}
-            disabled={!canRunSystemBackup}
-            title={!canRunSystemBackup ? "Production hardening üçün icazə yoxdur" : ""}
-          >
-            <ShieldCheck size={16} />
-            Hardening yoxla
-          </button>
-          <StatusBadge status={shownHardening.status || "Yoxlanmayıb"} />
-          <span className="module-action-note">
-            Son yoxlama: {formatAuditDate(shownHardening.checkedAt)}
-          </span>
-        </div>
-        <DataTable
-          columns={["Qat", "Status", "Score", "Detal", "Növbəti addım"]}
-          rows={hardeningItems.map((item) => [
-            <strong>{item.area}</strong>,
-            <StatusBadge status={item.status} />,
-            `${item.score}%`,
-            item.detail,
-            item.next,
-          ])}
-        />
-      </Panel>
-
-      <Panel className="settings-security-panel">
-        <PanelHeader title="Backend DB & Audit Log" subtitle="Bütün əsas əməliyyatlar qalıcı local DB və audit reyestrinə yazılır" icon={ShieldCheck} />
-        <div className="db-status-grid">
-          <div>
-            <span>Provider</span>
-            <strong>{dbMeta.provider || "Local persistent DB"}</strong>
-          </div>
-          <div>
-            <span>Runtime</span>
-            <strong>{dbMeta.runtime || "browser"}</strong>
-          </div>
-          <div>
-            <span>Target DB</span>
-            <strong>{targetDbProvider}</strong>
-          </div>
-          <div>
-            <span>Storage key</span>
-            <strong>{localDbKey}</strong>
-          </div>
-          <div>
-            <span>Son yazılış</span>
-            <strong>{formatAuditDate(dbMeta.lastWriteAt)}</strong>
-          </div>
-          <div>
-            <span>Audit sayı</span>
-            <strong>{auditLog.length}</strong>
-          </div>
-        </div>
-        <div className="audit-list">
-          {auditLog.slice(0, 8).map((entry) => (
-            <article className="audit-row" key={entry.id}>
-              <div>
-                <strong>{entry.action}</strong>
-                <span>{entry.module} · {entry.detail}</span>
-              </div>
-              <TwoLine title={entry.role} subtitle={formatAuditDate(entry.date)} />
-              <StatusBadge status={entry.status} />
-            </article>
-          ))}
-          {auditLog.length === 0 && <EmptyState title="Audit qeydi hələ yoxdur" />}
-        </div>
-      </Panel>
-    </div>
-  );
-}
+// SettingsPage extracted to src/pages/SettingsPage.jsx
 
 export function WorkflowSteps({ activeStage, compact = false }) {
   const activeIndex = stages.indexOf(activeStage);
@@ -18969,7 +17760,7 @@ function TaskItem({ tone, title, value, label }) {
   );
 }
 
-function Toggle({ label, checked, onChange, disabled = false }) {
+export function Toggle({ label, checked, onChange, disabled = false }) {
   return (
     <button className="toggle-row" onClick={onChange} disabled={disabled} title={disabled ? "Bu ayarı dəyişmək üçün icazə yoxdur" : ""}>
       <span>{label}</span>
