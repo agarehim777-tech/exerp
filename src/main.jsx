@@ -7,10 +7,11 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
-import { registerPWA } from "./lib/pwa.js";
+import { registerPWA, installChunkErrorRecovery } from "./lib/pwa.js";
 
 initObservability();
 instrumentSupabase();
+installChunkErrorRecovery();
 registerPWA();
 
 const routerBase = (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "/";
