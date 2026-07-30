@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, Building2, Eye, FileText, Package, Pencil, Plus, Search, Trash2, TrendingUp, useEffect, useMemo, useState } from "lucide-react";
+import { Boxes, Building2, Eye, FileText, Package, Pencil, Plus, Search, Trash2, TrendingUp } from "lucide-react";
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
