@@ -11,6 +11,12 @@ function sanitizeNext(raw) {
   }
 }
 
+function appUrl(path = "/") {
+  const base = import.meta.env.BASE_URL || "/";
+  const relativePath = String(path).replace(/^\/+/, "");
+  return new URL(`${base}${relativePath}`, window.location.origin).toString();
+}
+
 const MODULES = [
   { k: "CRM", d: "Müştəri münasibətləri, pipeline, tapşırıqlar", i: "M3 3h18v4H3zM3 10h11v11H3zM17 10h4v11h-4z" },
   { k: "Satış", d: "Kotirovka → Sifariş → Göndərmə axını", i: "M3 3v18h18M7 15l4-4 4 4 5-6" },
@@ -42,7 +48,7 @@ export default function Login() {
     if (!email) return setError("Əvvəlcə emailinizi daxil edin.");
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password",
+      redirectTo: appUrl("/reset-password"),
     });
     setBusy(false);
     if (error) return setError(error.message);
@@ -51,7 +57,7 @@ export default function Login() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.replace(next);
+      if (data.session) window.location.replace(appUrl(next));
     });
   }, [next]);
 
@@ -66,19 +72,24 @@ export default function Login() {
     setError(null);
     setBusy(true);
     const fn = mode === "signup"
-      ? supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + next } })
+      ? supabase.auth.signUp({ email, password, options: { emailRedirectTo: appUrl(next) } })
       : supabase.auth.signInWithPassword({ email, password });
-    const { error } = await fn;
+    const { data, error } = await fn;
     setBusy(false);
     if (error) return setError(error.message);
-    window.location.replace(next);
+    if (mode === "signup" && !data?.session) {
+      setMode("signin");
+      setInfo("Hesab yaradıldı. Emailinizə göndərilən təsdiq linkini açın, sonra daxil olun.");
+      return;
+    }
+    window.location.replace(appUrl(next));
   }
 
   async function google() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin + next },
+      options: { redirectTo: appUrl(next) },
     });
     if (error) setError(error.message);
   }
