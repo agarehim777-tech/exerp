@@ -53,16 +53,72 @@ export async function registerPWA() {
   }
   try {
     const { registerSW } = await import("virtual:pwa-register");
-    registerSW({
+    const updateSW = registerSW({
       immediate: true,
       onNeedRefresh() {
         window.dispatchEvent(new CustomEvent("erp:pwa-update"));
+        // Köhnə service worker aşkarlandı → dərhal yenisinə keç.
+        purgeStaleCaches().finally(() => updateSW(true));
       },
     });
+    installStaleWorkerWatcher();
   } catch (err) {
     console.warn("[pwa] registration failed", err);
   }
 }
+
+// Purge only this app's own runtime/precache buckets (origin-scoped storage may
+// also hold messaging caches that must stay untouched).
+async function purgeStaleCaches() {
+  if (typeof caches === "undefined") return;
+  try {
+    const names = await caches.keys();
+    await Promise.allSettled(
+      names
+        .filter((n) => n === "html-nav" || n === "static-assets" || n.startsWith("workbox-"))
+        .map((n) => caches.delete(n)),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+const CONTROLLER_RELOAD_FLAG = "erp:sw-reloaded";
+
+// Watches for a newer service worker taking control and refreshes the page once
+// so the user never stays on a stale app shell.
+function installStaleWorkerWatcher() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    try {
+      if (sessionStorage.getItem(CONTROLLER_RELOAD_FLAG)) return;
+      sessionStorage.setItem(CONTROLLER_RELOAD_FLAG, "1");
+    } catch {
+      /* ignore */
+    }
+    purgeStaleCaches().finally(() => window.location.reload());
+  });
+
+  const checkForUpdate = async () => {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration(SW_URL);
+      if (!reg) return;
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      await reg.update();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+  window.addEventListener("online", checkForUpdate);
+  setInterval(checkForUpdate, 60 * 60 * 1000);
+  checkForUpdate();
+}
+
 
 // Stale service-worker caches can serve an outdated chunk manifest, which makes
 // lazy route imports fail and leaves the user on a blank screen. Recover once
