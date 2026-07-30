@@ -1,3 +1,5 @@
+import { permissionCatalog } from "../services/permissions.js";
+import { localDbKey, localDbSchemaVersion } from "../services/persistence.js";
 import { defaultRoles } from "../services/permissions.js";
 import { useState } from "react";
 import { Bell, Check, CircleAlert, Database, Download, Plus, ShieldCheck, Upload, UserCog, X } from "lucide-react";
