@@ -95,9 +95,14 @@ Deno.serve(async (req) => {
         }),
         execute: async ({ days }) => {
           if (!tenantId) return { error: "Aktiv şirkət yoxdur" };
+          const to = new Date();
+          const from = new Date();
+          from.setDate(from.getDate() - days);
+          const iso = (d: Date) => d.toISOString().slice(0, 10);
           const { data, error } = await supabase.rpc("sales_dashboard", {
             _tenant: tenantId,
-            _days: days,
+            _from: iso(from),
+            _to: iso(to),
           });
           if (error) return { error: error.message };
           return { summary: data };
