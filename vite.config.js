@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: "Expert ERP",
         short_name: "ExERP",
-        description: "Expert ERP — çoxşirkətli idarəetmə platforması",
+        description: "Expert ERP вЂ” Г§oxЕџirkЙ™tli idarЙ™etmЙ™ platformasД±",
         theme_color: "#0F2A2E",
         background_color: "#0F2A2E",
         display: "standalone",
@@ -31,6 +31,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/~oauth/, /^\/api/, /^\/functions\//],
@@ -41,8 +43,8 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "html-nav",
-              networkTimeoutSeconds: 4,
-              expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 2,
+              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 5 },
             },
           },
           {
@@ -76,7 +78,7 @@ export default defineConfig({
           if (normalizedId.includes("/src/config/")) return "app-config";
           if (normalizedId.includes("/src/services/")) return "app-services";
           if (normalizedId.includes("/src/components/")) return "app-ui";
-          // Note: /src/modules/ intentionally NOT bundled together — each lazy() import
+          // Note: /src/modules/ intentionally NOT bundled together вЂ” each lazy() import
           // becomes its own route-based chunk for optimal code splitting.
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
           if (id.includes("node_modules/lucide-react")) return "icons";
@@ -95,3 +97,4 @@ export default defineConfig({
   },
   preview: { host: "127.0.0.1" },
 });
+

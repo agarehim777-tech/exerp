@@ -15,6 +15,7 @@ function isRefusedContext() {
     if (host === "lovableproject.com" || host.endsWith(".lovableproject.com")) return true;
     if (host === "lovableproject-dev.com" || host.endsWith(".lovableproject-dev.com")) return true;
     if (host === "beta.lovable.dev" || host.endsWith(".beta.lovable.dev")) return true;
+    if (host === "github.io" || host.endsWith(".github.io")) return true;
     const params = new URLSearchParams(window.location.search);
     if (params.get("sw") === "off") return true;
     return false;
@@ -34,6 +35,14 @@ async function unregisterMatching() {
       })
       .map((r) => r.unregister()),
   );
+  if ("caches" in window) {
+    const names = await caches.keys();
+    await Promise.allSettled(
+      names
+        .filter((name) => name === "html-nav" || name === "static-assets" || name.startsWith("workbox-"))
+        .map((name) => caches.delete(name)),
+    );
+  }
 }
 
 export async function registerPWA() {
@@ -54,3 +63,4 @@ export async function registerPWA() {
     console.warn("[pwa] registration failed", err);
   }
 }
+
