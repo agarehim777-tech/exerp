@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { moduleFromPath, pathForModule } from "./config/routes.js";
+import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
@@ -5254,16 +5254,13 @@ function App() {
   useEffect(() => {
     const fromUrl = moduleFromPath(location.pathname);
     setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-    // Köhnə modul URL-lərini kanonik yeni ünvana yönləndir.
-    const canonical = pathForModule(fromUrl);
-    if (
-      canonical !== "/" &&
-      location.pathname !== canonical &&
-      !location.pathname.startsWith(canonical + "/")
-    ) {
-      navigate(canonical, { replace: true });
+    // Köhnə/alias URL-lərini kanonik yeni ünvana yönləndir.
+    const target = canonicalPath(location.pathname);
+    if (target && target !== "/") {
+      navigate(target + location.search + location.hash, { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.search, location.hash, navigate]);
+
 
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
