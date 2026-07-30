@@ -10,44 +10,64 @@ export const stages = [
 export const navItems = [
   { id: "dashboard", label: "Panel" },
   { id: "assistant", label: "AI Köməkçi" },
-  { id: "platform", label: "Şirkətlər" },
+
+  // CRM
   { id: "crm", label: "Müştərilər", group: "crm" },
   { id: "crm-deals", label: "Sövdələşmələr", group: "crm" },
   { id: "crm-activities", label: "Aktivliklər", group: "crm" },
   { id: "crm-tasks", label: "Tapşırıqlar", group: "crm" },
-  { id: "sales-dashboard", label: "Dashboard", group: "sales" },
+
+  // Satış
+  { id: "sales-dashboard", label: "Satış paneli", group: "sales" },
   { id: "sales-quotes", label: "Kotirovkalar", group: "sales" },
   { id: "sales", label: "Sifarişlər", group: "sales" },
   { id: "sales-shipments", label: "Çatdırılmalar", group: "sales" },
-  { id: "warehouse", label: "Anbar" },
-  { id: "stock", label: "Anbar qalıqları" },
-  { id: "deliveries", label: "Təhvil" },
-  { id: "finance", label: "Maliyyə" },
-  { id: "cashbook", label: "Kassa & Xərclər" },
-  { id: "ar-invoices", label: "Satış fakturaları" },
-  { id: "invoices", label: "Fakturalar" },
-  { id: "accounting", label: "Mühasibat" },
-  { id: "tax", label: "Vergi" },
-  { id: "credits", label: "Kreditlər" },
-  { id: "receivables", label: "Borclar" },
-  { id: "vendors", label: "Vendorlar" },
-  { id: "procurement", label: "Satınalma" },
-  { id: "projects", label: "ROI" },
-  { id: "production", label: "İstehsalat" },
-  { id: "hr", label: "HR" },
-  { id: "kpi", label: "KPI" },
-  { id: "contracts", label: "Müqavilələr" },
-  { id: "reports", label: "Hesabatlar" },
-  { id: "support", label: "Dəstək" },
-  { id: "help", label: "Kömək" },
-  { id: "onboarding", label: "Onboarding" },
-  { id: "messages", label: "Mesajlar" },
-  { id: "notifications", label: "Bildirişlər" },
-  { id: "api", label: "API" },
-  { id: "settings", label: "Ayarlar" },
-  { id: "roles", label: "Rollar" },
-  { id: "access-check", label: "İcazə yoxlaması" },
+  { id: "ar-invoices", label: "Satış fakturaları", group: "sales" },
+
+  // Təchizat & Anbar
+  { id: "procurement", label: "Satınalma", group: "supply" },
+  { id: "vendors", label: "Vendorlar", group: "supply" },
+  { id: "stock", label: "Anbar qalıqları", group: "supply" },
+  { id: "warehouse", label: "Məhsullar", group: "supply" },
+  { id: "deliveries", label: "Təhvil-təslim", group: "supply" },
+
+  // Maliyyə
+  { id: "cashbook", label: "Kassa & Xərclər", group: "finance" },
+  { id: "accounting", label: "Mühasibat jurnalı", group: "finance" },
+  { id: "receivables", label: "Borclar", group: "finance" },
+  { id: "credits", label: "Kreditlər", group: "finance" },
+  { id: "tax", label: "Vergi", group: "finance" },
+
+  // Əməliyyat
+  { id: "projects", label: "Layihələr", group: "ops" },
+  { id: "production", label: "İstehsalat", group: "ops" },
+  { id: "contracts", label: "Müqavilələr", group: "ops" },
+  { id: "hr", label: "HR", group: "ops" },
+
+  // Analitika
+  { id: "reports", label: "Hesabatlar", group: "analytics" },
+  { id: "kpi", label: "KPI", group: "analytics" },
+
+  // Sistem
+  { id: "platform", label: "Şirkətlər", group: "system" },
+  { id: "settings", label: "Ayarlar", group: "system" },
+  { id: "roles", label: "Rollar", group: "system" },
+  { id: "access-check", label: "İcazə yoxlaması", group: "system" },
+  { id: "api", label: "API & inteqrasiya", group: "system" },
+  { id: "messages", label: "Mesajlar", group: "system" },
+  { id: "notifications", label: "Bildirişlər", group: "system" },
+  { id: "onboarding", label: "Onboarding", group: "system" },
+  { id: "help", label: "Kömək", group: "system" },
+  { id: "support", label: "Dəstək", group: "system" },
 ];
+
+// Köhnə (blob əsaslı) modullar DB əsaslı modullarla əvəz olundu.
+// URL-lər işləkdir, amma menyuda göstərilmir və yeni ekvivalentinə yönləndirilir.
+export const legacyModuleAliases = {
+  finance: "accounting",
+  invoices: "ar-invoices",
+};
+
 
 export const initialState = {
   customers: [],
