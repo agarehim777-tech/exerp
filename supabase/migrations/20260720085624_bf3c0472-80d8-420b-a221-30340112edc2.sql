@@ -57,20 +57,33 @@ END $$;
 REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.bump_customer_activity() FROM authenticated;
 
-GRANT EXECUTE ON FUNCTION public.accept_tenant_invite(text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_tenant(text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.seed_default_coa(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.seed_default_crm_pipeline(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.sales_dashboard(uuid, date, date) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.customer_360(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.apply_invoice_match(uuid, numeric, numeric) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.evaluate_invoice_match(uuid, numeric, numeric) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.convert_quote_to_order(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.trial_balance(uuid, date, date) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.crm_pipeline_summary(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_doc_number(uuid, text, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.is_tenant_member(uuid, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.is_tenant_admin(uuid, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.has_tenant_role(uuid, uuid, app_role) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.has_module_access(uuid, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.current_tenant_id() TO authenticated;
+DO $$
+DECLARE
+  signature text;
+  signatures text[] := ARRAY[
+    'public.accept_tenant_invite(text)',
+    'public.create_tenant(text,text)',
+    'public.seed_default_coa(uuid)',
+    'public.seed_default_crm_pipeline(uuid)',
+    'public.sales_dashboard(uuid,date,date)',
+    'public.customer_360(uuid)',
+    'public.apply_invoice_match(uuid,numeric,numeric)',
+    'public.evaluate_invoice_match(uuid,numeric,numeric)',
+    'public.convert_quote_to_order(uuid)',
+    'public.trial_balance(uuid,date,date)',
+    'public.crm_pipeline_summary(uuid)',
+    'public.generate_doc_number(uuid,text,text,text)',
+    'public.is_tenant_member(uuid,uuid)',
+    'public.is_tenant_admin(uuid,uuid)',
+    'public.has_tenant_role(uuid,uuid,app_role)',
+    'public.has_module_access(uuid,text,text)',
+    'public.current_tenant_id()'
+  ];
+BEGIN
+  FOREACH signature IN ARRAY signatures
+  LOOP
+    IF to_regprocedure(signature) IS NOT NULL THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', to_regprocedure(signature));
+    END IF;
+  END LOOP;
+END $$;
