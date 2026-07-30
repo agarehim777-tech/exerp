@@ -10719,6 +10719,9 @@ function App() {
           {active === "sales-quotes" && <QuotesPage />}
           {active === "sales-shipments" && <ShipmentsPage />}
           {active === "sales" && <SalesOrdersPage />}
+          {active === "stock" && <StockPage />}
+          {active === "cashbook" && <CashbookPage />}
+          {active === "ar-invoices" && <SalesInvoicesPage />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}
