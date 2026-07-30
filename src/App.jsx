@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { moduleFromPath, pathForModule } from "./config/routes.js";
+import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
