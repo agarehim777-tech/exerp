@@ -10662,3 +10662,28 @@ body { background: var(--bg); }
   .panel, .metric-card { animation: none !important; }
   .nav-item, .panel, .metric-card, .primary-btn { transition: none !important; }
 }
+
+.delivery-plan-lines {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.delivery-plan-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.delivery-plan-line span {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.delivery-plan-line small {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
