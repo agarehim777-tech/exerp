@@ -6,7 +6,7 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
-import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, draftWarnings } from "../../lib/invoiceDraft.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
 
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
