@@ -290,36 +290,51 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
 }
 
 // Faktura kəsimi axını: sifariş və layihələrdən avtomatik faktura yaradılması.
-function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
+function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreateDraft, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
   const [open, setOpen] = useState(false);
   const src = useBillingSources(tenantId);
   const [projectCustomer, setProjectCustomer] = useState({});
   const [projectPercent, setProjectPercent] = useState({});
-  const [preview, setPreview] = useState(null); // { draft, confirm }
+  const [preview, setPreview] = useState(null); // düzəliş edilə bilən qaralama
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { src.refresh(); }, [invoicesVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openOrderPreview = async (order) => {
     const invoiceNo = await nextInvoiceNo?.().catch(() => null);
-    setPreview({
-      draft: buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }),
-      confirm: async () => { await onCreateFromOrder(order); src.refresh(); },
-    });
+    setPreview(buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }));
   };
 
   const openProjectPreview = async (project, customerId, percent) => {
     const invoiceNo = await nextInvoiceNo?.().catch(() => null);
     const customerName = customers.find((c) => c.id === customerId)?.name;
-    setPreview({
-      draft: buildProjectInvoiceDraft(project, { invoice_no: invoiceNo, customer_name: customerName, percent: Number(percent) }),
-      confirm: async () => {
-        await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
-        src.refresh();
-      },
-    });
+    setPreview(buildProjectInvoiceDraft(project, {
+      invoice_no: invoiceNo, customer_id: customerId, customer_name: customerName, percent: Number(percent),
+    }));
   };
+
+  const confirmDraft = async (draft) => {
+    setBusy(true);
+    try {
+      const invoiceNo = draft.invoice_no || (await nextInvoiceNo?.().catch(() => null));
+      await onCreateDraft({
+        invoice_no: invoiceNo,
+        customer_id: draft.customer_id || null,
+        order_id: draft.order_id || null,
+        invoice_date: draft.invoice_date,
+        due_date: draft.due_date || null,
+        currency: draft.currency || "AZN",
+        notes: draft.notes || null,
+        lines: draft.lines,
+      });
+      setPreview(null);
+      src.refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
 
   const pendingOrders = src.orders.filter((o) => !o.billed);
