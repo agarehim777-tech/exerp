@@ -3672,7 +3672,7 @@ export function getDeliveryStockCheck(order, warehouseStock = {}) {
     const totalQty = Number(item.total || 0);
     const reservedQty = Number(item.reserved || 0);
     const messages = [];
-    if (totalQty < qty) messages.push(`${line.product}: anbarda ${totalQty}/${qty} ədəd var`);
+    if (totalQty < qty) messages.push(`${line.product}: anbarda ${totalQty}/${qty} ədəd var — təchizat gözlənilir (backorder)`);
     if (reservedQty < qty) messages.push(`${line.product}: rezerv ${reservedQty}/${qty} ədəd var`);
     return messages;
   });
@@ -13385,9 +13385,10 @@ function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
     const matchesCategory = filters.category === "all" || row.category === filters.category;
     const matchesStock =
       filters.stockStatus === "all" ||
-      (filters.stockStatus === "below" && (row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib")) ||
+      (filters.stockStatus === "below" && (row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq")) ||
       (filters.stockStatus === "available" && row.available > 0) ||
-      (filters.stockStatus === "empty" && row.available <= 0);
+      (filters.stockStatus === "empty" && row.available <= 0) ||
+      (filters.stockStatus === "shortage" && row.shortage > 0);
     const matchesReserve =
       filters.reserveStatus === "all" ||
       (filters.reserveStatus === "reserved" && row.reserved > 0) ||
@@ -13396,7 +13397,7 @@ function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
       filters.serialStatus === "all" ||
       (filters.serialStatus === "serial" && row.serialTracked) ||
       (filters.serialStatus === "batch" && !row.serialTracked);
-    const matchesMinimum = !filters.belowMinimum || row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib";
+    const matchesMinimum = !filters.belowMinimum || row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq";
     return matchesSearch && matchesCategory && matchesStock && matchesReserve && matchesSerial && matchesMinimum;
   });
 }
@@ -13652,6 +13653,7 @@ function WarehouseBalanceFilters({ filters, warehouses, categories, open, onChan
           <option value="below">Minimumdan aşağı</option>
           <option value="available">Stokda var</option>
           <option value="empty">Stok tükənib</option>
+          <option value="shortage">Çatışmazlıq (backorder)</option>
         </select>
       </label>
       <label>
@@ -13802,7 +13804,7 @@ export function WarehouseBalancesWorkspace({
 
   function showReplenishmentRows() {
     const next = { ...activeFilters, stockStatus: "below", belowMinimum: true };
-    const replenishmentCount = balanceRows.filter((row) => row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib").length;
+    const replenishmentCount = balanceRows.filter((row) => row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq").length;
     setDraftFilters(next);
     setActiveFilters(next);
     setFiltersOpen(true);

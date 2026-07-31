@@ -72,6 +72,7 @@ export function StatusBadge({ status }) {
 
 function statusClass(status) {
   const text = normalizeText(status);
+  if (text.includes("çatışmazlıq") || text.includes("backorder")) return "warning";
   if (text.includes("yüksək roi")) return "ok";
   if (text.includes("büdcə aşımı")) return "danger";
   if (text.includes("kritik") || text.includes("bloker") || text.includes("yüksək")) return "danger";
