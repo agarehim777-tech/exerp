@@ -8824,7 +8824,14 @@ function App() {
         });
       }
 
-      const quantities = buildQuantityMap(order.productLines);
+      const plan = stockCheck.plan || getDeliveryPlan({ ...order, warehouseId }, current.warehouseStock);
+      const deliverableLines = plan.lines.filter((line) => line.deliverable > 0);
+      if (deliverableLines.length === 0) return current;
+
+      const quantities = buildQuantityMap(
+        deliverableLines.map((line) => ({ product: line.product, qty: line.deliverable })),
+      );
+      const serialLines = deliverableLines.map((line) => ({ product: line.product, qty: line.deliverable }));
       const nextWarehouseStock =
         warehouseId && current.warehouseStock?.[warehouseId]
           ? {
@@ -8834,12 +8841,20 @@ function App() {
                   totalDelta: -1,
                   reservedDelta: -1,
                 }),
-                order.productLines,
+                serialLines,
                 "Satılıb",
                 orderId,
               ),
             }
           : current.warehouseStock;
+
+      const nextDelivered = {};
+      plan.lines.forEach((line) => {
+        nextDelivered[line.product] = line.delivered + line.deliverable;
+      });
+      const fullyDelivered = plan.lines.every((line) => line.delivered + line.deliverable >= line.ordered);
+      const deliveredNow = deliverableLines.reduce((sum, line) => sum + line.deliverable, 0);
+      const remainingAfter = plan.remainingTotal - deliveredNow;
 
       return appendAudit(
         {
@@ -8853,8 +8868,11 @@ function App() {
             item.id === orderId
               ? {
                   ...item,
-                  status: "Təhvil verilib",
-                  deliveryStatus: "Təhvil verildi",
+                  deliveredQuantities: nextDelivered,
+                  status: fullyDelivered ? "Təhvil verilib" : item.status,
+                  deliveryStatus: fullyDelivered
+                    ? "Təhvil verildi"
+                    : `Qismən təhvil (${plan.deliveredTotal + deliveredNow}/${plan.orderedTotal})`,
                   deliveredAt: formatPaymentDate(parsePaymentDate(baseDeliveryDate)),
                   deliveredBy: currentUser?.name || currentUser?.email || "System",
                 }
@@ -8863,15 +8881,26 @@ function App() {
         },
         {
           module: "Təhvil/Anbar",
-          action: "Təhvil tamamlandı",
-          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${getDeliveryTotalQuantity(order)} ədəd anbardan çıxıldı`,
+          action: fullyDelivered ? "Təhvil tamamlandı" : "Qismən təhvil",
+          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${deliveredNow} ədəd anbardan çıxıldı${
+            fullyDelivered ? "" : ` · ${remainingAfter} ədəd backorder qalır`
+          }`,
           role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
         },
       );
     });
 
-    notify(`${orderId} təhvil verildi və məhsul anbardan çıxıldı.`, "success");
+    const resultPlan = initialCheck.plan;
+    if (resultPlan && resultPlan.shortageTotal > 0) {
+      notify(
+        `${orderId}: ${resultPlan.deliverableTotal} ədəd təhvil verildi, ${resultPlan.shortageTotal} ədəd backorder olaraq qaldı.`,
+        "warning",
+      );
+    } else {
+      notify(`${orderId} təhvil verildi və məhsul anbardan çıxıldı.`, "success");
+    }
   }
+
 
   function transferWarehouseStock({ fromWarehouseId, toWarehouseId, product, qty }) {
     if (!requirePermission("warehouse.manage", "anbar transferi etmək")) return;
