@@ -14258,22 +14258,38 @@ function DeliveriesPage({ orders, warehouseStock = {}, warehouses = [], onComple
                 </div>
               </div>
               <OrderProductLines lines={selectedOrder.productLines} />
+              {selectedOrder.stockCheck.plan?.lines?.length ? (
+                <div className="delivery-plan-lines">
+                  {selectedOrder.stockCheck.plan.lines.map((line) => (
+                    <div className="delivery-plan-line" key={line.product}>
+                      <span>{line.product}</span>
+                      <small>
+                        Sifariş {line.ordered} · Təhvil verilib {line.delivered} · İndi {line.deliverable}
+                        {line.shortage > 0 ? ` · Backorder ${line.shortage}` : ""}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className={`delivery-stock-check ${selectedOrder.stockCheck.ok ? "ok" : "danger"}`}>
                 <div>
                   <strong>{selectedOrder.stockCheck.status}</strong>
                   <span>{selectedOrder.stockCheck.reason}</span>
                 </div>
-                <b>{selectedOrder.deliveryQty} ədəd</b>
+                <b>{selectedOrder.stockCheck.plan?.remainingTotal ?? selectedOrder.deliveryQty} ədəd</b>
               </div>
               <button
                 className="primary-btn full"
                 disabled={!selectedOrder.stockCheck.ok}
-                title={selectedOrder.stockCheck.ok ? "Təhvili tamamla" : selectedOrder.stockCheck.reason}
+                title={selectedOrder.stockCheck.reason}
                 onClick={() => completeSelected(selectedOrder)}
               >
                 <Check size={16} />
-                Təhvil verildi
+                {selectedOrder.stockCheck.partial
+                  ? `Qismən təhvil ver (${selectedOrder.stockCheck.plan.deliverableTotal})`
+                  : "Təhvil verildi"}
               </button>
+
             </div>
           ) : (
             <EmptyState title="Təhvil gözləyən sifariş yoxdur" />
