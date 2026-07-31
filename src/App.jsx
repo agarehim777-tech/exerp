@@ -3644,13 +3644,74 @@ function getDeliveryTotalQuantity(order) {
   return normalizeOrderProductLines(order?.productLines || []).reduce((sum, line) => sum + Number(line.qty || 0), 0);
 }
 
+export function getDeliveredQuantities(order) {
+  const raw = order?.deliveredQuantities;
+  const map = new Map();
+  if (raw && typeof raw === "object") {
+    Object.entries(raw).forEach(([product, qty]) => {
+      map.set(String(product), Math.max(0, Number(qty || 0)));
+    });
+  }
+  return map;
+}
+
+// Qismən təhvil planı: hər sətir üçün nə qədəri anbardan verilə bilər, nə qədəri backorder qalır.
+export function getDeliveryPlan(order, warehouseStock = {}) {
+  const productLines = normalizeOrderProductLines(order?.productLines || []);
+  const warehouseId = order?.warehouseId;
+  const rows = (warehouseId && warehouseStock?.[warehouseId]) || [];
+  const deliveredMap = getDeliveredQuantities(order);
+  const stockLeft = new Map();
+
+  const lines = productLines.map((line) => {
+    const ordered = Number(line.qty || 0);
+    const delivered = Math.min(ordered, deliveredMap.get(line.product) || 0);
+    const remaining = Math.max(0, ordered - delivered);
+    const item = rows.find((row) => row.product === line.product);
+    if (!stockLeft.has(line.product)) {
+      stockLeft.set(line.product, Math.max(0, Number(item?.total || 0)));
+    }
+    const physical = stockLeft.get(line.product);
+    const deliverable = Math.max(0, Math.min(remaining, physical));
+    stockLeft.set(line.product, physical - deliverable);
+    return {
+      product: line.product,
+      price: Number(line.price || 0),
+      ordered,
+      delivered,
+      remaining,
+      physical,
+      deliverable,
+      shortage: Math.max(0, remaining - deliverable),
+      hasStockRow: Boolean(item),
+    };
+  });
+
+  const orderedTotal = lines.reduce((sum, line) => sum + line.ordered, 0);
+  const deliveredTotal = lines.reduce((sum, line) => sum + line.delivered, 0);
+  const remainingTotal = lines.reduce((sum, line) => sum + line.remaining, 0);
+  const deliverableTotal = lines.reduce((sum, line) => sum + line.deliverable, 0);
+  const shortageTotal = lines.reduce((sum, line) => sum + line.shortage, 0);
+
+  return {
+    lines,
+    orderedTotal,
+    deliveredTotal,
+    remainingTotal,
+    deliverableTotal,
+    shortageTotal,
+    partial: deliverableTotal > 0 && shortageTotal > 0,
+    complete: remainingTotal === 0,
+  };
+}
+
 export function getDeliveryStockCheck(order, warehouseStock = {}) {
   if (!order) {
     return { ok: false, status: "Sifariş yoxdur", reason: "Sifariş tapılmadı.", issues: [] };
   }
 
   if (order.status === "Təhvil verilib") {
-    return { ok: false, status: "Təhvil verilib", reason: "Bu sifariş artıq təhvil verilib.", issues: [] };
+    return { ok: false, status: "Təhvil verilib", reason: "Bu sifariş artıq təhvil verilib.", issues: [], plan: null };
   }
 
   const productLines = normalizeOrderProductLines(order.productLines || []);
@@ -3663,36 +3724,50 @@ export function getDeliveryStockCheck(order, warehouseStock = {}) {
     return { ok: false, status: "Anbar seçilməyib", reason: "Sifariş üçün anbar seçilməyib.", issues: [] };
   }
 
-  const rows = warehouseStock?.[warehouseId] || [];
-  const issues = productLines.flatMap((line) => {
-    const item = rows.find((row) => row.product === line.product);
-    const qty = Number(line.qty || 0);
-    if (!item) return [`${line.product}: anbarda stok sətri yoxdur`];
+  const plan = getDeliveryPlan({ ...order, warehouseId }, warehouseStock);
 
-    const totalQty = Number(item.total || 0);
-    const reservedQty = Number(item.reserved || 0);
-    const messages = [];
-    if (totalQty < qty) messages.push(`${line.product}: anbarda ${totalQty}/${qty} ədəd var — təchizat gözlənilir (backorder)`);
-    if (reservedQty < qty) messages.push(`${line.product}: rezerv ${reservedQty}/${qty} ədəd var`);
-    return messages;
-  });
+  if (plan.remainingTotal === 0) {
+    return { ok: false, status: "Təhvil verilib", reason: "Sifarişin bütün məhsulları təhvil verilib.", issues: [], plan };
+  }
 
-  if (issues.length > 0) {
+  const issues = plan.lines
+    .filter((line) => line.shortage > 0)
+    .map(
+      (line) =>
+        `${line.product}: anbarda ${line.deliverable}/${line.remaining} ədəd var — ${line.shortage} ədəd təchizat gözlənilir (backorder)`,
+    );
+
+  if (plan.deliverableTotal === 0) {
     return {
       ok: false,
-      status: "Stok problemi",
-      reason: issues[0],
+      status: "Çatışmazlıq (backorder)",
+      reason: issues[0] || "Anbarda təhvil üçün qalıq yoxdur.",
       issues,
+      plan,
+    };
+  }
+
+  if (plan.shortageTotal > 0) {
+    return {
+      ok: true,
+      partial: true,
+      status: "Qismən təhvilə hazır",
+      reason: `${plan.deliverableTotal}/${plan.remainingTotal} ədəd indi təhvil verilə bilər, ${plan.shortageTotal} ədəd backorder qalır.`,
+      issues,
+      plan,
     };
   }
 
   return {
     ok: true,
+    partial: false,
     status: "Təhvilə hazır",
-    reason: "Məhsul rezervdədir və anbardan çıxarıla bilər.",
+    reason: "Bütün qalan məhsullar anbardadır və çıxarıla bilər.",
     issues: [],
+    plan,
   };
 }
+
 
 function buildSellerBonusRows(rows = []) {
   return rows
