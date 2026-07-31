@@ -37,6 +37,8 @@ export const navItems = [
   { id: "receivables", label: "Borclar", group: "finance" },
   { id: "credits", label: "Kreditlər", group: "finance" },
   { id: "tax", label: "Vergi", group: "finance" },
+  { id: "periods", label: "Mühasibat dövrləri", group: "finance" },
+
 
   // Əməliyyat
   { id: "projects", label: "Layihələr", group: "ops" },
@@ -53,6 +55,8 @@ export const navItems = [
   { id: "settings", label: "Ayarlar", group: "system" },
   { id: "roles", label: "Rollar", group: "system" },
   { id: "access-check", label: "İcazə yoxlaması", group: "system" },
+  { id: "audit", label: "Audit izi", group: "system" },
+
   { id: "api", label: "API & inteqrasiya", group: "system" },
   { id: "messages", label: "Mesajlar", group: "system" },
   { id: "notifications", label: "Bildirişlər", group: "system" },
