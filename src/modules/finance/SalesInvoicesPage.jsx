@@ -629,14 +629,3 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
     </div>
   );
 }
-
-
-function Field({ label, value }) {
-  return (
-    <div>
-      <div style={statLabel}>{label}</div>
-      <div style={{ fontWeight: 600 }}>{value}</div>
-    </div>
-  );
-}
-
