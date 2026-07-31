@@ -6,6 +6,8 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft } from "../../lib/invoiceDraft.js";
+
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
@@ -288,14 +290,37 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
 }
 
 // Faktura kəsimi axını: sifariş və layihələrdən avtomatik faktura yaradılması.
-function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
+function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
   const [open, setOpen] = useState(false);
   const src = useBillingSources(tenantId);
   const [projectCustomer, setProjectCustomer] = useState({});
   const [projectPercent, setProjectPercent] = useState({});
+  const [preview, setPreview] = useState(null); // { draft, confirm }
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => { src.refresh(); }, [invoicesVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openOrderPreview = async (order) => {
+    const invoiceNo = await nextInvoiceNo?.().catch(() => null);
+    setPreview({
+      draft: buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }),
+      confirm: async () => { await onCreateFromOrder(order); src.refresh(); },
+    });
+  };
+
+  const openProjectPreview = async (project, customerId, percent) => {
+    const invoiceNo = await nextInvoiceNo?.().catch(() => null);
+    const customerName = customers.find((c) => c.id === customerId)?.name;
+    setPreview({
+      draft: buildProjectInvoiceDraft(project, { invoice_no: invoiceNo, customer_name: customerName, percent: Number(percent) }),
+      confirm: async () => {
+        await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
+        src.refresh();
+      },
+    });
+  };
+
 
   const pendingOrders = src.orders.filter((o) => !o.billed);
   const pendingProjects = src.projects.filter((p) => !p.billed);
