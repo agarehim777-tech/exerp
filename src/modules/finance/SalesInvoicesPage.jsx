@@ -6,7 +6,7 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
-import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, draftWarnings } from "../../lib/invoiceDraft.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
 
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
@@ -467,8 +467,30 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
 function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy, onClose, onConfirm }) {
   const [draft, setDraft] = useState(initialDraft);
   const totals = useMemo(() => computeDraftTotals(draft.lines || []), [draft.lines]);
-  const warnings = useMemo(() => draftWarnings(draft), [draft]);
-  const blocked = warnings.length > 0;
+  const validation = useMemo(() => validateDraft(draft), [draft]);
+  const blocked = validation.hasErrors;
+
+  const fieldIssues = (index, field) =>
+    (validation.lineIssues[index] || []).filter((i) => i.field === field);
+  const fieldStyle = (index, field, base) => {
+    const issues = fieldIssues(index, field);
+    if (!issues.length) return base;
+    const isError = issues.some((i) => i.level === "error");
+    return { ...base, borderColor: isError ? "#b23a3a" : "#c08a2e", background: isError ? "#fdf2f2" : "#fdf9ee" };
+  };
+  const FieldError = ({ index, field }) => {
+    const issues = fieldIssues(index, field);
+    if (!issues.length) return null;
+    return (
+      <div style={{ marginTop: 2 }}>
+        {issues.map((i, k) => (
+          <div key={k} style={{ fontSize: 11, lineHeight: 1.3, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+            {i.level === "error" ? "⛔" : "⚠"} {i.message}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const patch = (p) => setDraft((d) => ({ ...d, ...p }));
   const patchLine = (index, p) =>
@@ -479,6 +501,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
     setDraft((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== index) }));
   const setAllVat = (rate) =>
     setDraft((d) => ({ ...d, lines: d.lines.map((l) => ({ ...l, vat_rate: Number(rate) })) }));
+
 
   return (
     <div
@@ -555,8 +578,11 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             </tr>
           </thead>
           <tbody>
-            {totals.rows.map((row, index) => (
-              <tr key={index}>
+            {totals.rows.map((row, index) => {
+              const rowIssues = validation.lineIssues[index] || [];
+              const rowHasError = rowIssues.some((i) => i.level === "error");
+              return (
+              <tr key={index} style={rowHasError ? { background: "#fdf4f4" } : undefined}>
                 <td style={td}>{row.line_no}</td>
                 <td style={td}>
                   {!!products.length && (
@@ -578,21 +604,36 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
                     </select>
                   )}
                   <input
-                    style={{ ...input, width: "100%", marginTop: 4 }}
+                    style={fieldStyle(index, "description", { ...input, width: "100%", marginTop: 4 })}
                     value={row.description || ""}
                     placeholder="Təsvir"
                     onChange={(e) => patchLine(index, { description: e.target.value })}
                   />
+                  <FieldError index={index} field="description" />
                 </td>
-                <td style={td}><input type="number" step="0.001" style={{ ...input, width: 80 }} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 100 }} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} /></td>
+                <td style={td}>
+                  <input type="number" step="0.001" style={fieldStyle(index, "qty", { ...input, width: 80 })} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} />
+                  <FieldError index={index} field="qty" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "unit_price", { ...input, width: 100 })} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} />
+                  <FieldError index={index} field="unit_price" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "discount_pct", { ...input, width: 80 })} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} />
+                  <FieldError index={index} field="discount_pct" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "vat_rate", { ...input, width: 80 })} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} />
+                  <FieldError index={index} field="vat_rate" />
+                </td>
                 <td style={{ ...td, fontWeight: 600 }}>{azn(row.line_total)}</td>
                 <td style={td}><button type="button" style={delBtn} onClick={() => removeLine(index)}>Sil</button></td>
               </tr>
-            ))}
+              );
+            })}
             {!totals.rows.length && <tr><td style={td} colSpan={8}>Sətir yoxdur.</td></tr>}
+
           </tbody>
         </table>
 
@@ -606,6 +647,9 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             ))}
             <div>Ara cəm: <b>{azn(totals.subtotal)}</b></div>
             <div>ƏDV cəmi: <b>{azn(totals.vat_total)}</b></div>
+            <div style={{ color: Math.abs(validation.roundingDiff) > 0.005 ? "#b23a3a" : "#6b6350" }}>
+              Yuvarlaqlaşdırma fərqi: <b>{validation.roundingDiff.toFixed(2)} ₼</b>
+            </div>
             <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(totals.total)}</b></div>
           </div>
         </div>
@@ -615,9 +659,25 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
           <textarea style={{ ...input, minHeight: 60 }} value={draft.notes || ""} onChange={(e) => patch({ notes: e.target.value })} />
         </label>
 
-        {blocked && (
-          <div style={{ ...msgBox, marginTop: 8, color: "#b23a3a" }}>{warnings.join(" ")}</div>
+        {(validation.docIssues.length > 0 || validation.errorCount > 0 || validation.warningCount > 0) && (
+          <div style={{ ...msgBox, marginTop: 8, display: "grid", gap: 4 }}>
+            <div style={{ fontWeight: 600, color: blocked ? "#b23a3a" : "#8a6d1f" }}>
+              Validasiya: {validation.errorCount} xəta · {validation.warningCount} xəbərdarlıq
+            </div>
+            {validation.docIssues.map((i, k) => (
+              <div key={k} style={{ fontSize: 12, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+                {i.level === "error" ? "⛔" : "⚠"} {i.message}
+              </div>
+            ))}
+            {validation.lineIssues.flatMap((issues, index) =>
+              issues.filter((i) => i.level === "error").map((i, k) => (
+                <div key={`${index}-${k}`} style={{ fontSize: 12, color: "#b23a3a" }}>
+                  ⛔ Sətir {index + 1}: {i.message}
+                </div>
+              )))}
+          </div>
         )}
+
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
           <button style={secondaryBtn} onClick={onClose}>İmtina</button>
