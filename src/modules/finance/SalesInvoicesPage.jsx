@@ -6,6 +6,8 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft } from "../../lib/invoiceDraft.js";
+
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
@@ -63,10 +65,12 @@ export default function SalesInvoicesPage() {
       <BillingRunPanel
         tenantId={tenantId}
         customers={customers}
+        nextInvoiceNo={ar.nextInvoiceNo}
         onCreateFromOrder={(order) => run(async () => { await ar.createFromOrder(order); setMsg(`Sifariş ${order.order_no} üzrə faktura yaradıldı.`); })}
         onCreateFromProject={(project, options) => run(async () => { await ar.createFromProject(project, options); setMsg(`Layihə "${project.name}" üzrə faktura yaradıldı.`); })}
         invoicesVersion={ar.invoices.length}
       />
+
 
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -286,14 +290,37 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
 }
 
 // Faktura kəsimi axını: sifariş və layihələrdən avtomatik faktura yaradılması.
-function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
+function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
   const [open, setOpen] = useState(false);
   const src = useBillingSources(tenantId);
   const [projectCustomer, setProjectCustomer] = useState({});
   const [projectPercent, setProjectPercent] = useState({});
+  const [preview, setPreview] = useState(null); // { draft, confirm }
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => { src.refresh(); }, [invoicesVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openOrderPreview = async (order) => {
+    const invoiceNo = await nextInvoiceNo?.().catch(() => null);
+    setPreview({
+      draft: buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }),
+      confirm: async () => { await onCreateFromOrder(order); src.refresh(); },
+    });
+  };
+
+  const openProjectPreview = async (project, customerId, percent) => {
+    const invoiceNo = await nextInvoiceNo?.().catch(() => null);
+    const customerName = customers.find((c) => c.id === customerId)?.name;
+    setPreview({
+      draft: buildProjectInvoiceDraft(project, { invoice_no: invoiceNo, customer_name: customerName, percent: Number(percent) }),
+      confirm: async () => {
+        await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
+        src.refresh();
+      },
+    });
+  };
+
 
   const pendingOrders = src.orders.filter((o) => !o.billed);
   const pendingProjects = src.projects.filter((p) => !p.billed);
@@ -339,10 +366,11 @@ function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromP
                       <button
                         style={primaryBtn}
                         disabled={!(order.items?.length)}
-                        onClick={async () => { await onCreateFromOrder(order); src.refresh(); }}
+                        onClick={() => openOrderPreview(order)}
                       >
-                        Faktura kəs
+                        Ön baxış və kəs
                       </button>
+
                     </td>
                   </tr>
                 ))}
@@ -386,13 +414,11 @@ function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromP
                         <button
                           style={primaryBtn}
                           disabled={!customerId || !(Number(project.budget) > 0)}
-                          onClick={async () => {
-                            await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
-                            src.refresh();
-                          }}
+                          onClick={() => openProjectPreview(project, customerId, percent)}
                         >
-                          Faktura kəs
+                          Ön baxış və kəs
                         </button>
+
                       </td>
                     </tr>
                   );
@@ -403,6 +429,110 @@ function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromP
           )}
         </div>
       )}
+
+      {preview && (
+        <InvoicePreviewModal
+          draft={preview.draft}
+          busy={busy}
+          onClose={() => setPreview(null)}
+          onConfirm={async () => {
+            setBusy(true);
+            try { await preview.confirm(); setPreview(null); } finally { setBusy(false); }
+          }}
+        />
+      )}
     </div>
   );
 }
+
+// Faktura kəsilməzdən əvvəl yaradılacaq sənədin ön baxışı.
+function InvoicePreviewModal({ draft, busy, onClose, onConfirm }) {
+  const blocked = (draft.warnings || []).length > 0;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(12,20,18,0.55)", zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fffdf7", borderRadius: 12, border: "1px solid #e6dfc9",
+          width: "min(760px, 100%)", maxHeight: "88vh", overflow: "auto",
+          padding: 20, boxShadow: "0 24px 60px rgba(0,0,0,.28)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: "#8a7a4a" }}>Faktura ön baxışı</div>
+            <h3 style={{ margin: "4px 0 0" }}>{draft.title}</h3>
+          </div>
+          <button style={secondaryBtn} onClick={onClose}>Bağla</button>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, margin: "14px 0" }}>
+          <Field label="Faktura №" value={draft.invoice_no} />
+          <Field label="Müştəri" value={draft.customer_name} />
+          <Field label="Tarix" value={draft.invoice_date} />
+          <Field label="Son ödəniş" value={draft.due_date} />
+          <Field label="Valyuta" value={draft.currency} />
+        </div>
+
+        <table style={table}>
+          <thead>
+            <tr>
+              <th style={th}>#</th><th style={th}>Təsvir</th><th style={th}>Say</th>
+              <th style={th}>Qiymət</th><th style={th}>End. %</th><th style={th}>ƏDV %</th><th style={th}>Cəm</th>
+            </tr>
+          </thead>
+          <tbody>
+            {draft.rows.map((row) => (
+              <tr key={row.line_no}>
+                <td style={td}>{row.line_no}</td>
+                <td style={td}>{row.description || "—"}</td>
+                <td style={td}>{row.qty}</td>
+                <td style={td}>{azn(row.unit_price)}</td>
+                <td style={td}>{row.discount_pct}</td>
+                <td style={td}>{row.vat_rate}</td>
+                <td style={{ ...td, fontWeight: 600 }}>{azn(row.line_total)}</td>
+              </tr>
+            ))}
+            {!draft.rows.length && <tr><td style={td} colSpan={7}>Sətir yoxdur.</td></tr>}
+          </tbody>
+        </table>
+
+        <div style={{ textAlign: "right", marginTop: 10, fontSize: 13, lineHeight: 1.8 }}>
+          <div>Ara cəm: <b>{azn(draft.subtotal)}</b></div>
+          <div>ƏDV: <b>{azn(draft.vat_total)}</b></div>
+          <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(draft.total)}</b></div>
+        </div>
+
+        {draft.notes && <div style={{ ...msgBox, marginTop: 12 }}>{draft.notes}</div>}
+        {blocked && (
+          <div style={{ ...msgBox, marginTop: 8, color: "#b23a3a" }}>
+            {draft.warnings.join(" ")}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+          <button style={secondaryBtn} onClick={onClose}>İmtina</button>
+          <button style={primaryBtn} disabled={busy || blocked} onClick={onConfirm}>
+            {busy ? "Yaradılır…" : "Təsdiqlə və faktura kəs"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value }) {
+  return (
+    <div>
+      <div style={statLabel}>{label}</div>
+      <div style={{ fontWeight: 600 }}>{value}</div>
+    </div>
+  );
+}
+
