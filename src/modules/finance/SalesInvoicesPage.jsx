@@ -6,7 +6,7 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
-import { buildOrderInvoiceDraft, buildProjectInvoiceDraft } from "../../lib/invoiceDraft.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, draftWarnings } from "../../lib/invoiceDraft.js";
 
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
@@ -65,11 +65,15 @@ export default function SalesInvoicesPage() {
       <BillingRunPanel
         tenantId={tenantId}
         customers={customers}
+        products={products}
         nextInvoiceNo={ar.nextInvoiceNo}
-        onCreateFromOrder={(order) => run(async () => { await ar.createFromOrder(order); setMsg(`Sifariş ${order.order_no} üzrə faktura yaradıldı.`); })}
-        onCreateFromProject={(project, options) => run(async () => { await ar.createFromProject(project, options); setMsg(`Layihə "${project.name}" üzrə faktura yaradıldı.`); })}
+        onCreateDraft={(payload) => run(async () => {
+          await ar.create(payload);
+          setMsg(`Faktura ${payload.invoice_no} yaradıldı.`);
+        })}
         invoicesVersion={ar.invoices.length}
       />
+
 
 
       <div style={card}>
