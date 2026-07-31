@@ -129,7 +129,7 @@ Nə cavab verə biləcəyin: müştəri/məhsul/sifariş axtarışı, statistika
     const result = streamText({
       model: gateway("google/gemini-3.6-flash"),
       system,
-      messages: convertToModelMessages(messages),
+      messages: await convertToModelMessages(Array.isArray(messages) ? messages : []),
       tools,
       stopWhen: stepCountIs(8),
     });
