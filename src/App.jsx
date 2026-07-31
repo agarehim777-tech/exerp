@@ -14203,16 +14203,23 @@ function DeliveriesPage({ orders, warehouseStock = {}, warehouses = [], onComple
               />,
               <TwoLine
                 title={<StatusBadge status={order.stockCheck.status} />}
-                subtitle={order.stockCheck.ok ? `${order.deliveryQty} ədəd rezervdə` : order.stockCheck.reason}
+                subtitle={
+                  order.stockCheck.partial
+                    ? `${order.stockCheck.plan.deliverableTotal} ədəd indi · ${order.stockCheck.plan.shortageTotal} backorder`
+                    : order.stockCheck.ok
+                      ? `${order.stockCheck.plan?.remainingTotal ?? order.deliveryQty} ədəd rezervdə`
+                      : order.stockCheck.reason
+                }
               />,
               <button
                 className="text-btn"
                 disabled={!order.stockCheck.ok}
-                title={order.stockCheck.ok ? "Məhsulu anbardan çıxart" : order.stockCheck.reason}
+                title={order.stockCheck.reason}
                 onClick={() => completeSelected(order)}
               >
-                Təhvil verildi
+                {order.stockCheck.partial ? "Qismən təhvil ver" : "Təhvil verildi"}
               </button>,
+
             ])}
           />
         </Panel>
