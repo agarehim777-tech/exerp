@@ -190,5 +190,9 @@ export function useSalesInvoices(tenantId) {
     await fetchAll();
   };
 
-  return { invoices, loading, error, refresh: fetchAll, create, postToLedger, addPayment, cancel };
+  return {
+    invoices, loading, error, refresh: fetchAll,
+    create, createFromOrder, createFromProject, nextInvoiceNo,
+    postToLedger, addPayment, cancel,
+  };
 }
