@@ -467,8 +467,30 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
 function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy, onClose, onConfirm }) {
   const [draft, setDraft] = useState(initialDraft);
   const totals = useMemo(() => computeDraftTotals(draft.lines || []), [draft.lines]);
-  const warnings = useMemo(() => draftWarnings(draft), [draft]);
-  const blocked = warnings.length > 0;
+  const validation = useMemo(() => validateDraft(draft), [draft]);
+  const blocked = validation.hasErrors;
+
+  const fieldIssues = (index, field) =>
+    (validation.lineIssues[index] || []).filter((i) => i.field === field);
+  const fieldStyle = (index, field, base) => {
+    const issues = fieldIssues(index, field);
+    if (!issues.length) return base;
+    const isError = issues.some((i) => i.level === "error");
+    return { ...base, borderColor: isError ? "#b23a3a" : "#c08a2e", background: isError ? "#fdf2f2" : "#fdf9ee" };
+  };
+  const FieldError = ({ index, field }) => {
+    const issues = fieldIssues(index, field);
+    if (!issues.length) return null;
+    return (
+      <div style={{ marginTop: 2 }}>
+        {issues.map((i, k) => (
+          <div key={k} style={{ fontSize: 11, lineHeight: 1.3, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+            {i.level === "error" ? "⛔" : "⚠"} {i.message}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const patch = (p) => setDraft((d) => ({ ...d, ...p }));
   const patchLine = (index, p) =>
@@ -479,6 +501,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
     setDraft((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== index) }));
   const setAllVat = (rate) =>
     setDraft((d) => ({ ...d, lines: d.lines.map((l) => ({ ...l, vat_rate: Number(rate) })) }));
+
 
   return (
     <div
