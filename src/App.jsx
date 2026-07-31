@@ -13215,16 +13215,23 @@ export function DeliveryOrdersPanel({ orders, isAllWarehouses, warehouseStock = 
             <StatusBadge status={order.paymentStatus || order.paymentMethod || "Nağd"} />,
             <TwoLine
               title={<StatusBadge status={stockCheck.status} />}
-              subtitle={stockCheck.ok ? `${getDeliveryTotalQuantity(order)} ədəd rezervdə` : stockCheck.reason}
+              subtitle={
+                stockCheck.partial
+                  ? `${stockCheck.plan.deliverableTotal} ədəd indi · ${stockCheck.plan.shortageTotal} backorder`
+                  : stockCheck.ok
+                    ? `${stockCheck.plan?.remainingTotal ?? getDeliveryTotalQuantity(order)} ədəd rezervdə`
+                    : stockCheck.reason
+              }
             />,
             <button
               className="text-btn"
               disabled={!stockCheck.ok}
-              title={stockCheck.ok ? "Məhsulu anbardan çıxart" : stockCheck.reason}
+              title={stockCheck.reason}
               onClick={() => onCompleteDelivery(order.id)}
             >
-              Təhvil verildi
+              {stockCheck.partial ? "Qismən təhvil ver" : "Təhvil verildi"}
             </button>,
+
           ];
         })}
       />
