@@ -6,7 +6,7 @@ import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
-import { buildOrderInvoiceDraft, buildProjectInvoiceDraft } from "../../lib/invoiceDraft.js";
+import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, draftWarnings } from "../../lib/invoiceDraft.js";
 
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
@@ -65,11 +65,15 @@ export default function SalesInvoicesPage() {
       <BillingRunPanel
         tenantId={tenantId}
         customers={customers}
+        products={products}
         nextInvoiceNo={ar.nextInvoiceNo}
-        onCreateFromOrder={(order) => run(async () => { await ar.createFromOrder(order); setMsg(`Sifariş ${order.order_no} üzrə faktura yaradıldı.`); })}
-        onCreateFromProject={(project, options) => run(async () => { await ar.createFromProject(project, options); setMsg(`Layihə "${project.name}" üzrə faktura yaradıldı.`); })}
+        onCreateDraft={(payload) => run(async () => {
+          await ar.create(payload);
+          setMsg(`Faktura ${payload.invoice_no} yaradıldı.`);
+        })}
         invoicesVersion={ar.invoices.length}
       />
+
 
 
       <div style={card}>
@@ -290,36 +294,51 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
 }
 
 // Faktura kəsimi axını: sifariş və layihələrdən avtomatik faktura yaradılması.
-function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
+function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreateDraft, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
   const [open, setOpen] = useState(false);
   const src = useBillingSources(tenantId);
   const [projectCustomer, setProjectCustomer] = useState({});
   const [projectPercent, setProjectPercent] = useState({});
-  const [preview, setPreview] = useState(null); // { draft, confirm }
+  const [preview, setPreview] = useState(null); // düzəliş edilə bilən qaralama
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { src.refresh(); }, [invoicesVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openOrderPreview = async (order) => {
     const invoiceNo = await nextInvoiceNo?.().catch(() => null);
-    setPreview({
-      draft: buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }),
-      confirm: async () => { await onCreateFromOrder(order); src.refresh(); },
-    });
+    setPreview(buildOrderInvoiceDraft(order, { invoice_no: invoiceNo }));
   };
 
   const openProjectPreview = async (project, customerId, percent) => {
     const invoiceNo = await nextInvoiceNo?.().catch(() => null);
     const customerName = customers.find((c) => c.id === customerId)?.name;
-    setPreview({
-      draft: buildProjectInvoiceDraft(project, { invoice_no: invoiceNo, customer_name: customerName, percent: Number(percent) }),
-      confirm: async () => {
-        await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
-        src.refresh();
-      },
-    });
+    setPreview(buildProjectInvoiceDraft(project, {
+      invoice_no: invoiceNo, customer_id: customerId, customer_name: customerName, percent: Number(percent),
+    }));
   };
+
+  const confirmDraft = async (draft) => {
+    setBusy(true);
+    try {
+      const invoiceNo = draft.invoice_no || (await nextInvoiceNo?.().catch(() => null));
+      await onCreateDraft({
+        invoice_no: invoiceNo,
+        customer_id: draft.customer_id || null,
+        order_id: draft.order_id || null,
+        invoice_date: draft.invoice_date,
+        due_date: draft.due_date || null,
+        currency: draft.currency || "AZN",
+        notes: draft.notes || null,
+        lines: draft.lines,
+      });
+      setPreview(null);
+      src.refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
 
   const pendingOrders = src.orders.filter((o) => !o.billed);
@@ -432,22 +451,35 @@ function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder
 
       {preview && (
         <InvoicePreviewModal
-          draft={preview.draft}
+          initialDraft={preview}
+          customers={customers}
+          products={products}
           busy={busy}
           onClose={() => setPreview(null)}
-          onConfirm={async () => {
-            setBusy(true);
-            try { await preview.confirm(); setPreview(null); } finally { setBusy(false); }
-          }}
+          onConfirm={confirmDraft}
         />
       )}
     </div>
   );
 }
 
-// Faktura kəsilməzdən əvvəl yaradılacaq sənədin ön baxışı.
-function InvoicePreviewModal({ draft, busy, onClose, onConfirm }) {
-  const blocked = (draft.warnings || []).length > 0;
+// Faktura kəsilməzdən əvvəl yaradılacaq sənədin redaktə edilə bilən ön baxışı.
+function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy, onClose, onConfirm }) {
+  const [draft, setDraft] = useState(initialDraft);
+  const totals = useMemo(() => computeDraftTotals(draft.lines || []), [draft.lines]);
+  const warnings = useMemo(() => draftWarnings(draft), [draft]);
+  const blocked = warnings.length > 0;
+
+  const patch = (p) => setDraft((d) => ({ ...d, ...p }));
+  const patchLine = (index, p) =>
+    setDraft((d) => ({ ...d, lines: d.lines.map((l, i) => (i === index ? { ...l, ...p } : l)) }));
+  const addLine = () =>
+    setDraft((d) => ({ ...d, lines: [...d.lines, { product_id: "", description: "", qty: 1, unit_price: 0, discount_pct: 0, vat_rate: 18 }] }));
+  const removeLine = (index) =>
+    setDraft((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== index) }));
+  const setAllVat = (rate) =>
+    setDraft((d) => ({ ...d, lines: d.lines.map((l) => ({ ...l, vat_rate: Number(rate) })) }));
+
   return (
     <div
       onClick={onClose}
@@ -460,65 +492,136 @@ function InvoicePreviewModal({ draft, busy, onClose, onConfirm }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "#fffdf7", borderRadius: 12, border: "1px solid #e6dfc9",
-          width: "min(760px, 100%)", maxHeight: "88vh", overflow: "auto",
+          width: "min(900px, 100%)", maxHeight: "88vh", overflow: "auto",
           padding: 20, boxShadow: "0 24px 60px rgba(0,0,0,.28)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: "#8a7a4a" }}>Faktura ön baxışı</div>
+            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: "#8a7a4a" }}>
+              Faktura ön baxışı — redaktə edilə bilər
+            </div>
             <h3 style={{ margin: "4px 0 0" }}>{draft.title}</h3>
           </div>
           <button style={secondaryBtn} onClick={onClose}>Bağla</button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, margin: "14px 0" }}>
-          <Field label="Faktura №" value={draft.invoice_no} />
-          <Field label="Müştəri" value={draft.customer_name} />
-          <Field label="Tarix" value={draft.invoice_date} />
-          <Field label="Son ödəniş" value={draft.due_date} />
-          <Field label="Valyuta" value={draft.currency} />
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={statLabel}>Faktura №</span>
+            <input style={input} value={draft.invoice_no} placeholder="avtomatik" onChange={(e) => patch({ invoice_no: e.target.value })} />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={statLabel}>Müştəri</span>
+            <select
+              style={input}
+              value={draft.customer_id || ""}
+              onChange={(e) => patch({
+                customer_id: e.target.value || null,
+                customer_name: customers.find((c) => c.id === e.target.value)?.name || "—",
+              })}
+            >
+              <option value="">Müştəri seç…</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={statLabel}>Tarix</span>
+            <input type="date" style={input} value={draft.invoice_date} onChange={(e) => patch({ invoice_date: e.target.value })} />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={statLabel}>Son ödəniş</span>
+            <input type="date" style={input} value={draft.due_date || ""} onChange={(e) => patch({ due_date: e.target.value })} />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={statLabel}>Valyuta</span>
+            <input style={input} value={draft.currency} onChange={(e) => patch({ currency: e.target.value })} />
+          </label>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: "#8a7a4a" }}>Bütün sətirlərə ƏDV tətbiq et:</span>
+          {[0, 18].map((rate) => (
+            <button key={rate} type="button" style={secondaryBtn} onClick={() => setAllVat(rate)}>{rate}%</button>
+          ))}
         </div>
 
         <table style={table}>
           <thead>
             <tr>
               <th style={th}>#</th><th style={th}>Təsvir</th><th style={th}>Say</th>
-              <th style={th}>Qiymət</th><th style={th}>End. %</th><th style={th}>ƏDV %</th><th style={th}>Cəm</th>
+              <th style={th}>Qiymət</th><th style={th}>End. %</th><th style={th}>ƏDV %</th>
+              <th style={th}>Cəm</th><th style={th} />
             </tr>
           </thead>
           <tbody>
-            {draft.rows.map((row) => (
-              <tr key={row.line_no}>
+            {totals.rows.map((row, index) => (
+              <tr key={index}>
                 <td style={td}>{row.line_no}</td>
-                <td style={td}>{row.description || "—"}</td>
-                <td style={td}>{row.qty}</td>
-                <td style={td}>{azn(row.unit_price)}</td>
-                <td style={td}>{row.discount_pct}</td>
-                <td style={td}>{row.vat_rate}</td>
+                <td style={td}>
+                  {!!products.length && (
+                    <select
+                      style={{ ...input, width: "100%" }}
+                      value={row.product_id || ""}
+                      onChange={(e) => {
+                        const product = products.find((p) => p.id === e.target.value);
+                        patchLine(index, {
+                          product_id: e.target.value || null,
+                          description: product?.name ?? row.description,
+                          unit_price: product?.price ?? row.unit_price,
+                          vat_rate: product?.vat_rate ?? row.vat_rate,
+                        });
+                      }}
+                    >
+                      <option value="">Sərbəst sətir…</option>
+                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  )}
+                  <input
+                    style={{ ...input, width: "100%", marginTop: 4 }}
+                    value={row.description || ""}
+                    placeholder="Təsvir"
+                    onChange={(e) => patchLine(index, { description: e.target.value })}
+                  />
+                </td>
+                <td style={td}><input type="number" step="0.001" style={{ ...input, width: 80 }} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} /></td>
+                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 100 }} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} /></td>
+                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} /></td>
+                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} /></td>
                 <td style={{ ...td, fontWeight: 600 }}>{azn(row.line_total)}</td>
+                <td style={td}><button type="button" style={delBtn} onClick={() => removeLine(index)}>Sil</button></td>
               </tr>
             ))}
-            {!draft.rows.length && <tr><td style={td} colSpan={7}>Sətir yoxdur.</td></tr>}
+            {!totals.rows.length && <tr><td style={td} colSpan={8}>Sətir yoxdur.</td></tr>}
           </tbody>
         </table>
 
-        <div style={{ textAlign: "right", marginTop: 10, fontSize: 13, lineHeight: 1.8 }}>
-          <div>Ara cəm: <b>{azn(draft.subtotal)}</b></div>
-          <div>ƏDV: <b>{azn(draft.vat_total)}</b></div>
-          <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(draft.total)}</b></div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
+          <button type="button" style={secondaryBtn} onClick={addLine}>+ Sətir</button>
+          <div style={{ fontSize: 13, textAlign: "right", lineHeight: 1.8 }}>
+            {totals.vat_breakdown.map((g) => (
+              <div key={g.rate} style={{ color: "#6b6350" }}>
+                ƏDV {g.rate}% — baza {azn(g.net)} · vergi <b>{azn(g.vat)}</b>
+              </div>
+            ))}
+            <div>Ara cəm: <b>{azn(totals.subtotal)}</b></div>
+            <div>ƏDV cəmi: <b>{azn(totals.vat_total)}</b></div>
+            <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(totals.total)}</b></div>
+          </div>
         </div>
 
-        {draft.notes && <div style={{ ...msgBox, marginTop: 12 }}>{draft.notes}</div>}
+        <label style={{ display: "grid", gap: 4, marginTop: 12 }}>
+          <span style={statLabel}>Qeyd</span>
+          <textarea style={{ ...input, minHeight: 60 }} value={draft.notes || ""} onChange={(e) => patch({ notes: e.target.value })} />
+        </label>
+
         {blocked && (
-          <div style={{ ...msgBox, marginTop: 8, color: "#b23a3a" }}>
-            {draft.warnings.join(" ")}
-          </div>
+          <div style={{ ...msgBox, marginTop: 8, color: "#b23a3a" }}>{warnings.join(" ")}</div>
         )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
           <button style={secondaryBtn} onClick={onClose}>İmtina</button>
-          <button style={primaryBtn} disabled={busy || blocked} onClick={onConfirm}>
+          <button style={primaryBtn} disabled={busy || blocked} onClick={() => onConfirm(draft)}>
             {busy ? "Yaradılır…" : "Təsdiqlə və faktura kəs"}
           </button>
         </div>
@@ -526,13 +629,3 @@ function InvoicePreviewModal({ draft, busy, onClose, onConfirm }) {
     </div>
   );
 }
-
-function Field({ label, value }) {
-  return (
-    <div>
-      <div style={statLabel}>{label}</div>
-      <div style={{ fontWeight: 600 }}>{value}</div>
-    </div>
-  );
-}
-
