@@ -3672,7 +3672,7 @@ export function getDeliveryStockCheck(order, warehouseStock = {}) {
     const totalQty = Number(item.total || 0);
     const reservedQty = Number(item.reserved || 0);
     const messages = [];
-    if (totalQty < qty) messages.push(`${line.product}: anbarda ${totalQty}/${qty} ədəd var`);
+    if (totalQty < qty) messages.push(`${line.product}: anbarda ${totalQty}/${qty} ədəd var — təchizat gözlənilir (backorder)`);
     if (reservedQty < qty) messages.push(`${line.product}: rezerv ${reservedQty}/${qty} ədəd var`);
     return messages;
   });
@@ -4257,16 +4257,32 @@ function releaseOrderSerialReservations(rows, productLines, orderId) {
   });
 }
 
-function adjustStockRows(rows, quantities, { totalDelta = 0, reservedDelta = 0 }) {
-  return rows.map((item) => {
+function adjustStockRows(rows, quantities, { totalDelta = 0, reservedDelta = 0, createMissing = false }) {
+  const seen = new Set();
+  const next = rows.map((item) => {
     const qty = quantities.get(item.product) || 0;
     if (!qty) return item;
+    seen.add(item.product);
     return {
       ...item,
+      // Qalıq heç vaxt mənfi olmur; rezerv qalıqdan çox ola bilər (backorder).
       total: Math.max(0, item.total + totalDelta * qty),
       reserved: Math.max(0, item.reserved + reservedDelta * qty),
     };
   });
+  if (!createMissing) return next;
+  // Anbarda sətri olmayan məhsul da satıla bilər — sıfır qalıqla rezerv sətri açılır.
+  quantities.forEach((qty, product) => {
+    if (!qty || seen.has(product) || next.some((item) => item.product === product)) return;
+    next.push({
+      product,
+      total: 0,
+      reserved: Math.max(0, reservedDelta * qty),
+      price: 0,
+      serials: [],
+    });
+  });
+  return next;
 }
 
 
@@ -4562,11 +4578,11 @@ function buildStateIntegrityReport(snapshot = {}, creditRows = []) {
       if (reservedQty > totalQty) {
         issues.push({
           id: `STOCK-RES-${group.label}-${item.product}`,
-          severity: "Kritik",
+          severity: "Xəbərdarlıq",
           area: "Anbar",
-          title: "Rezerv stokdan çoxdur",
-          detail: `${group.label}: ${item.product} reserved ${reservedQty}, total ${totalQty}`,
-          fix: "Rezerv və təhvil əməliyyatlarını sinxronlaşdırın",
+          title: "Çatışmazlıq (backorder)",
+          detail: `${group.label}: ${item.product} — rezerv ${reservedQty}, qalıq ${totalQty}, çatışmayan ${reservedQty - totalQty}`,
+          fix: "Təchizatdan mədaxil edin və ya sifarişi bağlayın",
         });
       }
       if (Array.isArray(item.serials) && item.serials.length > 0) {
@@ -7702,20 +7718,33 @@ function App() {
         .filter((item) => item.product)
         .map((item) => ({ product: item.product, qty: Number(item.qty || 0) }));
       const warehouseRows = state.warehouseStock?.[warehouseId] || [];
-      const hasInsufficientStock = productLines.some((line) => {
-        const item = warehouseRows.find((row) => row.product === line.product);
-        return !item || line.qty <= 0 || getAvailableQuantity(item) < line.qty;
-      });
+      const invalidQtyLine = productLines.some((line) => line.qty <= 0);
+      // Çatışmayan qalıq satışı bloklamır — sifariş backorder (mənfi mövcud) kimi qeyd olunur.
+      const shortageLines = productLines
+        .map((line) => {
+          const item = warehouseRows.find((row) => row.product === line.product);
+          const free = item ? getFreeQuantity(item) : 0;
+          const shortage = Math.max(0, line.qty - free);
+          return shortage > 0 ? `${line.product} (${shortage} ədəd)` : null;
+        })
+        .filter(Boolean);
 
       if (
         !values.customer ||
         !warehouseId ||
         productLines.length === 0 ||
-        Number(values.orderTotal || 0) <= 0 ||
-        hasInsufficientStock
+        invalidQtyLine ||
+        Number(values.orderTotal || 0) <= 0
       ) {
-        notify("Sifariş üçün müştəri, anbar və satış üçün kifayət qədər məhsul seçin.", "warning");
+        notify("Sifariş üçün müştəri, anbar və ən azı bir məhsul (say > 0) seçin.", "warning");
         return;
+      }
+
+      if (shortageLines.length > 0) {
+        notify(
+          `Qalıq çatışmır — sifariş backorder kimi yaradıldı: ${shortageLines.join(", ")}. Təchizatdan gətirilib təhvil verilməlidir.`,
+          "warning",
+        );
       }
 
       // Persist to DB (Supabase). Realtime bridge will merge into state.orders.
@@ -7935,6 +7964,7 @@ function App() {
                 [warehouseId]: updateSerialStatuses(
                   adjustStockRows(current.warehouseStock[warehouseId], reservedByProduct, {
                     reservedDelta: 1,
+                    createMissing: true,
                   }),
                   productLines,
                   "Rezervdə",
@@ -7945,7 +7975,7 @@ function App() {
         return {
           ...current,
           warehouseStock: nextWarehouseStock,
-          stock: adjustStockRows(current.stock, reservedByProduct, { reservedDelta: 1 }),
+          stock: adjustStockRows(current.stock, reservedByProduct, { reservedDelta: 1, createMissing: true }),
           credits: isCreditSale
             ? [
                 {
@@ -12911,6 +12941,15 @@ export function getAvailableQuantity(item) {
   return Math.max(0, Number(item.total || 0) - Number(item.reserved || 0));
 }
 
+// Satış üçün real sərbəst qalıq — mənfi ola bilər (backorder / sifariş gözləyən miqdar).
+export function getFreeQuantity(item) {
+  return Number(item?.total || 0) - Number(item?.reserved || 0);
+}
+
+export function getShortageQuantity(item) {
+  return Math.max(0, -getFreeQuantity(item));
+}
+
 export function getWarehouseStockSummary(items, capacity = 0, products = []) {
   const productsByName = buildProductLookup(products);
   const totalQty = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
@@ -13271,17 +13310,21 @@ function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}, produ
 
     return [...rowsByProduct.values()]
       .map((row) => {
-        const available = Math.max(0, row.total - row.reserved);
+        const free = row.total - row.reserved;
+        const available = Math.max(0, free);
+        const shortage = Math.max(0, -free);
         const coverage = orderCoverage.get(normalize(row.product)) || { orderedQty: 0, count: 0, latest: null };
         return {
           ...row,
           warehouseName: row.warehouseDistribution.length === 0 ? "—" : `${row.warehouseDistribution.length} anbar`,
           warehouseCount: row.warehouseDistribution.length,
           available,
+          free,
+          shortage,
           orderedQty: Number(coverage.orderedQty || 0),
           openPoCount: Number(coverage.count || 0),
           latestPoId: coverage.latest?.id || "",
-          status: getWarehouseBalanceStatus(available, row.reorderLevel),
+          status: shortage > 0 ? "Çatışmazlıq" : getWarehouseBalanceStatus(available, row.reorderLevel),
           stockValue: row.total * row.costPrice,
           salesValue: row.total * row.salePrice,
         };
@@ -13298,6 +13341,8 @@ function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}, produ
         const totalQty = Number(item.total || 0);
         const reserved = Number(item.reserved || 0);
         const available = getAvailableQuantity(item);
+        const free = getFreeQuantity(item);
+        const shortage = getShortageQuantity(item);
         const reorderLevel = getReorderPoint(item, productsByName);
         const coverage = orderCoverage.get(normalize(item.product)) || { orderedQty: 0, count: 0, latest: null };
         const costPrice = Number(catalogProduct?.costPrice || 0);
@@ -13318,11 +13363,13 @@ function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}, produ
           total: totalQty,
           reserved,
           available,
+          free,
+          shortage,
           orderedQty: Number(coverage.orderedQty || 0),
           openPoCount: Number(coverage.count || 0),
           latestPoId: coverage.latest?.id || "",
           warehouseDistribution: [],
-          status: getWarehouseBalanceStatus(available, reorderLevel),
+          status: shortage > 0 ? "Çatışmazlıq" : getWarehouseBalanceStatus(available, reorderLevel),
           stockValue: totalQty * costPrice,
           salesValue: totalQty * salePrice,
         };
@@ -13338,9 +13385,10 @@ function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
     const matchesCategory = filters.category === "all" || row.category === filters.category;
     const matchesStock =
       filters.stockStatus === "all" ||
-      (filters.stockStatus === "below" && (row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib")) ||
+      (filters.stockStatus === "below" && (row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq")) ||
       (filters.stockStatus === "available" && row.available > 0) ||
-      (filters.stockStatus === "empty" && row.available <= 0);
+      (filters.stockStatus === "empty" && row.available <= 0) ||
+      (filters.stockStatus === "shortage" && row.shortage > 0);
     const matchesReserve =
       filters.reserveStatus === "all" ||
       (filters.reserveStatus === "reserved" && row.reserved > 0) ||
@@ -13349,7 +13397,7 @@ function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
       filters.serialStatus === "all" ||
       (filters.serialStatus === "serial" && row.serialTracked) ||
       (filters.serialStatus === "batch" && !row.serialTracked);
-    const matchesMinimum = !filters.belowMinimum || row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib";
+    const matchesMinimum = !filters.belowMinimum || row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq";
     return matchesSearch && matchesCategory && matchesStock && matchesReserve && matchesSerial && matchesMinimum;
   });
 }
@@ -13605,6 +13653,7 @@ function WarehouseBalanceFilters({ filters, warehouses, categories, open, onChan
           <option value="below">Minimumdan aşağı</option>
           <option value="available">Stokda var</option>
           <option value="empty">Stok tükənib</option>
+          <option value="shortage">Çatışmazlıq (backorder)</option>
         </select>
       </label>
       <label>
@@ -13664,7 +13713,10 @@ function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProduct, onS
               <td>{row.total}</td>
               <td>{row.reorderLevel || "—"}</td>
               <td>{row.reserved}</td>
-              <td className={row.status === "Normal" ? "balance-qty good" : "balance-qty risk"}>{row.available}</td>
+              <td className={row.shortage > 0 || row.status !== "Normal" ? "balance-qty risk" : "balance-qty good"}>
+                {row.shortage > 0 ? `-${row.shortage}` : row.available}
+                {row.shortage > 0 && <small style={{ display: "block", opacity: 0.75 }}>sifariş gözləyir</small>}
+              </td>
               <td>{row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "—"}</td>
               <td>{row.unit}</td>
               <td>{money(row.costPrice)}</td>
@@ -13752,7 +13804,7 @@ export function WarehouseBalancesWorkspace({
 
   function showReplenishmentRows() {
     const next = { ...activeFilters, stockStatus: "below", belowMinimum: true };
-    const replenishmentCount = balanceRows.filter((row) => row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib").length;
+    const replenishmentCount = balanceRows.filter((row) => row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq").length;
     setDraftFilters(next);
     setActiveFilters(next);
     setFiltersOpen(true);
