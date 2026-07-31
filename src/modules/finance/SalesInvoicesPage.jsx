@@ -283,3 +283,125 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
     </form>
   );
 }
+
+// Faktura kəsimi axını: sifariş və layihələrdən avtomatik faktura yaradılması.
+function BillingRunPanel({ tenantId, customers, onCreateFromOrder, onCreateFromProject, invoicesVersion }) {
+  const [tab, setTab] = useState("orders");
+  const [open, setOpen] = useState(false);
+  const src = useBillingSources(tenantId);
+  const [projectCustomer, setProjectCustomer] = useState({});
+  const [projectPercent, setProjectPercent] = useState({});
+
+  useEffect(() => { src.refresh(); }, [invoicesVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pendingOrders = src.orders.filter((o) => !o.billed);
+  const pendingProjects = src.projects.filter((p) => !p.billed);
+
+  return (
+    <div style={card}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ margin: 0 }}>
+          Faktura kəsimi axını{" "}
+          <span style={badge("amber")}>{pendingOrders.length + pendingProjects.length} gözləyir</span>
+        </h3>
+        <button style={secondaryBtn} onClick={() => setOpen((v) => !v)}>{open ? "Gizlət" : "Aç"}</button>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button style={tab === "orders" ? primaryBtn : secondaryBtn} onClick={() => setTab("orders")}>
+              Sifarişlər ({pendingOrders.length})
+            </button>
+            <button style={tab === "projects" ? primaryBtn : secondaryBtn} onClick={() => setTab("projects")}>
+              Layihələr ({pendingProjects.length})
+            </button>
+          </div>
+
+          {tab === "orders" ? (
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={th}>Sifariş №</th><th style={th}>Müştəri</th><th style={th}>Sətir</th>
+                  <th style={th}>Məbləğ</th><th style={th}>Status</th><th style={th} />
+                </tr>
+              </thead>
+              <tbody>
+                {pendingOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td style={td}><b>{order.order_no}</b></td>
+                    <td style={td}>{order.customer?.name || "—"}</td>
+                    <td style={td}>{order.items?.length || 0}</td>
+                    <td style={td}>{azn(order.total)}</td>
+                    <td style={td}><span style={badge("gray")}>{order.status}</span></td>
+                    <td style={td}>
+                      <button
+                        style={primaryBtn}
+                        disabled={!(order.items?.length)}
+                        onClick={async () => { await onCreateFromOrder(order); src.refresh(); }}
+                      >
+                        Faktura kəs
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!pendingOrders.length && <tr><td style={td} colSpan={6}>Fakturalanmamış sifariş yoxdur.</td></tr>}
+              </tbody>
+            </table>
+          ) : (
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={th}>Layihə</th><th style={th}>Büdcə</th><th style={th}>Müştəri</th>
+                  <th style={th}>Mərhələ %</th><th style={th} />
+                </tr>
+              </thead>
+              <tbody>
+                {pendingProjects.map((project) => {
+                  const percent = projectPercent[project.id] ?? 100;
+                  const customerId = projectCustomer[project.id] || "";
+                  return (
+                    <tr key={project.id}>
+                      <td style={td}><b>{project.name}</b></td>
+                      <td style={td}>{azn(project.budget)}</td>
+                      <td style={td}>
+                        <select
+                          value={customerId}
+                          onChange={(e) => setProjectCustomer((p) => ({ ...p, [project.id]: e.target.value }))}
+                          style={input}
+                        >
+                          <option value="">Müştəri seç…</option>
+                          {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </td>
+                      <td style={td}>
+                        <input
+                          type="number" min="1" max="100" step="1" value={percent}
+                          onChange={(e) => setProjectPercent((p) => ({ ...p, [project.id]: e.target.value }))}
+                          style={{ ...input, width: 80 }}
+                        />
+                      </td>
+                      <td style={td}>
+                        <button
+                          style={primaryBtn}
+                          disabled={!customerId || !(Number(project.budget) > 0)}
+                          onClick={async () => {
+                            await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
+                            src.refresh();
+                          }}
+                        >
+                          Faktura kəs
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!pendingProjects.length && <tr><td style={td} colSpan={5}>Fakturalanmamış layihə yoxdur.</td></tr>}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
