@@ -63,10 +63,12 @@ export default function SalesInvoicesPage() {
       <BillingRunPanel
         tenantId={tenantId}
         customers={customers}
+        nextInvoiceNo={ar.nextInvoiceNo}
         onCreateFromOrder={(order) => run(async () => { await ar.createFromOrder(order); setMsg(`Sifariş ${order.order_no} üzrə faktura yaradıldı.`); })}
         onCreateFromProject={(project, options) => run(async () => { await ar.createFromProject(project, options); setMsg(`Layihə "${project.name}" üzrə faktura yaradıldı.`); })}
         invoicesVersion={ar.invoices.length}
       />
+
 
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
