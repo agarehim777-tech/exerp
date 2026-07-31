@@ -3,8 +3,13 @@ import react from "@vitejs/plugin-react";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
+
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID),
+  },
   plugins: [
     react(),
     mcpPlugin(),
