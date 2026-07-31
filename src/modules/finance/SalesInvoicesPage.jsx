@@ -366,10 +366,11 @@ function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder
                       <button
                         style={primaryBtn}
                         disabled={!(order.items?.length)}
-                        onClick={async () => { await onCreateFromOrder(order); src.refresh(); }}
+                        onClick={() => openOrderPreview(order)}
                       >
-                        Faktura kəs
+                        Ön baxış və kəs
                       </button>
+
                     </td>
                   </tr>
                 ))}
@@ -413,13 +414,11 @@ function BillingRunPanel({ tenantId, customers, nextInvoiceNo, onCreateFromOrder
                         <button
                           style={primaryBtn}
                           disabled={!customerId || !(Number(project.budget) > 0)}
-                          onClick={async () => {
-                            await onCreateFromProject(project, { customer_id: customerId, percent: Number(percent) });
-                            src.refresh();
-                          }}
+                          onClick={() => openProjectPreview(project, customerId, percent)}
                         >
-                          Faktura kəs
+                          Ön baxış və kəs
                         </button>
+
                       </td>
                     </tr>
                   );
