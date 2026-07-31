@@ -153,6 +153,45 @@ async function recoverFromStaleAssets() {
   window.location.reload();
 }
 
+// --- Version guard -------------------------------------------------------
+// Tətbiq versiyası (build id) dəyişəndə köhnə service worker + keşlər
+// təmizlənir və səhifə bir dəfə yenidən yüklənir.
+const VERSION_KEY = "erp:app-build-id";
+const VERSION_RELOAD_FLAG = "erp:version-reloaded";
+const APP_BUILD_ID = typeof __APP_BUILD_ID__ !== "undefined" ? __APP_BUILD_ID__ : "dev";
+
+export async function installVersionGuard() {
+  if (typeof window === "undefined") return;
+  let previous = null;
+  try {
+    previous = localStorage.getItem(VERSION_KEY);
+    localStorage.setItem(VERSION_KEY, APP_BUILD_ID);
+  } catch {
+    return;
+  }
+  if (!previous || previous === APP_BUILD_ID) return;
+
+  let alreadyReloaded = false;
+  try {
+    alreadyReloaded = sessionStorage.getItem(VERSION_RELOAD_FLAG) === APP_BUILD_ID;
+    sessionStorage.setItem(VERSION_RELOAD_FLAG, APP_BUILD_ID);
+  } catch {
+    /* ignore */
+  }
+  if (alreadyReloaded) return;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.allSettled(regs.map((r) => r.update().catch(() => {})));
+    }
+  } catch {
+    /* ignore */
+  }
+  await purgeStaleCaches();
+  window.location.reload();
+}
+
 export function installChunkErrorRecovery() {
   if (typeof window === "undefined") return;
   window.addEventListener("error", (event) => {
