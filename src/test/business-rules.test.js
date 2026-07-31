@@ -54,26 +54,36 @@ describe("inventory business rules", () => {
     expect(getAvailableQuantity({ total: 2, reserved: 8 })).toBe(0);
   });
 
-  it("blocks delivery unless every product is fully reserved in the selected warehouse", () => {
+  it("allows partial delivery from physical stock and keeps the rest as backorder", () => {
     const order = {
       id: "SO-1",
       warehouseId: "WH-1",
       status: "Rezervdə",
-      productLines: [{ product: "Telefon A", qty: 2 }],
+      productLines: [{ product: "Telefon A", qty: 5 }],
     };
 
-    expect(
-      getDeliveryStockCheck(order, {
-        "WH-1": [{ product: "Telefon A", total: 5, reserved: 1 }],
-      }).ok,
-    ).toBe(false);
+    const partial = getDeliveryStockCheck(order, {
+      "WH-1": [{ product: "Telefon A", total: 3, reserved: 5 }],
+    });
+    expect(partial.ok).toBe(true);
+    expect(partial.partial).toBe(true);
+    expect(partial.plan.deliverableTotal).toBe(3);
+    expect(partial.plan.shortageTotal).toBe(2);
 
-    expect(
-      getDeliveryStockCheck(order, {
-        "WH-1": [{ product: "Telefon A", total: 5, reserved: 2 }],
-      }).ok,
-    ).toBe(true);
+    const blocked = getDeliveryStockCheck(order, {
+      "WH-1": [{ product: "Telefon A", total: 0, reserved: 5 }],
+    });
+    expect(blocked.ok).toBe(false);
+
+    const full = getDeliveryStockCheck(
+      { ...order, deliveredQuantities: { "Telefon A": 3 } },
+      { "WH-1": [{ product: "Telefon A", total: 2, reserved: 2 }] },
+    );
+    expect(full.ok).toBe(true);
+    expect(full.partial).toBe(false);
+    expect(full.plan.deliverableTotal).toBe(2);
   });
+
 });
 
 describe("receivable business rules", () => {
