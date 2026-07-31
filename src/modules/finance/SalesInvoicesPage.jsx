@@ -578,8 +578,11 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             </tr>
           </thead>
           <tbody>
-            {totals.rows.map((row, index) => (
-              <tr key={index}>
+            {totals.rows.map((row, index) => {
+              const rowIssues = validation.lineIssues[index] || [];
+              const rowHasError = rowIssues.some((i) => i.level === "error");
+              return (
+              <tr key={index} style={rowHasError ? { background: "#fdf4f4" } : undefined}>
                 <td style={td}>{row.line_no}</td>
                 <td style={td}>
                   {!!products.length && (
@@ -601,21 +604,36 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
                     </select>
                   )}
                   <input
-                    style={{ ...input, width: "100%", marginTop: 4 }}
+                    style={fieldStyle(index, "description", { ...input, width: "100%", marginTop: 4 })}
                     value={row.description || ""}
                     placeholder="Təsvir"
                     onChange={(e) => patchLine(index, { description: e.target.value })}
                   />
+                  <FieldError index={index} field="description" />
                 </td>
-                <td style={td}><input type="number" step="0.001" style={{ ...input, width: 80 }} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 100 }} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} /></td>
-                <td style={td}><input type="number" step="0.01" style={{ ...input, width: 80 }} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} /></td>
+                <td style={td}>
+                  <input type="number" step="0.001" style={fieldStyle(index, "qty", { ...input, width: 80 })} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} />
+                  <FieldError index={index} field="qty" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "unit_price", { ...input, width: 100 })} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} />
+                  <FieldError index={index} field="unit_price" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "discount_pct", { ...input, width: 80 })} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} />
+                  <FieldError index={index} field="discount_pct" />
+                </td>
+                <td style={td}>
+                  <input type="number" step="0.01" style={fieldStyle(index, "vat_rate", { ...input, width: 80 })} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} />
+                  <FieldError index={index} field="vat_rate" />
+                </td>
                 <td style={{ ...td, fontWeight: 600 }}>{azn(row.line_total)}</td>
                 <td style={td}><button type="button" style={delBtn} onClick={() => removeLine(index)}>Sil</button></td>
               </tr>
-            ))}
+              );
+            })}
             {!totals.rows.length && <tr><td style={td} colSpan={8}>Sətir yoxdur.</td></tr>}
+
           </tbody>
         </table>
 
