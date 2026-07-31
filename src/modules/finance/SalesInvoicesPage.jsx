@@ -647,6 +647,9 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             ))}
             <div>Ara cəm: <b>{azn(totals.subtotal)}</b></div>
             <div>ƏDV cəmi: <b>{azn(totals.vat_total)}</b></div>
+            <div style={{ color: Math.abs(validation.roundingDiff) > 0.005 ? "#b23a3a" : "#6b6350" }}>
+              Yuvarlaqlaşdırma fərqi: <b>{validation.roundingDiff.toFixed(2)} ₼</b>
+            </div>
             <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(totals.total)}</b></div>
           </div>
         </div>
@@ -656,9 +659,25 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
           <textarea style={{ ...input, minHeight: 60 }} value={draft.notes || ""} onChange={(e) => patch({ notes: e.target.value })} />
         </label>
 
-        {blocked && (
-          <div style={{ ...msgBox, marginTop: 8, color: "#b23a3a" }}>{warnings.join(" ")}</div>
+        {(validation.docIssues.length > 0 || validation.errorCount > 0 || validation.warningCount > 0) && (
+          <div style={{ ...msgBox, marginTop: 8, display: "grid", gap: 4 }}>
+            <div style={{ fontWeight: 600, color: blocked ? "#b23a3a" : "#8a6d1f" }}>
+              Validasiya: {validation.errorCount} xəta · {validation.warningCount} xəbərdarlıq
+            </div>
+            {validation.docIssues.map((i, k) => (
+              <div key={k} style={{ fontSize: 12, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+                {i.level === "error" ? "⛔" : "⚠"} {i.message}
+              </div>
+            ))}
+            {validation.lineIssues.flatMap((issues, index) =>
+              issues.filter((i) => i.level === "error").map((i, k) => (
+                <div key={`${index}-${k}`} style={{ fontSize: 12, color: "#b23a3a" }}>
+                  ⛔ Sətir {index + 1}: {i.message}
+                </div>
+              )))}
+          </div>
         )}
+
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
           <button style={secondaryBtn} onClick={onClose}>İmtina</button>
