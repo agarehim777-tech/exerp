@@ -39,6 +39,9 @@ export const moduleRoutes = {
   settings: "/parametrler",
   roles: "/rollar",
   "access-check": "/icaze-yoxlama",
+  audit: "/audit",
+  periods: "/maliyye/dovrler",
+
 };
 
 export const pathToModule = Object.fromEntries(

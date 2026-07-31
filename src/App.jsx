@@ -125,7 +125,10 @@ const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissi
 const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.jsx"));
 const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
 const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
+const PeriodsPage = lazy(() => import("./modules/accounting/PeriodsPage.jsx"));
+const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
 const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
+
 const CrmActivitiesPage = lazy(() => import("./modules/crm/CrmActivitiesPage.jsx"));
 const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
 const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
@@ -186,6 +189,9 @@ export const navIcons = {
   settings: Settings,
   roles: ShieldCheck,
   "access-check": ShieldCheck,
+  audit: ShieldCheck,
+  periods: FileText,
+
 };
 
 export const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
@@ -5184,7 +5190,28 @@ export function userHasEffectivePermission(user, roles, permission) {
   return roleAllows && moduleAllows;
 }
 
+// Bu kolleksiyalar artıq real Supabase cədvəllərində saxlanılır — blob snapshot-a yazılmır.
+export const dbBackedCollections = [
+  "customers",
+  "products",
+  "orders",
+  "invoices",
+  "stock",
+  "warehouses",
+  "vendors",
+  "accounting",
+];
+
+export function stripDbBackedCollections(state) {
+  const next = { ...state };
+  dbBackedCollections.forEach((key) => {
+    if (key in next) delete next[key];
+  });
+  return next;
+}
+
 function App() {
+
   const [state, setState] = useState(() => hydrateState(initialState));
   const [tenantStateReady, setTenantStateReady] = useState(false);
   const tenantSnapshotUnavailable = useRef(false);
@@ -5696,7 +5723,7 @@ function App() {
           .upsert(
             {
               tenant_id: activeTenantId,
-              state,
+              state: stripDbBackedCollections(state),
               schema_version: localDbSchemaVersion,
               updated_at: new Date().toISOString(),
               updated_by: authUser.id,
@@ -5711,6 +5738,7 @@ function App() {
           });
       }, 800);
     }
+
 
     if (!remoteApiEnabled || !getRemoteToken()) {
       return () => window.clearTimeout(tenantSaveTimer.current);
@@ -10704,6 +10732,9 @@ function App() {
           {active === "assistant" && <AssistantPage />}
           {active === "roles" && <RolesPermissionsPage />}
           {active === "access-check" && <AccessCheckPage />}
+          {active === "audit" && <AuditLogPage />}
+          {active === "periods" && <PeriodsPage />}
+
           
           
 

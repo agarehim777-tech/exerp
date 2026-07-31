@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { downloadEInvoice, printInvoice } from "../../lib/invoicePdf.js";
 import { useSalesInvoices } from "../../shared/hooks/useSalesInvoices.js";
 import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
@@ -22,6 +23,7 @@ const emptyLine = () => ({ product_id: "", description: "", qty: 1, unit_price: 
 export default function SalesInvoicesPage() {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
+  const company = { name: activeMembership?.tenant?.name || "ExERP" };
   const ar = useSalesInvoices(tenantId);
   const { customers } = useCustomers(tenantId);
   const { products } = useProducts(tenantId);
@@ -96,6 +98,7 @@ export default function SalesInvoicesPage() {
                 onPost={() => run(() => ar.postToLedger(invoice.id))}
                 onPay={(payload) => run(() => ar.addPayment({ ...payload, invoice_id: invoice.id }))}
                 onCancel={() => run(() => ar.cancel(invoice.id))}
+                company={company}
               />
             ))}
             {!ar.invoices.length && !ar.loading && (
@@ -108,7 +111,7 @@ export default function SalesInvoicesPage() {
   );
 }
 
-function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel }) {
+function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
   const [payOpen, setPayOpen] = useState(false);
   const outstanding = Number(invoice.total) - Number(invoice.paid_amount);
   const [amount, setAmount] = useState(outstanding.toFixed(2));
@@ -132,6 +135,8 @@ function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel }) {
           {invoice.status !== "cancelled" && outstanding > 0 && (
             <button style={primaryBtn} onClick={() => setPayOpen((v) => !v)}>Ödəniş</button>
           )}
+          <button style={secondaryBtn} title="PDF / çap" onClick={() => printInvoice(invoice, { company })}>PDF</button>
+          <button style={secondaryBtn} title="E-faktura JSON" onClick={() => downloadEInvoice(invoice, company)}>E-faktura</button>
           {invoice.status !== "cancelled" && (
             <button style={delBtn} onClick={() => window.confirm("Faktura ləğv edilsin?") && onCancel()}>Ləğv</button>
           )}

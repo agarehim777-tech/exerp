@@ -78,6 +78,15 @@ export const pageMeta = {
     subtitle: "Hesablar planı, jurnal yazılışları, balans, P&L və cash flow görünüşü.",
     action: "Jurnal export",
   },
+  periods: {
+    title: "Mühasibat Dövrləri",
+    subtitle: "Hesabat dövrlərinin bağlanması — bağlı dövrdə jurnal və faktura dəyişikliyi bloklanır.",
+  },
+  audit: {
+    title: "Audit İzi",
+    subtitle: "Kritik cədvəllərdə kim, nə vaxt, nəyi dəyişib — köhnə və yeni dəyərlərlə.",
+  },
+
   tax: {
     title: "Vergi Təqvimi",
     subtitle: "ƏDV, DSMF, əmək haqqı və rüblük vergi öhdəliklərinin izlənməsi.",
