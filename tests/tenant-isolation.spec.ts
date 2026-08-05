@@ -25,7 +25,7 @@ const TENANT_TABLES = [
 ];
 
 async function restoreSession(page: Page) {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
   await page.evaluate(
     ([key, value]) => window.localStorage.setItem(key as string, value as string),
     [STORAGE_KEY, SESSION_JSON],
