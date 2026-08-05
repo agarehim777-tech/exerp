@@ -93,12 +93,12 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
             );
           })}
           {!rows.length && (
-            <tr><td style={td} colSpan={7}>Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin.</td></tr>
+            <tr><td style={td} colSpan={7}>{loading ? "Yüklənir…" : "Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin."}</td></tr>
           )}
         </tbody>
       </table>
       <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-        Qeyd: hesablama son 200 anbar hərəkəti üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
+        Qeyd: hesablama bütün anbar hərəkətləri ({movements.length.toLocaleString("az-AZ")}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
       </div>
     </div>
   );
