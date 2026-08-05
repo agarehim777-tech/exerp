@@ -3,6 +3,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useStock } from "../../shared/hooks/useStock.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
+import ValuationPanel from "./ValuationPanel.jsx";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
