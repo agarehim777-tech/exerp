@@ -1,14 +1,23 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
+const CLOUD_URL = "https://rojwxgndtunssjdwngrh.supabase.co";
+const CLOUD_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const cloudUrl = env.VITE_SUPABASE_URL || CLOUD_URL;
+  const cloudPublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || CLOUD_PUBLISHABLE_KEY;
+
+  return {
   base: process.env.VITE_BASE_PATH || "/",
   define: {
     __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID),
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(cloudUrl),
+    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(cloudPublishableKey),
   },
   plugins: [
     react(),
@@ -101,5 +110,6 @@ export default defineConfig({
     },
   },
   preview: { host: "127.0.0.1" },
+  };
 });
 
