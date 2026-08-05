@@ -14,6 +14,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [degraded, setDegraded] = useState(null);
 
   const pageRef = useRef(0);
   pageRef.current = movementsPage;
