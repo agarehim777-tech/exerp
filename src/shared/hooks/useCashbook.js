@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync.js';
 
 export function useCashbook(tenantId) {
   const [accounts, setAccounts] = useState([]);
