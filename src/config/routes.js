@@ -31,6 +31,7 @@ export const moduleRoutes = {
   contracts: "/muqavile",
   reports: "/hesabat",
   "financial-statements": "/hesabat/maliyye",
+  "data-reconciliation": "/sistem/barisdirma",
   support: "/destek",
   help: "/komek",
   onboarding: "/onboarding",

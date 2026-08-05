@@ -145,6 +145,10 @@ export const pageMeta = {
     title: "Maliyyə hesabatları",
     subtitle: "Mənfəət-Zərər, Balans, Pul axını və debitor yaşlanması.",
   },
+  "data-reconciliation": {
+    title: "Data barışdırması",
+    subtitle: "Blob məlumatı ilə real cədvəllər (serial, rezerv, istehsal, bildiriş) arasında uyğunsuzluqlar.",
+  },
   support: {
     title: "Support & Task",
     subtitle: "Daxili dəstək sorğuları, SLA, məsul şəxs və tətbiq tapşırıqları.",
