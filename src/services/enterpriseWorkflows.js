@@ -3,8 +3,8 @@ import { supabase } from "../integrations/supabase/client";
 const MODULES = new Set(["procurement", "warehouse", "credits", "crm", "finance", "hr", "production", "communications", "reports", "platform"]);
 const unwrap = (result) => { if (result.error) throw result.error; return result.data; };
 const assertContext = (tenantId, module) => {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
-  if (!MODULES.has(module)) throw new Error(`DЙ™stЙ™klЙ™nmЙ™yЙ™n modul: ${module}`);
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
+  if (!MODULES.has(module)) throw new Error(`Dəstəklənməyən modul: ${module}`);
 };
 
 export async function listWorkflowRecords({ tenantId, module, recordType, status }) {
@@ -34,14 +34,14 @@ export async function saveWorkflowRecord({ tenantId, module, record, lines, appr
 }
 
 export async function decideWorkflowStep({ tenantId, approvalId, status, comment }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
-  if (!["approved", "rejected", "skipped"].includes(status)) throw new Error("YanlД±Еџ tЙ™sdiq statusu.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
+  if (!["approved", "rejected", "skipped"].includes(status)) throw new Error("Yanlış təsdiq statusu.");
   return unwrap(await supabase.from("workflow_approvals").update({ status, comment: comment || null, decided_at: new Date().toISOString() })
     .eq("tenant_id", tenantId).eq("id", approvalId).select().single());
 }
 
 export async function listEntityTimeline({ tenantId, entityType, entityId }) {
-  if (!tenantId || !entityType || !entityId) throw new Error("Timeline konteksti natamamdД±r.");
+  if (!tenantId || !entityType || !entityId) throw new Error("Timeline konteksti natamamdır.");
   return unwrap(await supabase.from("entity_timeline").select("*").eq("tenant_id", tenantId)
     .eq("entity_type", entityType).eq("entity_id", entityId).order("created_at", { ascending: false }));
 }
@@ -51,7 +51,7 @@ export async function addEntityTimelineEvent({ tenantId, entityType, entityId, e
 }
 
 export async function listInventoryUnits({ tenantId, warehouseId, productId, status }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
   let query = supabase.from("inventory_units").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false });
   if (warehouseId) query = query.eq("warehouse_id", warehouseId);
   if (productId) query = query.eq("product_id", productId);
@@ -60,7 +60,7 @@ export async function listInventoryUnits({ tenantId, warehouseId, productId, sta
 }
 
 export async function saveInventoryUnit({ tenantId, unit }) {
-  if (!tenantId || !unit?.warehouse_id || !unit?.product_id) throw new Error("Anbar vЙ™ mЙ™hsul tЙ™lЙ™b olunur.");
+  if (!tenantId || !unit?.warehouse_id || !unit?.product_id) throw new Error("Anbar və məhsul tələb olunur.");
   const payload = {
     ...unit,
     tenant_id: tenantId,
@@ -77,54 +77,53 @@ export async function saveInventoryUnit({ tenantId, unit }) {
 }
 
 export async function removeInventoryUnit({ tenantId, unitId }) {
-  if (!tenantId || !unitId) throw new Error("Stok vahidi seГ§ilmЙ™yib.");
+  if (!tenantId || !unitId) throw new Error("Stok vahidi seçilməyib.");
   return unwrap(await supabase.from("inventory_units").delete().eq("tenant_id", tenantId).eq("id", unitId).select().single());
 }
 
 export async function queueNotification({ tenantId, notification }) {
-  if (!tenantId || !notification?.recipient || !notification?.channel || !notification?.body) throw new Error("BildiriЕџ ГјГ§Гјn alД±cД±, kanal vЙ™ mЙ™tn tЙ™lЙ™b olunur.");
+  if (!tenantId || !notification?.recipient || !notification?.channel || !notification?.body) throw new Error("Bildiriş üçün alıcı, kanal və mətn tələb olunur.");
   return unwrap(await supabase.from("notification_deliveries").insert({ ...notification, tenant_id: tenantId }).select().single());
 }
 
 export async function listEmployee360({ tenantId, employeeId }) {
-  if (!tenantId || !employeeId) throw new Error("ЖЏmЙ™kdaЕџ seГ§ilmЙ™yib.");
+  if (!tenantId || !employeeId) throw new Error("Əməkdaş seçilməyib.");
   return unwrap(await supabase.from("employee_events").select("*").eq("tenant_id", tenantId)
     .eq("employee_id", employeeId).order("created_at", { ascending: false }));
 }
 
 export async function listCreditPortfolio({ tenantId }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
   return unwrap(await supabase.from("credit_contracts")
     .select("*, customer:customers(id,name,fin), installments:credit_installments(id,due_date,principal_due,principal_paid,penalty_due,penalty_paid,status)")
     .eq("tenant_id", tenantId).order("risk_score", { ascending: false }).order("created_at", { ascending: false }));
 }
 
 export async function refreshCreditOverdue({ tenantId, asOf }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
   return unwrap(await supabase.rpc("refresh_credit_overdue", { _tenant_id: tenantId, _as_of: asOf || new Date().toISOString().slice(0, 10) }));
 }
 
 export async function updateCreditCollection({ tenantId, credit, stage, reason }) {
-  if (!tenantId || !credit?.id || !stage) throw new Error("Kredit vЙ™ mЙ™rhЙ™lЙ™ tЙ™lЙ™b olunur.");
+  if (!tenantId || !credit?.id || !stage) throw new Error("Kredit və mərhələ tələb olunur.");
   const updated = unwrap(await supabase.from("credit_contracts").update({ collection_stage: stage })
     .eq("tenant_id", tenantId).eq("id", credit.id).select().single());
   unwrap(await supabase.from("credit_adjustments").insert({
     tenant_id: tenantId, credit_id: credit.id, adjustment_type: "collection",
     old_value: { collection_stage: credit.collection_stage }, new_value: { collection_stage: stage },
-    reason: reason || "Kolleksiya mЙ™rhЙ™lЙ™si yenilЙ™ndi",
+    reason: reason || "Kolleksiya mərhələsi yeniləndi",
   }));
   return updated;
 }
 
 export async function listReconciliations({ tenantId }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
   return unwrap(await supabase.from("financial_reconciliations").select("*")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false }));
 }
 
 export async function saveReconciliation({ tenantId, reconciliation }) {
-  if (!tenantId) throw new Error("Tenant seГ§ilmЙ™yib.");
+  if (!tenantId) throw new Error("Tenant seçilməyib.");
   return unwrap(await supabase.from("financial_reconciliations")
     .upsert({ ...reconciliation, tenant_id: tenantId }).select().single());
 }
-
