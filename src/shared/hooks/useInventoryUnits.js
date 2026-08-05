@@ -33,4 +33,3 @@ export function useInventoryUnits(tenantId) {
   const remove = async (unitId) => { const result = await removeInventoryUnit({ tenantId, unitId }); await refresh(); return result; };
   return { units, loading, error, refresh, save, remove };
 }
-
