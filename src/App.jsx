@@ -10798,6 +10798,7 @@ function App() {
           {active === "access-check" && <AccessCheckPage />}
           {active === "audit" && <AuditLogPage />}
           {active === "periods" && <PeriodsPage />}
+          {active === "currencies" && <CurrenciesPage />}
           {active === "financial-statements" && <FinancialStatementsPage />}
 
           
