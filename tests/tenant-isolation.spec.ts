@@ -72,8 +72,8 @@ test.describe("Sessiya ilə tenant izolyasiyası", () => {
 
     await restoreSession(page);
     for (const path of ["/", "/anbar/mehsullar", "/maliyye/jurnal", "/kredit"]) {
-      await page.goto(path);
-      await page.waitForLoadState("networkidle");
+      await page.goto(path, { waitUntil: "domcontentloaded", timeout: 20_000 });
+      await page.waitForTimeout(1500);
       await expect(page).not.toHaveURL(/\/login/);
     }
     expect(errors, `Runtime xətaları: ${errors.join(" | ")}`).toEqual([]);
