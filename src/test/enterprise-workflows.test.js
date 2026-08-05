@@ -20,4 +20,3 @@ describe("enterprise workflow contract", () => {
     expect(migration).toContain("platform_tenant_usage");
   });
 });
-
