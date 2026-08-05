@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -63,6 +64,7 @@ const emptyPo = { vendor_id: "", po_number: "", order_date: today(), expected_da
 const emptyReceipt = { po_id: "", grn_number: "", receipt_date: today(), notes: "" };
 const emptyInvoice = { po_id: "", invoice_number: "", invoice_date: today(), due_date: "", currency: "AZN", match_notes: "" };
 const emptyPoLine = { product_sku: "", description: "", qty_ordered: "1", unit_price: "0", tax_rate: "0" };
+const emptyRfq = { title: "", description: "", quantity: "1", due_at: "", vendor_ids: [] };
 
 function nextNumber(prefix) {
   const now = new Date();
@@ -136,6 +138,8 @@ export default function ProcurementPage() {
   const [invoices, setInvoices] = useState([]);
   const [invoiceLines, setInvoiceLines] = useState([]);
   const [matchRows, setMatchRows] = useState({});
+  const [rfqs, setRfqs] = useState([]);
+  const [rfqForm, setRfqForm] = useState(emptyRfq);
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
@@ -184,6 +188,69 @@ export default function ProcurementPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadRfqs = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      setRfqs(await listWorkflowRecords({ tenantId, module: "procurement", recordType: "rfq" }));
+    } catch (rfqError) {
+      if (!String(rfqError?.message || "").includes("workflow_records")) setError(getError(rfqError));
+    }
+  }, [tenantId]);
+
+  useEffect(() => { loadRfqs(); }, [loadRfqs]);
+
+  async function saveRfq(event) {
+    event.preventDefault();
+    if (!rfqForm.title.trim() || !rfqForm.description.trim() || Number(rfqForm.quantity) <= 0 || !rfqForm.vendor_ids.length) {
+      setError("RFQ adı, məhsul, miqdar və ən azı bir vendor tələb olunur.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await saveWorkflowRecord({
+        tenantId,
+        module: "procurement",
+        record: {
+          record_type: "rfq", record_no: nextNumber("RFQ"), status: "sent", title: rfqForm.title.trim(),
+          due_at: rfqForm.due_at ? `${rfqForm.due_at}T18:00:00` : null,
+          payload: { vendor_ids: rfqForm.vendor_ids, selected_vendor_id: null, bids: [] },
+        },
+        lines: [{ description: rfqForm.description.trim(), quantity: Number(rfqForm.quantity), unit_price: 0 }],
+        approvals: [{ role_code: "procurement_manager" }, { role_code: "finance_manager" }],
+      });
+      setRfqForm(emptyRfq);
+      setNotice("Təklif sorğusu yaradıldı və vendor müqayisəsinə göndərildi.");
+      await loadRfqs();
+    } catch (rfqError) {
+      setError(getError(rfqError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateRfq(rfq, changes) {
+    setSaving(true);
+    try {
+      const { workflow_lines: _lines, workflow_approvals: _approvals, ...record } = rfq;
+      await saveWorkflowRecord({ tenantId, module: "procurement", record: { ...record, ...changes } });
+      await loadRfqs();
+      setNotice("RFQ statusu yeniləndi.");
+    } catch (rfqError) {
+      setError(getError(rfqError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function convertRfqToPo(rfq) {
+    const vendorId = rfq.payload?.selected_vendor_id || rfq.payload?.vendor_ids?.[0] || "";
+    const line = rfq.workflow_lines?.[0];
+    setPoForm({ ...emptyPo, vendor_id: vendorId, po_number: nextNumber("PO"), notes: `RFQ: ${rfq.record_no}` });
+    setPoDraftLines([{ ...emptyPoLine, description: line?.description || rfq.title, qty_ordered: String(line?.quantity || 1) }]);
+    setTab("po");
+  }
 
   useEffect(() => {
     if (!tenantId) return undefined;
@@ -932,6 +999,7 @@ export default function ProcurementPage() {
       <nav style={styles.tabs}>
         {[
           ["dashboard", BarChart3, "İcmal"],
+          ["rfq", ClipboardCheck, "Təklif sorğuları"],
           ["vendors", Building2, "Vendorlar"],
           ["po", ShoppingCart, "PO"],
           ["grn", PackageCheck, "Mədaxil"],
@@ -961,6 +1029,19 @@ export default function ProcurementPage() {
               onCreatePo={() => { resetPoForm(); setTab("po"); }}
               onReceive={choosePoForReceipt}
               onInvoice={choosePoForInvoice}
+            />
+          )}
+          {tab === "rfq" && (
+            <RfqTab
+              rfqs={rfqs}
+              vendors={vendors.filter((vendor) => vendor.is_active)}
+              form={rfqForm}
+              setForm={setRfqForm}
+              onSubmit={saveRfq}
+              onApprove={(rfq) => updateRfq(rfq, { status: "approved" })}
+              onReject={(rfq) => updateRfq(rfq, { status: "rejected" })}
+              onConvert={convertRfqToPo}
+              saving={saving}
             />
           )}
           {tab === "vendors" && (
@@ -1063,6 +1144,65 @@ export default function ProcurementPage() {
         </>
       )}
     </main>
+  );
+}
+
+function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, onConvert, saving }) {
+  const vendorName = (id) => vendors.find((vendor) => vendor.id === id)?.name || "Vendor";
+  const toggleVendor = (vendorId) => setForm({
+    ...form,
+    vendor_ids: form.vendor_ids.includes(vendorId)
+      ? form.vendor_ids.filter((id) => id !== vendorId)
+      : [...form.vendor_ids, vendorId],
+  });
+
+  return (
+    <div style={styles.splitGrid}>
+      <Panel title="Yeni təklif sorğusu" icon={ClipboardCheck}>
+        <form style={{ ...styles.form, gridTemplateColumns: "1fr" }} onSubmit={onSubmit}>
+          <Field label="Sorğunun adı" value={form.title} onChange={(value) => setForm({ ...form, title: value })} required wide />
+          <Field label="Məhsul / xidmət" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required wide />
+          <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
+          <Field label="Təklif üçün son tarix" type="date" value={form.due_at} onChange={(value) => setForm({ ...form, due_at: value })} />
+          <div style={styles.linesBlock}>
+            <strong>Vendorlar</strong>
+            {vendors.map((vendor) => (
+              <label key={vendor.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                <input type="checkbox" checked={form.vendor_ids.includes(vendor.id)} onChange={() => toggleVendor(vendor.id)} />
+                {vendor.name}
+              </label>
+            ))}
+            {!vendors.length && <small>Əvvəl aktiv vendor yaradın.</small>}
+          </div>
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label="RFQ yarat" tone="primary" submit disabled={saving || !vendors.length} />
+          </div>
+        </form>
+      </Panel>
+
+      <Panel title="RFQ və vendor müqayisəsi" icon={BarChart3}>
+        <DataTable
+          columns={["RFQ", "Məhsul", "Vendorlar", "Son tarix", "Status", "Əməl"]}
+          empty="Təklif sorğusu yoxdur."
+          rows={rfqs.map((rfq) => {
+            const line = rfq.workflow_lines?.[0];
+            const invited = rfq.payload?.vendor_ids || [];
+            return [
+              <TwoLine title={rfq.record_no} subtitle={rfq.title} />,
+              <TwoLine title={line?.description || "—"} subtitle={`${qty(line?.quantity)} vahid`} />,
+              <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
+              rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "—",
+              <span style={{ ...styles.badge, ...(rfq.status === "approved" ? styles.badge_success : rfq.status === "rejected" ? styles.badge_danger : styles.badge_info) }}>{rfq.status}</span>,
+              <div style={styles.rowActions}>
+                {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="Təsdiq" tone="success" onClick={() => onApprove(rfq)} />}
+                {rfq.status === "sent" && <IconButton icon={XCircle} label="Rədd" tone="danger" onClick={() => onReject(rfq)} />}
+                {rfq.status === "approved" && <IconButton icon={ShoppingCart} label="PO yarat" tone="primary" onClick={() => onConvert(rfq)} />}
+              </div>,
+            ];
+          })}
+        />
+      </Panel>
+    </div>
   );
 }
 
@@ -1763,7 +1903,7 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  tabActive: { borderColor: "#2563eb", color: "#1d4ed8", background: "#eff6ff" },
+  tabActive: { border: "1px solid #2563eb", color: "#1d4ed8", background: "#eff6ff" },
   panel: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "18px", boxShadow: "0 8px 28px rgba(15, 23, 42, 0.05)" },
   panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "14px" },
   panelTools: { display: "flex", alignItems: "center", gap: "8px", color: "#64748b" },

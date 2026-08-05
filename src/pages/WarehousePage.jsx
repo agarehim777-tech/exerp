@@ -19,6 +19,7 @@ import {
   TwoLine,
 } from "../components/ui.jsx";
 import { money, normalize, percent } from "../services/format.js";
+import { InventoryUnitsPanel } from "../modules/warehouse/InventoryUnitsPanel.jsx";
 import {
   WarehouseBalancesWorkspace,
   WarehouseControlPanel,
@@ -146,6 +147,7 @@ function WarehousePage({
         }}
         onTrackAction={onTrackAction}
       />
+      <InventoryUnitsPanel warehouses={warehouses} products={products} selectedWarehouseId={selectedWarehouseId} />
       <details className="warehouse-operations-drawer" ref={operationsRef}>
         <summary>
           <span><SlidersHorizontal size={17} /> Anbar əməliyyat nəzarəti</span>

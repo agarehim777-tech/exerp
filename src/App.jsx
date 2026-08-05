@@ -89,6 +89,7 @@ import {
   TwoLine,
 } from "./components/ui.jsx";
 import { money, normalize, percent } from "./services/format.js";
+import { queueNotification, saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
 import {
   addMonths,
   formatDateInput,
@@ -5511,6 +5512,7 @@ function App() {
     });
 
     if (deliveries.length === 0) return;
+    persistNotificationDeliveries(deliveries);
 
     setState((current) => {
       const existingKeys = new Set((current.notificationSendLog || []).map((log) => log.dedupeKey).filter(Boolean));
@@ -6773,6 +6775,21 @@ function App() {
       ),
     );
     notify(`${title} ${format} export siyahısına əlavə edildi.`);
+    queueMicrotask(() => {
+      if (!activeTenantId) return;
+      void saveWorkflowRecord({
+        tenantId: activeTenantId,
+        module: "reports",
+        record: {
+          record_type: "report_export",
+          record_no: exportRow.id,
+          status: "completed",
+          title: exportRow.title,
+          completed_at: new Date().toISOString(),
+          payload: exportRow,
+        },
+      }).catch((error) => notify(`Hesabat exportu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+    });
   }
 
   function runProjectsExportAction() {
@@ -6907,9 +6924,112 @@ function App() {
     notify("Yeni istehsal planı yaradıldı.");
   }
 
+  function syncProductionWorkflow(plan, status, extraPayload = {}) {
+    if (!activeTenantId || !plan?.id) return;
+    void saveWorkflowRecord({
+      tenantId: activeTenantId,
+      module: "production",
+      record: {
+        record_type: "production_order", record_no: plan.id, status, title: plan.product,
+        due_at: plan.dueDate ? `${plan.dueDate}T18:00:00` : null,
+        amount: Number(plan.totalCost || plan.actualTotalCost || 0),
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+        payload: {
+          warehouse_id: plan.warehouseId, warehouse_name: plan.warehouseName,
+          planned_qty: Number(plan.plannedQty || 0), produced_qty: Number(plan.producedQty || 0),
+          waste_rate: Number(plan.wasteRate || 0), labor_cost: Number(plan.laborCost || 0),
+          overhead_cost: Number(plan.overheadCost || 0), actual_material_cost: Number(plan.actualMaterialCost || 0),
+          actual_unit_cost: Number(plan.actualUnitCost || 0), issued_materials: plan.issuedMaterials || [],
+          receipt: plan.receipt || null, note: plan.note || "", ...extraPayload,
+        },
+      },
+      lines: (plan.materials || []).map((material) => ({
+        description: material.product, quantity: Number(material.qty || material.needed || 0),
+        unit_price: Number(material.unitCost || 0),
+        payload: { available: Number(material.available || 0), enough: material.enough !== false },
+      })),
+      approvals: status === "draft" ? [{ role_code: "production_manager" }, { role_code: "warehouse_manager" }] : undefined,
+    }).catch((error) => notify(`İstehsal workflow sinxronlaşmadı: ${error.message}`, "warning"));
+  }
+
+  function syncHrWorkflow(recordType, item, status, approvals) {
+    if (!activeTenantId || !item?.id) return;
+    const employeeName = item.employeeName || item.name || "HR qeydi";
+    void saveWorkflowRecord({
+      tenantId: activeTenantId,
+      module: "hr",
+      record: {
+        record_type: recordType,
+        record_no: item.id,
+        status,
+        title: `${employeeName} - ${recordType}`,
+        due_at: item.to ? `${item.to}T18:00:00` : null,
+        amount: Number(item.netSalary || item.salary || 0),
+        completed_at: ["approved", "paid", "completed", "rejected"].includes(status) ? new Date().toISOString() : null,
+        payload: item,
+      },
+      approvals,
+    }).catch((error) => notify(`HR workflow sinxronlaЕџmadД±: ${error.message}`, "warning"));
+  }
+
+  function syncCommunicationWorkflow(thread, status = "active") {
+    if (!activeTenantId || !thread?.id) return;
+    void saveWorkflowRecord({
+      tenantId: activeTenantId,
+      module: "communications",
+      record: {
+        record_type: thread.type === "group" ? "group_thread" : "direct_thread",
+        record_no: thread.id,
+        status,
+        title: thread.title || thread.person || "Daxili yazД±Еџma",
+        payload: {
+          participant_ids: thread.participantIds || [],
+          participants: thread.participants || [],
+          team: thread.team || "",
+          ticket_id: thread.ticketId || null,
+          order_id: thread.orderId || null,
+          credit_id: thread.creditId || null,
+          customer_fin: thread.customerFin || null,
+          message_count: (thread.messages || []).length,
+          last_message: thread.preview || "",
+          messages: thread.messages || [],
+        },
+      },
+    }).catch((error) => notify(`Mesaj workflow sinxronlaЕџmadД±: ${error.message}`, "warning"));
+  }
+
+  function persistNotificationDeliveries(deliveries = []) {
+    if (!activeTenantId) return;
+    deliveries.forEach((delivery) => {
+      const channelMap = { SMS: "sms", Email: "email", Push: "push" };
+      const wasSent = normalize(delivery.status).includes("nd");
+      void queueNotification({
+        tenantId: activeTenantId,
+        notification: {
+          entity_type: delivery.module || "notifications",
+          recipient: delivery.recipient || "Daxili komanda",
+          channel: channelMap[delivery.channel] || "in_app",
+          provider: delivery.providerName || null,
+          subject: delivery.subject || null,
+          body: delivery.body || delivery.subject || "BildiriЕџ",
+          status: wasSent ? "sent" : "failed",
+          sent_at: wasSent ? delivery.sentAtIso : null,
+          last_error: wasSent ? null : delivery.status,
+          metadata: {
+            rule_id: delivery.ruleId,
+            dedupe_key: delivery.dedupeKey,
+            priority: delivery.priority,
+            action_target: delivery.actionTarget,
+          },
+        },
+      }).catch((error) => notify(`BildiriЕџ logu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+    });
+  }
+
   function createProductionPlan(values) {
     if (!requirePermission("production.manage", "istehsal planı yaratmaq")) return;
     const stamp = getActionStamp();
+    let createdPlan = null;
 
     setState((current) => {
       const warehouse = current.warehouses.find((item) => item.id === values.warehouseId);
@@ -6934,6 +7054,7 @@ function App() {
           unitCost: Math.max(0, Number(material.unitCost || 0)),
         })),
       };
+      createdPlan = plan;
 
       return auditCurrentState(
         { ...current, productionPlans: [plan, ...(current.productionPlans || [])] },
@@ -6944,12 +7065,14 @@ function App() {
         },
       );
     });
+    queueMicrotask(() => createdPlan && syncProductionWorkflow(createdPlan, "draft"));
     notify("İstehsal planı və BOM yaradıldı.");
   }
 
   function updateProductionPlan(planId, values) {
     if (!requirePermission("production.manage", "istehsal planını redaktə etmək")) return;
     const stamp = getActionStamp();
+    let syncedPlan = null;
 
     setState((current) => {
       const existing = (current.productionPlans || []).find((item) => item.id === planId);
@@ -6978,6 +7101,7 @@ function App() {
           unitCost: Math.max(0, Number(material.unitCost || 0)),
         })),
       };
+      syncedPlan = updated;
 
       return auditCurrentState(
         {
@@ -6991,11 +7115,13 @@ function App() {
         },
       );
     });
+    queueMicrotask(() => syncedPlan && syncProductionWorkflow(syncedPlan, "draft"));
     notify("İstehsal planındakı dəyişikliklər saxlanıldı.");
   }
 
   function deleteProductionPlan(planId) {
     if (!requirePermission("production.manage", "istehsal planını silmək")) return;
+    let cancelledPlan = null;
     setState((current) => {
       const existing = (current.productionPlans || []).find((item) => item.id === planId);
       if (!existing) return current;
@@ -7003,6 +7129,7 @@ function App() {
         notify("Başlanmış və ya tamamlanmış plan audit və stok izi səbəbilə silinə bilməz.", "warning");
         return current;
       }
+      cancelledPlan = existing;
       return auditCurrentState(
         {
           ...current,
@@ -7016,12 +7143,14 @@ function App() {
         },
       );
     });
+    queueMicrotask(() => cancelledPlan && syncProductionWorkflow(cancelledPlan, "cancelled", { cancelled: true }));
     notify("İstehsal planı silindi.");
   }
 
   function startProductionPlan(planId) {
     if (!requirePermission("production.manage", "istehsala başlamaq")) return;
     const stamp = getActionStamp();
+    let startedPlan = null;
     setState((current) => {
       const rows = buildProductionPlanRows(
         current.productionPlans || [],
@@ -7035,6 +7164,7 @@ function App() {
         notify(`İstehsala başlamaq mümkün deyil: ${plan?.bottleneck || "plan tapılmadı"}.`, "warning");
         return current;
       }
+      startedPlan = { ...plan, status: "İstehsaldadır", startedAt: stamp };
       return auditCurrentState(
         {
           ...current,
@@ -7049,6 +7179,7 @@ function App() {
         },
       );
     });
+    queueMicrotask(() => startedPlan && syncProductionWorkflow(startedPlan, "in_progress", { material_reserved: true }));
     notify(`${planId} istehsala buraxıldı.`);
   }
 
@@ -7056,6 +7187,7 @@ function App() {
     if (!requirePermission("production.manage", "istehsal planını tamamlamaq")) return;
 
     const stamp = getActionStamp();
+    let syncedCompletedPlan = null;
     setState((current) => {
       const rows = buildProductionPlanRows(
         current.productionPlans || [],
@@ -7149,6 +7281,7 @@ function App() {
           at: stamp,
         },
       };
+      syncedCompletedPlan = completedPlan;
 
       return auditCurrentState(
         {
@@ -7168,6 +7301,7 @@ function App() {
         },
       );
     });
+    queueMicrotask(() => syncedCompletedPlan && syncProductionWorkflow(syncedCompletedPlan, "completed", { stock_posted: true }));
     notify(`${planId} üzrə xammal çıxıldı və hazır məhsul anbara mədaxil edildi.`);
   }
 
@@ -7488,6 +7622,31 @@ function App() {
 
     const sentCount = deliveries.filter((item) => item.status === "Göndərildi").length;
     const blockedCount = deliveries.length - sentCount;
+    if (activeTenantId) {
+      deliveries.forEach((delivery) => {
+        const channelMap = { SMS: "sms", Email: "email", Push: "push" };
+        void queueNotification({
+          tenantId: activeTenantId,
+          notification: {
+            entity_type: delivery.module || "notifications",
+            recipient: delivery.recipient || "Daxili komanda",
+            channel: channelMap[delivery.channel] || "in_app",
+            provider: delivery.providerName || null,
+            subject: delivery.subject || null,
+            body: delivery.body || delivery.subject || "BildiriЕџ",
+            status: delivery.status === "GГ¶ndЙ™rildi" ? "sent" : "failed",
+            sent_at: delivery.status === "GГ¶ndЙ™rildi" ? delivery.sentAtIso : null,
+            last_error: delivery.status === "GГ¶ndЙ™rildi" ? null : delivery.status,
+            metadata: {
+              rule_id: delivery.ruleId,
+              dedupe_key: delivery.dedupeKey,
+              priority: delivery.priority,
+              action_target: delivery.actionTarget,
+            },
+          },
+        }).catch((error) => notify(`BildiriЕџ logu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+      });
+    }
     const touchedRuleIds = new Set(deliveries.map((item) => item.ruleId));
     const providerUse = deliveries.reduce((map, item) => {
       if (!item.providerId) return map;
@@ -9618,6 +9777,10 @@ function App() {
         { module: "HR", action: "Məzuniyyət qeydi yaradıldı", detail: `${employee.name} · ${days} gün` },
       ),
     );
+    queueMicrotask(() => syncHrWorkflow("leave_request", request, "pending", [
+      { role_code: "line_manager" },
+      { role_code: "hr_manager" },
+    ]));
     setModal(null);
     notify(`${employee.name} üçün məzuniyyət qeydi yaradıldı.`);
   }
@@ -9652,6 +9815,11 @@ function App() {
       );
     });
     notify(`Məzuniyyət sorğusu: ${nextStatus}.`);
+    queueMicrotask(() => syncHrWorkflow(
+      "leave_request",
+      { ...request, status: nextStatus, decidedAt: stamp },
+      status === "TЙ™sdiq edildi" ? "approved" : "rejected",
+    ));
   }
 
   function markPayrollPaid(employeeId) {
@@ -9693,6 +9861,11 @@ function App() {
       );
     });
     notify("Payroll statusu ödənildi kimi bağlandı.");
+    queueMicrotask(() => syncHrWorkflow(
+      "payroll_line",
+      { ...employee, id: `${employeeId}-${baseFinanceDate.slice(0, 7)}`, employeeId, employeeName: employee.name, payrollPaidAt: stamp },
+      "paid",
+    ));
   }
 
   function updateEmployeeDocuments(employeeId, documentsComplete = 100) {
@@ -9737,6 +9910,11 @@ function App() {
       );
     });
     notify(nextScore === 100 ? "Əməkdaş sənədləri tamamlandı." : "Əməkdaş sənəd statusu yeniləndi.");
+    queueMicrotask(() => syncHrWorkflow(
+      "employee_document_check",
+      { id: `${employeeId}-documents`, employeeId, employeeName: employee.name, documentsComplete: nextScore, updatedAt: stamp },
+      nextScore === 100 ? "completed" : "pending",
+    ));
   }
 
   function openVacancyCreator() {
@@ -10663,6 +10841,7 @@ function App() {
     setConversationId(conversation.id);
     setDraftMessage("");
     notify(type === "group" ? "Qrup yaradıldı." : "Yeni söhbət yaradıldı.");
+    queueMicrotask(() => syncCommunicationWorkflow(conversation));
   }
 
   function archiveMessageConversation(id) {
@@ -10695,6 +10874,10 @@ function App() {
       ),
     );
     notify(nextArchived ? "Söhbət arxivləndi." : "Söhbət arxivdən çıxarıldı.");
+    queueMicrotask(() => syncCommunicationWorkflow(
+      { ...target, archived: nextArchived, status: nextArchived ? "Arxiv" : "Aktiv" },
+      nextArchived ? "archived" : "active",
+    ));
   }
 
   function deleteMessageConversation(id) {
@@ -10728,6 +10911,7 @@ function App() {
     if (!body) return;
     const stamp = getActionStamp();
     const sender = currentUser?.name || activeRoleInfo?.name || "Admin";
+    const selectedThreadForSync = (state.conversations || []).find((conversation) => conversation.id === conversationId);
     const comment = {
       id: `COM-${Date.now().toString().slice(-6)}`,
       author: sender,
@@ -10790,6 +10974,17 @@ function App() {
       );
     });
     setDraftMessage("");
+    if (selectedThreadForSync) {
+      queueMicrotask(() => syncCommunicationWorkflow({
+        ...selectedThreadForSync,
+        preview: body,
+        archived: false,
+        messages: [
+          ...(selectedThreadForSync.messages || []),
+          { id: comment.id, from: sender, text: body, time: stamp, status: "GГ¶ndЙ™rildi", readAt: stamp },
+        ],
+      }));
+    }
   }
 
   if (remoteUser?.mustChangePassword && remoteAuthStatus === "signedIn") {
@@ -11718,6 +11913,17 @@ function PlatformAdminPage() {
   }
   function cancelEdit() { setEditing(null); setForm(emptyForm); }
 
+  async function syncTenantLimits(tenantId) {
+    const { error: limitError } = await supabase.rpc("platform_set_tenant_limits", {
+      _tenant: tenantId,
+      _max_users: Number(form.max_users) || 10,
+      _max_warehouses: 3,
+      _max_storage_mb: form.plan_name === "enterprise" ? 10240 : form.plan_name === "business" ? 4096 : 1024,
+      _enabled_modules: form.modules,
+    });
+    if (limitError) throw limitError;
+  }
+
   async function submit(e) {
     e.preventDefault();
     setError(""); setBusy(true);
@@ -11734,6 +11940,7 @@ function PlatformAdminPage() {
           _tenant: editing.id, _modules: form.modules,
         });
         if (e2) throw e2;
+        await syncTenantLimits(editing.id);
       } else {
         const base = (form.slug || slugifyPlatform(form.name) || "sirket").slice(0, 40);
         let finalSlug = base; let lastErr = null; let createdTenantId = null;
@@ -11752,6 +11959,7 @@ function PlatformAdminPage() {
           finalSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
         }
         if (lastErr) throw lastErr;
+        await syncTenantLimits(createdTenantId);
 
         const adminEmail = form.admin_email.trim();
         if (createdTenantId && adminEmail) {
@@ -11788,6 +11996,15 @@ function PlatformAdminPage() {
     await refreshAuth?.();
   }
 
+  const activeTenantCount = tenants.filter((tenant) => tenant.status === "active").length;
+  const frozenTenantCount = tenants.filter((tenant) => tenant.status === "frozen").length;
+  const totalPlatformUsers = tenants.reduce((sum, tenant) => sum + Number(tenant.member_count || 0), 0);
+  const expiringTenantCount = tenants.filter((tenant) => {
+    if (!tenant.expires_at) return false;
+    const days = Math.ceil((new Date(tenant.expires_at).getTime() - Date.now()) / dayInMs);
+    return days >= 0 && days <= 30;
+  }).length;
+
   if (!checked) return <p className="muted">Yüklənir…</p>;
   if (!isAdmin) {
     return (
@@ -11806,6 +12023,12 @@ function PlatformAdminPage() {
 
   return (
     <div className="page-grid">
+      <section className="metric-grid four" style={{ gridColumn: "1 / -1" }}>
+        <MetricCard label="Aktiv ЕџirkЙ™t" value={activeTenantCount} trend={`${tenants.length} tenant`} icon={Building2} tone="success" />
+        <MetricCard label="Platform istifadЙ™Г§isi" value={totalPlatformUsers} trend="BГјtГјn tenant-lЙ™r" icon={Users} tone="primary" />
+        <MetricCard label="DondurulmuЕџ" value={frozenTenantCount} trend="GiriЕџ mЙ™hdudiyyЙ™ti" icon={ShieldCheck} tone={frozenTenantCount ? "warning" : "success"} />
+        <MetricCard label="30 gГјnЙ™ bitЙ™n" value={expiringTenantCount} trend="Lisenziya nЙ™zarЙ™ti" icon={CalendarClock} tone={expiringTenantCount ? "warning" : "info"} />
+      </section>
       <Panel>
         <PanelHeader
           title={editing ? `Şirkəti redaktə et — ${editing.name}` : "Yeni şirkət yarat"}

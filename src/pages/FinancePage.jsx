@@ -22,6 +22,7 @@ import {
 import { money, normalize, percent } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
+import { ReconciliationPanel } from "../modules/finance/ReconciliationPanel.jsx";
 import {
   baseFinanceDate,
   buildDailyCashSummary,
@@ -237,6 +238,7 @@ function FinancePage({
 
   return (
     <div className="stack">
+      <ReconciliationPanel />
       <section className="metric-grid four">
         <MetricCard label="Cash balans" value={money(cashTotal)} icon={Wallet} tone="success" />
         <MetricCard label="Daxilolma" value={money(inflowTotal)} trend={`${orders.length} satış/kredit mənbəyi`} icon={TrendingUp} tone="primary" />
