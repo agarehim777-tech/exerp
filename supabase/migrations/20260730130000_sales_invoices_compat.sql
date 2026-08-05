@@ -184,7 +184,6 @@ END $$;
 REVOKE ALL ON FUNCTION public.gl_account_by_code(UUID, TEXT) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.post_invoice_to_gl(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.post_payment_to_gl(UUID) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.apply_stock_movement() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sync_invoice_payment() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.post_invoice_to_gl(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.post_payment_to_gl(UUID) TO authenticated;
