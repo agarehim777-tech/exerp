@@ -30,6 +30,7 @@ export const moduleRoutes = {
   kpi: "/kpi",
   contracts: "/muqavile",
   reports: "/hesabat",
+  "financial-statements": "/hesabat/maliyye",
   support: "/destek",
   help: "/komek",
   onboarding: "/onboarding",
@@ -41,6 +42,7 @@ export const moduleRoutes = {
   "access-check": "/icaze-yoxlama",
   audit: "/audit",
   periods: "/maliyye/dovrler",
+  currencies: "/maliyye/valyutalar",
 
 };
 

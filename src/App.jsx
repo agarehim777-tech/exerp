@@ -60,6 +60,7 @@ import { pageMeta } from "./config/page-meta.js";
 const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
 const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
 const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
+const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
 import {
   changeRemotePassword,
   createRemoteCompany,
@@ -127,6 +128,7 @@ const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.js
 const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
 const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
 const PeriodsPage = lazy(() => import("./modules/accounting/PeriodsPage.jsx"));
+const CurrenciesPage = lazy(() => import("./modules/finance/CurrenciesPage.jsx"));
 const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
 const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
 
@@ -192,6 +194,8 @@ export const navIcons = {
   "access-check": ShieldCheck,
   audit: ShieldCheck,
   periods: FileText,
+  currencies: FileText,
+  "financial-statements": FileText,
 
 };
 
@@ -10794,6 +10798,8 @@ function App() {
           {active === "access-check" && <AccessCheckPage />}
           {active === "audit" && <AuditLogPage />}
           {active === "periods" && <PeriodsPage />}
+          {active === "currencies" && <CurrenciesPage />}
+          {active === "financial-statements" && <FinancialStatementsPage />}
 
           
           

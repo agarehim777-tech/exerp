@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync.js';
 
 function computeTotals(lines) {
   let subtotal = 0;
@@ -52,15 +53,13 @@ export function useSalesInvoices(tenantId) {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return undefined;
-    const channel = supabase
-      .channel(`ar:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_invoices', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoice_payments', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const degraded = useRealtimeResync(
+    tenantId,
+    ['sales_invoices', 'invoice_payments'],
+    fetchAll,
+    { channelPrefix: 'ar' },
+  );
+
 
   const create = async ({ lines = [], ...header }) => {
     const totals = computeTotals(lines);
@@ -191,7 +190,7 @@ export function useSalesInvoices(tenantId) {
   };
 
   return {
-    invoices, loading, error, refresh: fetchAll,
+    invoices, loading, error, degraded, refresh: fetchAll,
     create, createFromOrder, createFromProject, nextInvoiceNo,
     postToLedger, addPayment, cancel,
   };

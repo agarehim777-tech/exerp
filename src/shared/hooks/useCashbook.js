@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync.js';
 
 export function useCashbook(tenantId) {
   const [accounts, setAccounts] = useState([]);
@@ -36,15 +37,13 @@ export function useCashbook(tenantId) {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return undefined;
-    const channel = supabase
-      .channel(`cash:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_transactions', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const degraded = useRealtimeResync(
+    tenantId,
+    ['cash_transactions', 'expenses', 'cash_accounts'],
+    fetchAll,
+    { channelPrefix: 'cash' },
+  );
+
 
   const createAccount = async (payload) => {
     const { error: err } = await supabase.from('cash_accounts').insert({
@@ -98,7 +97,7 @@ export function useCashbook(tenantId) {
   }, [accounts, transactions]);
 
   return {
-    accounts, transactions, expenses, loading, error, refresh: fetchAll,
+    accounts, transactions, expenses, loading, error, degraded, refresh: fetchAll,
     createAccount, addTransaction, addExpense, setExpenseStatus, removeTransaction, balanceOf,
   };
 }
