@@ -19,6 +19,7 @@ import {
   TwoLine,
 } from "../components/ui.jsx";
 import { money, normalize, percent } from "../services/format.js";
+import { InventoryUnitsPanel } from "../modules/warehouse/InventoryUnitsPanel.jsx";
 import {
   WarehouseBalancesWorkspace,
   WarehouseControlPanel,
@@ -61,8 +62,8 @@ function WarehousePage({
   onEditProduct,
   onTrackAction,
 }) {
-  const [warehouseStatusFilter, setWarehouseStatusFilter] = useState("Hamısı");
-  const [stockFilter, setStockFilter] = useState("Hamısı");
+  const [warehouseStatusFilter, setWarehouseStatusFilter] = useState("HamД±sД±");
+  const [stockFilter, setStockFilter] = useState("HamД±sД±");
   const operationsRef = useRef(null);
   const isAllWarehouses = selectedWarehouseId === "all";
   const selectedWarehouse = isAllWarehouses
@@ -87,7 +88,7 @@ function WarehousePage({
   const stockAlerts = buildWarehouseStockAlerts(warehouses, warehouseStock, products);
   const transferSuggestions = buildWarehouseTransferSuggestions(warehouses, warehouseStock);
   const visibleWarehouses = filterRows(warehouses, query).filter((warehouse) =>
-    warehouseStatusFilter === "Hamısı" ? true : warehouse.status === warehouseStatusFilter,
+    warehouseStatusFilter === "HamД±sД±" ? true : warehouse.status === warehouseStatusFilter,
   );
   const warehouseList = visibleWarehouses.length > 0 ? visibleWarehouses : [];
   const visibleItems = filterWarehouseItems(filterRows(selectedItems, query), stockFilter);
@@ -103,10 +104,10 @@ function WarehousePage({
         row.reorderQty <= 0
           ? "Normal"
           : Number(coverage.orderedQty || 0) >= row.reorderQty
-            ? "Sifariş verilib"
+            ? "SifariЕџ verilib"
             : Number(coverage.orderedQty || 0) > 0
-              ? "Qismən sifarişdə"
-              : "Sifariş verilməyib",
+              ? "QismЙ™n sifariЕџdЙ™"
+              : "SifariЕџ verilmЙ™yib",
     };
   });
   const reorderRows = wmsRows.filter((row) => row.reorderQty > 0);
@@ -146,32 +147,33 @@ function WarehousePage({
         }}
         onTrackAction={onTrackAction}
       />
+      <InventoryUnitsPanel warehouses={warehouses} products={products} selectedWarehouseId={selectedWarehouseId} />
       <details className="warehouse-operations-drawer" ref={operationsRef}>
         <summary>
-          <span><SlidersHorizontal size={17} /> Anbar əməliyyat nəzarəti</span>
-          <span>Anbarlar, transfer, təhvil və WMS görünüşü <ChevronRight size={16} /></span>
+          <span><SlidersHorizontal size={17} /> Anbar Й™mЙ™liyyat nЙ™zarЙ™ti</span>
+          <span>Anbarlar, transfer, tЙ™hvil vЙ™ WMS gГ¶rГјnГјЕџГј <ChevronRight size={16} /></span>
         </summary>
         <div className="warehouse-operations-body">
       <section className="metric-grid four">
-        <MetricCard label="Anbar sayı" value={warehouses.length} icon={Warehouse} tone="primary" />
+        <MetricCard label="Anbar sayД±" value={warehouses.length} icon={Warehouse} tone="primary" />
         <MetricCard
-          label="Satış üçün"
-          value={`${aggregateSummary.available} ədəd`}
-          trend={`${aggregateSummary.total} ümumi stok`}
+          label="SatД±Еџ ГјГ§Гјn"
+          value={`${aggregateSummary.available} Й™dЙ™d`}
+          trend={`${aggregateSummary.total} Гјmumi stok`}
           icon={Boxes}
           tone="info"
         />
         <MetricCard
-          label="Rezervdə"
-          value={`${aggregateSummary.reserved} ədəd`}
+          label="RezervdЙ™"
+          value={`${aggregateSummary.reserved} Й™dЙ™d`}
           trend={percent(aggregateSummary.reservedRate)}
           icon={Package}
           tone="warning"
         />
         <MetricCard
-          label="Risk siqnalı"
+          label="Risk siqnalД±"
           value={stockAlerts.length}
-          trend={`${deliveryOrders.length} təhvil növbəsi`}
+          trend={`${deliveryOrders.length} tЙ™hvil nГ¶vbЙ™si`}
           icon={CircleAlert}
           tone={stockAlerts.length > 0 ? "danger" : "success"}
         />
@@ -180,16 +182,16 @@ function WarehousePage({
       <div className="warehouse-head-actions">
         <button className="secondary-btn" onClick={onCreateProduct}>
           <Plus size={16} />
-          Məhsul yarat
+          MЙ™hsul yarat
         </button>
         <button
           className="primary-btn"
           disabled={warehouses.length === 0}
-          title={warehouses.length === 0 ? "Əvvəl anbar yaradın" : "Anbara məhsul mədaxil edin"}
+          title={warehouses.length === 0 ? "ЖЏvvЙ™l anbar yaradД±n" : "Anbara mЙ™hsul mЙ™daxil edin"}
           onClick={onReceiveStock}
         >
           <Plus size={16} />
-          Mədaxil et
+          MЙ™daxil et
         </button>
       </div>
 
@@ -203,57 +205,57 @@ function WarehousePage({
 
       <Panel className="wms-control-panel">
         <PanelHeader
-          title="WMS əməliyyat nəzarəti"
-          subtitle="SKU, rəf/bin, serial izləmə, sayım dövrü və minimum stok nöqtələri"
+          title="WMS Й™mЙ™liyyat nЙ™zarЙ™ti"
+          subtitle="SKU, rЙ™f/bin, serial izlЙ™mЙ™, sayД±m dГ¶vrГј vЙ™ minimum stok nГ¶qtЙ™lЙ™ri"
           icon={Boxes}
         />
         <div className="wms-summary-grid">
           <div>
-            <span>Serial izlənən</span>
+            <span>Serial izlЙ™nЙ™n</span>
             <strong>{wmsRows.filter((row) => row.serialMode === "IMEI/Serial").length}</strong>
-            <small>Bahalı cihazlar</small>
+            <small>BahalД± cihazlar</small>
           </div>
           <div>
-            <span>Sayımda</span>
-            <strong>{wmsRows.filter((row) => row.cycleCount === "Bu həftə").length}</strong>
+            <span>SayД±mda</span>
+            <strong>{wmsRows.filter((row) => row.cycleCount === "Bu hЙ™ftЙ™").length}</strong>
             <small>Cycle count prioriteti</small>
           </div>
           <div>
-            <span>Satınalma siqnalı</span>
+            <span>SatД±nalma siqnalД±</span>
             <strong>{reorderRows.length}</strong>
-            <small>Minimum stokdan aşağı</small>
+            <small>Minimum stokdan aЕџaДџД±</small>
           </div>
           <div>
-            <span>Rezerv yükü</span>
+            <span>Rezerv yГјkГј</span>
             <strong>{selectedSummary.reserved}</strong>
-            <small>Təhvilə bağlı stok</small>
+            <small>TЙ™hvilЙ™ baДџlД± stok</small>
           </div>
         </div>
         <DataTable
-          columns={["SKU", "Məhsul", "Barkod/QR", "Serial status", "Bin/Rəf", "İzləmə", "Sayım", "Satış üçün", "Reorder", "Sifarişdə", "Status"]}
+          columns={["SKU", "MЙ™hsul", "Barkod/QR", "Serial status", "Bin/RЙ™f", "Д°zlЙ™mЙ™", "SayД±m", "SatД±Еџ ГјГ§Гјn", "Reorder", "SifariЕџdЙ™", "Status"]}
           rows={wmsRows.slice(0, 8).map((row) => [
             <strong>{row.sku}</strong>,
             row.product,
             <BarcodeBadge barcode={row.barcode} qrPayload={row.qrPayload} />,
             <TwoLine
               title={row.sampleSerial}
-              subtitle={`${row.serialSummary.available} anbarda · ${row.serialSummary.reserved} rezerv · ${row.serialSummary.sold} satılıb`}
+              subtitle={`${row.serialSummary.available} anbarda В· ${row.serialSummary.reserved} rezerv В· ${row.serialSummary.sold} satД±lД±b`}
             />,
             row.bin,
             row.serialMode,
             row.cycleCount,
             row.available,
-            row.reorderQty > 0 ? `${row.reorderQty} ədəd` : "Yoxdur",
-            row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "—",
+            row.reorderQty > 0 ? `${row.reorderQty} Й™dЙ™d` : "Yoxdur",
+            row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} Й™dЙ™d`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "вЂ”",
             <StatusBadge status={row.procurementStatus || row.status} />,
           ])}
         />
       </Panel>
 
       <Panel className="product-catalog-panel">
-        <PanelHeader title="Məhsul kataloqu" subtitle="SKU, kateqoriya, qiymət və minimum stok nəzarəti" icon={Package} />
+        <PanelHeader title="MЙ™hsul kataloqu" subtitle="SKU, kateqoriya, qiymЙ™t vЙ™ minimum stok nЙ™zarЙ™ti" icon={Package} />
         <DataTable
-          columns={["SKU", "Məhsul", "Kateqoriya", "Alış", "Satış", "Minimum stok", "Sifarişdə", "İzləmə", "Əməliyyat"]}
+          columns={["SKU", "MЙ™hsul", "Kateqoriya", "AlД±Еџ", "SatД±Еџ", "Minimum stok", "SifariЕџdЙ™", "Д°zlЙ™mЙ™", "ЖЏmЙ™liyyat"]}
           rows={products.map((product) => [
             <strong>{product.sku}</strong>,
             product.name,
@@ -263,27 +265,27 @@ function WarehousePage({
             product.reorderLevel,
             (() => {
               const coverage = purchaseOrderCoverage.get(normalize(product.name));
-              return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
+              return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} Й™dЙ™d`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "вЂ”";
             })(),
             product.serialTracked ? "IMEI / Serial" : "Batch",
-            <button className="text-btn" onClick={() => onEditProduct(product.id)}>Redaktə</button>,
+            <button className="text-btn" onClick={() => onEditProduct(product.id)}>RedaktЙ™</button>,
           ])}
         />
       </Panel>
 
       <section className="warehouse-layout">
         <Panel>
-          <PanelHeader title="Anbarlar" subtitle="Ümumi və ya konkret anbar seçin" />
+          <PanelHeader title="Anbarlar" subtitle="Гњmumi vЙ™ ya konkret anbar seГ§in" />
           <div className="warehouse-filter-row">
             <select
               aria-label="Anbar status filteri"
               value={warehouseStatusFilter}
               onChange={(event) => setWarehouseStatusFilter(event.target.value)}
             >
-              <option>Hamısı</option>
+              <option>HamД±sД±</option>
               <option>Aktiv</option>
               <option>Passiv</option>
-              <option>Təmir</option>
+              <option>TЙ™mir</option>
             </select>
           </div>
           <div className="warehouse-card-list">
@@ -291,22 +293,22 @@ function WarehousePage({
               <button className="warehouse-main" onClick={() => onSelect("all")}>
                 <div className="warehouse-card-head">
                   <div>
-                    <strong>Ümumi</strong>
-                    <span>Bütün anbarlar · Məcmu qalıq</span>
+                    <strong>Гњmumi</strong>
+                    <span>BГјtГјn anbarlar В· MЙ™cmu qalД±q</span>
                   </div>
                   <StatusBadge status="Toplam" />
                 </div>
-                <p>Bütün anbarlar üzrə malların ümumi qalıq və satış üçün miqdarı.</p>
+                <p>BГјtГјn anbarlar ГјzrЙ™ mallarД±n Гјmumi qalД±q vЙ™ satД±Еџ ГјГ§Гјn miqdarД±.</p>
                 <div className="warehouse-stats">
-                  <span>{aggregateItems.length} məhsul</span>
-                  <span>{aggregateSummary.total} ədəd</span>
-                  <span>{aggregateSummary.available} satış üçün</span>
+                  <span>{aggregateItems.length} mЙ™hsul</span>
+                  <span>{aggregateSummary.total} Й™dЙ™d</span>
+                  <span>{aggregateSummary.available} satД±Еџ ГјГ§Гјn</span>
                 </div>
                 <ProgressRow label="" value={(aggregateSummary.available / Math.max(aggregateSummary.total, 1)) * 100} compact />
               </button>
               <div className="warehouse-actions">
                 <button className="text-btn" onClick={() => onSelect("all")}>
-                  Ümumiyə bax
+                  ГњmumiyЙ™ bax
                 </button>
               </div>
             </article>
@@ -322,14 +324,14 @@ function WarehousePage({
                     <div className="warehouse-card-head">
                       <div>
                         <strong>{warehouse.name}</strong>
-                        <span>{warehouse.code} · {warehouse.city}</span>
+                        <span>{warehouse.code} В· {warehouse.city}</span>
                       </div>
                       <StatusBadge status={warehouse.status} />
                     </div>
                     <p>{warehouse.address}</p>
                     <div className="warehouse-stats">
-                      <span>{items.length} məhsul</span>
-                      <span>{warehouseSummary.available} satış üçün</span>
+                      <span>{items.length} mЙ™hsul</span>
+                      <span>{warehouseSummary.available} satД±Еџ ГјГ§Гјn</span>
                       <span>{warehouseSummary.utilization}% doluluq</span>
                     </div>
                     <ProgressRow label="" value={warehouseSummary.utilization} compact />
@@ -339,7 +341,7 @@ function WarehousePage({
                       Daxil ol
                     </button>
                     <button className="text-btn" onClick={() => onEdit(warehouse.id)}>
-                      Redaktə
+                      RedaktЙ™
                     </button>
                     <button className="text-btn danger" onClick={() => onDelete(warehouse.id)}>
                       Sil
@@ -348,7 +350,7 @@ function WarehousePage({
                 </article>
               );
             })}
-            {warehouseList.length === 0 && <EmptyState title="Anbar tapılmadı" />}
+            {warehouseList.length === 0 && <EmptyState title="Anbar tapД±lmadД±" />}
           </div>
         </Panel>
 
@@ -357,19 +359,19 @@ function WarehousePage({
             <>
               <div className="warehouse-detail-head">
                 <div>
-                  <h2>Ümumi anbar qalığı</h2>
-                  <p>Bütün anbarlar üzrə məhsul qalıqları və anbar paylanması</p>
+                  <h2>Гњmumi anbar qalД±ДџД±</h2>
+                  <p>BГјtГјn anbarlar ГјzrЙ™ mЙ™hsul qalД±qlarД± vЙ™ anbar paylanmasД±</p>
                 </div>
               </div>
               <div className="warehouse-info-grid">
-                <TwoLine title="Anbar sayı" subtitle={`${warehouses.length} anbar`} />
-                <TwoLine title="Unikal məhsul" subtitle={`${aggregateItems.length} məhsul`} />
-                <TwoLine title="Ümumi / rezerv" subtitle={`${aggregateSummary.total} / ${aggregateSummary.reserved} ədəd`} />
-                <TwoLine title="Satış üçün dəyər" subtitle={money(aggregateSummary.value)} />
+                <TwoLine title="Anbar sayД±" subtitle={`${warehouses.length} anbar`} />
+                <TwoLine title="Unikal mЙ™hsul" subtitle={`${aggregateItems.length} mЙ™hsul`} />
+                <TwoLine title="Гњmumi / rezerv" subtitle={`${aggregateSummary.total} / ${aggregateSummary.reserved} Й™dЙ™d`} />
+                <TwoLine title="SatД±Еџ ГјГ§Гјn dЙ™yЙ™r" subtitle={money(aggregateSummary.value)} />
               </div>
               <WarehouseStockToolbar filter={stockFilter} setFilter={setStockFilter} />
               <DataTable
-                columns={["Məhsul", "Ümumi", "Rezerv", "Satış üçün", "Sifarişdə", "Anbar paylanması", "Dəyər", "Risk"]}
+                columns={["MЙ™hsul", "Гњmumi", "Rezerv", "SatД±Еџ ГјГ§Гјn", "SifariЕџdЙ™", "Anbar paylanmasД±", "DЙ™yЙ™r", "Risk"]}
                 rows={visibleItems.map((item) => [
                   <strong>{item.product}</strong>,
                   item.total,
@@ -377,11 +379,11 @@ function WarehousePage({
                   getAvailableQuantity(item),
                   (() => {
                     const coverage = purchaseOrderCoverage.get(normalize(item.product));
-                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
+                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} Й™dЙ™d`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "вЂ”";
                   })(),
                   <WarehouseDistribution distribution={item.distribution} />,
                   money(getAvailableQuantity(item) * item.price),
-                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="Aşağı stok" /> : "Normal",
+                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="AЕџaДџД± stok" /> : "Normal",
                 ])}
               />
               <WarehouseTransferPanel
@@ -401,12 +403,12 @@ function WarehousePage({
                 <div>
                   <h2>{selectedWarehouse.name}</h2>
                   <p>
-                    {selectedWarehouse.code} · {selectedWarehouse.type} · {selectedWarehouse.city}
+                    {selectedWarehouse.code} В· {selectedWarehouse.type} В· {selectedWarehouse.city}
                   </p>
                 </div>
                 <div className="warehouse-head-actions">
                   <button className="secondary-btn" onClick={() => onEdit(selectedWarehouse.id)}>
-                    Redaktə et
+                    RedaktЙ™ et
                   </button>
                   <button className="secondary-btn danger-outline" onClick={() => onDelete(selectedWarehouse.id)}>
                     Sil
@@ -414,14 +416,14 @@ function WarehousePage({
                 </div>
               </div>
               <div className="warehouse-info-grid">
-                <TwoLine title="Məsul şəxs" subtitle={selectedWarehouse.manager} />
-                <TwoLine title="Ünvan" subtitle={selectedWarehouse.address} />
-                <TwoLine title="Tutum" subtitle={`${selectedSummary.total} / ${selectedWarehouse.capacity} ədəd`} />
-                <TwoLine title="Satış üçün dəyər" subtitle={money(selectedSummary.value)} />
+                <TwoLine title="MЙ™sul ЕџЙ™xs" subtitle={selectedWarehouse.manager} />
+                <TwoLine title="Гњnvan" subtitle={selectedWarehouse.address} />
+                <TwoLine title="Tutum" subtitle={`${selectedSummary.total} / ${selectedWarehouse.capacity} Й™dЙ™d`} />
+                <TwoLine title="SatД±Еџ ГјГ§Гјn dЙ™yЙ™r" subtitle={money(selectedSummary.value)} />
               </div>
               <WarehouseStockToolbar filter={stockFilter} setFilter={setStockFilter} />
               <DataTable
-                columns={["Məhsul", "Ümumi", "Rezerv", "Satış üçün", "Sifarişdə", "Qiymət", "Dəyər", "Risk"]}
+                columns={["MЙ™hsul", "Гњmumi", "Rezerv", "SatД±Еџ ГјГ§Гјn", "SifariЕџdЙ™", "QiymЙ™t", "DЙ™yЙ™r", "Risk"]}
                 rows={visibleItems.map((item) => [
                   <strong>{item.product}</strong>,
                   item.total,
@@ -429,11 +431,11 @@ function WarehousePage({
                   getAvailableQuantity(item),
                   (() => {
                     const coverage = purchaseOrderCoverage.get(normalize(item.product));
-                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
+                    return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} Й™dЙ™d`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "вЂ”";
                   })(),
                   money(item.price),
                   money(getAvailableQuantity(item) * item.price),
-                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="Aşağı stok" /> : "Normal",
+                  getAvailableQuantity(item) <= 3 ? <StatusBadge status="AЕџaДџД± stok" /> : "Normal",
                 ])}
               />
               <WarehouseTransferPanel
@@ -448,7 +450,7 @@ function WarehousePage({
               />
             </>
           ) : (
-            <EmptyState title="Anbar seçilməyib" />
+            <EmptyState title="Anbar seГ§ilmЙ™yib" />
           )}
         </Panel>
       </section>
@@ -457,3 +459,4 @@ function WarehousePage({
     </div>
   );
 }
+
