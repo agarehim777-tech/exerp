@@ -42,6 +42,7 @@ export const moduleRoutes = {
   "access-check": "/icaze-yoxlama",
   audit: "/audit",
   periods: "/maliyye/dovrler",
+  currencies: "/maliyye/valyutalar",
 
 };
 
