@@ -36,9 +36,9 @@ function CreditsPage({
   selectedCreditId,
   onClearSelectedCredit,
 }) {
-  const [creditFilter, setCreditFilter] = useState("HamД±sД±");
-  const [sourceFilter, setSourceFilter] = useState("BГјtГјn mЙ™nbЙ™lЙ™r");
-  const [monthFilter, setMonthFilter] = useState("BГјtГјn aylar");
+  const [creditFilter, setCreditFilter] = useState("Hamısı");
+  const [sourceFilter, setSourceFilter] = useState("Bütün mənbələr");
+  const [monthFilter, setMonthFilter] = useState("Bütün aylar");
   const [yearFilter, setYearFilter] = useState(String(currentBusinessYear));
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(10);
@@ -59,7 +59,7 @@ function CreditsPage({
   const todayCredits = enrichedCredits.filter((item) => item.paymentState.isDueToday);
   const overdueCredits = enrichedCredits.filter((item) => item.paymentState.isOverdue);
   const completedCredits = enrichedCredits.filter((item) => isCreditClosed(item.credit, item.plan));
-  const salesCredits = enrichedCredits.filter((item) => getCreditSourceLabel(item.credit) === "SatД±Еџdan gЙ™lЙ™n");
+  const salesCredits = enrichedCredits.filter((item) => getCreditSourceLabel(item.credit) === "Satışdan gələn");
   const monthlyDue = enrichedCredits.reduce((sum, item) => {
     if (isCreditClosed(item.credit, item.plan)) return sum;
     return sum + Number(item.paymentState.nextInstallment?.amount || 0);
@@ -77,40 +77,40 @@ function CreditsPage({
   const collectionQueueCount = todayCredits.length + overdueCredits.length;
   const handoverItems = [
     {
-      label: "SatД±Еџ baДџlantД±sД±",
+      label: "Satış bağlantısı",
       value: `${linkedSalesCredits.length}/${salesCredits.length}`,
-      hint: "SifariЕџ vЙ™ mГјqavilЙ™ ilЙ™ gЙ™lЙ™n kreditlЙ™r",
+      hint: "Sifariş və müqavilə ilə gələn kreditlər",
       tone: linkedSalesCredits.length === salesCredits.length ? "success" : "warning",
     },
     {
-      label: "AyrД± borc mЙ™ntiqi",
+      label: "Ayrı borc məntiqi",
       value: uniqueContractCount,
-      hint: "HЙ™r kredit ayrД±ca mГјqavilЙ™ kimi saxlanД±r",
+      hint: "Hər kredit ayrıca müqavilə kimi saxlanır",
       tone: uniqueContractCount === enrichedCredits.length ? "success" : "warning",
     },
     {
-      label: "YД±ДџД±m nГ¶vbЙ™si",
+      label: "Yığım növbəsi",
       value: collectionQueueCount,
-      hint: "Bu gГјn vЙ™ gecikmiЕџ Г¶dЙ™niЕџlЙ™r",
+      hint: "Bu gün və gecikmiş ödənişlər",
       tone: collectionQueueCount > 0 ? "danger" : "success",
     },
     {
-      label: "MaliyyЙ™ sinxronu",
+      label: "Maliyyə sinxronu",
       value: money(paidTotal),
-      hint: "ЖЏsas Г¶dЙ™niЕџ borcdan, cЙ™rimЙ™ kassadan izlЙ™nir",
+      hint: "Əsas ödəniş borcdan, cərimə kassadan izlənir",
       tone: "info",
     },
   ];
   const filterItems = [
-    { label: "HamД±sД±", title: "HamД±sД±", count: enrichedCredits.length, tone: "primary" },
+    { label: "Hamısı", title: "Hamısı", count: enrichedCredits.length, tone: "primary" },
     { label: "Aktiv", title: "Aktiv", count: activeCredits.length, tone: "success" },
-    { label: "GГ¶zlЙ™yЙ™n", title: "GГ¶zlЙ™yЙ™n", count: enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "GГ¶zlЙ™yЙ™n")).length, tone: "warning" },
-    { label: "GecikmiЕџ", title: "GecikmiЕџ", count: overdueCredits.length, tone: "danger" },
-    { label: "BaДџlanmД±Еџ", title: "BaДџlanmД±Еџ", count: completedCredits.length, tone: "info" },
-    { label: "BugГјnkГј", title: "BugГјnkГј", count: todayCredits.length, tone: "neutral" },
+    { label: "Gözləyən", title: "Gözləyən", count: enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Gözləyən")).length, tone: "warning" },
+    { label: "Gecikmiş", title: "Gecikmiş", count: overdueCredits.length, tone: "danger" },
+    { label: "Bağlanmış", title: "Bağlanmış", count: completedCredits.length, tone: "info" },
+    { label: "Bugünkü", title: "Bugünkü", count: todayCredits.length, tone: "neutral" },
     { label: "Cari ay", title: "Cari ay", count: currentMonthCredits.length, tone: "neutral" },
   ];
-  const sourceFilters = ["BГјtГјn mЙ™nbЙ™lЙ™r", "SatД±Еџdan gЙ™lЙ™n", "Manual kredit"];
+  const sourceFilters = ["Bütün mənbələr", "Satışdan gələn", "Manual kredit"];
   const yearOptions = [
     ...new Set(
       enrichedCredits
@@ -123,8 +123,8 @@ function CreditsPage({
   const visibleCredits = enrichedCredits
     .filter((item) => {
       const date = getCreditRowDate(item);
-      const matchesMonth = monthFilter === "BГјtГјn aylar" || (date && monthNamesAz[date.getMonth()] === monthFilter);
-      const matchesYear = yearFilter === "BГјtГјn illЙ™r" || (date && String(date.getFullYear()) === String(yearFilter));
+      const matchesMonth = monthFilter === "Bütün aylar" || (date && monthNamesAz[date.getMonth()] === monthFilter);
+      const matchesYear = yearFilter === "Bütün illər" || (date && String(date.getFullYear()) === String(yearFilter));
       return (
         matchesCreditManagementFilter(item, creditFilter) &&
         matchesCreditSourceFilter(item, sourceFilter) &&
@@ -155,9 +155,9 @@ function CreditsPage({
     onClearSelectedCredit?.();
   };
   const resetFilters = () => {
-    setCreditFilter("HamД±sД±");
-    setSourceFilter("BГјtГјn mЙ™nbЙ™lЙ™r");
-    setMonthFilter("BГјtГјn aylar");
+    setCreditFilter("Hamısı");
+    setSourceFilter("Bütün mənbələr");
+    setMonthFilter("Bütün aylar");
     setYearFilter(String(currentBusinessYear));
     setSearchTerm("");
     setPageSize(10);
@@ -168,7 +168,7 @@ function CreditsPage({
   const exportVisibleCredits = () => {
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = [
-      ["Kod", "MГјЕџtЙ™ri", "FIN", "MГјqavilЙ™", "Cihaz", "MЙ™blЙ™Дџ", "QalД±q", "AylД±q", "NГ¶vbЙ™ti tarix", "Status", "GecikmЙ™", "MЙ™nbЙ™"],
+      ["Kod", "Müştəri", "FIN", "Müqavilə", "Cihaz", "Məbləğ", "Qalıq", "Aylıq", "Növbəti tarix", "Status", "Gecikmə", "Mənbə"],
       ...visibleCredits.map((item) => {
         const { credit, plan, paymentState } = item;
         return [
@@ -182,7 +182,7 @@ function CreditsPage({
           paymentState.nextInstallment?.amount || plan.monthly,
           paymentState.nextInstallment?.due || credit.next,
           getCreditManagementStatus(item),
-          paymentState.isOverdue ? `${paymentState.daysOverdue} gГјn` : "",
+          paymentState.isOverdue ? `${paymentState.daysOverdue} gün` : "",
           getCreditSourceLabel(credit),
         ];
       }),
@@ -201,13 +201,13 @@ function CreditsPage({
   return (
     <div className="stack">
       <section className="metric-grid four">
-        <MetricCard label="Aktiv kreditlЙ™r" value={activeCredits.length} icon={CreditCard} tone="primary" />
-        <MetricCard label="Portfel qalД±ДџД±" value={money(portfolioBalance)} trend={`${money(paidTotal)} Г¶dЙ™nilib`} icon={Wallet} tone="success" />
-        <MetricCard label="Bu ay yД±ДџД±m" value={money(monthlyDue)} trend={`Orta ${money(averageMonthly)}`} icon={CalendarClock} tone="info" />
-        <MetricCard label="GecikmiЕџ" value={overdueCredits.length} trend={money(overdueAmount)} icon={CircleAlert} tone="danger" />
+        <MetricCard label="Aktiv kreditlər" value={activeCredits.length} icon={CreditCard} tone="primary" />
+        <MetricCard label="Portfel qalığı" value={money(portfolioBalance)} trend={`${money(paidTotal)} ödənilib`} icon={Wallet} tone="success" />
+        <MetricCard label="Bu ay yığım" value={money(monthlyDue)} trend={`Orta ${money(averageMonthly)}`} icon={CalendarClock} tone="info" />
+        <MetricCard label="Gecikmiş" value={overdueCredits.length} trend={money(overdueAmount)} icon={CircleAlert} tone="danger" />
       </section>
 
-      <section className="credit-handover-strip" aria-label="Kredit modulunun tЙ™hvil statusu">
+      <section className="credit-handover-strip" aria-label="Kredit modulunun təhvil statusu">
         {handoverItems.map((item) => (
           <div className={`credit-handover-item ${item.tone}`} key={item.label}>
             <span>{item.label}</span>
@@ -222,13 +222,13 @@ function CreditsPage({
       <section className="credit-management-shell">
         <div className="credit-management-topline">
           <div>
-            <h2>Portfel siyahД±sД±</h2>
-            <p>KreditlЙ™ri prioritet, tarix vЙ™ mЙ™nbЙ™ ГјzrЙ™ idarЙ™ edin.</p>
+            <h2>Portfel siyahısı</h2>
+            <p>Kreditləri prioritet, tarix və mənbə üzrə idarə edin.</p>
           </div>
-          <div className="credit-management-summary" aria-label="Kredit portfeli xГјlasЙ™si">
-            <span><strong>{visibleCredits.length}</strong> nЙ™ticЙ™</span>
-            <span><strong>{todayCredits.length}</strong> bu gГјn</span>
-            <span><strong>{salesCredits.length}</strong> satД±Еџdan</span>
+          <div className="credit-management-summary" aria-label="Kredit portfeli xülasəsi">
+            <span><strong>{visibleCredits.length}</strong> nəticə</span>
+            <span><strong>{todayCredits.length}</strong> bu gün</span>
+            <span><strong>{salesCredits.length}</strong> satışdan</span>
           </div>
         </div>
 
@@ -250,16 +250,16 @@ function CreditsPage({
             <div>
               <h3>
                 <CreditCard size={17} />
-                Kredit siyahД±sД±
+                Kredit siyahısı
               </h3>
-              <span>{todayLabel} tarixinЙ™ portfel icmalД±</span>
+              <span>{todayLabel} tarixinə portfel icmalı</span>
             </div>
             <strong>{visibleCredits.length} kredit</strong>
           </div>
 
           <div className="credit-directory-filters">
             <label>
-              <span>GГ¶stЙ™r</span>
+              <span>Göstər</span>
               <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
                 {[10, 25, 50, 100].map((size) => (
                   <option key={size} value={size}>{size}</option>
@@ -269,44 +269,44 @@ function CreditsPage({
             <label>
               <span>Ay</span>
               <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
-                <option>BГјtГјn aylar</option>
+                <option>Bütün aylar</option>
                 {monthNamesAz.map((month) => (
                   <option key={month}>{month}</option>
                 ))}
               </select>
             </label>
             <label>
-              <span>Д°l</span>
+              <span>İl</span>
               <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
-                <option>BГјtГјn illЙ™r</option>
+                <option>Bütün illər</option>
                 {yearOptions.map((year) => (
                   <option key={year}>{year}</option>
                 ))}
               </select>
             </label>
             <label className="credit-search-field">
-              <span>AxtarД±Еџ</span>
+              <span>Axtarış</span>
               <div>
                 <Search size={15} />
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="MГјЕџtЙ™ri, kredit kodu, mГјqavilЙ™..."
+                  placeholder="Müştəri, kredit kodu, müqavilə..."
                 />
               </div>
             </label>
             <label>
-              <span>MЙ™nbЙ™</span>
+              <span>Mənbə</span>
               <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
                 {sourceFilters.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </label>
-            <button className="primary-btn icon-only" title="FilterlЙ™ri tЙ™tbiq et" type="button" onClick={applyFilters}>
+            <button className="primary-btn icon-only" title="Filterləri tətbiq et" type="button" onClick={applyFilters}>
               <Filter size={16} />
             </button>
-            <button className="secondary-btn icon-only" title="FilterlЙ™ri sД±fД±rla" type="button" onClick={resetFilters}>
+            <button className="secondary-btn icon-only" title="Filterləri sıfırla" type="button" onClick={resetFilters}>
               <RefreshCw size={16} />
             </button>
             <button className="secondary-btn credit-excel-btn" type="button" onClick={exportVisibleCredits}>
@@ -316,13 +316,13 @@ function CreditsPage({
           </div>
 
           <DataTable
-            columns={["#", "MГјЕџtЙ™ri", "MГјqavilЙ™ / cihaz", "MГјqavilЙ™ mЙ™blЙ™Дџi", "Г–dЙ™nilib", "QalД±q", "NГ¶vbЙ™ti", "Status", "ЖЏmЙ™l."]}
+            columns={["#", "Müştəri", "Müqavilə / cihaz", "Müqavilə məbləği", "Ödənilib", "Qalıq", "Növbəti", "Status", "Əməl."]}
             rows={tableCredits.map((item, index) => {
               const { credit, plan, paymentState } = item;
               const nextAmount = Number(paymentState.nextInstallment?.amount || 0);
               const debt = getCreditDebtFormula(item);
               const compactCode = String(credit.id || "").replace(/\D/g, "").slice(-4) || credit.id;
-              const customerMeta = [credit.fin, getCreditSourceLabel(credit)].filter(Boolean).join(" В· ");
+              const customerMeta = [credit.fin, getCreditSourceLabel(credit)].filter(Boolean).join(" · ");
               return [
                 index + 1,
                 <div className="credit-customer-cell">
@@ -331,13 +331,13 @@ function CreditsPage({
                     <strong>{credit.customer}</strong>
                     <span>
                       <b>#{compactCode}</b>
-                      {customerMeta ? ` В· ${customerMeta}` : ""}
+                      {customerMeta ? ` · ${customerMeta}` : ""}
                     </span>
                   </div>
                 </div>,
                 <div className="credit-contract-cell" data-testid="credit-contract-cell">
                   <strong>{credit.contractId || credit.id}</strong>
-                  <span>{credit.device || credit.product || "Cihaz qeyd edilmЙ™yib"}</span>
+                  <span>{credit.device || credit.product || "Cihaz qeyd edilməyib"}</span>
                   <em>
                     {credit.orderId ? (
                       <button
@@ -346,27 +346,27 @@ function CreditsPage({
                         onClick={() => onOpenSalesOrder?.(credit.orderId)}
                         data-testid="credit-row-order-link"
                       >
-                        {credit.orderId} sifariЕџi
+                        {credit.orderId} sifarişi
                       </button>
                     ) : (
                       "Manual qeyd"
                     )}{" "}
-                    В· {debt.remainingMonths} ay qalД±b
+                    · {debt.remainingMonths} ay qalıb
                   </em>
                 </div>,
-                <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay В· ${credit.date || "tarixsiz"}`} />,
-                <TwoLine title={money(debt.paid)} subtitle={`${credit.paidMonths || 0}/${plan.months} ay baДџlanД±b`} />,
-                <TwoLine title={money(debt.balance)} subtitle={`NГ¶vbЙ™ti ${money(debt.nextAmount)}`} />,
-                <TwoLine title={paymentState.nextInstallment?.due || credit.next || "вЂ”"} subtitle={nextAmount > 0 ? `${money(nextAmount)} aylД±q` : "Plan tamamlanД±b"} />,
+                <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay · ${credit.date || "tarixsiz"}`} />,
+                <TwoLine title={money(debt.paid)} subtitle={`${credit.paidMonths || 0}/${plan.months} ay bağlanıb`} />,
+                <TwoLine title={money(debt.balance)} subtitle={`Növbəti ${money(debt.nextAmount)}`} />,
+                <TwoLine title={paymentState.nextInstallment?.due || credit.next || "—"} subtitle={nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
                 <div className="credit-status-stack">
                   <StatusBadge status={getCreditManagementStatus(item)} />
-                  {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gГјn gecikmЙ™</strong>}
+                  {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
                 </div>,
                 <div className="credit-table-actions">
-                  <button className="icon-btn" title="Kredit kartД±na bax" onClick={() => setDetailCreditId(credit.id)}>
+                  <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
                   </button>
-                  <button className="icon-btn" title="Г–dЙ™niЕџ tarixГ§Й™si" onClick={() => setDetailCreditId(credit.id)}>
+                  <button className="icon-btn" title="Ödəniş tarixçəsi" onClick={() => setDetailCreditId(credit.id)}>
                     <RefreshCw size={16} />
                   </button>
                 </div>,
@@ -389,4 +389,3 @@ function CreditsPage({
     </div>
   );
 }
-
