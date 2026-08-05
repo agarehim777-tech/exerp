@@ -465,7 +465,1118 @@ export default function ProcurementPage() {
       email: vendor.email || "",
       phone: vendor.phone || "",
       address: vendor.address || "",
-      is…12418 tokens truncated…"} icon={Receipt}>
+      is_active: vendor.is_active,
+    });
+    setTab("vendors");
+  }
+
+  async function toggleVendor(vendor) {
+    setSaving(true);
+    const { error: vendorError } = await supabase.from("vendors").update({ is_active: !vendor.is_active }).eq("id", vendor.id);
+    if (vendorError) setError(getError(vendorError));
+    else {
+      setNotice(`${vendor.name} ${vendor.is_active ? "passiv edildi" : "aktiv edildi"}.`);
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function deleteVendor(vendor) {
+    const linkedPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
+    if (linkedPo.length) {
+      setError("");
+      setNotice("Bu vendor ГјzrЙ™ PO tarixi var. SilmЙ™k Й™vЙ™zinЙ™ passiv statusa keГ§irildi.");
+      await supabase.from("vendors").update({ is_active: false }).eq("id", vendor.id);
+      await load();
+      return;
+    }
+    if (!window.confirm(`${vendor.name} vendorunu silmЙ™k istЙ™yirsiniz?`)) return;
+    setSaving(true);
+    const { error: vendorError } = await supabase.from("vendors").delete().eq("id", vendor.id);
+    if (vendorError) setError(getError(vendorError));
+    else {
+      setNotice("Vendor silindi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function savePo(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    if (!poForm.vendor_id || !poForm.po_number.trim()) {
+      setError("Vendor vЙ™ PO nГ¶mrЙ™si tЙ™lЙ™b olunur.");
+      return;
+    }
+    const validLines = poDraftLines
+      .filter((line) => line.product_sku.trim() && toNumber(line.qty_ordered) > 0 && toNumber(line.unit_price) >= 0)
+      .map((line, index) => ({
+        line_no: index + 1,
+        product_sku: line.product_sku.trim(),
+        description: line.description.trim() || null,
+        qty_ordered: toNumber(line.qty_ordered),
+        unit_price: toNumber(line.unit_price),
+        tax_rate: toNumber(line.tax_rate),
+      }));
+    if (!validLines.length) {
+      setError("PO ГјГ§Гјn Й™n azД± bir mЙ™hsul sЙ™tri tЙ™lЙ™b olunur.");
+      return;
+    }
+
+    setSaving(true);
+    const payload = {
+      vendor_id: poForm.vendor_id,
+      po_number: poForm.po_number.trim(),
+      order_date: poForm.order_date || today(),
+      expected_date: poForm.expected_date || null,
+      currency: poForm.currency || "AZN",
+      notes: poForm.notes.trim() || null,
+      created_by: user?.id || null,
+    };
+
+    if (editingPoId) {
+      const currentPoLines = linesByPo.get(editingPoId) || [];
+      const hasMovements =
+        receiptLines.some((line) => currentPoLines.some((poLine) => poLine.id === line.po_line_id)) ||
+        invoiceLines.some((line) => currentPoLines.some((poLine) => poLine.id === line.po_line_id));
+      const { error: poError } = await supabase.from("purchase_orders").update(payload).eq("id", editingPoId);
+      if (poError) {
+        setError(getError(poError));
+        setSaving(false);
+        return;
+      }
+      if (!hasMovements) {
+        const { error: deleteError } = await supabase.from("purchase_order_lines").delete().eq("po_id", editingPoId);
+        if (deleteError) {
+          setError(getError(deleteError));
+          setSaving(false);
+          return;
+        }
+        const { error: lineError } = await supabase.from("purchase_order_lines").insert(validLines.map((line) => ({ ...line, po_id: editingPoId })));
+        if (lineError) {
+          setError(getError(lineError));
+          setSaving(false);
+          return;
+        }
+      }
+      setNotice(hasMovements ? "PO baЕџlД±ДџД± yenilЙ™ndi. MЙ™daxil/faktura olan PO sЙ™tirlЙ™ri qorundu." : "PO yenilЙ™ndi.");
+    } else {
+      const { data: po, error: poError } = await supabase
+        .from("purchase_orders")
+        .insert({ ...payload, tenant_id: tenantId, status: "draft" })
+        .select()
+        .single();
+      if (poError) {
+        setError(getError(poError));
+        setSaving(false);
+        return;
+      }
+      const { error: lineError } = await supabase.from("purchase_order_lines").insert(validLines.map((line) => ({ ...line, po_id: po.id })));
+      if (lineError) {
+        setError(getError(lineError));
+        setSaving(false);
+        return;
+      }
+      setNotice("PO yaradД±ldД± vЙ™ qaralama statusunda saxlanД±ldД±.");
+    }
+
+    resetPoForm();
+    await load();
+    setSaving(false);
+  }
+
+  function editPo(po) {
+    const lines = linesByPo.get(po.id) || [];
+    setEditingPoId(po.id);
+    setPoForm({
+      vendor_id: po.vendor_id,
+      po_number: po.po_number || "",
+      order_date: po.order_date || today(),
+      expected_date: po.expected_date || "",
+      currency: po.currency || "AZN",
+      notes: po.notes || "",
+    });
+    setPoDraftLines(
+      lines.length
+        ? lines.map((line) => ({
+            product_sku: line.product_sku || "",
+            description: line.description || "",
+            qty_ordered: String(line.qty_ordered || ""),
+            unit_price: String(line.unit_price || ""),
+            tax_rate: String(line.tax_rate || 0),
+          }))
+        : [{ ...emptyPoLine }],
+    );
+    setTab("po");
+  }
+
+  async function updatePoStatus(poId, status) {
+    setSaving(true);
+    const { error: statusError } = await supabase.from("purchase_orders").update({ status }).eq("id", poId);
+    if (statusError) setError(getError(statusError));
+    else {
+      setNotice(`PO statusu dЙ™yiЕџdi: ${PO_STATUS[status]?.label || status}.`);
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function recomputePoStatus(poId, sourceReceiptLines = receiptLines) {
+    const lines = linesByPo.get(poId) || [];
+    if (!lines.length) return;
+    const map = new Map();
+    sourceReceiptLines.forEach((line) => {
+      const accepted = Math.max(0, toNumber(line.qty_received) - toNumber(line.qty_rejected));
+      map.set(line.po_line_id, (map.get(line.po_line_id) || 0) + accepted);
+    });
+    const anyReceived = lines.some((line) => (map.get(line.id) || 0) > 0);
+    const allReceived = lines.every((line) => (map.get(line.id) || 0) >= toNumber(line.qty_ordered));
+    const nextStatus = allReceived ? "received" : anyReceived ? "partial" : "approved";
+    await supabase.from("purchase_orders").update({ status: nextStatus }).eq("id", poId);
+  }
+
+  async function deletePo(po) {
+    const hasReceipts = goodsReceipts.some((receipt) => receipt.po_id === po.id);
+    const hasInvoices = invoices.some((invoice) => invoice.po_id === po.id);
+    if (hasReceipts || hasInvoices) {
+      setError("Bu PO ГјzrЙ™ mЙ™daxil vЙ™ ya faktura var. SilmЙ™k Й™vЙ™zinЙ™ lЙ™Дџv edin/baДџlayД±n.");
+      return;
+    }
+    if (!window.confirm(`${po.po_number} PO-sunu silmЙ™k istЙ™yirsiniz?`)) return;
+    setSaving(true);
+    const { error: poError } = await supabase.from("purchase_orders").delete().eq("id", po.id);
+    if (poError) setError(getError(poError));
+    else {
+      setNotice("PO silindi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
+  function choosePoForReceipt(poId) {
+    const po = purchaseOrders.find((item) => item.id === poId);
+    if (!po) return;
+    setEditingReceiptId(null);
+    setReceiptForm({ ...emptyReceipt, po_id: poId, grn_number: nextNumber("GRN") });
+    setReceiptDraftLines(buildReceiptLines(poId));
+    setTab("grn");
+  }
+
+  function editReceipt(receipt) {
+    setEditingReceiptId(receipt.id);
+    setReceiptForm({
+      po_id: receipt.po_id,
+      grn_number: receipt.grn_number || "",
+      receipt_date: receipt.receipt_date || today(),
+      notes: receipt.notes || "",
+    });
+    setReceiptDraftLines(buildReceiptLines(receipt.po_id, receipt.id));
+    setTab("grn");
+  }
+
+  async function saveReceipt(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    if (!receiptForm.po_id || !receiptForm.grn_number.trim()) {
+      setError("PO vЙ™ GRN nГ¶mrЙ™si tЙ™lЙ™b olunur.");
+      return;
+    }
+    const items = receiptDraftLines
+      .filter((line) => toNumber(line.qty_received) > 0)
+      .map((line) => ({
+        po_line_id: line.po_line_id,
+        qty_received: toNumber(line.qty_received),
+        qty_rejected: toNumber(line.qty_rejected),
+      }));
+    if (!items.length) {
+      setError("ЖЏn azД± bir mЙ™daxil sЙ™tri tЙ™lЙ™b olunur.");
+      return;
+    }
+    setSaving(true);
+    let receiptId = editingReceiptId;
+    if (editingReceiptId) {
+      const { error: receiptError } = await supabase
+        .from("goods_receipts")
+        .update({
+          po_id: receiptForm.po_id,
+          grn_number: receiptForm.grn_number.trim(),
+          receipt_date: receiptForm.receipt_date || today(),
+          notes: receiptForm.notes.trim() || null,
+        })
+        .eq("id", editingReceiptId);
+      if (receiptError) {
+        setError(getError(receiptError));
+        setSaving(false);
+        return;
+      }
+      const { error: deleteError } = await supabase.from("goods_receipt_lines").delete().eq("grn_id", editingReceiptId);
+      if (deleteError) {
+        setError(getError(deleteError));
+        setSaving(false);
+        return;
+      }
+    } else {
+      const { data: receipt, error: receiptError } = await supabase
+        .from("goods_receipts")
+        .insert({
+          tenant_id: tenantId,
+          po_id: receiptForm.po_id,
+          grn_number: receiptForm.grn_number.trim(),
+          receipt_date: receiptForm.receipt_date || today(),
+          notes: receiptForm.notes.trim() || null,
+          received_by: user?.id || null,
+        })
+        .select()
+        .single();
+      if (receiptError) {
+        setError(getError(receiptError));
+        setSaving(false);
+        return;
+      }
+      receiptId = receipt.id;
+    }
+
+    const { error: lineError } = await supabase.from("goods_receipt_lines").insert(items.map((line) => ({ ...line, grn_id: receiptId })));
+    if (lineError) {
+      setError(getError(lineError));
+      setSaving(false);
+      return;
+    }
+
+    const nextReceiptLines = [...receiptLines.filter((line) => line.grn_id !== receiptId), ...items.map((line) => ({ ...line, grn_id: receiptId }))];
+    await recomputePoStatus(receiptForm.po_id, nextReceiptLines);
+    setNotice(editingReceiptId ? "GRN yenilЙ™ndi vЙ™ PO statusu hesablandД±." : "MЙ™daxil qeyd edildi vЙ™ PO statusu hesablandД±.");
+    resetReceiptForm();
+    await load();
+    setSaving(false);
+  }
+
+  async function deleteReceipt(receipt) {
+    if (!window.confirm(`${receipt.grn_number} GRN qeydini silmЙ™k istЙ™yirsiniz?`)) return;
+    setSaving(true);
+    const { error: receiptError } = await supabase.from("goods_receipts").delete().eq("id", receipt.id);
+    if (receiptError) setError(getError(receiptError));
+    else {
+      await recomputePoStatus(receipt.po_id, receiptLines.filter((line) => line.grn_id !== receipt.id));
+      setNotice("GRN silindi vЙ™ PO statusu yenilЙ™ndi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
+  function choosePoForInvoice(poId) {
+    setEditingInvoiceId(null);
+    const po = purchaseOrders.find((item) => item.id === poId);
+    setInvoiceForm({
+      ...emptyInvoice,
+      po_id: poId,
+      invoice_number: nextNumber("INV"),
+      currency: po?.currency || "AZN",
+    });
+    setInvoiceDraftLines(buildInvoiceLines(poId));
+    setTab("invoices");
+  }
+
+  function editInvoice(invoice) {
+    setEditingInvoiceId(invoice.id);
+    setInvoiceForm({
+      po_id: invoice.po_id || "",
+      invoice_number: invoice.invoice_number || "",
+      invoice_date: invoice.invoice_date || today(),
+      due_date: invoice.due_date || "",
+      currency: invoice.currency || "AZN",
+      match_notes: invoice.match_notes || "",
+    });
+    setInvoiceDraftLines(invoice.po_id ? buildInvoiceLines(invoice.po_id, invoice.id) : []);
+    setTab("invoices");
+  }
+
+  async function saveInvoice(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    if (!invoiceForm.po_id || !invoiceForm.invoice_number.trim()) {
+      setError("PO vЙ™ faktura nГ¶mrЙ™si tЙ™lЙ™b olunur.");
+      return;
+    }
+    const po = purchaseOrders.find((item) => item.id === invoiceForm.po_id);
+    if (!po) {
+      setError("PO tapД±lmadД±.");
+      return;
+    }
+    const items = invoiceDraftLines
+      .filter((line) => toNumber(line.qty_invoiced) > 0 && toNumber(line.unit_price) >= 0)
+      .map((line) => ({
+        po_line_id: line.po_line_id,
+        qty_invoiced: toNumber(line.qty_invoiced),
+        unit_price: toNumber(line.unit_price),
+        tax_rate: toNumber(line.tax_rate),
+      }));
+    if (!items.length) {
+      setError("Faktura ГјГ§Гјn Й™n azД± bir sЙ™tir tЙ™lЙ™b olunur.");
+      return;
+    }
+    setSaving(true);
+    let invoiceId = editingInvoiceId;
+    const payload = {
+      vendor_id: po.vendor_id,
+      po_id: po.id,
+      invoice_number: invoiceForm.invoice_number.trim(),
+      invoice_date: invoiceForm.invoice_date || today(),
+      due_date: invoiceForm.due_date || null,
+      currency: invoiceForm.currency || po.currency || "AZN",
+      match_notes: invoiceForm.match_notes.trim() || null,
+      created_by: user?.id || null,
+    };
+
+    if (editingInvoiceId) {
+      const { error: invoiceError } = await supabase.from("vendor_invoices").update(payload).eq("id", editingInvoiceId);
+      if (invoiceError) {
+        setError(getError(invoiceError));
+        setSaving(false);
+        return;
+      }
+      const { error: deleteError } = await supabase.from("vendor_invoice_lines").delete().eq("invoice_id", editingInvoiceId);
+      if (deleteError) {
+        setError(getError(deleteError));
+        setSaving(false);
+        return;
+      }
+    } else {
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("vendor_invoices")
+        .insert({ ...payload, tenant_id: tenantId, status: "draft" })
+        .select()
+        .single();
+      if (invoiceError) {
+        setError(getError(invoiceError));
+        setSaving(false);
+        return;
+      }
+      invoiceId = invoice.id;
+    }
+
+    const { error: lineError } = await supabase.from("vendor_invoice_lines").insert(items.map((line) => ({ ...line, invoice_id: invoiceId })));
+    if (lineError) {
+      setError(getError(lineError));
+      setSaving(false);
+      return;
+    }
+    await runMatch(invoiceId, false);
+    setNotice(editingInvoiceId ? "Faktura yenilЙ™ndi vЙ™ 3-way match hesablandД±." : "Faktura yaradД±ldД± vЙ™ 3-way match hesablandД±.");
+    resetInvoiceForm();
+    await load();
+    setSaving(false);
+  }
+
+  async function runMatch(invoiceId, withNotice = true) {
+    const [{ data: rows, error: evalError }, { error: applyError }] = await Promise.all([
+      supabase.rpc("evaluate_invoice_match", { _invoice_id: invoiceId }),
+      supabase.rpc("apply_invoice_match", { _invoice_id: invoiceId }),
+    ]);
+    if (evalError || applyError) {
+      setError(getError(evalError || applyError));
+      return;
+    }
+    setMatchRows((current) => ({ ...current, [invoiceId]: rows || [] }));
+    if (withNotice) setNotice("3-way match yenilЙ™ndi.");
+    await load();
+  }
+
+  async function updateInvoiceStatus(invoiceId, status) {
+    setSaving(true);
+    const { error: invoiceError } = await supabase.from("vendor_invoices").update({ status }).eq("id", invoiceId);
+    if (invoiceError) setError(getError(invoiceError));
+    else {
+      setNotice(`Faktura statusu dЙ™yiЕџdi: ${INVOICE_STATUS[status]?.label || status}.`);
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function deleteInvoice(invoice) {
+    if (invoice.status === "paid") {
+      setError("Г–dЙ™nilmiЕџ fakturanД± silmЙ™k olmaz. LazД±mdД±rsa Й™vvЙ™l Г¶dЙ™niЕџ dГјzЙ™liЕџi aparД±lmalД±dД±r.");
+      return;
+    }
+    if (!window.confirm(`${invoice.invoice_number} fakturasД±nД± silmЙ™k istЙ™yirsiniz?`)) return;
+    setSaving(true);
+    const { error: invoiceError } = await supabase.from("vendor_invoices").delete().eq("id", invoice.id);
+    if (invoiceError) setError(getError(invoiceError));
+    else {
+      setNotice("Faktura silindi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
+  if (!tenantId) {
+    return (
+      <main style={styles.page}>
+        <section style={styles.emptyPanel}>
+          <AlertTriangle size={28} />
+          <h1>Aktiv ЕџirkЙ™t seГ§ilmЙ™yib</h1>
+          <p>SatД±nalma modulundan istifadЙ™ etmЙ™k ГјГ§Гјn Й™vvЙ™l tenant/ЕџirkЙ™t seГ§in.</p>
+          <Link to="/" style={styles.linkButton}>
+            <ArrowLeft size={16} />
+            PanelЙ™ qayД±t
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main style={styles.page}>
+      <header style={styles.header}>
+        <div>
+          <Link to="/" style={styles.backLink}>
+            <ArrowLeft size={16} />
+            PanelЙ™ qayД±t
+          </Link>
+          <h1 style={styles.title}>SatД±nalma</h1>
+          <p style={styles.subtitle}>Vendor, zavod sifariЕџi, mЙ™daxil, faktura vЙ™ 3-way match axД±nД±.</p>
+          <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 8, fontFamily: "monospace", fontSize: 12, color: "#065f46" }}>
+            <strong>Aktiv tenant:</strong>
+            <span>{profile?.active_tenant_id ? `${profile.active_tenant_id}` : "вЂ”"}</span>
+            <span style={{ opacity: 0.6 }}>| sorДџu: {tenantId || "вЂ”"}</span>
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard?.writeText(tenantId || ""); }}
+              style={{ marginLeft: 4, border: "none", background: "transparent", cursor: "pointer", color: "#047857", fontSize: 11 }}
+            >
+              copy
+            </button>
+          </div>
+        </div>
+        <div style={styles.headerActions}>
+          <IconButton icon={RefreshCw} label={loading ? "YГјklЙ™nir" : "YenilЙ™"} onClick={load} disabled={loading || saving} />
+          <IconButton icon={Plus} label="Yeni PO" onClick={() => { resetPoForm(); setTab("po"); }} tone="primary" />
+        </div>
+      </header>
+
+      <section style={styles.metricGrid}>
+        <Metric icon={Building2} label="Aktiv vendor" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} vendor`} tone="blue" />
+        <Metric icon={ShoppingCart} label="AГ§Д±q PO" value={stats.openPo.length} hint={`${purchaseOrders.length} Гјmumi PO`} tone="amber" />
+        <Metric icon={Truck} label="MЙ™daxil gГ¶zlЙ™yir" value={stats.waitingReceipt.length} hint="TЙ™sdiqli vЙ™ qismЙ™n PO" tone="green" />
+        <Metric icon={WalletCards} label="PO dЙ™yЙ™ri" value={money(stats.approvedSpend)} hint={`${stats.exceptions.length} match fЙ™rqi`} tone="rose" />
+      </section>
+
+      <section style={styles.toolbar}>
+        <div style={styles.searchBox}>
+          <Search size={17} />
+          <input style={styles.searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, faktura, SKU axtar..." />
+        </div>
+        {tab === "po" && (
+          <select value={poStatus} onChange={(event) => setPoStatusFilter(event.target.value)} style={styles.select}>
+            <option value="all">BГјtГјn PO statuslarД±</option>
+            {Object.entries(PO_STATUS).map(([key, meta]) => (
+              <option key={key} value={key}>{meta.label}</option>
+            ))}
+          </select>
+        )}
+        {tab === "invoices" && (
+          <select value={invoiceStatus} onChange={(event) => setInvoiceStatusFilter(event.target.value)} style={styles.select}>
+            <option value="all">BГјtГјn faktura statuslarД±</option>
+            {Object.entries(INVOICE_STATUS).map(([key, meta]) => (
+              <option key={key} value={key}>{meta.label}</option>
+            ))}
+          </select>
+        )}
+      </section>
+
+      {(notice || error) && (
+        <div style={{ ...styles.message, ...(error ? styles.messageError : styles.messageOk) }}>
+          {error || notice}
+          <button type="button" onClick={() => { setError(""); setNotice(""); }} style={styles.messageClose}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      <nav style={styles.tabs}>
+        {[
+          ["dashboard", BarChart3, "Д°cmal"],
+          ["rfq", ClipboardCheck, "TЙ™klif sorДџularД±"],
+          ["vendors", Building2, "Vendorlar"],
+          ["po", ShoppingCart, "PO"],
+          ["grn", PackageCheck, "MЙ™daxil"],
+          ["invoices", Receipt, "Fakturalar"],
+        ].map(([id, Icon, label]) => (
+          <button key={id} type="button" onClick={() => setTab(id)} style={{ ...styles.tabButton, ...(tab === id ? styles.tabActive : {}) }}>
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {loading ? (
+        <section style={styles.emptyPanel}>
+          <RefreshCw size={26} />
+          <h2>MЙ™lumatlar yГјklЙ™nir</h2>
+          <p>SatД±nalma reyestri serverdЙ™n oxunur.</p>
+        </section>
+      ) : (
+        <>
+          {tab === "dashboard" && (
+            <DashboardTab
+              purchaseOrders={purchaseOrders}
+              vendors={vendors}
+              invoices={invoices}
+              poMetrics={poMetrics}
+              onCreatePo={() => { resetPoForm(); setTab("po"); }}
+              onReceive={choosePoForReceipt}
+              onInvoice={choosePoForInvoice}
+            />
+          )}
+          {tab === "rfq" && (
+            <RfqTab
+              rfqs={rfqs}
+              vendors={vendors.filter((vendor) => vendor.is_active)}
+              form={rfqForm}
+              setForm={setRfqForm}
+              onSubmit={saveRfq}
+              onApprove={(rfq) => updateRfq(rfq, { status: "approved" })}
+              onReject={(rfq) => updateRfq(rfq, { status: "rejected" })}
+              onConvert={convertRfqToPo}
+              saving={saving}
+            />
+          )}
+          {tab === "vendors" && (
+            <VendorsTab
+              vendors={filteredVendors}
+              form={vendorForm}
+              setForm={setVendorForm}
+              editingId={editingVendorId}
+              onSubmit={saveVendor}
+              onCancel={() => { setEditingVendorId(null); setVendorForm(emptyVendor); }}
+              onEdit={editVendor}
+              onToggle={toggleVendor}
+              onDelete={deleteVendor}
+              purchaseOrders={purchaseOrders}
+              saving={saving}
+            />
+          )}
+          {tab === "po" && (
+            <PurchaseOrdersTab
+              vendors={vendors}
+              products={products}
+              purchaseOrders={filteredPurchaseOrders}
+              allPurchaseOrders={purchaseOrders}
+              linesByPo={linesByPo}
+              poMetrics={poMetrics}
+              acceptedByLine={acceptedByLine}
+              invoicedByLine={invoicedByLine}
+              expandedPo={expandedPo}
+              setExpandedPo={setExpandedPo}
+              form={poForm}
+              setForm={setPoForm}
+              draftLines={poDraftLines}
+              setDraftLines={setPoDraftLines}
+              setProductOnLine={setProductOnLine}
+              editingPoId={editingPoId}
+              onSubmit={savePo}
+              onCancel={resetPoForm}
+              onEdit={editPo}
+              onDelete={deletePo}
+              onApprove={(po) => updatePoStatus(po.id, "approved")}
+              onCancelPo={(po) => updatePoStatus(po.id, "cancelled")}
+              onClose={(po) => updatePoStatus(po.id, "closed")}
+              onReceive={choosePoForReceipt}
+              onInvoice={choosePoForInvoice}
+              saving={saving}
+            />
+          )}
+          {tab === "grn" && (
+            <ReceiptsTab
+              form={receiptForm}
+              setForm={(next) => {
+                setReceiptForm(next);
+                if (next.po_id !== receiptForm.po_id) setReceiptDraftLines(next.po_id ? buildReceiptLines(next.po_id) : []);
+              }}
+              draftLines={receiptDraftLines}
+              setDraftLines={setReceiptDraftLines}
+              editingId={editingReceiptId}
+              poOptions={activePoOptions}
+              goodsReceipts={goodsReceipts.filter((receipt) => matchesQuery([receipt.grn_number, receipt.purchase_orders?.po_number], query))}
+              receiptLinesByReceipt={receiptLinesByReceipt}
+              poLines={poLines}
+              expandedReceipt={expandedReceipt}
+              setExpandedReceipt={setExpandedReceipt}
+              onSubmit={saveReceipt}
+              onCancel={resetReceiptForm}
+              onEdit={editReceipt}
+              onDelete={deleteReceipt}
+              saving={saving}
+            />
+          )}
+          {tab === "invoices" && (
+            <InvoicesTab
+              form={invoiceForm}
+              setForm={(next) => {
+                setInvoiceForm(next);
+                if (next.po_id !== invoiceForm.po_id) setInvoiceDraftLines(next.po_id ? buildInvoiceLines(next.po_id, editingInvoiceId) : []);
+              }}
+              draftLines={invoiceDraftLines}
+              setDraftLines={setInvoiceDraftLines}
+              editingId={editingInvoiceId}
+              poOptions={invoicePoOptions}
+              invoices={filteredInvoices}
+              invoiceLinesByInvoice={invoiceLinesByInvoice}
+              poLines={poLines}
+              invoiceTotals={invoiceTotals}
+              matchRows={matchRows}
+              expandedInvoice={expandedInvoice}
+              setExpandedInvoice={setExpandedInvoice}
+              onSubmit={saveInvoice}
+              onCancel={resetInvoiceForm}
+              onEdit={editInvoice}
+              onDelete={deleteInvoice}
+              onMatch={(invoice) => runMatch(invoice.id)}
+              onApprove={(invoice) => updateInvoiceStatus(invoice.id, "approved")}
+              onPaid={(invoice) => updateInvoiceStatus(invoice.id, "paid")}
+              onCancelInvoice={(invoice) => updateInvoiceStatus(invoice.id, "cancelled")}
+              saving={saving}
+            />
+          )}
+        </>
+      )}
+    </main>
+  );
+}
+
+function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, onConvert, saving }) {
+  const vendorName = (id) => vendors.find((vendor) => vendor.id === id)?.name || "Vendor";
+  const toggleVendor = (vendorId) => setForm({
+    ...form,
+    vendor_ids: form.vendor_ids.includes(vendorId)
+      ? form.vendor_ids.filter((id) => id !== vendorId)
+      : [...form.vendor_ids, vendorId],
+  });
+
+  return (
+    <div style={styles.splitGrid}>
+      <Panel title="Yeni tЙ™klif sorДџusu" icon={ClipboardCheck}>
+        <form style={{ ...styles.form, gridTemplateColumns: "1fr" }} onSubmit={onSubmit}>
+          <Field label="SorДџunun adД±" value={form.title} onChange={(value) => setForm({ ...form, title: value })} required wide />
+          <Field label="MЙ™hsul / xidmЙ™t" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required wide />
+          <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
+          <Field label="TЙ™klif ГјГ§Гјn son tarix" type="date" value={form.due_at} onChange={(value) => setForm({ ...form, due_at: value })} />
+          <div style={styles.linesBlock}>
+            <strong>Vendorlar</strong>
+            {vendors.map((vendor) => (
+              <label key={vendor.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                <input type="checkbox" checked={form.vendor_ids.includes(vendor.id)} onChange={() => toggleVendor(vendor.id)} />
+                {vendor.name}
+              </label>
+            ))}
+            {!vendors.length && <small>ЖЏvvЙ™l aktiv vendor yaradД±n.</small>}
+          </div>
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label="RFQ yarat" tone="primary" submit disabled={saving || !vendors.length} />
+          </div>
+        </form>
+      </Panel>
+
+      <Panel title="RFQ vЙ™ vendor mГјqayisЙ™si" icon={BarChart3}>
+        <DataTable
+          columns={["RFQ", "MЙ™hsul", "Vendorlar", "Son tarix", "Status", "ЖЏmЙ™l"]}
+          empty="TЙ™klif sorДџusu yoxdur."
+          rows={rfqs.map((rfq) => {
+            const line = rfq.workflow_lines?.[0];
+            const invited = rfq.payload?.vendor_ids || [];
+            return [
+              <TwoLine title={rfq.record_no} subtitle={rfq.title} />,
+              <TwoLine title={line?.description || "вЂ”"} subtitle={`${qty(line?.quantity)} vahid`} />,
+              <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "вЂ”"} />,
+              rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "вЂ”",
+              <span style={{ ...styles.badge, ...(rfq.status === "approved" ? styles.badge_success : rfq.status === "rejected" ? styles.badge_danger : styles.badge_info) }}>{rfq.status}</span>,
+              <div style={styles.rowActions}>
+                {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="TЙ™sdiq" tone="success" onClick={() => onApprove(rfq)} />}
+                {rfq.status === "sent" && <IconButton icon={XCircle} label="RЙ™dd" tone="danger" onClick={() => onReject(rfq)} />}
+                {rfq.status === "approved" && <IconButton icon={ShoppingCart} label="PO yarat" tone="primary" onClick={() => onConvert(rfq)} />}
+              </div>,
+            ];
+          })}
+        />
+      </Panel>
+    </div>
+  );
+}
+
+function Metric({ icon: Icon, label, value, hint, tone }) {
+  return (
+    <article style={styles.metricCard}>
+      <div style={{ ...styles.metricIcon, ...styles[`metric_${tone}`] }}>
+        <Icon size={20} />
+      </div>
+      <div>
+        <span style={styles.metricLabel}>{label}</span>
+        <strong style={styles.metricValue}>{value}</strong>
+        <small style={styles.metricHint}>{hint}</small>
+      </div>
+    </article>
+  );
+}
+
+function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo, onReceive, onInvoice }) {
+  const latePo = purchaseOrders.filter((po) => po.expected_date && po.expected_date < today() && ["draft", "approved", "partial"].includes(po.status));
+  const actionPo = purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status)).slice(0, 6);
+  const exceptionInvoices = invoices.filter((invoice) => invoice.status === "exception").slice(0, 6);
+
+  return (
+    <section style={styles.dashboardGrid}>
+      <Panel title="SatД±nalma axД±nД±" icon={ClipboardCheck} action={<IconButton icon={Plus} label="Yeni PO" onClick={onCreatePo} tone="primary" />}>
+        <div style={styles.flowRow}>
+          {[
+            ["1", "Vendor", `${vendors.filter((vendor) => vendor.is_active).length} aktiv vendor`],
+            ["2", "PO", "Qaralama в†’ tЙ™sdiq"],
+            ["3", "MЙ™daxil", "GRN ilЙ™ anbara qЙ™bul"],
+            ["4", "Faktura", "3-way match vЙ™ Г¶dЙ™niЕџ"],
+          ].map(([step, title, text]) => (
+            <div key={step} style={styles.flowItem}>
+              <span>{step}</span>
+              <strong>{title}</strong>
+              <small>{text}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="TЙ™hvil/mЙ™daxil gГ¶zlЙ™yЙ™n PO-lar" icon={Truck}>
+        {actionPo.length === 0 ? (
+          <Empty title="MЙ™daxil gГ¶zlЙ™yЙ™n PO yoxdur." />
+        ) : (
+          actionPo.map((po) => (
+            <div key={po.id} style={styles.compactRow}>
+              <div>
+                <strong>{po.po_number}</strong>
+                <small>{po.vendors?.name || "Vendor yoxdur"} В· {money(poMetrics.get(po.id)?.total || 0, po.currency)}</small>
+              </div>
+              <div style={styles.rowActions}>
+                <IconButton icon={PackageCheck} label="MЙ™daxil" onClick={() => onReceive(po.id)} />
+                <IconButton icon={Receipt} label="Faktura" onClick={() => onInvoice(po.id)} />
+              </div>
+            </div>
+          ))
+        )}
+      </Panel>
+
+      <Panel title="Risk vЙ™ istisnalar" icon={AlertTriangle}>
+        {latePo.length === 0 && exceptionInvoices.length === 0 ? (
+          <Empty title="GecikЙ™n PO vЙ™ match istisnasД± yoxdur." />
+        ) : (
+          <>
+            {latePo.map((po) => (
+              <div key={po.id} style={styles.warningRow}>
+                <AlertTriangle size={16} />
+                <div>
+                  <strong>{po.po_number}</strong>
+                  <small>GГ¶zlЙ™nilЙ™n tarix keГ§ib: {po.expected_date}</small>
+                </div>
+              </div>
+            ))}
+            {exceptionInvoices.map((invoice) => (
+              <div key={invoice.id} style={styles.warningRow}>
+                <XCircle size={16} />
+                <div>
+                  <strong>{invoice.invoice_number}</strong>
+                  <small>Fakturada miqdar vЙ™ ya qiymЙ™t fЙ™rqi var.</small>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </Panel>
+    </section>
+  );
+}
+
+function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onEdit, onToggle, onDelete, purchaseOrders, saving }) {
+  return (
+    <section style={styles.splitGrid}>
+      <Panel title={editingId ? "Vendoru redaktЙ™ et" : "Yeni vendor"} icon={Building2}>
+        <form onSubmit={onSubmit} style={styles.form}>
+          <Field label="Ad" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
+          <Field label="VГ–EN" value={form.tax_id} onChange={(value) => setForm({ ...form, tax_id: value })} />
+          <Field label="Email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
+          <Field label="Telefon" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
+          <Field label="Гњnvan" value={form.address} onChange={(value) => setForm({ ...form, address: value })} wide />
+          <label style={styles.checkLine}>
+            <input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} />
+            Aktiv vendor kimi saxla
+          </label>
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label={editingId ? "Yadda saxla" : "ЖЏlavЙ™ et"} tone="primary" disabled={saving} submit />
+            {editingId && <IconButton icon={X} label="LЙ™Дџv et" onClick={onCancel} />}
+          </div>
+        </form>
+      </Panel>
+
+      <Panel title="Vendor reyestri" icon={Building2}>
+        <DataTable
+          columns={["Vendor", "ЖЏlaqЙ™", "PO sayД±", "Status", "ЖЏmЙ™l"]}
+          empty="Vendor yoxdur. Sol tЙ™rЙ™fdЙ™n ilk vendoru yaradД±n."
+          rows={vendors.map((vendor) => {
+            const vendorPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
+            return [
+              <TwoLine key="vendor" title={vendor.name} subtitle={vendor.tax_id || vendor.address || "VГ–EN/Гјnvan qeyd edilmЙ™yib"} />,
+              <TwoLine key="contact" title={vendor.phone || "Telefon yoxdur"} subtitle={vendor.email || "Email yoxdur"} />,
+              vendorPo.length,
+              <span key="status" style={{ ...styles.badge, ...(vendor.is_active ? styles.badge_success : styles.badge_neutral) }}>
+                {vendor.is_active ? "Aktiv" : "Passiv"}
+              </span>,
+              <div key="actions" style={styles.rowActions}>
+                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(vendor)} />
+                <IconButton icon={vendor.is_active ? XCircle : CheckCircle2} label={vendor.is_active ? "Passiv" : "Aktiv"} onClick={() => onToggle(vendor)} />
+                <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(vendor)} tone="danger" />
+              </div>,
+            ];
+          })}
+        />
+      </Panel>
+    </section>
+  );
+}
+
+function PurchaseOrdersTab({
+  vendors,
+  products,
+  purchaseOrders,
+  allPurchaseOrders,
+  linesByPo,
+  poMetrics,
+  acceptedByLine,
+  invoicedByLine,
+  expandedPo,
+  setExpandedPo,
+  form,
+  setForm,
+  draftLines,
+  setDraftLines,
+  setProductOnLine,
+  editingPoId,
+  onSubmit,
+  onCancel,
+  onEdit,
+  onDelete,
+  onApprove,
+  onCancelPo,
+  onClose,
+  onReceive,
+  onInvoice,
+  saving,
+}) {
+  const activeVendors = vendors.filter((vendor) => vendor.is_active);
+  return (
+    <section style={styles.stack}>
+      <Panel title={editingPoId ? "PO redaktЙ™si" : "Yeni satД±nalma sifariЕџi"} icon={ShoppingCart}>
+        <form onSubmit={onSubmit} style={styles.form}>
+          <label style={styles.field}>
+            <span>Vendor</span>
+            <select value={form.vendor_id} onChange={(event) => setForm({ ...form, vendor_id: event.target.value })} required>
+              <option value="">Vendor seГ§in</option>
+              {activeVendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+              ))}
+            </select>
+          </label>
+          <Field label="PO nГ¶mrЙ™si" value={form.po_number} onChange={(value) => setForm({ ...form, po_number: value })} required />
+          <Field label="SifariЕџ tarixi" type="date" value={form.order_date} onChange={(value) => setForm({ ...form, order_date: value })} />
+          <Field label="GГ¶zlЙ™nilЙ™n tarix" type="date" value={form.expected_date} onChange={(value) => setForm({ ...form, expected_date: value })} />
+          <label style={styles.field}>
+            <span>Valyuta</span>
+            <select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })}>
+              <option value="AZN">AZN</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+          <Field label="Qeyd" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} wide />
+
+          <div style={styles.linesBlock}>
+            <div style={styles.linesHeader}>
+              <strong>MЙ™hsul sЙ™tirlЙ™ri</strong>
+              <IconButton icon={Plus} label="SЙ™tir" onClick={() => setDraftLines([...draftLines, { ...emptyPoLine }])} />
+            </div>
+            <datalist id="procurement-products">
+              {products.map((product) => (
+                <option key={product.id} value={product.sku}>{product.name}</option>
+              ))}
+            </datalist>
+            {draftLines.map((line, index) => (
+              <div key={index} style={styles.lineGrid}>
+                <input list="procurement-products" placeholder="SKU / mЙ™hsul kodu" value={line.product_sku} onChange={(event) => setProductOnLine(index, event.target.value)} style={styles.input} />
+                <input placeholder="MЙ™hsul adД± / izah" value={line.description} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, description: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" step="0.001" placeholder="Miqdar" value={line.qty_ordered} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_ordered: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" step="0.0001" placeholder="Vahid qiymЙ™t" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" step="0.01" placeholder="ЖЏDV %" value={line.tax_rate} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, tax_rate: event.target.value } : item)))} style={styles.input} />
+                <IconButton icon={Trash2} label="Sil" tone="danger" disabled={draftLines.length === 1} onClick={() => setDraftLines(draftLines.filter((_, itemIndex) => itemIndex !== index))} />
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label={editingPoId ? "PO yenilЙ™" : "PO yarat"} tone="primary" disabled={saving || activeVendors.length === 0} submit />
+            {editingPoId && <IconButton icon={X} label="LЙ™Дџv et" onClick={onCancel} />}
+          </div>
+          {activeVendors.length === 0 && <p style={styles.helperText}>PO yaratmaq ГјГ§Гјn Й™vvЙ™l aktiv vendor yaradД±n.</p>}
+        </form>
+      </Panel>
+
+      <Panel title="PO reyestri" icon={ClipboardCheck}>
+        <DataTable
+          columns={["PO", "Vendor", "DЙ™yЙ™r", "Status", "MЙ™daxil", "ЖЏmЙ™l"]}
+          empty={allPurchaseOrders.length ? "FilterЙ™ uyДџun PO yoxdur." : "PO yoxdur. YuxarД±dakД± formadan ilk sifariЕџi yaradД±n."}
+          rows={purchaseOrders.map((po) => {
+            const metrics = poMetrics.get(po.id) || {};
+            const isExpanded = expandedPo === po.id;
+            return [
+              <button key="po" type="button" style={styles.linkCell} onClick={() => setExpandedPo(isExpanded ? null : po.id)}>
+                <TwoLine title={po.po_number} subtitle={`${po.order_date || "tarixsiz"} в†’ ${po.expected_date || "plan yoxdur"}`} />
+              </button>,
+              po.vendors?.name || "Vendor yoxdur",
+              <TwoLine key="amount" title={money(metrics.total || 0, po.currency)} subtitle={`${metrics.lineCount || 0} sЙ™tir`} />,
+              <StatusPill key="status" status={po.status} />,
+              <Progress key="progress" value={metrics.progress || 0} label={`${qty(metrics.received)} / ${qty(metrics.ordered)} Й™dЙ™d`} />,
+              <div key="actions" style={styles.rowActions}>
+                <IconButton icon={Eye} label={isExpanded ? "BaДџla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
+                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(po)} disabled={po.status === "closed"} />
+                {po.status === "draft" && <IconButton icon={CheckCircle2} label="TЙ™sdiq" onClick={() => onApprove(po)} tone="success" />}
+                {["approved", "partial"].includes(po.status) && <IconButton icon={PackageCheck} label="MЙ™daxil" onClick={() => onReceive(po.id)} tone="success" />}
+                {["approved", "partial", "received"].includes(po.status) && <IconButton icon={Receipt} label="Faktura" onClick={() => onInvoice(po.id)} />}
+                {po.status === "received" && <IconButton icon={CheckCircle2} label="BaДџla" onClick={() => onClose(po)} />}
+                {!["closed", "cancelled"].includes(po.status) && <IconButton icon={XCircle} label="LЙ™Дџv" onClick={() => onCancelPo(po)} tone="danger" />}
+                {["draft", "cancelled"].includes(po.status) && <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />}
+              </div>,
+            ];
+          })}
+          detail={(po) =>
+            expandedPo === po.id && (
+              <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
+            )
+          }
+          sourceRows={purchaseOrders}
+        />
+      </Panel>
+    </section>
+  );
+}
+
+function ReceiptsTab({
+  form,
+  setForm,
+  draftLines,
+  setDraftLines,
+  editingId,
+  poOptions,
+  goodsReceipts,
+  receiptLinesByReceipt,
+  poLines,
+  expandedReceipt,
+  setExpandedReceipt,
+  onSubmit,
+  onCancel,
+  onEdit,
+  onDelete,
+  saving,
+}) {
+  return (
+    <section style={styles.stack}>
+      <Panel title={editingId ? "MЙ™daxili redaktЙ™ et" : "Yeni mЙ™daxil (GRN)"} icon={PackageCheck}>
+        <form onSubmit={onSubmit} style={styles.form}>
+          <label style={styles.field}>
+            <span>PO</span>
+            <select value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
+              <option value="">PO seГ§in</option>
+              {poOptions.map((po) => (
+                <option key={po.id} value={po.id}>{po.po_number} В· {po.vendors?.name || "Vendor"}</option>
+              ))}
+            </select>
+          </label>
+          <Field label="GRN nГ¶mrЙ™si" value={form.grn_number} onChange={(value) => setForm({ ...form, grn_number: value })} required />
+          <Field label="MЙ™daxil tarixi" type="date" value={form.receipt_date} onChange={(value) => setForm({ ...form, receipt_date: value })} />
+          <Field label="Qeyd" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} wide />
+
+          <div style={styles.linesBlock}>
+            <div style={styles.linesHeader}>
+              <strong>QЙ™bul sЙ™tirlЙ™ri</strong>
+              <small>{draftLines.length ? "QЙ™bul/rЙ™dd miqdarlarД±nД± tЙ™sdiqlЙ™yin." : "PO seГ§dikdЙ™ sЙ™tirlЙ™r aГ§Д±lacaq."}</small>
+            </div>
+            {draftLines.map((line, index) => (
+              <div key={line.po_line_id} style={styles.receiptLineGrid}>
+                <TwoLine title={line.label} subtitle={`SifariЕџ: ${qty(line.ordered)} В· QalД±q: ${qty(line.outstanding)}`} />
+                <input type="number" min="0" step="0.001" placeholder="QЙ™bul edildi" value={line.qty_received} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_received: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" step="0.001" placeholder="RЙ™dd edildi" value={line.qty_rejected} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_rejected: event.target.value } : item)))} style={styles.input} />
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label={editingId ? "GRN yenilЙ™" : "MЙ™daxil et"} tone="primary" disabled={saving || !draftLines.length} submit />
+            {editingId && <IconButton icon={X} label="LЙ™Дџv et" onClick={onCancel} />}
+          </div>
+        </form>
+      </Panel>
+
+      <Panel title="MЙ™daxil reyestri" icon={Truck}>
+        <DataTable
+          columns={["GRN", "PO", "Tarix", "SЙ™tir", "ЖЏmЙ™l"]}
+          empty="MЙ™daxil qeydi yoxdur."
+          rows={goodsReceipts.map((receipt) => {
+            const lines = receiptLinesByReceipt.get(receipt.id) || [];
+            const isExpanded = expandedReceipt === receipt.id;
+            return [
+              <button key="grn" type="button" style={styles.linkCell} onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)}>
+                <TwoLine title={receipt.grn_number} subtitle={receipt.notes || "Qeyd yoxdur"} />
+              </button>,
+              receipt.purchase_orders?.po_number || "PO yoxdur",
+              receipt.receipt_date,
+              lines.length,
+              <div key="actions" style={styles.rowActions}>
+                <IconButton icon={Eye} label={isExpanded ? "BaДџla" : "Bax"} onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)} />
+                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(receipt)} />
+                <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(receipt)} tone="danger" />
+              </div>,
+            ];
+          })}
+          sourceRows={goodsReceipts}
+          detail={(receipt) => expandedReceipt === receipt.id && <ReceiptLineTable lines={receiptLinesByReceipt.get(receipt.id) || []} poLines={poLines} />}
+        />
+      </Panel>
+    </section>
+  );
+}
+
+function InvoicesTab({
+  form,
+  setForm,
+  draftLines,
+  setDraftLines,
+  editingId,
+  poOptions,
+  invoices,
+  invoiceLinesByInvoice,
+  poLines,
+  invoiceTotals,
+  matchRows,
+  expandedInvoice,
+  setExpandedInvoice,
+  onSubmit,
+  onCancel,
+  onEdit,
+  onDelete,
+  onMatch,
+  onApprove,
+  onPaid,
+  onCancelInvoice,
+  saving,
+}) {
+  return (
+    <section style={styles.stack}>
+      <Panel title={editingId ? "FakturanД± redaktЙ™ et" : "Yeni vendor fakturasД±"} icon={Receipt}>
         <form onSubmit={onSubmit} style={styles.form}>
           <label style={styles.field}>
             <span>PO</span>
@@ -872,4 +1983,3 @@ const styles = {
   emptyPanel: { maxWidth: "560px", margin: "90px auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "30px", textAlign: "center", display: "grid", gap: "10px", justifyItems: "center" },
   linkButton: { display: "inline-flex", alignItems: "center", gap: "8px", background: "#2563eb", color: "#fff", borderRadius: "9px", padding: "10px 14px", textDecoration: "none", fontWeight: 800 },
 };
-
