@@ -64,7 +64,7 @@ export default function StockPage() {
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
-      {tab === "valuation" && <ValuationPanel movements={stock.movements} products={products} />}
+      {tab === "valuation" && <ValuationPanel loadMovements={stock.fetchAllMovements} products={products} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
     </div>
   );
