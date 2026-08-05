@@ -1,4 +1,4 @@
-import { formatDateInput, parsePaymentDate } from "../../services/date.js";
+import { addMonths, formatDateInput, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { normalize } from "../../services/format.js";
 
 export const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
