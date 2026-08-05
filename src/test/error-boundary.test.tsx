@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-function Boom() {
+function Boom(): JSX.Element {
   throw new Error("boom-test");
 }
 

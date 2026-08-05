@@ -3,6 +3,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useStock } from "../../shared/hooks/useStock.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
+import ValuationPanel from "./ValuationPanel.jsx";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -54,7 +55,7 @@ export default function StockPage() {
       </div>
 
       <div style={tabBar}>
-        {[["balances", "Qalıqlar"], ["movements", "Hərəkətlər"], ["warehouses", "Anbarlar"]].map(([k, l]) => (
+        {[["balances", "Qalıqlar"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["warehouses", "Anbarlar"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
       </div>
@@ -63,6 +64,7 @@ export default function StockPage() {
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
+      {tab === "valuation" && <ValuationPanel movements={stock.movements} products={products} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
     </div>
   );
