@@ -24,9 +24,9 @@ export default function CurrenciesPage() {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      {msg && <div style={msgBox(msg.type)}>{msg.text}</div>}
-      {fx.degraded && <div style={msgBox("warn")}>Canlı yenilənmə kəsildi — məlumatlar avtomatik yenidən sinxronlaşdırılır…</div>}
-      {fx.error && <div style={msgBox("err")}>{fx.error}</div>}
+      {msg && <div style={msgBox}>{msg.text}</div>}
+      {fx.degraded && <div style={msgBox}>Canlı yenilənmə kəsildi — məlumatlar avtomatik yenidən sinxronlaşdırılır…</div>}
+      {fx.error && <div style={msgBox}>Xəta: {fx.error}</div>}
 
       <div style={card}>
         <h3 style={{ margin: "0 0 4px" }}>Valyutalar</h3>
@@ -67,8 +67,8 @@ export default function CurrenciesPage() {
                 <td style={td}>{c.symbol || "—"}</td>
                 <td style={td}>{c.is_base ? "1.000000 (əsas)" : fx.rateFor(c.code).toFixed(6)}</td>
                 <td style={td}>
-                  <span style={badge(c.is_active ? "ok" : "muted")}>{c.is_active ? "Aktiv" : "Deaktiv"}</span>
-                  {c.is_base && <span style={{ marginLeft: 6, ...badge("info") }}>Əsas</span>}
+                  <span style={badge(c.is_active ? "green" : "gray")}>{c.is_active ? "Aktiv" : "Deaktiv"}</span>
+                  {c.is_base && <span style={{ marginLeft: 6, ...badge("amber") }}>Əsas</span>}
                 </td>
                 <td style={td}>
                   {!c.is_base && (
