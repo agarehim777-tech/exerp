@@ -193,6 +193,7 @@ export const navIcons = {
   "access-check": ShieldCheck,
   audit: ShieldCheck,
   periods: FileText,
+  "financial-statements": FileText,
 
 };
 
