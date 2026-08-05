@@ -38,6 +38,7 @@ export const navItems = [
   { id: "credits", label: "Kreditlər", group: "finance" },
   { id: "tax", label: "Vergi", group: "finance" },
   { id: "periods", label: "Mühasibat dövrləri", group: "finance" },
+  { id: "currencies", label: "Valyuta & məzənnə", group: "finance" },
 
 
   // Əməliyyat
