@@ -60,6 +60,7 @@ import { pageMeta } from "./config/page-meta.js";
 const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
 const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
 const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
+const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
 import {
   changeRemotePassword,
   createRemoteCompany,
