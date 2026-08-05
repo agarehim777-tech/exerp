@@ -253,6 +253,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     movementsTotal,
     movementsPageCount: Math.max(1, Math.ceil(movementsTotal / movementsPageSize)),
     movementsLoading,
+    degraded,
     setMovementsPage,
     fetchAllMovements,
     loading,
