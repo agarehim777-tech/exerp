@@ -177,9 +177,34 @@ function MovementsPanel({ stock, products }) {
               <td style={td}>{m.doc_no || "—"}</td>
             </tr>
           ))}
-          {!stock.movements.length && <tr><td style={td} colSpan={6}>Hərəkət yoxdur.</td></tr>}
+          {!stock.movements.length && (
+            <tr><td style={td} colSpan={6}>{stock.movementsLoading ? "Yüklənir…" : "Hərəkət yoxdur."}</td></tr>
+          )}
         </tbody>
       </table>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 13, opacity: 0.75 }}>
+          Səhifə {stock.movementsPage + 1} / {stock.movementsPageCount} · səhifədə {stock.movementsPageSize} qeyd
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            style={primaryBtn}
+            disabled={stock.movementsPage === 0 || stock.movementsLoading}
+            onClick={() => stock.setMovementsPage((page) => Math.max(0, page - 1))}
+          >
+            ← Əvvəlki
+          </button>
+          <button
+            type="button"
+            style={primaryBtn}
+            disabled={stock.movementsPage + 1 >= stock.movementsPageCount || stock.movementsLoading}
+            onClick={() => stock.setMovementsPage((page) => page + 1)}
+          >
+            Növbəti →
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
