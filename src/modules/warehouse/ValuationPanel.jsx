@@ -1,13 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
 import { azn, badge, card, input, statLabel, statTile, statValue, table, td, th } from "../../shared/ui/tokens.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
  * Hesablama saf funksiyalar üzərində aparılır (src/shared/utils/inventoryValuation.ts).
+ * Hərəkətlər siyahısı səhifələndiyi üçün burada tam tarixçə ayrıca yüklənir.
  */
-export default function ValuationPanel({ movements = [], products = [] }) {
+export default function ValuationPanel({ loadMovements, products = [] }) {
   const [method, setMethod] = useState("fifo");
+  const [movements, setMovements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.resolve(loadMovements ? loadMovements() : []).then((rows) => {
+      if (cancelled) return;
+      setMovements(rows || []);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [loadMovements]);
 
   const nameById = useMemo(() => {
     const map = new Map();
