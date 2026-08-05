@@ -54,7 +54,7 @@ export default function StockPage() {
       </div>
 
       <div style={tabBar}>
-        {[["balances", "Qalıqlar"], ["movements", "Hərəkətlər"], ["warehouses", "Anbarlar"]].map(([k, l]) => (
+        {[["balances", "Qalıqlar"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["warehouses", "Anbarlar"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
       </div>
@@ -63,6 +63,7 @@ export default function StockPage() {
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
+      {tab === "valuation" && <ValuationPanel movements={stock.movements} products={products} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
     </div>
   );
