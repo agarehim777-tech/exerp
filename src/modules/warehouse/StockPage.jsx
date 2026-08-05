@@ -137,7 +137,9 @@ function MovementsPanel({ stock, products }) {
 
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Anbar hərəkətləri</h3>
+      <h3 style={{ marginTop: 0 }}>
+        Anbar hərəkətləri ({stock.movementsTotal.toLocaleString("az-AZ")})
+      </h3>
       {msg && <div style={msgBox}>{msg}</div>}
       <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 16 }}>
         <select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })} style={input}>
