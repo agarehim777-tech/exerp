@@ -61,6 +61,9 @@ export default function StockPage() {
       </div>
 
       {stock.error && <div style={msgBox}>Xəta: {stock.error.message}</div>}
+      {stock.degraded && (
+        <div style={msgBox}>Canlı yenilənmə kəsildi — məlumatlar avtomatik yenidən sinxronlaşdırılır…</div>
+      )}
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
