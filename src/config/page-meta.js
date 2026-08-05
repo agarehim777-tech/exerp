@@ -137,6 +137,10 @@ export const pageMeta = {
     subtitle: "Bütün modullar üzrə hesabat, cədvəl və ixrac.",
     action: "PDF export",
   },
+  "financial-statements": {
+    title: "Maliyyə hesabatları",
+    subtitle: "Mənfəət-Zərər, Balans, Pul axını və debitor yaşlanması.",
+  },
   support: {
     title: "Support & Task",
     subtitle: "Daxili dəstək sorğuları, SLA, məsul şəxs və tətbiq tapşırıqları.",
