@@ -17,4 +17,3 @@ export function useCreditPortfolio(tenantId) {
   const setCollection = async (credit, stage) => { await updateCreditCollection({ tenantId, credit, stage }); await refresh(); };
   return { contracts, loading, error, refresh, recalculate, setCollection };
 }
-
