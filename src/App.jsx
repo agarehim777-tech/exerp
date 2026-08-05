@@ -128,6 +128,7 @@ const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.js
 const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
 const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
 const PeriodsPage = lazy(() => import("./modules/accounting/PeriodsPage.jsx"));
+const CurrenciesPage = lazy(() => import("./modules/finance/CurrenciesPage.jsx"));
 const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
 const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
 
