@@ -96,7 +96,7 @@ export function useCashbook(tenantId) {
   }, [accounts, transactions]);
 
   return {
-    accounts, transactions, expenses, loading, error, refresh: fetchAll,
+    accounts, transactions, expenses, loading, error, degraded, refresh: fetchAll,
     createAccount, addTransaction, addExpense, setExpenseStatus, removeTransaction, balanceOf,
   };
 }
