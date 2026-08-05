@@ -77,66 +77,107 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     await Promise.all([fetchBase(), fetchMovements(pageRef.current)]);
   }, [fetchBase, fetchMovements]);
 
-  // --- Incremental realtime --------------------------------------------
+  // --- Incremental realtime (fallback: tam refetch) ---------------------
   useEffect(() => {
     if (!tenantId) return undefined;
     const filter = `tenant_id=eq.${tenantId}`;
     const suffix = Math.random().toString(36).slice(2, 10);
+    let disposed = false;
+    let resyncTimer = null;
+
+    /** İnkremental yeniləmə alınmayanda bütün datanı yenidən çəkir. */
+    const fallbackResync = (reason) => {
+      if (disposed || resyncTimer) return;
+      setDegraded(reason || 'realtime');
+      resyncTimer = setTimeout(async () => {
+        resyncTimer = null;
+        if (disposed) return;
+        try {
+          await Promise.all([fetchBase(), fetchMovements(pageRef.current)]);
+          if (!disposed) setDegraded(null);
+        } catch (err) {
+          if (!disposed) setError(err);
+        }
+      }, 400);
+    };
 
     const hydrateMovement = async (id) => {
-      const { data } = await supabase.from('stock_movements').select(MOVEMENT_SELECT).eq('id', id).maybeSingle();
+      if (!id) return null;
+      const { data, error: err } = await supabase
+        .from('stock_movements').select(MOVEMENT_SELECT).eq('id', id).maybeSingle();
+      if (err) throw err;
       return data || null;
     };
     const hydrateBalance = async (id) => {
-      const { data } = await supabase.from('stock_balances').select(BALANCE_SELECT).eq('id', id).maybeSingle();
+      if (!id) return null;
+      const { data, error: err } = await supabase
+        .from('stock_balances').select(BALANCE_SELECT).eq('id', id).maybeSingle();
+      if (err) throw err;
       return data || null;
     };
 
     const onMovement = async (payload) => {
-      if (payload.eventType === 'DELETE') {
-        const removedId = payload.old?.id;
-        setMovements((prev) => prev.filter((row) => row.id !== removedId));
-        setMovementsTotal((prev) => Math.max(0, prev - 1));
-        return;
-      }
-      const row = await hydrateMovement(payload.new?.id);
-      if (!row) return;
-      if (payload.eventType === 'INSERT') {
-        setMovementsTotal((prev) => prev + 1);
-        if (pageRef.current !== 0) return;
+      try {
+        if (payload.eventType === 'DELETE') {
+          const removedId = payload.old?.id;
+          if (!removedId) { fallbackResync('movement-delete'); return; }
+          setMovements((prev) => prev.filter((row) => row.id !== removedId));
+          setMovementsTotal((prev) => Math.max(0, prev - 1));
+          return;
+        }
+        const row = await hydrateMovement(payload.new?.id);
+        if (!row) { fallbackResync('movement-hydrate'); return; }
+        if (payload.eventType === 'INSERT') {
+          setMovementsTotal((prev) => prev + 1);
+          if (pageRef.current !== 0) return;
+          setMovements((prev) => (prev.some((item) => item.id === row.id)
+            ? prev
+            : [row, ...prev].slice(0, movementsPageSize)));
+          return;
+        }
         setMovements((prev) => (prev.some((item) => item.id === row.id)
-          ? prev
-          : [row, ...prev].slice(0, movementsPageSize)));
-        return;
+          ? prev.map((item) => (item.id === row.id ? row : item))
+          : prev));
+      } catch {
+        fallbackResync('movement-error');
       }
-      setMovements((prev) => prev.map((item) => (item.id === row.id ? row : item)));
     };
 
     const onBalance = async (payload) => {
-      if (payload.eventType === 'DELETE') {
-        const removedId = payload.old?.id;
-        setBalances((prev) => prev.filter((row) => row.id !== removedId));
-        return;
+      try {
+        if (payload.eventType === 'DELETE') {
+          const removedId = payload.old?.id;
+          if (!removedId) { fallbackResync('balance-delete'); return; }
+          setBalances((prev) => prev.filter((row) => row.id !== removedId));
+          return;
+        }
+        const row = await hydrateBalance(payload.new?.id);
+        if (!row) { fallbackResync('balance-hydrate'); return; }
+        setBalances((prev) => (prev.some((item) => item.id === row.id)
+          ? prev.map((item) => (item.id === row.id ? row : item))
+          : [...prev, row]));
+      } catch {
+        fallbackResync('balance-error');
       }
-      const row = await hydrateBalance(payload.new?.id);
-      if (!row) return;
-      setBalances((prev) => (prev.some((item) => item.id === row.id)
-        ? prev.map((item) => (item.id === row.id ? row : item))
-        : [...prev, row]));
     };
 
     const onWarehouse = (payload) => {
-      if (payload.eventType === 'DELETE') {
-        setWarehouses((prev) => prev.filter((row) => row.id !== payload.old?.id));
-        return;
+      try {
+        if (payload.eventType === 'DELETE') {
+          setWarehouses((prev) => prev.filter((row) => row.id !== payload.old?.id));
+          return;
+        }
+        const row = payload.new;
+        if (!row?.id) { fallbackResync('warehouse-payload'); return; }
+        setWarehouses((prev) => {
+          const next = prev.some((item) => item.id === row.id)
+            ? prev.map((item) => (item.id === row.id ? { ...item, ...row } : item))
+            : [...prev, row];
+          return next.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'az'));
+        });
+      } catch {
+        fallbackResync('warehouse-error');
       }
-      const row = payload.new;
-      setWarehouses((prev) => {
-        const next = prev.some((item) => item.id === row.id)
-          ? prev.map((item) => (item.id === row.id ? { ...item, ...row } : item))
-          : [...prev, row];
-        return next.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'az'));
-      });
     };
 
     const channel = supabase
@@ -144,10 +185,30 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_movements', filter }, onMovement)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_balances', filter }, onBalance)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'warehouses', filter }, onWarehouse)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          fallbackResync(`channel-${status.toLowerCase()}`);
+        } else if (status === 'SUBSCRIBED') {
+          // Bağlantı bərpa olunanda mümkün itmiş event-lər üçün tam sinxronizasiya.
+          fallbackResync('channel-resubscribed');
+        }
+      });
 
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, movementsPageSize]);
+    // Tab yenidən aktivləşəndə / şəbəkə qayıdanda da tam sinxronizasiya.
+    const onWake = () => {
+      if (document.visibilityState === 'visible') fallbackResync('wake');
+    };
+    window.addEventListener('online', onWake);
+    document.addEventListener('visibilitychange', onWake);
+
+    return () => {
+      disposed = true;
+      if (resyncTimer) clearTimeout(resyncTimer);
+      window.removeEventListener('online', onWake);
+      document.removeEventListener('visibilitychange', onWake);
+      supabase.removeChannel(channel);
+    };
+  }, [tenantId, movementsPageSize, fetchBase, fetchMovements]);
 
   // --- Mutations --------------------------------------------------------
   const createWarehouse = async (payload) => {
