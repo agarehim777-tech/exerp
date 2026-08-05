@@ -48,6 +48,7 @@ export const navItems = [
 
   // Analitika
   { id: "reports", label: "Hesabatlar", group: "analytics" },
+  { id: "financial-statements", label: "Maliyyə hesabatları", group: "analytics" },
   { id: "kpi", label: "KPI", group: "analytics" },
 
   // Sistem
