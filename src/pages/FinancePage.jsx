@@ -54,13 +54,13 @@ function FinancePage({
   onOpenCredit,
   onOpenVendors,
 }) {
-  const [financeFilter, setFinanceFilter] = useState("HamД±sД±");
-  const [categoryFilter, setCategoryFilter] = useState("BГјtГјn kateqoriyalar");
+  const [financeFilter, setFinanceFilter] = useState("Hamısı");
+  const [categoryFilter, setCategoryFilter] = useState("Bütün kateqoriyalar");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [ledgerSearch, setLedgerSearch] = useState("");
-  const pending = expenses.filter((expense) => expense.status === "TЙ™sdiq gГ¶zlЙ™yir");
-  const approvedExpenses = expenses.filter((expense) => expense.status === "TЙ™sdiq edildi");
+  const pending = expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
+  const approvedExpenses = expenses.filter((expense) => expense.status === "Təsdiq edildi");
   const approvedCashExpenses = approvedExpenses.filter((expense) => hasExpenseCashImpact(expense));
   const pendingCashExpenses = pending.filter((expense) => hasExpenseCashImpact(expense));
   const nonCashExpenseTotal = expenses
@@ -78,7 +78,7 @@ function FinancePage({
     .filter((row) => row.direction === "in")
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const salesCashTotal = ledger
-    .filter((row) => row.type === "SatД±Еџ" && row.direction === "in")
+    .filter((row) => row.type === "Satış" && row.direction === "in")
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const creditCashTotal = ledger
     .filter((row) => row.type === "Kredit")
@@ -93,19 +93,19 @@ function FinancePage({
     return sum + Number(paymentState.nextInstallment?.amount || 0);
   }, 0);
   const filterItems = [
-    { label: "HamД±sД±", count: ledger.length },
+    { label: "Hamısı", count: ledger.length },
     { label: "Daxilolma", count: ledger.filter((row) => row.direction === "in").length },
-    { label: "SatД±Еџ", count: ledger.filter((row) => row.type === "SatД±Еџ").length },
+    { label: "Satış", count: ledger.filter((row) => row.type === "Satış").length },
     { label: "Kredit", count: ledger.filter((row) => row.type === "Kredit").length },
-    { label: "XЙ™rc", count: ledger.filter((row) => row.type === "XЙ™rc").length },
-    { label: "GecikmЙ™ gЙ™liri", count: ledger.filter((row) => Number(row.penalty || 0) > 0).length },
-    { label: "TЙ™sdiq gГ¶zlЙ™yir", count: pending.length },
-    { label: "Cash tЙ™sirsiz", count: ledger.filter((row) => row.direction === "accrual").length },
+    { label: "Xərc", count: ledger.filter((row) => row.type === "Xərc").length },
+    { label: "Gecikmə gəliri", count: ledger.filter((row) => Number(row.penalty || 0) > 0).length },
+    { label: "Təsdiq gözləyir", count: pending.length },
+    { label: "Cash təsirsiz", count: ledger.filter((row) => row.direction === "accrual").length },
   ];
-  const categoryOptions = ["BГјtГјn kateqoriyalar", ...new Set(ledger.map((row) => row.category).filter(Boolean))];
+  const categoryOptions = ["Bütün kateqoriyalar", ...new Set(ledger.map((row) => row.category).filter(Boolean))];
   const visibleLedger = ledger.filter((row) => {
     const matchesFilter = matchesFinanceFilter(row, financeFilter);
-    const matchesCategory = categoryFilter === "BГјtГјn kateqoriyalar" || row.category === categoryFilter;
+    const matchesCategory = categoryFilter === "Bütün kateqoriyalar" || row.category === categoryFilter;
     return (
       matchesFilter &&
       matchesCategory &&
@@ -129,8 +129,8 @@ function FinancePage({
   const visibleNet = visibleInflow - visibleOutflow;
   const dailyCash = useMemo(() => buildDailyCashSummary(ledger, openingBalance, baseFinanceDate), [ledger, openingBalance]);
   const dailyCreditRows = dailyCash.rows.filter((row) => row.type === "Kredit");
-  const dailySalesRows = dailyCash.rows.filter((row) => row.type === "SatД±Еџ");
-  const dailyExpenseRows = dailyCash.rows.filter((row) => row.type === "XЙ™rc");
+  const dailySalesRows = dailyCash.rows.filter((row) => row.type === "Satış");
+  const dailyExpenseRows = dailyCash.rows.filter((row) => row.type === "Xərc");
   const maxCategoryTotal = Math.max(1, ...categoryRows.map((row) => row.total));
   const fxExposure = currencyRows.reduce((sum, row) => sum + Math.abs(Number(row.exposureAzn || 0)), 0);
   const activeAccounts = accounts.filter((account) => account.status === "Aktiv");
@@ -138,8 +138,8 @@ function FinancePage({
   const bankAccounts = activeAccounts.filter((account) => !normalize(account.type).includes("kassa"));
   const accountOpeningBalance = total(activeAccounts, "openingBalance");
   const resetLedgerFilters = () => {
-    setFinanceFilter("HamД±sД±");
-    setCategoryFilter("BГјtГјn kateqoriyalar");
+    setFinanceFilter("Hamısı");
+    setCategoryFilter("Bütün kateqoriyalar");
     setDateFrom("");
     setDateTo("");
     setLedgerSearch("");
@@ -147,7 +147,7 @@ function FinancePage({
   const exportVisibleLedger = () => {
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = [
-      ["Tarix", "Tip", "MЙ™nbЙ™ modul", "Kateqoriya", "Hesab", "MЙ™nbЙ™", "TЙ™rЙ™f", "ЖЏsas", "GecikmЙ™", "MЙ™blЙ™Дџ", "Status"],
+      ["Tarix", "Tip", "Mənbə modul", "Kateqoriya", "Hesab", "Mənbə", "Tərəf", "Əsas", "Gecikmə", "Məbləğ", "Status"],
       ...visibleLedger.map((row) => [
         row.date,
         row.type,
@@ -173,7 +173,7 @@ function FinancePage({
     URL.revokeObjectURL(downloadUrl);
   };
   const renderFinanceSource = (row) => {
-    if (row.type === "SatД±Еџ" && row.orderId) {
+    if (row.type === "Satış" && row.orderId) {
       return (
         <div className="finance-source-cell">
           <button
@@ -241,70 +241,70 @@ function FinancePage({
       <ReconciliationPanel />
       <section className="metric-grid four">
         <MetricCard label="Cash balans" value={money(cashTotal)} icon={Wallet} tone="success" />
-        <MetricCard label="Daxilolma" value={money(inflowTotal)} trend={`${orders.length} satД±Еџ/kredit mЙ™nbЙ™yi`} icon={TrendingUp} tone="primary" />
-        <MetricCard label="Real cash Г§Д±xД±ЕџД±" value={money(approvedExpenseTotal)} trend={`${money(pendingExpenseTotal)} tЙ™sdiqdЙ™ В· ${money(nonCashExpenseTotal)} cash tЙ™sirsiz`} icon={BarChart3} tone="warning" />
+        <MetricCard label="Daxilolma" value={money(inflowTotal)} trend={`${orders.length} satış/kredit mənbəyi`} icon={TrendingUp} tone="primary" />
+        <MetricCard label="Real cash çıxışı" value={money(approvedExpenseTotal)} trend={`${money(pendingExpenseTotal)} təsdiqdə · ${money(nonCashExpenseTotal)} cash təsirsiz`} icon={BarChart3} tone="warning" />
         <MetricCard
-          label="Kredit kassasД±"
+          label="Kredit kassası"
           value={money(creditCashTotal)}
-          trend={`${money(penaltyIncome)} gecikmЙ™ gЙ™liri`}
+          trend={`${money(penaltyIncome)} gecikmə gəliri`}
           icon={CreditCard}
           tone="info"
         />
       </section>
 
       <Panel className="finance-control-panel">
-        <PanelHeader title="MaliyyЙ™ nЙ™zarЙ™ti" subtitle="Kassa, satД±Еџ, kredit vЙ™ xЙ™rc axД±nlarД±nД±n icmalД±" icon={Wallet} />
+        <PanelHeader title="Maliyyə nəzarəti" subtitle="Kassa, satış, kredit və xərc axınlarının icmalı" icon={Wallet} />
         <div className="finance-control-grid">
           <div className="finance-control-tile">
-            <span>BaЕџlanДџД±c balans</span>
+            <span>Başlanğıc balans</span>
             <strong>{money(openingBalance)}</strong>
-            <small>{accounts.length} hesab ГјzrЙ™</small>
+            <small>{accounts.length} hesab üzrə</small>
           </div>
           <div className="finance-control-tile">
-            <span>Net axД±n</span>
+            <span>Net axın</span>
             <strong>{money(netFlow)}</strong>
-            <small>Daxilolma - tЙ™sdiqli xЙ™rclЙ™r</small>
+            <small>Daxilolma - təsdiqli xərclər</small>
           </div>
           <div className="finance-control-tile">
-            <span>GГ¶zlЙ™nilЙ™n kredit</span>
+            <span>Gözlənilən kredit</span>
             <strong>{money(expectedCredit)}</strong>
-            <small>NГ¶vbЙ™ti aylД±q Г¶dЙ™niЕџlЙ™r</small>
+            <small>Növbəti aylıq ödənişlər</small>
           </div>
           <div className="finance-control-tile">
-            <span>BugГјn</span>
+            <span>Bugün</span>
             <strong>{formatPaymentDate(parsePaymentDate(baseFinanceDate))}</strong>
-            <small>{pending.length} tЙ™sdiq gГ¶zlЙ™yir</small>
+            <small>{pending.length} təsdiq gözləyir</small>
           </div>
         </div>
         <div className="finance-cash-bridge">
           <div>
-            <span>SatД±Еџdan kassa</span>
+            <span>Satışdan kassa</span>
             <strong>{money(salesCashTotal)}</strong>
-            <small>NaДџd/kart/kГ¶Г§ГјrmЙ™ yД±ДџД±mД±</small>
+            <small>Nağd/kart/köçürmə yığımı</small>
           </div>
           <div>
-            <span>Kredit yД±ДџД±mД±</span>
+            <span>Kredit yığımı</span>
             <strong>{money(creditCashTotal)}</strong>
-            <small>ЖЏsas + gecikmЙ™ gЙ™liri</small>
+            <small>Əsas + gecikmə gəliri</small>
           </div>
           <div>
-            <span>TЙ™sdiqli cash Г§Д±xД±ЕџД±</span>
+            <span>Təsdiqli cash çıxışı</span>
             <strong>{money(approvedExpenseTotal)}</strong>
-            <small>Real kassaya tЙ™sir edЙ™n xЙ™rclЙ™r</small>
+            <small>Real kassaya təsir edən xərclər</small>
           </div>
           <div>
-            <span>Cash tЙ™sirsiz uГ§ot</span>
+            <span>Cash təsirsiz uçot</span>
             <strong>{money(nonCashExpenseTotal)}</strong>
-            <small>Payroll vЙ™ accrual xЙ™rclЙ™r</small>
+            <small>Payroll və accrual xərclər</small>
           </div>
         </div>
         <div className="finance-signal-list">
           {pending.slice(0, 4).map((expense) => (
-            <button key={expense.id} className="finance-signal-row" onClick={() => setExpenseStatus(expense.id, "TЙ™sdiq edildi")}>
+            <button key={expense.id} className="finance-signal-row" onClick={() => setExpenseStatus(expense.id, "Təsdiq edildi")}>
               <div>
                 <strong>{expense.description}</strong>
                 <span>
-                  {expense.category} В· {money(expense.amount)} В· kliklЙ™ tЙ™sdiqlЙ™
+                  {expense.category} · {money(expense.amount)} · kliklə təsdiqlə
                 </span>
               </div>
               <StatusBadge status={expense.status} />
@@ -313,7 +313,7 @@ function FinancePage({
           {pending.length === 0 && (
             <div className="finance-signal-empty">
               <Check size={16} />
-              TЙ™sdiq gГ¶zlЙ™yЙ™n xЙ™rc yoxdur
+              Təsdiq gözləyən xərc yoxdur
             </div>
           )}
         </div>
@@ -321,50 +321,50 @@ function FinancePage({
 
       <Panel className="finance-daily-close-panel" data-testid="finance-daily-close">
         <PanelHeader
-          title="GГјnlГјk kassa baДџlanД±ЕџД±"
-          subtitle={`${dailyCash.label} ГјzrЙ™ real kassa hЙ™rЙ™kЙ™ti, pending Г¶hdЙ™lik vЙ™ cash-neutral uГ§ot ayrД±mД±`}
+          title="Günlük kassa bağlanışı"
+          subtitle={`${dailyCash.label} üzrə real kassa hərəkəti, pending öhdəlik və cash-neutral uçot ayrımı`}
           icon={CalendarClock}
         />
         <div className="finance-daily-grid">
           <div>
-            <span>AГ§Д±lД±Еџ</span>
+            <span>Açılış</span>
             <strong>{money(dailyCash.opening)}</strong>
-            <small>ЖЏvvЙ™lki gГјnlЙ™rdЙ™n gЙ™lЙ™n balans</small>
+            <small>Əvvəlki günlərdən gələn balans</small>
           </div>
           <div>
-            <span>BugГјnkГј giriЕџ</span>
+            <span>Bugünkü giriş</span>
             <strong>{money(dailyCash.inflow)}</strong>
-            <small>{dailySalesRows.length} satД±Еџ В· {dailyCreditRows.length} kredit</small>
+            <small>{dailySalesRows.length} satış · {dailyCreditRows.length} kredit</small>
           </div>
           <div>
-            <span>BugГјnkГј Г§Д±xД±Еџ</span>
+            <span>Bugünkü çıxış</span>
             <strong>{money(dailyCash.outflow)}</strong>
-            <small>TЙ™sdiqli real xЙ™rc</small>
+            <small>Təsdiqli real xərc</small>
           </div>
           <div>
-            <span>BaДџlanД±Еџ</span>
+            <span>Bağlanış</span>
             <strong>{money(dailyCash.closing)}</strong>
-            <small>Faktiki cash qalД±ДџД±</small>
+            <small>Faktiki cash qalığı</small>
           </div>
           <div>
-            <span>GГ¶zlЙ™yЙ™n Г§Д±xД±Еџ</span>
+            <span>Gözləyən çıxış</span>
             <strong>{money(dailyCash.pendingOutflow)}</strong>
-            <small>{dailyExpenseRows.filter((row) => row.direction === "pending").length} tЙ™sdiq gГ¶zlЙ™yir</small>
+            <small>{dailyExpenseRows.filter((row) => row.direction === "pending").length} təsdiq gözləyir</small>
           </div>
           <div>
-            <span>Proqnoz qalД±q</span>
+            <span>Proqnoz qalıq</span>
             <strong>{money(dailyCash.projectedClosing)}</strong>
-            <small>{money(dailyCash.penalty)} gecikmЙ™ gЙ™liri В· {money(dailyCash.accrual)} accrual</small>
+            <small>{money(dailyCash.penalty)} gecikmə gəliri · {money(dailyCash.accrual)} accrual</small>
           </div>
         </div>
         <DataTable
-          columns={["MЙ™nbЙ™", "Tip", "TЙ™rЙ™f", "ЖЏsas", "GecikmЙ™", "Kassa", "Status"]}
+          columns={["Mənbə", "Tip", "Tərəf", "Əsas", "Gecikmə", "Kassa", "Status"]}
           rows={dailyCash.rows.slice(0, 6).map((row) => [
             renderFinanceSource(row),
             <StatusBadge status={row.type} />,
             row.party,
-            row.principal > 0 ? money(row.principal) : "вЂ”",
-            row.penalty > 0 ? money(row.penalty) : "вЂ”",
+            row.principal > 0 ? money(row.principal) : "—",
+            row.penalty > 0 ? money(row.penalty) : "—",
             <strong className={`finance-amount ${row.direction}`}>
               {row.direction === "out" ? "-" : row.direction === "in" ? "+" : ""}
               {money(row.amount)}
@@ -377,73 +377,73 @@ function FinancePage({
       <Panel className="finance-account-panel">
         <div className="warehouse-detail-head">
           <div>
-            <h2>Kassa vЙ™ bank hesablarД±</h2>
-            <p>AГ§Д±lД±Еџ balanslarД± hesablar ГјzrЙ™ mГјhasibat vЙ™ kassa proqnozuna daxil edilir.</p>
+            <h2>Kassa və bank hesabları</h2>
+            <p>Açılış balansları hesablar üzrə mühasibat və kassa proqnozuna daxil edilir.</p>
           </div>
           <button className="secondary-btn" onClick={onCreateAccount}>
             <Plus size={16} />
-            Hesab Й™lavЙ™ et
+            Hesab əlavə et
           </button>
         </div>
         <div className="finance-account-summary">
           <div>
             <span>Aktiv hesablar</span>
             <strong>{activeAccounts.length}</strong>
-            <small>{cashAccounts.length} kassa В· {bankAccounts.length} bank</small>
+            <small>{cashAccounts.length} kassa · {bankAccounts.length} bank</small>
           </div>
           <div>
-            <span>AГ§Д±lД±Еџ balansД±</span>
+            <span>Açılış balansı</span>
             <strong>{money(accountOpeningBalance)}</strong>
             <small>Kassa proqnozuna daxildir</small>
           </div>
           <div>
             <span>Cari cash balans</span>
             <strong>{money(cashTotal)}</strong>
-            <small>AГ§Д±lД±Еџ + daxilolma - tЙ™sdiqli Г§Д±xД±Еџ</small>
+            <small>Açılış + daxilolma - təsdiqli çıxış</small>
           </div>
         </div>
         <DataTable
-          columns={["Hesab", "Tip", "Valyuta", "AГ§Д±lД±Еџ balansД±", "Status", "ЖЏmЙ™liyyat"]}
+          columns={["Hesab", "Tip", "Valyuta", "Açılış balansı", "Status", "Əməliyyat"]}
           rows={accounts.map((account) => [
             <TwoLine title={account.name} subtitle={account.code} />,
             account.type,
             account.currency,
             <strong>{money(account.openingBalance)}</strong>,
             <StatusBadge status={account.status} />,
-            <button className="text-btn" onClick={() => onEditAccount(account.id)}>RedaktЙ™</button>,
+            <button className="text-btn" onClick={() => onEditAccount(account.id)}>Redaktə</button>,
           ])}
         />
       </Panel>
 
       <Panel className="finance-scenario-panel">
         <PanelHeader
-          title="Д°darЙ™etmЙ™ uГ§otu"
-          subtitle="P&L, debitor qalД±qlarД± vЙ™ tЙ™sdiq gГ¶zlЙ™yЙ™n xЙ™rclЙ™rin kassaya tЙ™siri"
+          title="İdarəetmə uçotu"
+          subtitle="P&L, debitor qalıqları və təsdiq gözləyən xərclərin kassaya təsiri"
           icon={BarChart3}
         />
         <div className="finance-scenario-grid">
           <div>
-            <span>BrГјt satД±Еџ</span>
+            <span>Brüt satış</span>
             <strong>{money(financeScenario.grossSales)}</strong>
-            <small>SatД±Еџ modulu ГјzrЙ™</small>
+            <small>Satış modulu üzrə</small>
           </div>
           <div>
-            <span>TЙ™xmini maya</span>
+            <span>Təxmini maya</span>
             <strong>{money(financeScenario.estimatedCost)}</strong>
-            <small>68% mЙ™hsul maya modeli</small>
+            <small>68% məhsul maya modeli</small>
           </div>
           <div>
-            <span>BrГјt mЙ™nfЙ™Й™t</span>
+            <span>Brüt mənfəət</span>
             <strong>{money(financeScenario.grossProfit)}</strong>
             <small>{percent(financeScenario.margin)} marja</small>
           </div>
           <div>
             <span>Debitor portfeli</span>
             <strong>{money(financeScenario.creditBalance)}</strong>
-            <small>Kredit qalД±qlarД±</small>
+            <small>Kredit qalıqları</small>
           </div>
           <div>
-            <span>GГ¶zlЙ™yЙ™n xЙ™rclЙ™rdЙ™n sonra</span>
+            <span>Gözləyən xərclərdən sonra</span>
             <strong>{money(financeScenario.cashAfterPending)}</strong>
             <small>Kassa proqnozu</small>
           </div>
@@ -452,29 +452,29 @@ function FinancePage({
 
       <Panel className="finance-currency-panel">
         <PanelHeader
-          title="Multi-valyuta nЙ™zarЙ™ti"
-          subtitle="SatД±Еџ, yД±ДџД±m vЙ™ aГ§Д±q kredit portfeli ГјzrЙ™ AZN/USD/EUR ekvivalenti"
+          title="Multi-valyuta nəzarəti"
+          subtitle="Satış, yığım və açıq kredit portfeli üzrə AZN/USD/EUR ekvivalenti"
           icon={Wallet}
         />
         <div className="finance-scenario-grid">
           <div>
             <span>FX risk</span>
             <strong>{money(fxExposure)}</strong>
-            <small>AГ§Д±q portfel ГјzrЙ™ tЙ™xmini tЙ™sir</small>
+            <small>Açıq portfel üzrə təxmini təsir</small>
           </div>
           <div>
-            <span>Valyuta sayД±</span>
+            <span>Valyuta sayı</span>
             <strong>{currencyRows.length}</strong>
-            <small>Aktiv kurs masasД±</small>
+            <small>Aktiv kurs masası</small>
           </div>
           <div>
             <span>Baza valyuta</span>
             <strong>AZN</strong>
-            <small>Kassa vЙ™ mГјhasibat bazasД±</small>
+            <small>Kassa və mühasibat bazası</small>
           </div>
         </div>
         <DataTable
-          columns={["Valyuta", "Kurs", "SatД±Еџ ekvivalenti", "YД±ДџД±m ekvivalenti", "FX tЙ™sir", "Status"]}
+          columns={["Valyuta", "Kurs", "Satış ekvivalenti", "Yığım ekvivalenti", "FX təsir", "Status"]}
           rows={currencyRows.map((row) => [
             <TwoLine title={row.code} subtitle={row.name} />,
             row.rate,
@@ -488,12 +488,12 @@ function FinancePage({
 
       <section className="dashboard-grid">
         <Panel>
-          <PanelHeader title="XЙ™rc kateqoriyalarД±" subtitle="TЙ™sdiqli, gГ¶zlЙ™yЙ™n vЙ™ imtina edilmiЕџ xЙ™rclЙ™r" />
+          <PanelHeader title="Xərc kateqoriyaları" subtitle="Təsdiqli, gözləyən və imtina edilmiş xərclər" />
           <div className="finance-category-list">
             {categoryRows.map((row) => (
               <div className="finance-category-row" key={row.category}>
                 <div className="finance-category-main">
-                  <TwoLine title={row.category} subtitle={`${money(row.approved)} tЙ™sdiqli В· ${money(row.pending)} gГ¶zlЙ™yir`} />
+                  <TwoLine title={row.category} subtitle={`${money(row.approved)} təsdiqli · ${money(row.pending)} gözləyir`} />
                   <strong>{money(row.total)}</strong>
                 </div>
                 <ProgressRow value={(row.total / maxCategoryTotal) * 100} compact />
@@ -503,9 +503,9 @@ function FinancePage({
         </Panel>
 
         <Panel className="finance-expense-queue-panel span-2">
-          <PanelHeader title="XЙ™rc tЙ™sdiq nГ¶vbЙ™si" subtitle="RЙ™hbЙ™rlik tЙ™sdiqi vЙ™ imtina axД±nД±" />
+          <PanelHeader title="Xərc təsdiq növbəsi" subtitle="Rəhbərlik təsdiqi və imtina axını" />
           <DataTable
-            columns={["TЙ™svir", "Kateqoriya", "Tarix", "MЙ™blЙ™Дџ", "Status", "ЖЏmЙ™liyyat"]}
+            columns={["Təsvir", "Kateqoriya", "Tarix", "Məbləğ", "Status", "Əməliyyat"]}
             rows={expenses.map((expense) => [
               <strong>{expense.description}</strong>,
               expense.category,
@@ -513,17 +513,17 @@ function FinancePage({
               money(expense.amount),
               <StatusBadge status={expense.status} />,
               <div className="row-actions operation-table-actions">
-                {expense.status === "TЙ™sdiq gГ¶zlЙ™yir" && (
+                {expense.status === "Təsdiq gözləyir" && (
                   <>
-                    <button className="text-btn" onClick={() => setExpenseStatus(expense.id, "TЙ™sdiq edildi")}>
-                      TЙ™sdiq
+                    <button className="text-btn" onClick={() => setExpenseStatus(expense.id, "Təsdiq edildi")}>
+                      Təsdiq
                     </button>
-                    <button className="text-btn danger" onClick={() => setExpenseStatus(expense.id, "Д°mtina edildi")}>
-                      Д°mtina
+                    <button className="text-btn danger" onClick={() => setExpenseStatus(expense.id, "İmtina edildi")}>
+                      İmtina
                     </button>
                   </>
                 )}
-                <button className="text-btn" onClick={() => onEditExpense(expense.id)}>RedaktЙ™</button>
+                <button className="text-btn" onClick={() => onEditExpense(expense.id)}>Redaktə</button>
                 <button className="text-btn danger" onClick={() => onDeleteExpense(expense.id)}>Sil</button>
               </div>,
             ])}
@@ -532,7 +532,7 @@ function FinancePage({
       </section>
 
       <Panel className="finance-ledger-panel">
-        <PanelHeader title="Kassa axД±nД±" subtitle="SatД±Еџ, kredit Г¶dЙ™niЕџi vЙ™ xЙ™rclЙ™r vahid reyestrdЙ™" />
+        <PanelHeader title="Kassa axını" subtitle="Satış, kredit ödənişi və xərclər vahid reyestrdə" />
         <div className="finance-filter-toolbar">
           <div className="tabs finance-filter-tabs">
             {filterItems.map((item) => (
@@ -548,11 +548,11 @@ function FinancePage({
           </div>
           <div className="finance-filter-controls">
             <label className="finance-search-filter">
-              <span>AxtarД±Еџ</span>
+              <span>Axtarış</span>
               <input
                 value={ledgerSearch}
                 onChange={(event) => setLedgerSearch(event.target.value)}
-                placeholder="MЙ™nbЙ™, tЙ™rЙ™f, status..."
+                placeholder="Mənbə, tərəf, status..."
               />
             </label>
             <label className="finance-category-filter">
@@ -564,14 +564,14 @@ function FinancePage({
               </select>
             </label>
             <label className="finance-date-filter">
-              <span>BaЕџlanДџД±c</span>
+              <span>Başlanğıc</span>
               <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
             </label>
             <label className="finance-date-filter">
               <span>Son</span>
               <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
             </label>
-            <button className="secondary-btn icon-only" type="button" title="FilterlЙ™ri sД±fД±rla" onClick={resetLedgerFilters}>
+            <button className="secondary-btn icon-only" type="button" title="Filterləri sıfırla" onClick={resetLedgerFilters}>
               <RefreshCw size={16} />
             </button>
             <button className="secondary-btn finance-export-btn" type="button" onClick={exportVisibleLedger}>
@@ -582,11 +582,11 @@ function FinancePage({
         </div>
         <div className="finance-ledger-summary">
           <div>
-            <span>GГ¶rГјnЙ™n daxilolma</span>
+            <span>Görünən daxilolma</span>
             <strong>{money(visibleInflow)}</strong>
           </div>
           <div>
-            <span>GГ¶rГјnЙ™n Г§Д±xД±Еџ</span>
+            <span>Görünən çıxış</span>
             <strong>{money(visibleOutflow)}</strong>
           </div>
           <div>
@@ -594,24 +594,24 @@ function FinancePage({
             <strong>{money(visibleNet)}</strong>
           </div>
           <div>
-            <span>GГ¶zlЙ™yЙ™n / accrual</span>
+            <span>Gözləyən / accrual</span>
             <strong>{money(visiblePending + visibleAccrual)}</strong>
           </div>
           <div>
-            <span>GecikmЙ™ gЙ™liri</span>
+            <span>Gecikmə gəliri</span>
             <strong>{money(visiblePenalty)}</strong>
           </div>
         </div>
         <DataTable
-          columns={["Tarix", "Tip", "Hesab", "MЙ™nbЙ™", "MГјЕџtЙ™ri/TЙ™svir", "ЖЏsas", "GecikmЙ™", "MЙ™blЙ™Дџ", "Status"]}
+          columns={["Tarix", "Tip", "Hesab", "Mənbə", "Müştəri/Təsvir", "Əsas", "Gecikmə", "Məbləğ", "Status"]}
           rows={visibleLedger.map((row) => [
             row.date,
             <StatusBadge status={row.type} />,
-            row.account || "вЂ”",
+            row.account || "—",
             renderFinanceSource(row),
             row.party,
-            row.principal > 0 ? money(row.principal) : "вЂ”",
-            row.penalty > 0 ? money(row.penalty) : "вЂ”",
+            row.principal > 0 ? money(row.principal) : "—",
+            row.penalty > 0 ? money(row.penalty) : "—",
             <strong className={`finance-amount ${row.direction}`}>
               {row.direction === "out" ? "-" : row.direction === "in" ? "+" : ""}
               {money(row.amount)}
@@ -622,14 +622,14 @@ function FinancePage({
       </Panel>
 
       <Panel>
-        <PanelHeader title="Kredit kassa daxilolmalarД±" subtitle="ЖЏsas mЙ™blЙ™Дџ vЙ™ gecikmЙ™ gЙ™liri ayrД± izlЙ™nir" />
+        <PanelHeader title="Kredit kassa daxilolmaları" subtitle="Əsas məbləğ və gecikmə gəliri ayrı izlənir" />
         <DataTable
-          columns={["Tarix", "MГјЕџtЙ™ri", "Kredit", "MГјqavilЙ™", "ЖЏsas", "GecikmЙ™", "Kassa"]}
+          columns={["Tarix", "Müştəri", "Kredit", "Müqavilə", "Əsas", "Gecikmə", "Kassa"]}
           rows={cashEntries.map((entry) => [
             entry.date,
             <strong>{entry.customer}</strong>,
             entry.creditId,
-            entry.contractId || "вЂ”",
+            entry.contractId || "—",
             money(entry.principal),
             money(entry.penalty),
             <StatusBadge status={money(entry.amount)} />,
@@ -639,5 +639,4 @@ function FinancePage({
     </div>
   );
 }
-
 
