@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 -- Shared, tenant-isolated records for the ERP workflows that do not warrant
 -- duplicating approval, line, timeline and delivery infrastructure per module.
 CREATE TABLE IF NOT EXISTS public.workflow_records (

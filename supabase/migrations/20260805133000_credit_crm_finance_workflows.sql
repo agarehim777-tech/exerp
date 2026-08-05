@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.6 seconds
-Output:
 ALTER TABLE public.credit_contracts
   ADD COLUMN IF NOT EXISTS daily_penalty_rate NUMERIC(8,6) NOT NULL DEFAULT 0 CHECK (daily_penalty_rate >= 0),
   ADD COLUMN IF NOT EXISTS risk_score INTEGER NOT NULL DEFAULT 0 CHECK (risk_score BETWEEN 0 AND 100),

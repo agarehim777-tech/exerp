@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.6 seconds
-Output:
 CREATE OR REPLACE FUNCTION public.platform_set_tenant_limits(
   _tenant UUID,
   _max_users INTEGER,
