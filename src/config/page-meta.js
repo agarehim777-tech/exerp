@@ -82,6 +82,10 @@ export const pageMeta = {
     title: "Mühasibat Dövrləri",
     subtitle: "Hesabat dövrlərinin bağlanması — bağlı dövrdə jurnal və faktura dəyişikliyi bloklanır.",
   },
+  currencies: {
+    title: "Valyuta & Məzənnə",
+    subtitle: "Çoxvalyutalı əməliyyatlar üçün valyuta siyahısı və tarixə görə məzənnələr.",
+  },
   audit: {
     title: "Audit İzi",
     subtitle: "Kritik cədvəllərdə kim, nə vaxt, nəyi dəyişib — köhnə və yeni dəyərlərlə.",
