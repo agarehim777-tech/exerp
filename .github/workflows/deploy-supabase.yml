@@ -40,8 +40,12 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$PROJECT_REF"
 
+      - name: Mark superseded legacy schema migration
+        run: supabase migration repair --status applied 20260730125048
+
       - name: Apply migrations
         run: supabase db push --include-all
 
       - name: List applied migrations
         run: supabase migration list
+
