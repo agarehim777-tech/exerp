@@ -58,6 +58,7 @@ export const navItems = [
   { id: "roles", label: "Rollar", group: "system" },
   { id: "access-check", label: "İcazə yoxlaması", group: "system" },
   { id: "audit", label: "Audit izi", group: "system" },
+  { id: "data-reconciliation", label: "Data barışdırması", group: "system" },
 
   { id: "api", label: "API & inteqrasiya", group: "system" },
   { id: "messages", label: "Mesajlar", group: "system" },

@@ -61,6 +61,7 @@ const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").th
 const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
 const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
+const DataReconciliationPage = lazy(() => import("./modules/admin/DataReconciliationPage.jsx"));
 import {
   changeRemotePassword,
   createRemoteCompany,
@@ -10800,6 +10801,7 @@ function App() {
           {active === "periods" && <PeriodsPage />}
           {active === "currencies" && <CurrenciesPage />}
           {active === "financial-statements" && <FinancialStatementsPage />}
+          {active === "data-reconciliation" && <DataReconciliationPage />}
 
           
           
