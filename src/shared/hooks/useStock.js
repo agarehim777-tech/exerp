@@ -1,60 +1,165 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 
-export function useStock(tenantId) {
+const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
+const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price), warehouse:warehouses(id,name,code)';
+const DEFAULT_PAGE_SIZE = 50;
+
+export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {}) {
   const [warehouses, setWarehouses] = useState([]);
   const [balances, setBalances] = useState([]);
   const [movements, setMovements] = useState([]);
+  const [movementsPage, setMovementsPage] = useState(0);
+  const [movementsTotal, setMovementsTotal] = useState(0);
+  const [movementsLoading, setMovementsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchAll = useCallback(async () => {
+  const pageRef = useRef(0);
+  pageRef.current = movementsPage;
+
+  // --- Server-side paginated movements ---------------------------------
+  const fetchMovements = useCallback(async (page = 0) => {
+    if (!tenantId) return;
+    setMovementsLoading(true);
+    const from = page * movementsPageSize;
+    const { data, error: err, count } = await supabase
+      .from('stock_movements')
+      .select(MOVEMENT_SELECT, { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('moved_at', { ascending: false })
+      .range(from, from + movementsPageSize - 1);
+    if (err) setError(err);
+    setMovements(data || []);
+    setMovementsTotal(count ?? 0);
+    setMovementsLoading(false);
+  }, [tenantId, movementsPageSize]);
+
+  useEffect(() => { fetchMovements(movementsPage); }, [fetchMovements, movementsPage]);
+
+  /** Dəyərləmə (FIFO/orta) üçün bütün hərəkətləri səhifələnmiş şəkildə yükləyir. */
+  const fetchAllMovements = useCallback(async () => {
+    if (!tenantId) return [];
+    const chunk = 1000;
+    const all = [];
+    for (let offset = 0; ; offset += chunk) {
+      const { data, error: err } = await supabase
+        .from('stock_movements')
+        .select(MOVEMENT_SELECT)
+        .eq('tenant_id', tenantId)
+        .order('moved_at', { ascending: true })
+        .range(offset, offset + chunk - 1);
+      if (err) { setError(err); break; }
+      all.push(...(data || []));
+      if (!data || data.length < chunk) break;
+    }
+    return all;
+  }, [tenantId]);
+
+  // --- Warehouses + balances -------------------------------------------
+  const fetchBase = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    const [wh, bal, mov] = await Promise.all([
+    const [wh, bal] = await Promise.all([
       supabase.from('warehouses').select('*').eq('tenant_id', tenantId).order('name'),
-      supabase
-        .from('stock_balances')
-        .select('*, product:products(id,name,sku,unit,price), warehouse:warehouses(id,name,code)')
-        .eq('tenant_id', tenantId),
-      supabase
-        .from('stock_movements')
-        .select('*, product:products(id,name,sku), warehouse:warehouses(id,name)')
-        .eq('tenant_id', tenantId)
-        .order('moved_at', { ascending: false })
-        .limit(200),
+      supabase.from('stock_balances').select(BALANCE_SELECT).eq('tenant_id', tenantId),
     ]);
-    const firstError = wh.error || bal.error || mov.error;
-    if (firstError) setError(firstError);
-    else setError(null);
+    const firstError = wh.error || bal.error;
+    setError(firstError || null);
     setWarehouses(wh.data || []);
     setBalances(bal.data || []);
-    setMovements(mov.data || []);
     setLoading(false);
   }, [tenantId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchBase(); }, [fetchBase]);
 
+  const refresh = useCallback(async () => {
+    await Promise.all([fetchBase(), fetchMovements(pageRef.current)]);
+  }, [fetchBase, fetchMovements]);
+
+  // --- Incremental realtime --------------------------------------------
   useEffect(() => {
     if (!tenantId) return undefined;
-    const channel = supabase
-      .channel(`stock:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_movements', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'warehouses', filter: `tenant_id=eq.${tenantId}` }, fetchAll)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+    const filter = `tenant_id=eq.${tenantId}`;
+    const suffix = Math.random().toString(36).slice(2, 10);
 
+    const hydrateMovement = async (id) => {
+      const { data } = await supabase.from('stock_movements').select(MOVEMENT_SELECT).eq('id', id).maybeSingle();
+      return data || null;
+    };
+    const hydrateBalance = async (id) => {
+      const { data } = await supabase.from('stock_balances').select(BALANCE_SELECT).eq('id', id).maybeSingle();
+      return data || null;
+    };
+
+    const onMovement = async (payload) => {
+      if (payload.eventType === 'DELETE') {
+        const removedId = payload.old?.id;
+        setMovements((prev) => prev.filter((row) => row.id !== removedId));
+        setMovementsTotal((prev) => Math.max(0, prev - 1));
+        return;
+      }
+      const row = await hydrateMovement(payload.new?.id);
+      if (!row) return;
+      if (payload.eventType === 'INSERT') {
+        setMovementsTotal((prev) => prev + 1);
+        if (pageRef.current !== 0) return;
+        setMovements((prev) => (prev.some((item) => item.id === row.id)
+          ? prev
+          : [row, ...prev].slice(0, movementsPageSize)));
+        return;
+      }
+      setMovements((prev) => prev.map((item) => (item.id === row.id ? row : item)));
+    };
+
+    const onBalance = async (payload) => {
+      if (payload.eventType === 'DELETE') {
+        const removedId = payload.old?.id;
+        setBalances((prev) => prev.filter((row) => row.id !== removedId));
+        return;
+      }
+      const row = await hydrateBalance(payload.new?.id);
+      if (!row) return;
+      setBalances((prev) => (prev.some((item) => item.id === row.id)
+        ? prev.map((item) => (item.id === row.id ? row : item))
+        : [...prev, row]));
+    };
+
+    const onWarehouse = (payload) => {
+      if (payload.eventType === 'DELETE') {
+        setWarehouses((prev) => prev.filter((row) => row.id !== payload.old?.id));
+        return;
+      }
+      const row = payload.new;
+      setWarehouses((prev) => {
+        const next = prev.some((item) => item.id === row.id)
+          ? prev.map((item) => (item.id === row.id ? { ...item, ...row } : item))
+          : [...prev, row];
+        return next.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'az'));
+      });
+    };
+
+    const channel = supabase
+      .channel(`stock:${tenantId}:${suffix}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_movements', filter }, onMovement)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_balances', filter }, onBalance)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'warehouses', filter }, onWarehouse)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [tenantId, movementsPageSize]);
+
+  // --- Mutations --------------------------------------------------------
   const createWarehouse = async (payload) => {
     const { error: err } = await supabase.from('warehouses').insert({ ...payload, tenant_id: tenantId });
     if (err) throw err;
-    await fetchAll();
+    await fetchBase();
   };
 
   const removeWarehouse = async (id) => {
     const { error: err } = await supabase.from('warehouses').delete().eq('id', id);
     if (err) throw err;
-    await fetchAll();
+    await fetchBase();
   };
 
   const addMovement = async (payload) => {
@@ -65,7 +170,8 @@ export function useStock(tenantId) {
       tenant_id: tenantId,
     });
     if (err) throw err;
-    await fetchAll();
+    if (pageRef.current !== 0) setMovementsPage(0);
+    else await fetchMovements(0);
   };
 
   const setReorderPoint = async (balanceId, value) => {
@@ -74,11 +180,25 @@ export function useStock(tenantId) {
       .update({ reorder_point: Number(value) || 0 })
       .eq('id', balanceId);
     if (err) throw err;
-    await fetchAll();
   };
 
   return {
-    warehouses, balances, movements, loading, error,
-    refresh: fetchAll, createWarehouse, removeWarehouse, addMovement, setReorderPoint,
+    warehouses,
+    balances,
+    movements,
+    movementsPage,
+    movementsPageSize,
+    movementsTotal,
+    movementsPageCount: Math.max(1, Math.ceil(movementsTotal / movementsPageSize)),
+    movementsLoading,
+    setMovementsPage,
+    fetchAllMovements,
+    loading,
+    error,
+    refresh,
+    createWarehouse,
+    removeWarehouse,
+    addMovement,
+    setReorderPoint,
   };
 }

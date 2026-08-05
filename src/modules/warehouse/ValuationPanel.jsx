@@ -1,13 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
 import { azn, badge, card, input, statLabel, statTile, statValue, table, td, th } from "../../shared/ui/tokens.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
  * Hesablama saf funksiyalar üzərində aparılır (src/shared/utils/inventoryValuation.ts).
+ * Hərəkətlər siyahısı səhifələndiyi üçün burada tam tarixçə ayrıca yüklənir.
  */
-export default function ValuationPanel({ movements = [], products = [] }) {
+export default function ValuationPanel({ loadMovements, products = [] }) {
   const [method, setMethod] = useState("fifo");
+  const [movements, setMovements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.resolve(loadMovements ? loadMovements() : []).then((rows) => {
+      if (cancelled) return;
+      setMovements(rows || []);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [loadMovements]);
 
   const nameById = useMemo(() => {
     const map = new Map();
@@ -79,12 +93,12 @@ export default function ValuationPanel({ movements = [], products = [] }) {
             );
           })}
           {!rows.length && (
-            <tr><td style={td} colSpan={7}>Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin.</td></tr>
+            <tr><td style={td} colSpan={7}>{loading ? "Yüklənir…" : "Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin."}</td></tr>
           )}
         </tbody>
       </table>
       <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-        Qeyd: hesablama son 200 anbar hərəkəti üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
+        Qeyd: hesablama bütün anbar hərəkətləri ({movements.length.toLocaleString("az-AZ")}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
       </div>
     </div>
   );
