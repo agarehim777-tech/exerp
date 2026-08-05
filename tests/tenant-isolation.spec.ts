@@ -81,7 +81,8 @@ test.describe("Sessiya ilə tenant izolyasiyası", () => {
 
   test("başqa tenant-ın məlumatı sorğuda görünmür", async ({ page }) => {
     await restoreSession(page);
-    await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => {});
+    await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
+    await page.waitForTimeout(2000);
     const result = await page.evaluate(
       async ([url, key, storageKey]) => {
         const raw = window.localStorage.getItem(storageKey as string);
