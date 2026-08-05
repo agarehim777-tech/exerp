@@ -3,8 +3,9 @@ import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../shared/hooks/useAccounting.js";
+import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
 
-const TYPE_LABEL = { asset: "Aktiv", liability: "Öhdəlik", equity: "Kapital", revenue: "Gəlir", expense: "Xərc" };
+const TYPE_LABEL = { asset: "Aktiv", liability: "Г–hdЙ™lik", equity: "Kapital", revenue: "GЙ™lir", expense: "XЙ™rc" };
 
 export default function AccountingPage() {
   const { activeMembership } = useAuth();
@@ -15,13 +16,15 @@ export default function AccountingPage() {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "flex", gap: 8, borderBottom: "1px solid #e6dfc9", paddingBottom: 8 }}>
-        {[["coa","Hesablar planı"],["journal","Jurnal"],["tb","Trial Balance"]].map(([k,l]) => (
+        {[["coa","Hesablar planД±"],["journal","Jurnal"],["tb","Trial Balance"]].map(([k,l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
+        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaР•СџdР”В±rmasР”В±</button>
       </div>
       {tab === "coa" && <ChartOfAccountsPanel isAdmin={isAdmin} />}
       {tab === "journal" && <JournalPanel isAdmin={isAdmin} />}
       {tab === "tb" && <TrialBalancePanel tenantId={tenantId} />}
+      {tab === "reconciliation" && <ReconciliationPanel />}
     </div>
   );
 }
@@ -34,24 +37,24 @@ function ChartOfAccountsPanel({ isAdmin }) {
 
   const doSeed = async () => {
     setBusy(true); setMsg("");
-    try { await seedDefaults(); setMsg("Standart hesablar əlavə edildi"); }
-    catch (e) { setMsg("Xəta: " + e.message); }
+    try { await seedDefaults(); setMsg("Standart hesablar Й™lavЙ™ edildi"); }
+    catch (e) { setMsg("XЙ™ta: " + e.message); }
     setBusy(false);
   };
 
   const doCreate = async (e) => {
     e.preventDefault(); setBusy(true); setMsg("");
     try { await create(form); setForm({ code: "", name: "", type: "asset" }); }
-    catch (er) { setMsg("Xəta: " + er.message); }
+    catch (er) { setMsg("XЙ™ta: " + er.message); }
     setBusy(false);
   };
 
   return (
     <div style={card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Hesablar planı ({accounts.length})</h3>
+        <h3 style={{ margin: 0 }}>Hesablar planД± ({accounts.length})</h3>
         {isAdmin && accounts.length === 0 && (
-          <button onClick={doSeed} disabled={busy} style={primaryBtn}>Standart hesabları yüklə</button>
+          <button onClick={doSeed} disabled={busy} style={primaryBtn}>Standart hesablarД± yГјklЙ™</button>
         )}
       </div>
       {msg && <div style={msgBox}>{msg}</div>}
@@ -62,10 +65,10 @@ function ChartOfAccountsPanel({ isAdmin }) {
           <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={input}>
             {Object.entries(TYPE_LABEL).map(([k,l]) => <option key={k} value={k}>{l}</option>)}
           </select>
-          <button type="submit" disabled={busy} style={primaryBtn}>+ Əlavə et</button>
+          <button type="submit" disabled={busy} style={primaryBtn}>+ ЖЏlavЙ™ et</button>
         </form>
       )}
-      {loading ? <div>Yüklənir…</div> : (
+      {loading ? <div>YГјklЙ™nirвЂ¦</div> : (
         <table style={table}>
           <thead><tr><th style={th}>Kod</th><th style={th}>Ad</th><th style={th}>Tip</th>{isAdmin && <th style={th}></th>}</tr></thead>
           <tbody>
@@ -106,22 +109,22 @@ function JournalPanel({ isAdmin }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!totals.balanced) { setMsg("Debet və kredit bərabər olmalıdır"); return; }
+    if (!totals.balanced) { setMsg("Debet vЙ™ kredit bЙ™rabЙ™r olmalД±dД±r"); return; }
     setBusy(true); setMsg("");
     try {
       await createEntry({ entry_date: entryDate, reference, description,
         lines: lines.filter((l) => l.account_id && ((Number(l.debit) || 0) > 0 || (Number(l.credit) || 0) > 0)) });
       setShowForm(false); setReference(""); setDescription("");
       setLines([{ account_id: "", debit: 0, credit: 0, memo: "" }, { account_id: "", debit: 0, credit: 0, memo: "" }]);
-    } catch (er) { setMsg("Xəta: " + er.message); }
+    } catch (er) { setMsg("XЙ™ta: " + er.message); }
     setBusy(false);
   };
 
   return (
     <div style={card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Jurnal yazılışları ({entries.length})</h3>
-        {isAdmin && <button onClick={() => setShowForm(!showForm)} style={primaryBtn}>{showForm ? "Bağla" : "+ Yeni yazılış"}</button>}
+        <h3 style={{ margin: 0 }}>Jurnal yazД±lД±ЕџlarД± ({entries.length})</h3>
+        {isAdmin && <button onClick={() => setShowForm(!showForm)} style={primaryBtn}>{showForm ? "BaДџla" : "+ Yeni yazД±lД±Еџ"}</button>}
       </div>
       {msg && <div style={msgBox}>{msg}</div>}
       {showForm && (
@@ -129,7 +132,7 @@ function JournalPanel({ isAdmin }) {
           <div style={{ display: "grid", gridTemplateColumns: "160px 200px 1fr", gap: 8, marginBottom: 8 }}>
             <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} style={input} required />
             <input placeholder="Reference" value={reference} onChange={(e) => setReference(e.target.value)} style={input} />
-            <input placeholder="Təsvir" value={description} onChange={(e) => setDescription(e.target.value)} style={input} />
+            <input placeholder="TЙ™svir" value={description} onChange={(e) => setDescription(e.target.value)} style={input} />
           </div>
           <table style={table}>
             <thead><tr><th style={th}>Hesab</th><th style={th}>Debet</th><th style={th}>Kredit</th><th style={th}>Memo</th></tr></thead>
@@ -138,8 +141,8 @@ function JournalPanel({ isAdmin }) {
                 <tr key={i}>
                   <td style={td}>
                     <select value={l.account_id} onChange={(e) => upd(i, "account_id", e.target.value)} style={input} required>
-                      <option value="">— Hesab seç —</option>
-                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                      <option value="">вЂ” Hesab seГ§ вЂ”</option>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} вЂ” {a.name}</option>)}
                     </select>
                   </td>
                   <td style={td}><input type="number" step="0.01" min="0" value={l.debit} onChange={(e) => upd(i, "debit", e.target.value)} style={{ ...input, width: 100 }} /></td>
@@ -148,32 +151,32 @@ function JournalPanel({ isAdmin }) {
                 </tr>
               ))}
               <tr>
-                <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>Cəm:</td>
+                <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>CЙ™m:</td>
                 <td style={{ ...td, color: totals.balanced ? "#064e3b" : "#b23a3a" }}><b>{totals.d.toFixed(2)}</b></td>
                 <td style={{ ...td, color: totals.balanced ? "#064e3b" : "#b23a3a" }}><b>{totals.c.toFixed(2)}</b></td>
-                <td style={td}>{totals.balanced ? "✓ balanslıdır" : "✗ balanssız"}</td>
+                <td style={td}>{totals.balanced ? "вњ“ balanslД±dД±r" : "вњ— balanssД±z"}</td>
               </tr>
             </tbody>
           </table>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button type="button" onClick={addLine} style={secondaryBtn}>+ Sətir</button>
+            <button type="button" onClick={addLine} style={secondaryBtn}>+ SЙ™tir</button>
             <button type="submit" disabled={busy || !totals.balanced} style={primaryBtn}>Yarat</button>
           </div>
         </form>
       )}
-      {loading ? <div>Yüklənir…</div> : (
+      {loading ? <div>YГјklЙ™nirвЂ¦</div> : (
         <table style={table}>
-          <thead><tr><th style={th}>Tarix</th><th style={th}>Ref</th><th style={th}>Təsvir</th><th style={th}>Cəm</th><th style={th}>Status</th>{isAdmin && <th style={th}></th>}</tr></thead>
+          <thead><tr><th style={th}>Tarix</th><th style={th}>Ref</th><th style={th}>TЙ™svir</th><th style={th}>CЙ™m</th><th style={th}>Status</th>{isAdmin && <th style={th}></th>}</tr></thead>
           <tbody>
             {entries.map((e) => {
               const total = (e.journal_lines || []).reduce((s, l) => s + Number(l.debit), 0);
               return (
                 <tr key={e.id}>
                   <td style={td}>{e.entry_date}</td>
-                  <td style={td}>{e.reference || "—"}</td>
-                  <td style={td}>{e.description || "—"}</td>
+                  <td style={td}>{e.reference || "вЂ”"}</td>
+                  <td style={td}>{e.description || "вЂ”"}</td>
                   <td style={td}>{total.toFixed(2)}</td>
-                  <td style={td}>{e.posted ? <span style={badgeGreen}>Postlanıb</span> : <span style={badgeGray}>Layihə</span>}</td>
+                  <td style={td}>{e.posted ? <span style={badgeGreen}>PostlanД±b</span> : <span style={badgeGray}>LayihЙ™</span>}</td>
                   {isAdmin && (
                     <td style={td}>
                       {!e.posted && <button onClick={() => post(e.id).catch((er) => alert(er.message))} style={secondaryBtn}>Postla</button>}
@@ -213,9 +216,9 @@ function TrialBalancePanel({ tenantId }) {
         <h3 style={{ margin: 0, flex: 1 }}>Trial Balance</h3>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} />
-        <button onClick={load} style={primaryBtn}>Yenilə</button>
+        <button onClick={load} style={primaryBtn}>YenilЙ™</button>
       </div>
-      {loading ? <div>Yüklənir…</div> : (
+      {loading ? <div>YГјklЙ™nirвЂ¦</div> : (
         <table style={table}>
           <thead><tr><th style={th}>Kod</th><th style={th}>Hesab</th><th style={th}>Tip</th><th style={th}>Debet</th><th style={th}>Kredit</th><th style={th}>Balans</th></tr></thead>
           <tbody>
@@ -230,10 +233,10 @@ function TrialBalancePanel({ tenantId }) {
               </tr>
             ))}
             <tr style={{ background: "#faf5e2" }}>
-              <td colSpan={3} style={{ ...td, textAlign: "right", fontWeight: 700 }}>Cəm</td>
+              <td colSpan={3} style={{ ...td, textAlign: "right", fontWeight: 700 }}>CЙ™m</td>
               <td style={{ ...td, fontWeight: 700 }}>{totals.d.toFixed(2)}</td>
               <td style={{ ...td, fontWeight: 700 }}>{totals.c.toFixed(2)}</td>
-              <td style={td}>{Math.abs(totals.d - totals.c) < 0.01 ? "✓" : "✗ balanssız"}</td>
+              <td style={td}>{Math.abs(totals.d - totals.c) < 0.01 ? "вњ“" : "вњ— balanssД±z"}</td>
             </tr>
           </tbody>
         </table>
@@ -254,3 +257,4 @@ const msgBox = { background: "#faf5e2", color: "#5a4a1e", padding: 8, borderRadi
 const tabBtn = (active) => ({ background: active ? "#064e3b" : "transparent", color: active ? "#fbe89a" : "#064e3b", border: 0, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 });
 const badgeGreen = { background: "#064e3b", color: "#fbe89a", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
 const badgeGray = { background: "#e6dfc9", color: "#5a4a1e", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
+
