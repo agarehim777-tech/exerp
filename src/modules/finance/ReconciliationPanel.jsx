@@ -23,21 +23,20 @@ export function ReconciliationPanel() {
     await load();
   }
   return <Panel className="finance-reconciliation-panel">
-    <PanelHeader title="Kassa vЙ™ bank uzlaЕџdД±rmasД±" subtitle="Statement qalД±ДџД± ilЙ™ ERP ledger qalД±ДџД±nД± mГјqayisЙ™ edin" icon={RefreshCw} />
+    <PanelHeader title="Kassa və bank uzlaşdırması" subtitle="Statement qalığı ilə ERP ledger qalığını müqayisə edin" icon={RefreshCw} />
     {error && <div className="inline-alert danger">{error}</div>}
     <form className="production-form-grid" onSubmit={submit}>
-      <label><span>BaЕџlanДџД±c</span><input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
+      <label><span>Başlanğıc</span><input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
       <label><span>Son tarix</span><input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></label>
-      <label><span>Bank/kassa Г§Д±xarД±ЕџД±</span><input type="number" step="0.01" value={form.statement_balance} onChange={(e) => setForm({ ...form, statement_balance: e.target.value })} /></label>
+      <label><span>Bank/kassa çıxarışı</span><input type="number" step="0.01" value={form.statement_balance} onChange={(e) => setForm({ ...form, statement_balance: e.target.value })} /></label>
       <label><span>ERP ledger</span><input type="number" step="0.01" value={form.ledger_balance} onChange={(e) => setForm({ ...form, ledger_balance: e.target.value })} /></label>
-      <button className="primary-btn" type="submit"><Save size={16} /> UzlaЕџdД±rma yarat</button>
+      <button className="primary-btn" type="submit"><Save size={16} /> Uzlaşdırma yarat</button>
     </form>
-    <DataTable columns={["Period", "Г‡Д±xarД±Еџ", "Ledger", "FЙ™rq", "Status"]} rows={rows.map((row) => [
-      <TwoLine title={`${row.period_start} вЂ” ${row.period_end}`} subtitle={row.id.slice(0, 8)} />,
+    <DataTable columns={["Period", "Çıxarış", "Ledger", "Fərq", "Status"]} rows={rows.map((row) => [
+      <TwoLine title={`${row.period_start} — ${row.period_end}`} subtitle={row.id.slice(0, 8)} />,
       money(row.statement_balance), money(row.ledger_balance),
       <strong>{money(row.difference)}</strong>, <StatusBadge status={row.status} />,
     ])} />
-    {!rows.length && !error && <div className="finance-signal-empty"><CheckCircle2 size={16} /> UzlaЕџdД±rma qeydi yoxdur</div>}
+    {!rows.length && !error && <div className="finance-signal-empty"><CheckCircle2 size={16} /> Uzlaşdırma qeydi yoxdur</div>}
   </Panel>;
 }
-
