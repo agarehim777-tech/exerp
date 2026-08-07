@@ -1,10 +1,10 @@
 import { Download, FileText, X } from "lucide-react";
-import { StatusBadge, TwoLine } from "../components/ui.jsx";
-import { daysBetween, roundMoney } from "../shared/lib/credit.js";
-import { formatDateInput, parsePaymentDate } from "../services/date.js";
-import { money, normalize } from "../services/format.js";
-import { stages } from "../data.js";
-import { total } from "../shared/utils/aggregate.js";
+import { StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { daysBetween, roundMoney } from "./credit.js";
+import { formatDateInput, parsePaymentDate } from "../../services/date.js";
+import { money, normalize } from "../../services/format.js";
+import { stages } from "../../data.js";
+import { total } from "../../shared/utils/aggregate.js";
 
 export function buildAccountingCloseChecklist(accounting, closeRun) {
   const { balance, pl, cashFlow, journalRows, chartRows } = accounting;
