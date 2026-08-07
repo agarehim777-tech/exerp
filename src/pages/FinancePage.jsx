@@ -35,7 +35,7 @@ import {
   getCreditPaymentState,
   hasExpenseCashImpact,
   isCreditClosed,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default FinancePage;
 

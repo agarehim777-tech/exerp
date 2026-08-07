@@ -12,7 +12,7 @@ import {
 import {
   getNormalizedVendor,
   getVendorKey,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default VendorManagementPage;
 

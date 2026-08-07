@@ -25,7 +25,7 @@ import {
 } from "../shared/lib/appDomain.jsx";
 import {
   navIcons,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default function DashboardPage({
   stats,

@@ -24,7 +24,7 @@ import {
   matchesCreditSearch,
   matchesCreditSourceFilter,
   monthNamesAz,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default CreditsPage;
 

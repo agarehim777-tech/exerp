@@ -1,21 +1,13 @@
-import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
-import { DataTable, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
-import { lazy, useMemo, useState } from "react";
+import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
+import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { lazy, useEffect, useMemo, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue } from "../../services/date.js";
-import { getCreditDebtFormula, getCreditDisplayPlan, getCreditPaidTotal, getCreditRiskLabel, getCreditSourceLabel } from "./credit.js";
+import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, roundMoney } from "./credit.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
-import { initialState, navItems } from "../../data.js";
+import { initialState, navItems, stages } from "../../data.js";
 export { applyCreditPrincipalPayment, buildCreditPlan, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRowDate, getCreditSourceLabel, getReceivableClosureAmount, isCreditClosed, matchesCreditManagementFilter, matchesCreditSearch, matchesCreditSourceFilter, monthNamesAz } from "./credit.js";
-import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
-import { Building2, Check, ChevronRight, CreditCard, Download, FileText, Filter, Package, Pencil, Plus, Trash2, Users, Wallet, X } from "lucide-react";
-import { daysBetween, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditSourceLabel, isCreditClosed, roundMoney } from "./credit.js";
-import { money, normalize, percent } from "../../services/format.js";
-import { navItems, stages } from "../../data.js";
-import { formatDateInput, parsePaymentDate } from "../../services/date.js";
-import { total } from "../../shared/utils/aggregate.js";
-import { useEffect, useMemo, useState } from "react";
 export function buildAccountingCloseChecklist(accounting, closeRun) {
   const { balance, pl, cashFlow, journalRows, chartRows } = accounting;
   const cashAccount = chartRows.find((row) => row.code === "1010");
