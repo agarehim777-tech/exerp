@@ -3,7 +3,7 @@ import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wa
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
-import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
+import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({
   employees,
   allEmployees = employees,

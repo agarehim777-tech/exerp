@@ -4,7 +4,7 @@ import { buildCreditPlan, getCreditInitials } from "../shared/lib/credit.js";
 import { money } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
-import { WorkflowSteps, buildSalesBonusRows, getOrderBonusAmount, getOrderBonusText, getOrderSellerBonuses, getSalesCashImpact, getSalesOrderRiskStatus, getShortSellerName, matchesSalesDateRange, matchesSalesOrderFilter, matchesSalesOrderSearch } from "../shared/lib/appDomain.jsx";
+import { WorkflowSteps, buildSalesBonusRows, getOrderBalance, getOrderBonusAmount, getOrderBonusText, getOrderDeliveryStatus, getOrderPaymentMethod, getOrderSellerBonuses, getSalesCashImpact, getSalesOrderRiskStatus, getShortSellerName, matchesSalesDateRange, matchesSalesOrderFilter, matchesSalesOrderSearch, summarizeOrderProducts } from "../shared/lib/appDomain.jsx";
 export default function SalesPage({
   orders,
   stock,

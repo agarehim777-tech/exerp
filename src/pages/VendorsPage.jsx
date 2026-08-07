@@ -3,7 +3,7 @@ import { DataTable, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, Tw
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo } from "react";
-import { buildProcurementRows, currentBusinessQuarter, isPurchaseOrderOpen } from "../shared/lib/appDomain.jsx";
+import { buildProcurementRows, currentBusinessQuarter, currentBusinessYear, isPurchaseOrderOpen } from "../shared/lib/appDomain.jsx";
 export default function VendorsPage({
   vendors,
   warehouseStock = {},
