@@ -7,9 +7,11 @@ import {
   buildProcurementRows,
   currentBusinessQuarter,
   currentBusinessYear,
+  isPurchaseOrderOpen,
+} from "../shared/lib/appDomain.jsx";
+import {
   getNormalizedVendor,
   getVendorKey,
-  isPurchaseOrderOpen,
 } from "../App.jsx";
 
 export default VendorManagementPage;

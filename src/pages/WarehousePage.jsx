@@ -21,24 +21,26 @@ import {
 import { money, normalize, percent } from "../services/format.js";
 import { InventoryUnitsPanel } from "../modules/warehouse/InventoryUnitsPanel.jsx";
 import {
+  buildPurchaseOrderCoverage,
+  isDeliveryQueueOrder,
+} from "../shared/lib/appDomain.jsx";
+import {
+  BarcodeBadge,
+  DeliveryOrdersPanel,
   WarehouseBalancesWorkspace,
   WarehouseControlPanel,
+  WarehouseDistribution,
   WarehouseStockToolbar,
   WarehouseTransferPanel,
-  WarehouseDistribution,
-  DeliveryOrdersPanel,
-  BarcodeBadge,
   buildAggregateWarehouseStock,
-  buildWarehouseSummaries,
-  getWarehouseStockSummary,
   buildWarehouseStockAlerts,
+  buildWarehouseSummaries,
   buildWarehouseTransferSuggestions,
+  buildWarehouseWmsRows,
   filterRows,
   filterWarehouseItems,
-  buildPurchaseOrderCoverage,
-  buildWarehouseWmsRows,
-  isDeliveryQueueOrder,
   getAvailableQuantity,
+  getWarehouseStockSummary,
 } from "../App.jsx";
 
 export default WarehousePage;

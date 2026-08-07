@@ -25,13 +25,15 @@ import { total } from "../shared/utils/aggregate.js";
 import { ReconciliationPanel } from "../modules/finance/ReconciliationPanel.jsx";
 import {
   baseFinanceDate,
+} from "../shared/lib/appDomain.jsx";
+import {
   buildDailyCashSummary,
   buildExpenseCategoryRows,
   buildFinanceLedger,
   buildFinanceScenario,
-  hasExpenseCashImpact,
   getCreditDisplayPlan,
   getCreditPaymentState,
+  hasExpenseCashImpact,
   isCreditClosed,
 } from "../App.jsx";
 

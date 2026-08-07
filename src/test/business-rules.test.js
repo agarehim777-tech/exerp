@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  getDeliveryStockCheck,
+} from "../shared/lib/appDomain.jsx";
+import {
   applyCreditPrincipalPayment,
   buildCreditPlan,
   getAvailableQuantity,
-  getDeliveryStockCheck,
   getReceivableClosureAmount,
   isCreditClosed,
 } from "../App.jsx";
