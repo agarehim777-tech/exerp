@@ -1,19 +1,12 @@
 import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
-import { Building2, Check, ChevronRight, CreditCard, FileText, Filter, Package, Pencil, Plus, Trash2, Users, Wallet, X } from "lucide-react";
+import { Building2, Check, ChevronRight, CreditCard, Download, FileText, Filter, Package, Pencil, Plus, Trash2, Users, Wallet, X } from "lucide-react";
 import { daysBetween, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditSourceLabel, isCreditClosed } from "../../shared/lib/credit.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { navItems, stages } from "../../data.js";
-import { parsePaymentDate } from "../../services/date.js";
+import { formatDateInput, parsePaymentDate } from "../../services/date.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
-import { Download, FileText, X } from "lucide-react";
-import { StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { daysBetween, roundMoney } from "./credit.js";
-import { formatDateInput, parsePaymentDate } from "../../services/date.js";
-import { money, normalize } from "../../services/format.js";
-import { stages } from "../../data.js";
-import { total } from "../../shared/utils/aggregate.js";
-
 export function buildAccountingCloseChecklist(accounting, closeRun) {
   const { balance, pl, cashFlow, journalRows, chartRows } = accounting;
   const cashAccount = chartRows.find((row) => row.code === "1010");
