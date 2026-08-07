@@ -15,7 +15,7 @@ import {
   targetDbProvider,
   uniqueModuleIds,
   userHasEffectivePermission,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default SettingsPage;
 

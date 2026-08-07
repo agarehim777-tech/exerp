@@ -21,9 +21,11 @@ import { money } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import {
   WorkflowSteps,
-  navIcons,
   currentBusinessDate,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
+import {
+  navIcons,
+} from "../shared/lib/appDomain.jsx";
 
 export default function DashboardPage({
   stats,

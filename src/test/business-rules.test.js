@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  getDeliveryStockCheck,
+} from "../shared/lib/appDomain.jsx";
+import {
   applyCreditPrincipalPayment,
   buildCreditPlan,
   getAvailableQuantity,
-  getDeliveryStockCheck,
   getReceivableClosureAmount,
   isCreditClosed,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 describe("credit business rules", () => {
   it("splits the remaining principal and corrects the final installment", () => {

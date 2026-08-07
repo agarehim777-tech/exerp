@@ -6,9 +6,11 @@ import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import { CreditRiskPanel } from "../modules/credits/CreditRiskPanel.jsx";
 import {
-  CreditDetailModal,
   baseCreditDate,
   currentBusinessYear,
+} from "../shared/lib/appDomain.jsx";
+import {
+  CreditDetailModal,
   getCreditDebtFormula,
   getCreditDisplayPlan,
   getCreditInitials,
@@ -22,7 +24,7 @@ import {
   matchesCreditSearch,
   matchesCreditSourceFilter,
   monthNamesAz,
-} from "../App.jsx";
+} from "../shared/lib/appDomain.jsx";
 
 export default CreditsPage;
 
