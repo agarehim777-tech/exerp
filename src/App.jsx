@@ -12575,12 +12575,44 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
               <span>Ümumi:</span>
               <strong>{money(orderTotal)}</strong>
             </div>
-            {stockIssues.length > 0 && (
-              <div className="order-stock-warning">
-                <CircleAlert size={16} />
-                <span>{stockIssues[0]} — sifariş yaradıla bilər, çatışmayan hissə backorder kimi rezervdə gözləyəcək.</span>
+            {backorderRows.length > 0 && (
+              <div className="order-backorder-box">
+                <div className="order-stock-warning">
+                  <CircleAlert size={16} />
+                  <span>
+                    Anbarda qalıq çatmır — sifariş yaradılır, çatışmayan hissə <strong>backorder</strong> kimi rezervdə
+                    saxlanılır və aşağıdakı addımda bağlanır.
+                  </span>
+                </div>
+                <ul className="order-backorder-list">
+                  {backorderRows.map((row) => (
+                    <li key={row.rowId}>
+                      <strong>{row.product}</strong>
+                      <span>
+                        {row.available}/{row.requested} mövcud · {row.plan?.missingQty} ədəd backorder
+                      </span>
+                      {row.plan && (
+                        <>
+                          <em>
+                            Gözlənilən bağlanma tarixi: <b>{row.plan.expectedLabel}</b>
+                          </em>
+                          <em>
+                            Addım: <b>{row.plan.step}</b> → {row.plan.closeStage}
+                          </em>
+                          <small>{row.plan.stepHint}</small>
+                          {row.plan.uncoveredQty > 0 && (
+                            <small className="order-backorder-gap">
+                              {row.plan.uncoveredQty} ədəd üçün hələ açıq PO yoxdur — satınalma tələbi yaradın.
+                            </small>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
+
 
           </section>
 
