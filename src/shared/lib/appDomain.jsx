@@ -1735,6 +1735,74 @@ export function buildPurchaseOrderCoverage(purchaseOrders = []) {
   }, new Map());
 }
 
+export const backorderDefaultLeadDays = 14;
+export const backorderGrnDays = 3;
+
+export function getBackorderPlan({
+  product,
+  missingQty = 0,
+  purchaseOrders = [],
+  today = new Date(),
+  leadDays = backorderDefaultLeadDays,
+}) {
+  const missing = Math.max(0, Math.round(Number(missingQty || 0)));
+  if (!product || missing <= 0) return null;
+
+  const key = normalize(product);
+  const openPos = (purchaseOrders || [])
+    .filter((po) => normalize(po.product) === key && isPurchaseOrderOpen(po))
+    .sort((a, b) => {
+      const dateA = parsePaymentDate(a.expectedAt || a.date)?.getTime() || Infinity;
+      const dateB = parsePaymentDate(b.expectedAt || b.date)?.getTime() || Infinity;
+      return dateA - dateB;
+    });
+  const incomingQty = openPos.reduce((sum, po) => sum + Math.max(0, Number(po.qty || 0)), 0);
+  const covered = Math.min(missing, incomingQty);
+  const uncovered = missing - covered;
+  const primaryPo = openPos[0] || null;
+  const baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const addDays = (date, days) => {
+    const next = new Date(date.getTime());
+    next.setDate(next.getDate() + days);
+    return next;
+  };
+
+  let expectedDate;
+  let step;
+  let stepHint;
+
+  if (!primaryPo) {
+    expectedDate = addDays(baseDate, leadDays + backorderGrnDays);
+    step = "Satınalma sifarişi (PO) yaradılmalıdır";
+    stepHint = "Satınalma → PO təsdiqi → Anbar qəbulu (GRN) → Təhvil";
+  } else {
+    const poDate = parsePaymentDate(primaryPo.expectedAt) || addDays(parsePaymentDate(primaryPo.date) || baseDate, leadDays);
+    expectedDate = addDays(poDate < baseDate ? baseDate : poDate, backorderGrnDays);
+    const status = normalize(primaryPo.status);
+    if (status.includes("gözl") || status.includes("gozl")) {
+      step = `${primaryPo.id} PO təsdiqi gözlənilir`;
+      stepHint = "PO təsdiqi → Anbar qəbulu (GRN) → Rezervin bağlanması → Təhvil";
+    } else {
+      step = `${primaryPo.id} üzrə anbar qəbulu (GRN)`;
+      stepHint = "Anbar qəbulu (GRN) → Rezervin bağlanması → Təhvil";
+    }
+  }
+
+  return {
+    product,
+    missingQty: missing,
+    coveredQty: covered,
+    uncoveredQty: uncovered,
+    purchaseOrder: primaryPo,
+    expectedDate,
+    expectedLabel: formatPaymentDate(expectedDate),
+    step,
+    stepHint,
+    closeStage: "Anbardan təhvil (rezerv bağlanır)",
+  };
+}
+
+
 export function getReorderPoint(item = {}, productsByName = new Map()) {
   const catalogProduct = productsByName.get(normalize(item.product));
   const configuredPoint = catalogProduct?.reorderLevel ?? item.reorderLevel;
