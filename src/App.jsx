@@ -150,7 +150,7 @@ const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
 const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage.jsx"));
-import { baseCreditDate, buildProductLookup, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
+import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
 const CrmPage = lazy(() => import("./pages/CrmPage.jsx"));
 const SalesPage = lazy(() => import("./pages/SalesPage.jsx"));
 const VendorsPage = lazy(() => import("./pages/VendorsPage.jsx"));
@@ -12285,15 +12285,28 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
   const bonusRate = sellerRows.reduce((sum, item) => sum + Number(item.bonus || 0), 0);
   const bonusTotal = (paidAmount * bonusRate) / 100;
   const selectedSerials = productRows.flatMap((row) => row.serials || []);
-  const stockIssues = productRows
+  const backorderRows = productRows
     .filter((row) => row.product)
     .map((row) => {
       const item = availableStock.find((stockItem) => stockItem.product === row.product);
       const available = item ? getAvailableQuantity(item) : 0;
       const requested = Math.max(1, Number(row.qty || 1));
-      return available < requested ? `${row.product}: ${available}/${requested} — ${requested - available} ədəd backorder` : "";
+      if (available >= requested) return null;
+      return {
+        rowId: row.id,
+        product: row.product,
+        available,
+        requested,
+        plan: getBackorderPlan({
+          product: row.product,
+          missingQty: requested - available,
+          purchaseOrders: orderOptions.purchaseOrders || [],
+        }),
+      };
     })
     .filter(Boolean);
+  
+
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
@@ -12562,12 +12575,44 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
               <span>Ümumi:</span>
               <strong>{money(orderTotal)}</strong>
             </div>
-            {stockIssues.length > 0 && (
-              <div className="order-stock-warning">
-                <CircleAlert size={16} />
-                <span>{stockIssues[0]} — sifariş yaradıla bilər, çatışmayan hissə backorder kimi rezervdə gözləyəcək.</span>
+            {backorderRows.length > 0 && (
+              <div className="order-backorder-box">
+                <div className="order-stock-warning">
+                  <CircleAlert size={16} />
+                  <span>
+                    Anbarda qalıq çatmır — sifariş yaradılır, çatışmayan hissə <strong>backorder</strong> kimi rezervdə
+                    saxlanılır və aşağıdakı addımda bağlanır.
+                  </span>
+                </div>
+                <ul className="order-backorder-list">
+                  {backorderRows.map((row) => (
+                    <li key={row.rowId}>
+                      <strong>{row.product}</strong>
+                      <span>
+                        {row.available}/{row.requested} mövcud · {row.plan?.missingQty} ədəd backorder
+                      </span>
+                      {row.plan && (
+                        <>
+                          <em>
+                            Gözlənilən bağlanma tarixi: <b>{row.plan.expectedLabel}</b>
+                          </em>
+                          <em>
+                            Addım: <b>{row.plan.step}</b> → {row.plan.closeStage}
+                          </em>
+                          <small>{row.plan.stepHint}</small>
+                          {row.plan.uncoveredQty > 0 && (
+                            <small className="order-backorder-gap">
+                              {row.plan.uncoveredQty} ədəd üçün hələ açıq PO yoxdur — satınalma tələbi yaradın.
+                            </small>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
+
 
           </section>
 

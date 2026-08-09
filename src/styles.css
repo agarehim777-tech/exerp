@@ -10687,3 +10687,46 @@ body { background: var(--bg); }
   font-size: 0.75rem;
   opacity: 0.75;
 }
+
+.order-backorder-box {
+  display: grid;
+  gap: 10px;
+}
+
+.order-backorder-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-backorder-list li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning, #d99a26);
+  border-radius: 10px;
+  background: var(--surface-2, rgba(148, 163, 184, 0.08));
+}
+
+.order-backorder-list li strong {
+  font-size: 0.9rem;
+}
+
+.order-backorder-list li span,
+.order-backorder-list li em,
+.order-backorder-list li small {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.order-backorder-list li em b {
+  color: var(--text);
+}
+
+.order-backorder-gap {
+  color: var(--danger, #d94848) !important;
+}
