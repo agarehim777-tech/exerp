@@ -12565,9 +12565,10 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
             {stockIssues.length > 0 && (
               <div className="order-stock-warning">
                 <CircleAlert size={16} />
-                <span>{stockIssues[0]}</span>
+                <span>{stockIssues[0]} — sifariş yaradıla bilər, çatışmayan hissə backorder kimi rezervdə gözləyəcək.</span>
               </div>
             )}
+
           </section>
 
           {paymentMethod === "Kredit" && (
