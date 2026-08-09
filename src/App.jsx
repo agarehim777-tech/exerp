@@ -12285,15 +12285,28 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
   const bonusRate = sellerRows.reduce((sum, item) => sum + Number(item.bonus || 0), 0);
   const bonusTotal = (paidAmount * bonusRate) / 100;
   const selectedSerials = productRows.flatMap((row) => row.serials || []);
-  const stockIssues = productRows
+  const backorderRows = productRows
     .filter((row) => row.product)
     .map((row) => {
       const item = availableStock.find((stockItem) => stockItem.product === row.product);
       const available = item ? getAvailableQuantity(item) : 0;
       const requested = Math.max(1, Number(row.qty || 1));
-      return available < requested ? `${row.product}: ${available}/${requested} — ${requested - available} ədəd backorder` : "";
+      if (available >= requested) return null;
+      return {
+        rowId: row.id,
+        product: row.product,
+        available,
+        requested,
+        plan: getBackorderPlan({
+          product: row.product,
+          missingQty: requested - available,
+          purchaseOrders: orderOptions.purchaseOrders || [],
+        }),
+      };
     })
     .filter(Boolean);
+  const stockIssues = backorderRows.map((row) => row.product);
+
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
