@@ -365,13 +365,21 @@ function CreditsPage({
                   {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
                 </div>,
                 <div className="credit-table-actions">
+                  <button
+                    className="primary-btn compact"
+                    type="button"
+                    title="Kredit üzrə ödəniş götür"
+                    disabled={debt.balance <= 0}
+                    onClick={() => setQuickCreditId(credit.id)}
+                  >
+                    <Wallet size={15} />
+                    Ödəniş götür
+                  </button>
                   <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
                   </button>
-                  <button className="icon-btn" title="Ödəniş tarixçəsi" onClick={() => setDetailCreditId(credit.id)}>
-                    <RefreshCw size={16} />
-                  </button>
                 </div>,
+
               ];
             })}
           />
