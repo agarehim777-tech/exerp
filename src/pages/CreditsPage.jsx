@@ -145,6 +145,7 @@ function CreditsPage({
     });
   const tableCredits = visibleCredits.slice(0, pageSize);
   const detailItem = detailCreditId ? enrichedCredits.find((item) => item.credit.id === detailCreditId) : null;
+  const quickItem = quickCreditId ? enrichedCredits.find((item) => item.credit.id === quickCreditId) : null;
   const todayLabel = formatPaymentDate(parsePaymentDate(baseCreditDate));
 
   useEffect(() => {
