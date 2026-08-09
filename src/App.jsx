@@ -12305,7 +12305,7 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
       };
     })
     .filter(Boolean);
-  const stockIssues = backorderRows.map((row) => row.product);
+  
 
   const canCreateOrder = Boolean(
     selectedCustomer &&
