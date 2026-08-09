@@ -150,7 +150,7 @@ const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
 const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage.jsx"));
-import { baseCreditDate, buildProductLookup, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
+import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
 const CrmPage = lazy(() => import("./pages/CrmPage.jsx"));
 const SalesPage = lazy(() => import("./pages/SalesPage.jsx"));
 const VendorsPage = lazy(() => import("./pages/VendorsPage.jsx"));
