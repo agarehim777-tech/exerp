@@ -45,6 +45,8 @@ function CreditsPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [detailCreditId, setDetailCreditId] = useState("");
+  const [quickCreditId, setQuickCreditId] = useState("");
+
   const enrichedCredits = useMemo(
     () =>
       credits.map((credit) => {
@@ -143,6 +145,7 @@ function CreditsPage({
     });
   const tableCredits = visibleCredits.slice(0, pageSize);
   const detailItem = detailCreditId ? enrichedCredits.find((item) => item.credit.id === detailCreditId) : null;
+  const quickItem = quickCreditId ? enrichedCredits.find((item) => item.credit.id === quickCreditId) : null;
   const todayLabel = formatPaymentDate(parsePaymentDate(baseCreditDate));
 
   useEffect(() => {
@@ -365,17 +368,33 @@ function CreditsPage({
                   {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
                 </div>,
                 <div className="credit-table-actions">
+                  <button
+                    className="primary-btn compact"
+                    type="button"
+                    title="Kredit üzrə ödəniş götür"
+                    disabled={debt.balance <= 0}
+                    onClick={() => setQuickCreditId(credit.id)}
+                  >
+                    <Wallet size={15} />
+                    Ödəniş götür
+                  </button>
                   <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
                   </button>
-                  <button className="icon-btn" title="Ödəniş tarixçəsi" onClick={() => setDetailCreditId(credit.id)}>
-                    <RefreshCw size={16} />
-                  </button>
                 </div>,
+
               ];
             })}
           />
         </Panel>
+
+        {quickItem ? (
+          <QuickCollectModal
+            item={quickItem}
+            onReceivePayment={onReceivePayment}
+            onClose={() => setQuickCreditId("")}
+          />
+        ) : null}
 
         {detailItem ? (
           <CreditDetailModal
@@ -388,6 +407,75 @@ function CreditsPage({
           />
         ) : null}
       </section>
+
+    </div>
+  );
+}
+
+function QuickCollectModal({ item, onReceivePayment, onClose }) {
+  const { credit, plan, paymentState } = item;
+  const debt = getCreditDebtFormula(item);
+  const suggested = Math.min(
+    Number(paymentState.nextInstallment?.amount || plan.monthly || 0),
+    Number(debt.balance || 0),
+  );
+  const [principalAmount, setPrincipalAmount] = useState(Math.round(suggested));
+  const [penaltyAmount, setPenaltyAmount] = useState(0);
+  const principal = Math.max(0, Math.round(Number(principalAmount || 0)));
+  const penalty = Math.max(0, Math.round(Number(penaltyAmount || 0)));
+
+  function submit(event) {
+    event.preventDefault();
+    if (principal <= 0 && penalty <= 0) return;
+    onReceivePayment?.(credit.id, { principalAmount: principal, penaltyAmount: penalty });
+    onClose();
+  }
+
+  return (
+    <div className="modal-shell" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-head">
+          <div>
+            <h2>Ödəniş götür</h2>
+            <p>{credit.customer} · {credit.contractId || credit.id} · qalıq {money(debt.balance)}</p>
+          </div>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
+        </div>
+        <form className="credit-payment-form" onSubmit={submit}>
+          <div className="credit-payment-inputs">
+            <label>
+              <span>Əsas məbləğ</span>
+              <input
+                aria-label="Əsas məbləğ"
+                type="number"
+                min="0"
+                value={principalAmount}
+                onChange={(event) => setPrincipalAmount(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Gecikmə faizi</span>
+              <input
+                aria-label="Gecikmə faizi"
+                type="number"
+                min="0"
+                value={penaltyAmount}
+                onChange={(event) => setPenaltyAmount(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="credit-payment-preview">
+            <span>Borcdan silinir <strong>{money(principal)}</strong></span>
+            <span>Kassaya daxil olur <strong>{money(principal + penalty)}</strong></span>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
+            <button type="submit" className="primary-btn" disabled={principal <= 0 && penalty <= 0}>
+              Ödənişi qeyd et
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
