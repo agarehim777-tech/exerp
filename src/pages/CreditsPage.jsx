@@ -45,6 +45,8 @@ function CreditsPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [detailCreditId, setDetailCreditId] = useState("");
+  const [quickCreditId, setQuickCreditId] = useState("");
+
   const enrichedCredits = useMemo(
     () =>
       credits.map((credit) => {
