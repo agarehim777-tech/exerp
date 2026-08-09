@@ -12291,7 +12291,7 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
       const item = availableStock.find((stockItem) => stockItem.product === row.product);
       const available = item ? getAvailableQuantity(item) : 0;
       const requested = Math.max(1, Number(row.qty || 1));
-      return available < requested ? `${row.product}: ${available}/${requested} ədəd satış qalığı` : "";
+      return available < requested ? `${row.product}: ${available}/${requested} — ${requested - available} ədəd backorder` : "";
     })
     .filter(Boolean);
   const canCreateOrder = Boolean(
@@ -12299,9 +12299,9 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
       warehouseId &&
       availableStock.length > 0 &&
       orderTotal > 0 &&
-      productRows.some((row) => row.product) &&
-      stockIssues.length === 0,
+      productRows.some((row) => row.product),
   );
+
 
   function getRowSerialOptions(row) {
     const allSerials = getAvailableSerialsForProduct(warehouseStock, warehouseId, row.product);
