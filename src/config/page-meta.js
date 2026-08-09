@@ -15,7 +15,6 @@ export const pageMeta = {
   crm: {
     title: "CRM — Müştəri İdarəetməsi",
     subtitle: "FİN kodu, borc limiti, kateqoriya və 360° müştəri görünüşü.",
-    action: "Yeni müştəri",
   },
   "crm-deals": {
     title: "Sövdələşmələr (Deals)",

@@ -4,6 +4,18 @@ import { supabase } from '../../integrations/supabase/client';
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price), warehouse:warehouses(id,name,code)';
 const DEFAULT_PAGE_SIZE = 50;
+const normalizeMovement = (row) => {
+  const movementType = row?.movement_type || row?.move_type || '';
+  const isOut = ['delivery','transfer_out','write_off'].includes(movementType);
+  return {
+    ...row,
+    move_type: row?.move_type || (isOut ? 'out' : 'in'),
+    qty: row?.qty ?? row?.quantity ?? 0,
+    moved_at: row?.moved_at || row?.created_at || null,
+    reference: row?.reference || row?.reference_id || null,
+    doc_no: row?.doc_no || row?.reference_type || null,
+  };
+};
 
 export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {}) {
   const [warehouses, setWarehouses] = useState([]);
@@ -28,10 +40,10 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       .from('stock_movements')
       .select(MOVEMENT_SELECT, { count: 'exact' })
       .eq('tenant_id', tenantId)
-      .order('moved_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(from, from + movementsPageSize - 1);
     if (err) setError(err);
-    setMovements(data || []);
+    setMovements((data || []).map(normalizeMovement));
     setMovementsTotal(count ?? 0);
     setMovementsLoading(false);
   }, [tenantId, movementsPageSize]);
@@ -48,10 +60,10 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
         .from('stock_movements')
         .select(MOVEMENT_SELECT)
         .eq('tenant_id', tenantId)
-        .order('moved_at', { ascending: true })
+        .order('created_at', { ascending: true })
         .range(offset, offset + chunk - 1);
       if (err) { setError(err); break; }
-      all.push(...(data || []));
+      all.push(...(data || []).map(normalizeMovement));
       if (!data || data.length < chunk) break;
     }
     return all;
@@ -107,7 +119,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       const { data, error: err } = await supabase
         .from('stock_movements').select(MOVEMENT_SELECT).eq('id', id).maybeSingle();
       if (err) throw err;
-      return data || null;
+      return data ? normalizeMovement(data) : null;
     };
     const hydrateBalance = async (id) => {
       if (!id) return null;

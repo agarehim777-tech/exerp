@@ -1562,7 +1562,7 @@ tr:hover td {
 }
 
 .warehouse-module {
-  gap: 16px;
+  gap: 12px;
 }
 
 .warehouse-balance-workspace {
@@ -1575,13 +1575,36 @@ tr:hover td {
 }
 
 .warehouse-balance-toolbar {
-  min-height: 68px;
+  min-height: 60px;
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.warehouse-balance-quick-search {
+  min-width: 0;
+  height: 36px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fff;
+}
+
+.warehouse-balance-quick-search:focus-within {
+  border-color: #7db5ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.warehouse-balance-quick-search input {
+  width: 100%; min-width: 0; border: 0; outline: 0;
+  color: var(--text); background: transparent; font-size: 13px;
 }
 
 .warehouse-balance-tabs,
@@ -1697,11 +1720,14 @@ tr:hover td {
 .warehouse-balance-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 14px;
-  padding: 15px 16px;
+  gap: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line);
-  background: #f5f8fc;
+  background: #f7f9fb;
 }
+
+.warehouse-balance-title { display:flex; align-items:center; gap:8px; min-width:max-content; color:#17372e; font-size:14px; }
+.warehouse-balance-title span { min-width:22px; height:20px; display:grid; place-items:center; border-radius:6px; color:#08745a; background:#e3f3ed; font-size:11px; font-weight:800; }
 
 .warehouse-balance-filters > label {
   min-width: 0;
@@ -1999,7 +2025,7 @@ tr:hover td {
 @media (max-width: 900px) {
   .warehouse-balance-toolbar {
     align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: 1fr;
     padding: 0 12px 12px;
   }
 

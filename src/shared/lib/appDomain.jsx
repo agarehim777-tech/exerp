@@ -2737,6 +2737,7 @@ export function WarehouseBalancesWorkspace({
   products,
   purchaseOrders = [],
   query,
+  onQueryChange,
   onReceiveStock,
   onOpenImport,
   onCreateProduct,
@@ -2746,7 +2747,7 @@ export function WarehouseBalancesWorkspace({
   onOpenOperations,
   onTrackAction,
 }) {
-  const [view, setView] = useState("products");
+  const view = "warehouses";
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [draftFilters, setDraftFilters] = useState(() => ({ ...warehouseBalanceFilterDefaults }));
   const [activeFilters, setActiveFilters] = useState(() => ({ ...warehouseBalanceFilterDefaults }));
@@ -2762,14 +2763,6 @@ export function WarehouseBalancesWorkspace({
   const visibleRows = useMemo(
     () => filterWarehouseBalanceRows(balanceRows, activeFilters, query),
     [balanceRows, activeFilters, query],
-  );
-  const productRows = useMemo(
-    () => buildWarehouseBalanceRows({ warehouses, warehouseStock, products, purchaseOrders, view: "products", warehouseId: activeFilters.warehouseId }),
-    [warehouses, warehouseStock, products, purchaseOrders, activeFilters.warehouseId],
-  );
-  const warehouseRows = useMemo(
-    () => buildWarehouseBalanceRows({ warehouses, warehouseStock, products, purchaseOrders, view: "warehouses", warehouseId: activeFilters.warehouseId }),
-    [warehouses, warehouseStock, products, purchaseOrders, activeFilters.warehouseId],
   );
 
   function changeDraftFilter(key, value) {
@@ -2797,11 +2790,11 @@ export function WarehouseBalancesWorkspace({
 
   function handleExport() {
     exportWarehouseBalanceCsv(visibleRows, view);
-    onTrackAction?.("Anbar qalıqları CSV ixrac edildi", `${visibleRows.length} sətir · ${view === "products" ? "məhsullar üzrə" : "anbarlar üzrə"}`);
+    onTrackAction?.("Anbar qalıqları CSV ixrac edildi", `${visibleRows.length} məhsul/anbar sətri`);
   }
 
   function handlePrint() {
-    onTrackAction?.("Anbar qalıqları çap üçün açıldı", `${visibleRows.length} sətir · ${view === "products" ? "məhsullar üzrə" : "anbarlar üzrə"}`);
+    onTrackAction?.("Anbar qalıqları çap üçün açıldı", `${visibleRows.length} məhsul/anbar sətri`);
     document.body.classList.add("warehouse-print-mode");
     const clearPrintMode = () => document.body.classList.remove("warehouse-print-mode");
     window.addEventListener("afterprint", clearPrintMode, { once: true });
@@ -2819,14 +2812,13 @@ export function WarehouseBalancesWorkspace({
   return (
     <section className="warehouse-balance-workspace">
       <div className="warehouse-balance-toolbar">
-        <div className="warehouse-balance-tabs" role="tablist" aria-label="Qalıq görünüşü">
-          <button type="button" role="tab" aria-selected={view === "products"} className={view === "products" ? "active" : ""} onClick={() => setView("products")}>
-            Məhsullar üzrə <strong>{productRows.length}</strong>
-          </button>
-          <button type="button" role="tab" aria-selected={view === "warehouses"} className={view === "warehouses" ? "active" : ""} onClick={() => setView("warehouses")}>
-            Anbarlar üzrə <strong>{warehouseRows.length}</strong>
-          </button>
-        </div>
+        <div className="warehouse-balance-title"><strong>Məhsul və anbar qalıqları</strong><span>{visibleRows.length}</span></div>
+        {onQueryChange && (
+          <label className="warehouse-balance-quick-search" aria-label="Məhsul axtarışı">
+            <Search size={16} />
+            <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Məhsul, SKU və ya kateqoriya axtar..." />
+          </label>
+        )}
         <div className="warehouse-balance-actions">
           <button type="button" className="secondary-btn" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
             <Filter size={16} /> Filter
@@ -2866,7 +2858,7 @@ export function WarehouseBalancesWorkspace({
       />
       <div className="warehouse-balance-table-meta">
         <span>{visibleRows.length} qalıq sətri</span>
-        <strong>{view === "products" ? "Məhsullar üzrə cari qalıq" : "Anbarlar üzrə cari qalıq"}</strong>
+        <strong>Cari stok vəziyyəti</strong>
       </div>
       <WarehouseBalanceTable
         rows={visibleRows}
@@ -3824,7 +3816,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
             <tr key={row.key}>
               <td>{row.category}</td>
               <td>
-                {view === "products" && row.productId && onOpenProduct ? (
+                {row.productId && onOpenProduct ? (
                   <button type="button" className="text-btn" onClick={() => onOpenProduct(row.productId)} title="Məhsulun 360 baxışını aç">
                     <strong>{row.product}</strong>
                   </button>

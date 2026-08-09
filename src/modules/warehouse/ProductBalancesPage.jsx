@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, History, Package, ShoppingCart, Warehouse, X } from "lucide-react";
 import { WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
+import { supabase } from "../../integrations/supabase/client";
+import { useAuth } from "../../auth/AuthProvider.jsx";
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
@@ -28,12 +30,12 @@ function Product360Modal({ product, warehouses, warehouseStock, orders, movement
   const productMovements = useMemo(() => movements.filter((item) =>
     String(item.product_id || item.product?.id || "") === String(product.id)
     || String(item.sku || item.product?.sku || "") === String(product.sku || "")), [movements, product]);
-  const incoming = productMovements.filter((item) => item.move_type === "in");
+  const incoming = productMovements.filter((item) => ["in", "receipt", "transfer_in"].includes(item.move_type || item.movement_type));
   const total = balances.reduce((sum, item) => sum + item.total, 0);
   const reserved = balances.reduce((sum, item) => sum + item.reserved, 0);
   const soldQty = sales.reduce((sum, item) => sum + item.qty, 0);
   const soldValue = sales.reduce((sum, item) => sum + item.total, 0);
-  const receivedQty = incoming.reduce((sum, item) => sum + Math.abs(Number(item.qty || 0)), 0);
+  const receivedQty = incoming.reduce((sum, item) => sum + Math.abs(Number(item.qty ?? item.quantity ?? 0)), 0);
 
   return (
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="product-360-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -66,8 +68,8 @@ function Product360Modal({ product, warehouses, warehouseStock, orders, movement
 
           {tab === "overview" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Qalıq", "Rezerv", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, available }) => [warehouse.name, number(qty), number(hold), number(available)])} />}
           {tab === "sales" && <HistoryTable title="Satış tarixçəsi" empty="Bu məhsul üzrə satış tapılmadı." headers={["Tarix", "Sifariş", "Müştəri", "Miqdar", "Məbləğ", "Status"]} rows={sales.map(({ order, qty, total: amount }) => [dateTime(order.date || order.created_at), order.id || order.order_no || "—", order.customer || order.customerName || "—", number(qty), money(amount), order.status || "—"])} />}
-          {tab === "receipts" && <HistoryTable loading={loadingMovements} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Maya", "Sənəd", "Qeyd"]} rows={incoming.map((item) => [dateTime(item.moved_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty))}`, money(item.unit_cost), item.doc_no || item.reference || "—", item.note || "—"])} />}
-          {tab === "history" && <HistoryTable loading={loadingMovements} title="Məhsulun bütün hərəkətləri" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Növ", "Anbar", "Miqdar", "Maya", "Sənəd / qeyd"]} rows={productMovements.map((item) => [dateTime(item.moved_at), item.move_type === "in" ? "Daxilolma" : item.move_type === "out" ? "Çıxış" : item.move_type || "Hərəkət", item.warehouse?.name || "—", number(item.qty), money(item.unit_cost), item.doc_no || item.reference || item.note || "—"])} />}
+          {tab === "receipts" && <HistoryTable loading={loadingMovements} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Maya", "Sənəd", "Qeyd"]} rows={incoming.map((item) => [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), item.doc_no || item.reference_type || item.reference || "—", item.note || "—"])} />}
+          {tab === "history" && <HistoryTable loading={loadingMovements} title="Məhsulun bütün hərəkətləri" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Növ", "Anbar", "Miqdar", "Maya", "Sənəd / qeyd"]} rows={productMovements.map((item) => { const type=item.move_type||item.movement_type; return [dateTime(item.moved_at||item.created_at), ["in","receipt","transfer_in"].includes(type) ? "Daxilolma" : ["out","delivery","transfer_out","write_off"].includes(type) ? "Çıxış" : type || "Hərəkət", item.warehouse?.name || "—", number(item.qty??item.quantity), money(item.unit_cost), item.doc_no || item.reference_type || item.reference || item.note || "—"]; })} />}
         </div>
       </div>
     </div>
@@ -86,17 +88,55 @@ function HistoryTable({ title, headers, rows, empty, loading }) {
 }
 
 export default function ProductBalancesPage({ warehouses = [], warehouseStock = {}, products = [], purchaseOrders = [], orders = [], stockMovements = [], fetchAllMovements, onReceiveStock, onOpenImport, onCreateProduct, onEditProduct, onOpenWarehouse, onTrackAction }) {
+  const { activeTenantId } = useAuth();
   const [query, setQuery] = useState("");
+  const [livePurchaseOrders, setLivePurchaseOrders] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [movements, setMovements] = useState(stockMovements);
   const [loadingMovements, setLoadingMovements] = useState(false);
   const selectedProduct = products.find((product) => String(product.id) === String(selectedId));
 
+  useEffect(() => {
+    if (!activeTenantId) { setLivePurchaseOrders([]); return; }
+    let active = true;
+    (async () => {
+      const { data: pos, error: poError } = await supabase.from("purchase_orders").select("id,po_number,status,expected_date,currency").eq("tenant_id", activeTenantId).in("status", ["approved", "partial"]);
+      if (poError) throw poError;
+      const poIds = (pos || []).map((po) => po.id);
+      if (!poIds.length) { if (active) setLivePurchaseOrders([]); return; }
+      const [{ data: lines, error: lineError }, { data: grns, error: grnError }] = await Promise.all([
+        supabase.from("purchase_order_lines").select("id,po_id,product_id,product_sku,description,qty_ordered,unit_price").in("po_id", poIds),
+        supabase.from("goods_receipts").select("id,po_id").eq("tenant_id", activeTenantId).in("po_id", poIds),
+      ]);
+      if (lineError) throw lineError;
+      if (grnError) throw grnError;
+      const grnIds = (grns || []).map((grn) => grn.id);
+      let receiptLines = [];
+      if (grnIds.length) {
+        const { data, error } = await supabase.from("goods_receipt_lines").select("grn_id,po_line_id,qty_received,qty_rejected").in("grn_id", grnIds);
+        if (error) throw error;
+        receiptLines = data || [];
+      }
+      const acceptedByLine = new Map();
+      receiptLines.forEach((line) => acceptedByLine.set(line.po_line_id, (acceptedByLine.get(line.po_line_id) || 0) + Number(line.qty_received || 0) - Number(line.qty_rejected || 0)));
+      const poById = new Map((pos || []).map((po) => [po.id, po]));
+      const productById = new Map(products.map((product) => [String(product.id), product]));
+      const productBySku = new Map(products.map((product) => [String(product.sku || "").toLocaleLowerCase("az"), product]));
+      const coverage = (lines || []).map((line) => {
+        const remaining = Math.max(0, Number(line.qty_ordered || 0) - Number(acceptedByLine.get(line.id) || 0));
+        const product = productById.get(String(line.product_id || "")) || productBySku.get(String(line.product_sku || "").toLocaleLowerCase("az"));
+        const po = poById.get(line.po_id);
+        return { id: po?.po_number || line.po_id, product: product?.name || line.description || line.product_sku, qty: remaining, amount: remaining * Number(line.unit_price || 0), status: po?.status, expectedAt: po?.expected_date };
+      }).filter((item) => item.qty > 0 && item.product);
+      if (active) setLivePurchaseOrders(coverage);
+    })().catch(() => { if (active) setLivePurchaseOrders([]); });
+    return () => { active = false; };
+  }, [activeTenantId, products]);
+
   useEffect(() => { if (!selectedId || !fetchAllMovements) return; let active = true; setLoadingMovements(true); fetchAllMovements().then((rows) => active && setMovements(rows || [])).finally(() => active && setLoadingMovements(false)); return () => { active = false; }; }, [selectedId, fetchAllMovements]);
 
-  return <div className="stack warehouse-module">
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}><div><h1 style={{ margin: 0, fontSize: 26, color: "#12372c", display: "flex", alignItems: "center", gap: 9 }}><Package size={24} /> Məhsullar</h1><p style={{ margin: "6px 0 0", fontSize: 14, color: "#66756f" }}>Məhsulun qalığı, rezervi, satışa uyğun miqdarı və 360 tarixçəsi.</p></div><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Məhsul, SKU və ya kateqoriya axtar…" style={{ width: 330, maxWidth: "100%", padding: "10px 12px", border: "1px solid #d8d1b9", borderRadius: 8, fontSize: 14 }} /></div>
-    <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={purchaseOrders} query={query} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onSelectWarehouse={() => {}} onOpenOperations={onOpenWarehouse} onTrackAction={onTrackAction} />
+  return <div className="stack warehouse-module product-balances-page">
+    <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={livePurchaseOrders??purchaseOrders} query={query} onQueryChange={setQuery} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onSelectWarehouse={() => {}} onOpenOperations={onOpenWarehouse} onTrackAction={onTrackAction} />
     {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} orders={orders} movements={movements} loadingMovements={loadingMovements} onClose={() => setSelectedId(null)} onEdit={onEditProduct} />}
   </div>;
 }

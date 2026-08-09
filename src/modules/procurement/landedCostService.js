@@ -1,0 +1,12 @@
+import { supabase } from '../../integrations/supabase/client';
+const unwrap = ({ data, error }) => { if (error) throw error; return data; };
+export const listShipments = async tenantId => unwrap(await supabase.from('procurement_shipments').select('*, lines:procurement_shipment_lines(*), costs:procurement_shipment_costs(*)').eq('tenant_id',tenantId).order('created_at',{ascending:false}));
+export const saveShipment = async shipment => unwrap(await supabase.from('procurement_shipments').upsert(shipment).select().single());
+export const updateShipmentWarehouse = async (id, tenantId, warehouseId) => unwrap(await supabase.from('procurement_shipments').update({ warehouse_id: warehouseId || null }).eq('id',id).eq('tenant_id',tenantId).select().single());
+export const saveShipmentLine = async line => unwrap(await supabase.from('procurement_shipment_lines').upsert(line,{onConflict:'shipment_id,po_line_id'}).select().single());
+export const removeShipmentLine = async id => unwrap(await supabase.from('procurement_shipment_lines').delete().eq('id',id));
+export const saveShipmentCost = async cost => unwrap(await supabase.from('procurement_shipment_costs').upsert(cost).select().single());
+export const removeShipmentCost = async id => unwrap(await supabase.from('procurement_shipment_costs').delete().eq('id',id));
+export const recalculateShipment = async (id,approve=false) => unwrap(await supabase.rpc('recalculate_shipment_landed_cost',{_shipment:id,_approve:approve}));
+export const receiveShipment = async (id,warehouseId,date) => unwrap(await supabase.rpc('receive_landed_cost_shipment',{_shipment:id,_warehouse:warehouseId,_receipt_date:date}));
+export const getCostingLines = async (shipmentId,version) => unwrap(await supabase.from('procurement_landed_cost_lines').select('*, shipment_line:procurement_shipment_lines(*)').eq('shipment_id',shipmentId).eq('costing_version',version));

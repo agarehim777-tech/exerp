@@ -3,6 +3,7 @@ import { useCustomer360 } from '../../shared/hooks/useCustomer360.js';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import Avatar from './Avatar.jsx';
+import BirthDateInput from './BirthDateInput.jsx';
 
 export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
@@ -143,7 +144,9 @@ function OverviewTab({ c, tags, onUpdate }) {
       <Row label="E-poçt" value={c.email} />
       <Row label="VÖEN" value={c.tax_id} />
       <Row label="Ünvan" value={c.address} />
+      <Row label="Doğum tarixi" value={c.birth_date ? new Date(`${c.birth_date}T00:00:00`).toLocaleDateString('az-AZ') : null} />
       <Row label="Seqment" value={c.segment} />
+      <Row label="Müştəri səviyyəsi" value={c.customer_level_override ? `${c.customer_level_override} (manual)` : (c.customer_level || 'standard')} />
       <div>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Teqlər</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -162,15 +165,22 @@ function OverviewTab({ c, tags, onUpdate }) {
         <label key={k}>{fieldLabels[k]}<input value={form[k] || ''} onChange={e => setForm({ ...form, [k]: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
       ))}
+      <label>Doğum tarixi (məcburi deyil)<BirthDateInput value={form.birth_date || ''} onChange={value => setForm({ ...form, birth_date: value })} /></label>
       <label>Müştəri tipi
         <select value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
-          <option value="individual">Fiziki şəxs</option><option value="business">Hüquqi şəxs</option><option value="vip">VIP müştəri</option>
+          <option value="individual">Fiziki şəxs</option><option value="business">Hüquqi şəxs</option>
+        </select>
+      </label>
+      <label>Müştəri səviyyəsi
+        <select value={form.customer_level_override || ''} onChange={e => setForm({ ...form, customer_level_override: e.target.value || null })}
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
+          <option value="">Avtomatik hesablansın</option><option value="standard">Adi</option><option value="silver">Gümüş</option><option value="gold">Qızıl</option><option value="platinum">Platin</option>
         </select>
       </label>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={() => setEdit(false)} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', background: '#fff' }}>Ləğv</button>
-        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.tax_id, address: form.address, segment: form.segment }); setEdit(false); }}
+        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.tax_id, address: form.address, birth_date: form.birth_date || null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
           style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yadda saxla</button>
       </div>
     </div>

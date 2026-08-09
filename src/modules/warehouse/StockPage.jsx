@@ -4,6 +4,7 @@ import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useStock } from "../../shared/hooks/useStock.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import ValuationPanel from "./ValuationPanel.jsx";
+import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -162,10 +163,7 @@ function MovementsPanel({ stock, products }) {
           <option value="">Anbar seç…</option>
           {stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
-        <select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })} style={input}>
-          <option value="">Məhsul seç…</option>
-          {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
+        <ProductSearchSelect products={products} value={form.product_id} onChange={(productId) => setForm({ ...form, product_id: productId })} />
         <select value={form.move_type} onChange={(e) => setForm({ ...form, move_type: e.target.value })} style={input}>
           {Object.entries(MANUAL_MOVE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
@@ -250,7 +248,7 @@ function TransferPanel({ stock }) {
       <form onSubmit={submit} style={formGrid}>
         <label style={fieldLabel}>Mənbə anbar<select required value={form.fromWarehouseId} onChange={(e) => setForm({ ...form, fromWarehouseId: e.target.value, productId: "" })} style={input}><option value="">Seçin…</option>{stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
         <label style={fieldLabel}>Hədəf anbar<select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} style={input}><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
-        <label style={fieldLabel}>Məhsul<select required disabled={!form.fromWarehouseId} value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} style={input}><option value="">Seçin…</option>{sourceBalances.map((b) => <option key={b.product_id} value={b.product_id}>{b.product?.name || b.sku} · {Number(b.qty).toLocaleString("az-AZ")} ədəd</option>)}</select></label>
+        <label style={fieldLabel}>Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
         <label style={fieldLabel}>Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} /></label>
         <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" style={input} /></label>
         <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}><button type="submit" disabled={busy || stock.warehouses.length < 2} style={primaryBtn}>{busy ? "Köçürülür…" : "Transfer et"}</button></div>

@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 
+const withCustomerMeta = (customer) => {
+  if (!customer || !String(customer.notes || '').startsWith('__crm_meta__:')) return customer;
+  try { const meta = JSON.parse(String(customer.notes).slice('__crm_meta__:'.length)); return { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null }; } catch { return customer; }
+};
+
 export function useCustomer360(customerId) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +25,7 @@ export function useCustomer360(customerId) {
     const deals = dealsResult.data || [];
     const orders = ordersResult.data || [];
     return {
-      customer: customerResult.data,
+      customer: withCustomerMeta(customerResult.data),
       open_deals: deals.filter((deal) => deal.status === 'open'),
       won_amount: deals.filter((deal) => deal.status === 'won').reduce((sum, deal) => sum + Number(deal.amount || 0), 0),
       activities: activitiesResult.data || [],
@@ -58,7 +63,7 @@ export function useCustomer360(customerId) {
           orders_outstanding: detailedOrders.reduce((sum, order) => sum + Math.max(0, Number(order.total || 0) - Number(order.paid_amount || 0)), 0),
         };
       }
-      setData(result);
+      setData({ ...result, customer: withCustomerMeta(result.customer) });
     } catch (nextError) {
       setData(null);
       setError(nextError);
