@@ -14,7 +14,7 @@ AS $$
 DECLARE
   g public.goods_receipts%rowtype;
   p public.purchase_orders%rowtype;
-  shipment_id uuid;
+  v_shipment_id uuid;
   shipment_status text;
 BEGIN
   SELECT * INTO g FROM public.goods_receipts WHERE id = _grn;
@@ -26,16 +26,16 @@ BEGIN
 
   SELECT * INTO p FROM public.purchase_orders WHERE id = g.po_id;
 
-  SELECT id, status INTO shipment_id, shipment_status
-  FROM public.procurement_shipments
-  WHERE source_grn_id = g.id
+  SELECT ps.id, ps.status INTO v_shipment_id, shipment_status
+  FROM public.procurement_shipments ps
+  WHERE ps.source_grn_id = g.id
   FOR UPDATE;
 
   IF shipment_status IN ('received','closed') THEN
     RAISE EXCEPTION 'Tamamlanmış mədaxil dəyişdirilə bilməz';
   END IF;
 
-  IF shipment_id IS NULL THEN
+  IF v_shipment_id IS NULL THEN
     INSERT INTO public.procurement_shipments(
       tenant_id, shipment_no, shipment_date, expected_arrival_date,
       currency, status, notes, source_grn_id, created_by
@@ -49,7 +49,7 @@ BEGIN
       concat_ws(' · ', g.grn_number, g.notes),
       g.id,
       coalesce(g.received_by, auth.uid())
-    ) RETURNING id INTO shipment_id;
+    ) RETURNING id INTO v_shipment_id;
   ELSE
     UPDATE public.procurement_shipments
     SET shipment_date = g.receipt_date,
@@ -57,11 +57,11 @@ BEGIN
         currency = coalesce(p.currency, 'AZN'),
         notes = concat_ws(' · ', g.grn_number, g.notes),
         updated_at = now()
-    WHERE id = shipment_id;
+    WHERE id = v_shipment_id;
   END IF;
 
   DELETE FROM public.procurement_shipment_lines sl
-  WHERE sl.shipment_id = shipment_id
+  WHERE sl.shipment_id = v_shipment_id
     AND NOT EXISTS (
       SELECT 1 FROM public.goods_receipt_lines gl
       WHERE gl.grn_id = g.id AND gl.po_line_id = sl.po_line_id
@@ -75,7 +75,7 @@ BEGIN
   )
   SELECT
     g.tenant_id,
-    shipment_id,
+    v_shipment_id,
     pol.id,
     sum(gl.qty_received - gl.qty_rejected),
     sum(gl.qty_received - gl.qty_rejected),
@@ -100,7 +100,7 @@ BEGIN
     duty_rate = EXCLUDED.duty_rate,
     updated_at = now();
 
-  RETURN shipment_id;
+  RETURN v_shipment_id;
 END;
 $$;
 
