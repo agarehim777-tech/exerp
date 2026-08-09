@@ -68,6 +68,33 @@ BEGIN
         AND (gl.qty_received - gl.qty_rejected) > 0
     );
 
+  WITH receipt_totals AS (
+    SELECT pol.id AS po_line_id,
+           sum(gl.qty_received - gl.qty_rejected) AS net_qty,
+           coalesce(pol.unit_price, 0) AS unit_price,
+           coalesce(pol.unit_volume_m3, 0) AS unit_volume,
+           coalesce(pol.unit_gross_weight_kg, 0) AS unit_weight,
+           coalesce(pol.duty_rate, 0) AS duty_rate,
+           pol.qty_ordered
+    FROM public.goods_receipt_lines gl
+    JOIN public.purchase_order_lines pol ON pol.id = gl.po_line_id
+    WHERE gl.grn_id = g.id
+      AND (gl.qty_received - gl.qty_rejected) > 0
+    GROUP BY pol.id, pol.unit_price, pol.unit_volume_m3,
+             pol.unit_gross_weight_kg, pol.duty_rate, pol.qty_ordered
+  ), available_lines AS (
+    SELECT rt.*,
+      greatest(0, least(
+        rt.net_qty,
+        rt.qty_ordered - coalesce((
+          SELECT sum(sl.shipped_qty)
+          FROM public.procurement_shipment_lines sl
+          WHERE sl.po_line_id = rt.po_line_id
+            AND sl.shipment_id <> v_shipment_id
+        ), 0)
+      )) AS sync_qty
+    FROM receipt_totals rt
+  )
   INSERT INTO public.procurement_shipment_lines(
     tenant_id, shipment_id, po_line_id, shipped_qty, received_qty,
     invoice_unit_price, exchange_rate, total_volume_m3,
@@ -76,20 +103,16 @@ BEGIN
   SELECT
     g.tenant_id,
     v_shipment_id,
-    pol.id,
-    sum(gl.qty_received - gl.qty_rejected),
-    sum(gl.qty_received - gl.qty_rejected),
-    coalesce(pol.unit_price, 0),
+    al.po_line_id,
+    al.sync_qty,
+    al.sync_qty,
+    al.unit_price,
     coalesce(p.exchange_rate, 1),
-    sum(gl.qty_received - gl.qty_rejected) * coalesce(pol.unit_volume_m3, 0),
-    sum(gl.qty_received - gl.qty_rejected) * coalesce(pol.unit_gross_weight_kg, 0),
-    coalesce(pol.duty_rate, 0)
-  FROM public.goods_receipt_lines gl
-  JOIN public.purchase_order_lines pol ON pol.id = gl.po_line_id
-  WHERE gl.grn_id = g.id
-    AND (gl.qty_received - gl.qty_rejected) > 0
-  GROUP BY pol.id, pol.unit_price, pol.unit_volume_m3,
-           pol.unit_gross_weight_kg, pol.duty_rate
+    al.sync_qty * al.unit_volume,
+    al.sync_qty * al.unit_weight,
+    al.duty_rate
+  FROM available_lines al
+  WHERE al.sync_qty > 0
   ON CONFLICT (shipment_id, po_line_id) DO UPDATE SET
     shipped_qty = EXCLUDED.shipped_qty,
     received_qty = EXCLUDED.received_qty,
