@@ -388,6 +388,14 @@ function CreditsPage({
           />
         </Panel>
 
+        {quickItem ? (
+          <QuickCollectModal
+            item={quickItem}
+            onReceivePayment={onReceivePayment}
+            onClose={() => setQuickCreditId("")}
+          />
+        ) : null}
+
         {detailItem ? (
           <CreditDetailModal
             item={detailItem}
@@ -399,6 +407,7 @@ function CreditsPage({
           />
         ) : null}
       </section>
+
     </div>
   );
 }
