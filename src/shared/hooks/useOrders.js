@@ -117,17 +117,94 @@ export function useOrders(tenantId) {
   const updateStatus = async (id, status) => {
     const { error } = await supabase.from('orders').update({ status }).eq('id', id);
     if (error) throw error;
+    await fetchAll();
   };
 
   const updateHeader = async (id, patch) => {
     const { error } = await supabase.from('orders').update(patch).eq('id', id);
     if (error) throw error;
+    await fetchAll();
+  };
+
+  const registerPayment = async (order, amount, accountId) => {
+    const payment = Number(amount);
+    const total = Number(order?.total || 0);
+    const alreadyPaid = Number(order?.paid_amount || 0);
+    const outstanding = Math.max(0, total - alreadyPaid);
+    if (!order?.id) throw new Error('Sifariş tapılmadı.');
+    if (!Number.isFinite(payment) || payment <= 0) throw new Error('Düzgün ödəniş məbləği daxil edin.');
+    if (payment > outstanding) throw new Error(`Ödəniş qalıq borcdan (${outstanding.toFixed(2)} ${order.currency || 'AZN'}) çox ola bilməz.`);
+
+    let resolvedAccountId = accountId;
+    if (!resolvedAccountId) {
+      const { data: existingAccount, error: accountError } = await supabase.from('cash_accounts')
+        .select('id').eq('tenant_id', tenantId).eq('currency', order.currency || 'AZN').eq('is_active', true).limit(1).maybeSingle();
+      if (accountError) throw accountError;
+      if (existingAccount) resolvedAccountId = existingAccount.id;
+      else {
+        const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
+          tenant_id: tenantId, name: 'Əsas kassa', type: 'cash', currency: order.currency || 'AZN', opening_balance: 0, is_active: true,
+        }).select('id').single();
+        if (createAccountError) throw createAccountError;
+        resolvedAccountId = createdAccount.id;
+      }
+    }
+
+    const { data: transaction, error: cashError } = await supabase.from('cash_transactions').insert({
+      tenant_id: tenantId,
+      account_id: resolvedAccountId,
+      direction: 'in',
+      amount: payment,
+      currency: order.currency || 'AZN',
+      category: 'sales_payment',
+      counterparty: order.customer?.name || null,
+      customer_id: order.customer_id || order.customer?.id || null,
+      reference: order.order_no,
+      description: `${order.order_no} sifarişi üzrə müştəri ödənişi`,
+      occurred_at: new Date().toISOString().slice(0, 10),
+    }).select('id').single();
+    if (cashError) throw cashError;
+
+    const newPaid = Number((alreadyPaid + payment).toFixed(2));
+    const { error: orderError } = await supabase.from('orders').update({
+      paid_amount: newPaid,
+      payment_status: newPaid >= total ? 'paid' : 'partial',
+    }).eq('id', order.id).eq('tenant_id', tenantId);
+    if (orderError) {
+      await supabase.from('cash_transactions').delete().eq('id', transaction.id).eq('tenant_id', tenantId);
+      throw orderError;
+    }
+    await fetchAll();
+  };
+
+  const update = async (id, { items = [], ...header }) => {
+    const rows = items.map((item, index) => lineValues(item, index, tenantId, id));
+    const subtotal = rows.reduce((sum, item) => sum + item.qty * item.unit_price * (1 - item.discount_pct / 100), 0);
+    const vatTotal = rows.reduce((sum, item) => {
+      const net = item.qty * item.unit_price * (1 - item.discount_pct / 100);
+      return sum + net * item.vat_rate / 100;
+    }, 0);
+    const { error: headerError } = await supabase.from('orders').update({
+      ...header,
+      subtotal: Number(subtotal.toFixed(2)),
+      vat_total: Number(vatTotal.toFixed(2)),
+      total: Number((subtotal + vatTotal).toFixed(2)),
+    }).eq('id', id).eq('tenant_id', tenantId);
+    if (headerError) throw headerError;
+    const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', id).eq('tenant_id', tenantId);
+    if (deleteError) throw deleteError;
+    if (rows.length) {
+      const { error: itemError } = await supabase.from('order_items').insert(rows);
+      if (itemError) throw itemError;
+    }
+    await fetchAll();
   };
 
   const remove = async (id) => {
     const { error } = await supabase.from('orders').delete().eq('id', id);
     if (error) throw error;
+    await fetchAll();
   };
 
-  return { orders, loading, error, refresh: fetchAll, create, updateStatus, updateHeader, remove };
+  return { orders, loading, error, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
 }

@@ -10,6 +10,12 @@ import {
 } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
+const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
+const sectionTitle = { margin: 0, fontSize: 19, lineHeight: 1.3, color: "#12372c" };
+const sectionSubtitle = { margin: "5px 0 18px", fontSize: 13, lineHeight: 1.5, color: "#66756f" };
+const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#334b43" };
+const formGrid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(220px, 1fr))", gap: 14 };
+const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 export default function StockPage() {
   const { activeMembership } = useAuth();
@@ -17,7 +23,7 @@ export default function StockPage() {
   const tenantId = activeMembership?.tenant_id;
   const stock = useStock(tenantId);
   const { products } = useProducts(tenantId);
-  const [tab, setTab] = useState("balances");
+  const [tab, setTab] = useState("warehouses");
 
   const totals = useMemo(() => {
     const qty = stock.balances.reduce((sum, b) => sum + Number(b.qty || 0), 0);
@@ -35,6 +41,12 @@ export default function StockPage() {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <div>
+        <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.2, color: "#12372c" }}>Anbar idarəetməsi</h1>
+        <p style={{ margin: "6px 0 0", fontSize: 14, color: "#66756f" }}>
+          Anbarları, qalıqları, daxili transferləri və stok hərəkətlərini bir yerdən idarə edin.
+        </p>
+      </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <div style={statTile}>
           <div style={statLabel}>Anbarlar</div>
@@ -55,7 +67,7 @@ export default function StockPage() {
       </div>
 
       <div style={tabBar}>
-        {[["balances", "Qalıqlar"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["warehouses", "Anbarlar"]].map(([k, l]) => (
+        {[["warehouses", "Anbarlar"], ["balances", "Anbarlar üzrə qalıqlar"], ["transfer", "Daxili transfer"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
       </div>
@@ -66,6 +78,7 @@ export default function StockPage() {
       )}
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
+      {tab === "transfer" && <TransferPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
       {tab === "valuation" && <ValuationPanel loadMovements={stock.fetchAllMovements} products={products} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
@@ -154,7 +167,7 @@ function MovementsPanel({ stock, products }) {
           {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <select value={form.move_type} onChange={(e) => setForm({ ...form, move_type: e.target.value })} style={input}>
-          {Object.entries(MOVE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          {Object.entries(MANUAL_MOVE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <input required type="number" step="0.001" placeholder="Say" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} />
         <input type="number" step="0.01" placeholder="Maya dəyəri" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} style={input} />
@@ -212,31 +225,91 @@ function MovementsPanel({ stock, products }) {
   );
 }
 
+function TransferPanel({ stock }) {
+  const [form, setForm] = useState({ fromWarehouseId: "", toWarehouseId: "", productId: "", qty: "", note: "" });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const sourceBalances = stock.balances.filter((row) => row.warehouse_id === form.fromWarehouseId && Number(row.qty || 0) > 0);
+  const selectedBalance = sourceBalances.find((row) => row.product_id === form.productId);
+
+  const submit = async (event) => {
+    event.preventDefault(); setBusy(true); setMsg("");
+    try {
+      const reference = await stock.transferStock(form);
+      setForm((current) => ({ ...current, productId: "", qty: "", note: "" }));
+      setMsg(`Transfer tamamlandı: ${reference}`);
+    } catch (error) { setMsg(`Xəta: ${error.message}`); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div style={card}>
+      <h2 style={sectionTitle}>Daxili anbar transferi</h2>
+      <p style={sectionSubtitle}>Məhsulu bir anbardan digərinə köçürün. Çıxış və giriş birlikdə qeydə alınır.</p>
+      {msg && <div style={msgBox}>{msg}</div>}
+      <form onSubmit={submit} style={formGrid}>
+        <label style={fieldLabel}>Mənbə anbar<select required value={form.fromWarehouseId} onChange={(e) => setForm({ ...form, fromWarehouseId: e.target.value, productId: "" })} style={input}><option value="">Seçin…</option>{stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
+        <label style={fieldLabel}>Hədəf anbar<select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} style={input}><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
+        <label style={fieldLabel}>Məhsul<select required disabled={!form.fromWarehouseId} value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} style={input}><option value="">Seçin…</option>{sourceBalances.map((b) => <option key={b.product_id} value={b.product_id}>{b.product?.name || b.sku} · {Number(b.qty).toLocaleString("az-AZ")} ədəd</option>)}</select></label>
+        <label style={fieldLabel}>Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} /></label>
+        <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" style={input} /></label>
+        <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}><button type="submit" disabled={busy || stock.warehouses.length < 2} style={primaryBtn}>{busy ? "Köçürülür…" : "Transfer et"}</button></div>
+      </form>
+      {stock.warehouses.length < 2 && <div style={{ ...msgBox, marginTop: 12 }}>Transfer üçün ən azı iki anbar yaradılmalıdır.</div>}
+    </div>
+  );
+}
+
 function WarehousesPanel({ stock, isAdmin }) {
-  const [form, setForm] = useState({ code: "", name: "", address: "" });
+  const emptyForm = { id: "", code: "", name: "", address: "", is_active: true };
+  const [form, setForm] = useState(emptyForm);
   const [msg, setMsg] = useState("");
 
   const submit = async (event) => {
     event.preventDefault();
     setMsg("");
     try {
-      await stock.createWarehouse(form);
-      setForm({ code: "", name: "", address: "" });
+      if (form.id) await stock.updateWarehouse(form.id, form);
+      else await stock.createWarehouse({ code: form.code, name: form.name, address: form.address, is_active: true });
+      setMsg(form.id ? "Anbar məlumatları yeniləndi." : "Yeni anbar yaradıldı.");
+      setForm(emptyForm);
     } catch (error) {
       setMsg(`Xəta: ${error.message}`);
     }
   };
 
+  const edit = (warehouse) => setForm({
+    id: warehouse.id,
+    code: warehouse.code || "",
+    name: warehouse.name || "",
+    address: warehouse.address || "",
+    is_active: warehouse.is_active !== false,
+  });
+
+  const remove = async (warehouse) => {
+    if (!window.confirm(`“${warehouse.name}” anbarı silinsin?`)) return;
+    setMsg("");
+    try {
+      await stock.removeWarehouse(warehouse.id);
+      if (form.id === warehouse.id) setForm(emptyForm);
+      setMsg("Anbar silindi.");
+    } catch (error) {
+      setMsg(`Anbar silinmədi: ${error.message}`);
+    }
+  };
+
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Anbarlar ({stock.warehouses.length})</h3>
+      <h2 style={sectionTitle}>Anbarlar ({stock.warehouses.length})</h2>
+      <p style={sectionSubtitle}>Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
       {msg && <div style={msgBox}>{msg}</div>}
       {isAdmin && (
-        <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "120px 1fr 1fr auto", gap: 8, marginBottom: 12 }}>
+        <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1.4fr auto auto", gap: 10, marginBottom: 18, alignItems: "end" }}>
           <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
           <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
           <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={input} />
-          <button type="submit" style={primaryBtn}>+ Anbar</button>
+          <button type="submit" style={primaryBtn}>{form.id ? "Yadda saxla" : "+ Anbar"}</button>
+          {form.id && <button type="button" style={secondaryActionBtn} onClick={() => setForm(emptyForm)}>Ləğv et</button>}
         </form>
       )}
       <table style={table}>
@@ -247,11 +320,7 @@ function WarehousesPanel({ stock, isAdmin }) {
               <td style={td}><b>{w.code}</b></td>
               <td style={td}>{w.name}</td>
               <td style={td}>{w.address || "—"}</td>
-              {isAdmin && (
-                <td style={td}>
-                  <button style={delBtn} onClick={() => window.confirm("Anbar silinsin?") && stock.removeWarehouse(w.id)}>Sil</button>
-                </td>
-              )}
+              {isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button style={secondaryActionBtn} onClick={() => edit(w)}>Redaktə et</button><button style={delBtn} onClick={() => remove(w)}>Sil</button></td>}
             </tr>
           ))}
           {!stock.warehouses.length && <tr><td style={td} colSpan={4}>Anbar yoxdur.</td></tr>}

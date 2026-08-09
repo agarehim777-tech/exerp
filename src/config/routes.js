@@ -8,24 +8,18 @@ export const moduleRoutes = {
   "crm-activities": "/crm/aktivlikler",
   "crm-tasks": "/crm/tapsiriqlar",
   "sales-dashboard": "/satis/dashboard",
-  "sales-quotes": "/satis/kotirovka",
   sales: "/satis/sifarisler",
-  "sales-shipments": "/satis/catdirilma",
-  warehouse: "/anbar/mehsullar",
+  products: "/anbar/mehsullar",
   stock: "/anbar/qaliqlar",
   deliveries: "/tehvil",
   finance: "/maliyye/jurnal",
   cashbook: "/maliyye/kassa",
-  "ar-invoices": "/maliyye/satis-fakturalari",
   invoices: "/faktura",
   accounting: "/muhasibat",
-  tax: "/vergi",
   credits: "/kredit",
   receivables: "/borclar",
   vendors: "/vendor",
   procurement: "/satinalma",
-  projects: "/layihe",
-  production: "/istehsalat",
   hr: "/hr/emekdaslar",
   kpi: "/kpi",
   contracts: "/muqavile",
@@ -42,8 +36,6 @@ export const moduleRoutes = {
   roles: "/rollar",
   "access-check": "/icaze-yoxlama",
   audit: "/audit",
-  periods: "/maliyye/dovrler",
-  currencies: "/maliyye/valyutalar",
 
 };
 
@@ -54,7 +46,11 @@ export const pathToModule = Object.fromEntries(
 // Köhnə blob-əsaslı modullar → DB-əsaslı ekvivalentləri.
 export const legacyModuleAliases = {
   finance: "accounting",
-  invoices: "ar-invoices",
+  invoices: "sales",
+  "sales-quotes": "sales",
+  "sales-shipments": "sales",
+  "ar-invoices": "sales",
+  warehouse: "stock",
 };
 
 // Tarixi (köhnə) URL-lər. Modul adını/URL-ini dəyişəndə köhnə dəyəri bura əlavə et
@@ -63,11 +59,9 @@ export const historicalRoutes = {
   finance: ["/maliyye", "/jurnal"],
   accounting: ["/maliyye/muhasibat"],
   invoices: ["/fakturalar", "/satis/faktura"],
-  "ar-invoices": ["/satis-fakturalari"],
+  sales: ["/sifarisler", "/satis", "/satis/kotirovka", "/satis/catdirilma", "/maliyye/satis-fakturalari", "/satis-fakturalari"],
   crm: ["/musteriler"],
-  warehouse: ["/anbar"],
-  stock: ["/qaliqlar"],
-  sales: ["/sifarisler", "/satis"],
+  stock: ["/anbar", "/qaliqlar"],
   hr: ["/hr", "/emekdaslar"],
   platform: ["/sirketler", "/platform"],
   procurement: ["/satin-alma"],

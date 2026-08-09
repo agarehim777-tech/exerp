@@ -80,6 +80,7 @@ export const createPermissionByType = {
   sales: "sales.create",
   warehouse: "warehouse.manage",
   product: "warehouse.manage",
+  products: "warehouse.manage",
   financeAccount: "finance.manage",
   finance: "finance.manage",
   invoices: "invoices.manage",

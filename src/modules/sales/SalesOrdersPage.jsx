@@ -1,16 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useOrders } from '../../shared/hooks/useOrders.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
 import { useProducts } from '../../shared/hooks/useProducts.js';
+import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
 
-const KANBAN_STATUSES = ['draft', 'pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+const KANBAN_STATUSES = ['draft', 'confirmed', 'processing', 'delivered', 'cancelled'];
+const STATUS_LABELS = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
+const canonicalStatus = status => status === 'pending' ? 'draft' : status === 'shipped' ? 'processing' : status;
 
-export default function SalesOrdersPage() {
-  const { activeTenantId } = useAuth();
-  const { orders, updateStatus, updateHeader, remove } = useOrders(activeTenantId);
+export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
+  const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
+  const { orders, update, updateStatus, updateHeader, registerPayment, remove } = useOrders(activeTenantId);
+  const { accounts: cashAccounts } = useCashbook(activeTenantId);
   const { customers } = useCustomers(activeTenantId);
   const { products } = useProducts(activeTenantId);
   const [view, setView] = useState('table');
@@ -20,6 +24,15 @@ export default function SalesOrdersPage() {
   const filtered = useMemo(() => orders.filter(o =>
     !q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase())
   ), [orders, q]);
+
+  useEffect(() => {
+    if (!selectedOrderId || !orders.length) return;
+    const target = orders.find(order => String(order.id) === String(selectedOrderId) || String(order.order_no) === String(selectedOrderId));
+    if (target) {
+      setSelected(target);
+      onSelectedOrderHandled?.();
+    }
+  }, [selectedOrderId, orders, onSelectedOrderHandled]);
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -41,7 +54,7 @@ export default function SalesOrdersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead style={{ background: '#f8fafc' }}>
               <tr>
-                <Th>№</Th><Th>Müştəri</Th><Th align="right">Cəm</Th><Th>Status</Th><Th>Ödəniş</Th><Th>Tarix</Th>
+                <Th>№</Th><Th>Müştəri</Th><Th align="right">Ümumi məbləğ</Th><Th align="right">Ödənilib</Th><Th align="right">Qalıq borc</Th><Th>Status</Th><Th>Ödəniş statusu</Th><Th>Tarix</Th>
               </tr>
             </thead>
             <tbody>
@@ -53,24 +66,30 @@ export default function SalesOrdersPage() {
                   <Td><b>{o.order_no}</b></Td>
                   <Td>{o.customer?.name || '—'}</Td>
                   <Td align="right"><b>{Number(o.total).toFixed(2)} {o.currency}</b></Td>
-                  <Td><StatusBadge status={o.status} /></Td>
+                  <Td align="right"><b style={{ color: '#047857' }}>{Math.max(0, Number(o.paid_amount || 0)).toFixed(2)} {o.currency}</b></Td>
+                  <Td align="right">
+                    <b style={{ color: Math.max(0, Number(o.total || 0) - Number(o.paid_amount || 0)) > 0 ? '#dc2626' : '#047857' }}>
+                      {Math.max(0, Number(o.total || 0) - Number(o.paid_amount || 0)).toFixed(2)} {o.currency}
+                    </b>
+                  </Td>
+                  <Td><StatusBadge status={STATUS_LABELS[o.status] || o.status} /></Td>
                   <Td><StatusBadge status={o.payment_status} /></Td>
                   <Td>{new Date(o.order_date || o.created_at).toLocaleDateString('az-AZ')}</Td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Sifariş yoxdur</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Sifariş yoxdur</td></tr>}
             </tbody>
           </table>
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
           {KANBAN_STATUSES.map(st => {
-            const col = filtered.filter(o => o.status === st);
+            const col = filtered.filter(o => canonicalStatus(o.status) === st);
             const sum = col.reduce((s, o) => s + Number(o.total || 0), 0);
             return (
               <div key={st} style={{ minWidth: 260, background: '#f8fafc', borderRadius: 12, padding: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <StatusBadge status={st} />
+                  <StatusBadge status={STATUS_LABELS[st]} />
                   <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{col.length} · {sum.toFixed(0)} ₼</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -95,9 +114,16 @@ export default function SalesOrdersPage() {
       {selected && (
         <OrderDrawer
           order={selected} customers={customers} products={products}
+          cashAccounts={cashAccounts.filter(account => account.is_active !== false)}
+          canManageOrder={Boolean(isPlatformAdmin || ['owner', 'admin'].includes(activeMembership?.role) || (selected.created_by && selected.created_by === user?.id))}
           onClose={() => setSelected(null)}
           onStatus={(id, s) => updateStatus(id, s)}
           onPatch={(id, p) => updateHeader(id, p)}
+          onPayment={(amount, accountId) => registerPayment(selected, amount, accountId)}
+          onUpdate={async (id, values) => {
+            await update(id, values);
+            setSelected(null);
+          }}
           onDelete={async (id) => { if (confirm('Silinsin?')) { await remove(id); setSelected(null); } }}
         />
       )}

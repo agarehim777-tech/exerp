@@ -2741,6 +2741,7 @@ export function WarehouseBalancesWorkspace({
   onOpenImport,
   onCreateProduct,
   onEditProduct,
+  onOpenProduct,
   onSelectWarehouse,
   onOpenOperations,
   onTrackAction,
@@ -2871,6 +2872,7 @@ export function WarehouseBalancesWorkspace({
         rows={visibleRows}
         view={view}
         onEditProduct={onEditProduct}
+        onOpenProduct={onOpenProduct}
         onCreateProduct={onCreateProduct}
         onSelectWarehouse={selectWarehouse}
       />
@@ -3798,7 +3800,7 @@ export function WarehouseBalanceFilters({ filters, warehouses, categories, open,
   );
 }
 
-export function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProduct, onSelectWarehouse }) {
+export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct, onCreateProduct, onSelectWarehouse }) {
   const totals = rows.reduce((summary, row) => ({
     total: summary.total + Number(row.total || 0),
     reserved: summary.reserved + Number(row.reserved || 0),
@@ -3821,7 +3823,13 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProdu
           {rows.map((row) => (
             <tr key={row.key}>
               <td>{row.category}</td>
-              <td><strong>{row.product}</strong></td>
+              <td>
+                {view === "products" && row.productId && onOpenProduct ? (
+                  <button type="button" className="text-btn" onClick={() => onOpenProduct(row.productId)} title="Məhsulun 360 baxışını aç">
+                    <strong>{row.product}</strong>
+                  </button>
+                ) : <strong>{row.product}</strong>}
+              </td>
               <td className="warehouse-sku">{row.sku}</td>
               <td>{view === "products" ? <WarehouseDistribution distribution={row.warehouseDistribution} /> : row.warehouseName}</td>
               <td>{row.total}</td>
@@ -3841,7 +3849,10 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onCreateProdu
                 {view === "warehouses" ? (
                   <button className="text-btn" onClick={() => onSelectWarehouse(row.warehouseId)}>Anbara keç</button>
                 ) : row.productId ? (
-                  <button className="text-btn" onClick={() => onEditProduct(row.productId)}>Redaktə</button>
+                  <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+                    {onOpenProduct && <button className="text-btn" onClick={() => onOpenProduct(row.productId)}>360 baxış</button>}
+                    <button className="text-btn" onClick={() => onEditProduct(row.productId)}>Redaktə</button>
+                  </span>
                 ) : (
                   <button className="text-btn" onClick={onCreateProduct}>Kataloqa əlavə et</button>
                 )}

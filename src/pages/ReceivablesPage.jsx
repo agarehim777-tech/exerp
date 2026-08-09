@@ -4,25 +4,41 @@ import { money } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
-export default function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt }) {
+import { useAuth } from "../auth/AuthProvider.jsx";
+import { useOrders } from "../shared/hooks/useOrders.js";
+export default function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt, onOpenSalesOrder }) {
+  const { activeTenantId } = useAuth();
+  const { orders: realOrders } = useOrders(activeTenantId);
   const [typeFilter, setTypeFilter] = useState("Hamısı");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("Hamısı");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [collectionFilter, setCollectionFilter] = useState("Hamısı");
   const [agingFilter, setAgingFilter] = useState("Hamısı");
-  const debtorRows = rows.filter((row) => row.type === "Debitor");
-  const creditorRows = rows.filter((row) => row.type === "Kreditor");
-  const overdueRows = rows.filter((row) => Number(row.overdueDays || 0) > 0);
-  const highRiskRows = rows.filter((row) => ["Kritik", "Yüksək"].includes(row.riskCategory));
+  const [selectedDebt, setSelectedDebt] = useState(null);
+  const effectiveRows = realOrders.filter(order => order.status !== "cancelled").map(order => {
+    const amount = Math.max(0, Number(order.total || 0) - Number(order.paid_amount || 0));
+    return {
+      id: `DB-ORD-${order.id}`, type: "Debitor", party: order.customer?.name || "Müştəri qeyd edilməyib",
+      source: order.order_no, sourceType: "order", sourceTypeLabel: "Satış sifarişi", amount,
+      orderBalance: amount, creditBalance: 0, customerDebt: 0, overdueDays: 0,
+      owner: "Satış", status: amount > 0 ? "Aktiv" : "Bağlandı", detail: `${order.order_no} · ${order.items?.map(item => item.description).filter(Boolean).join(", ") || "Sifariş"}`,
+      orderIds: [order.id], openOrderIds: [order.id], creditIds: [], contractIds: [], closingMode: "cash-in",
+      agingBucket: "Cari", riskCategory: "Sağlam", collectionStatus: "İzləmədə", nextAction: amount > 0 ? "Ödənişi izlə" : "Bağlanıb",
+    };
+  }).filter(row => row.amount > 0);
+  const debtorRows = effectiveRows.filter((row) => row.type === "Debitor");
+  const creditorRows = effectiveRows.filter((row) => row.type === "Kreditor");
+  const overdueRows = effectiveRows.filter((row) => Number(row.overdueDays || 0) > 0);
+  const highRiskRows = effectiveRows.filter((row) => ["Kritik", "Yüksək"].includes(row.riskCategory));
   const totalDebitor = total(debtorRows, "amount");
   const totalCreditor = total(creditorRows, "amount");
   const netPosition = totalDebitor - totalCreditor;
-  const agingSummary = buildReceivableAgingSummary(rows);
-  const sourceTypeOptions = ["Hamısı", ...new Set(rows.map((row) => row.sourceTypeLabel || row.sourceType).filter(Boolean))];
-  const riskOptions = ["Hamısı", ...new Set(rows.map((row) => row.riskCategory).filter(Boolean))];
-  const collectionOptions = ["Hamısı", ...new Set(rows.map((row) => row.collectionStatus).filter(Boolean))];
+  const agingSummary = buildReceivableAgingSummary(effectiveRows);
+  const sourceTypeOptions = ["Hamısı", ...new Set(effectiveRows.map((row) => row.sourceTypeLabel || row.sourceType).filter(Boolean))];
+  const riskOptions = ["Hamısı", ...new Set(effectiveRows.map((row) => row.riskCategory).filter(Boolean))];
+  const collectionOptions = ["Hamısı", ...new Set(effectiveRows.map((row) => row.collectionStatus).filter(Boolean))];
   const agingOptions = ["Hamısı", ...agingSummary.map((row) => row.bucket)];
-  const visibleRows = rows.filter((row) => {
+  const visibleRows = effectiveRows.filter((row) => {
     const matchesType = typeFilter === "Hamısı" || row.type === typeFilter;
     const rowSourceType = row.sourceTypeLabel || row.sourceType;
     const matchesSourceType = sourceTypeFilter === "Hamısı" || rowSourceType === sourceTypeFilter;
@@ -104,9 +120,10 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
               <option key={item}>{item}</option>
             ))}
           </select>
-          <span>{visibleRows.length}/{rows.length} sətir</span>
+          <span>{visibleRows.length}/{effectiveRows.length} sətir</span>
         </div>
         <DataTable
+          onRowClick={(index) => setSelectedDebt(visibleRows[index])}
           columns={["Tip", "Tərəf", "Mənbə", "Məbləğ", "Aging", "Risk", "Kolleksiya", "Növbəti addım", "Məsul", "Bağlanış"]}
           rows={visibleRows.map((row) => [
             <StatusBadge status={row.type} />,
@@ -119,7 +136,7 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
             row.nextAction,
             row.owner,
             Number(row.amount || 0) > 0 ? (
-              <button className="text-btn receivable-close-button" data-testid="receivable-close-button" onClick={() => onCloseDebt?.(row.id)}>
+              <button className="text-btn receivable-close-button" data-testid="receivable-close-button" onClick={(event) => { event.stopPropagation(); onCloseDebt?.(row.id); }}>
                 Bağla
               </button>
             ) : (
@@ -148,6 +165,32 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
           />
         )}
       </Panel>
+      {selectedDebt && <DebtDetail row={selectedDebt} onClose={() => setSelectedDebt(null)} onOpenSalesOrder={onOpenSalesOrder} />}
     </div>
   );
+}
+
+function DebtDetail({ row, onClose, onOpenSalesOrder }) {
+  const orderId = row.openOrderIds?.[0] || row.orderIds?.[0];
+  const detailRows = [
+    ["Tip", row.type], ["Tərəf", row.party], ["Mənbə", row.source],
+    ["Mənbə növü", row.sourceTypeLabel || row.sourceType], ["Qalıq borc", money(row.amount)],
+    ["Sifariş qalığı", money(row.orderBalance || 0)], ["Kredit qalığı", money(row.creditBalance || 0)],
+    ["Manual borc", money(row.customerDebt || 0)], ["Aging", row.agingBucket],
+    ["Gecikmə", Number(row.overdueDays || 0) > 0 ? `${row.overdueDays} gün` : "Gecikmə yoxdur"],
+    ["Risk", row.riskCategory], ["Kolleksiya", row.collectionStatus],
+    ["Məsul", row.owner], ["Növbəti addım", row.nextAction], ["Ətraflı", row.detail],
+  ];
+  return <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.45)", display: "flex", justifyContent: "flex-end" }}>
+    <aside onClick={event => event.stopPropagation()} style={{ width: 480, maxWidth: "100%", height: "100%", overflowY: "auto", background: "#fff", padding: 20, boxSizing: "border-box", boxShadow: "-10px 0 30px rgba(15,23,42,.16)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div><small style={{ color: "#64748b", fontWeight: 700 }}>BORC MƏLUMATI</small><h2 style={{ margin: "5px 0" }}>{row.party}</h2><StatusBadge status={row.type} /></div>
+        <button type="button" onClick={onClose} style={{ border: 0, background: "transparent", fontSize: 25, cursor: "pointer" }}>×</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 9 }}>
+        {detailRows.map(([label, value]) => <div key={label} style={{ padding: 11, border: "1px solid #e2e8f0", borderRadius: 9, background: "#f8fafc" }}><small style={{ display: "block", color: "#64748b", marginBottom: 4 }}>{label}</small><strong style={{ overflowWrap: "anywhere" }}>{value || "—"}</strong></div>)}
+      </div>
+      {orderId && <button type="button" onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} style={{ width: "100%", marginTop: 14, padding: 10, border: 0, borderRadius: 9, background: "#075e4b", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Əlaqəli sifarişə bax</button>}
+    </aside>
+  </div>;
 }

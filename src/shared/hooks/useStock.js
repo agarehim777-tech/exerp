@@ -218,6 +218,21 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     await fetchBase();
   };
 
+  const updateWarehouse = async (id, payload) => {
+    const { error: err } = await supabase
+      .from('warehouses')
+      .update({
+        code: payload.code,
+        name: payload.name,
+        address: payload.address || null,
+        is_active: payload.is_active !== false,
+      })
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+    if (err) throw err;
+    await fetchBase();
+  };
+
   const removeWarehouse = async (id) => {
     const { error: err } = await supabase.from('warehouses').delete().eq('id', id);
     if (err) throw err;
@@ -234,6 +249,43 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     if (err) throw err;
     if (pageRef.current !== 0) setMovementsPage(0);
     else await fetchMovements(0);
+  };
+
+  const transferStock = async ({ fromWarehouseId, toWarehouseId, productId, qty, note }) => {
+    const amount = Number(qty);
+    if (!fromWarehouseId || !toWarehouseId || fromWarehouseId === toWarehouseId) {
+      throw new Error('Fərqli mənbə və hədəf anbar seçin.');
+    }
+    if (!productId || !Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Məhsul və düzgün miqdar seçin.');
+    }
+
+    const source = balances.find(
+      (row) => row.warehouse_id === fromWarehouseId && row.product_id === productId,
+    );
+    if (!source || Number(source.qty || 0) < amount) {
+      throw new Error(`Mənbə anbarda yalnız ${Number(source?.qty || 0).toLocaleString('az-AZ')} ədəd mövcuddur.`);
+    }
+
+    const reference = `TR-${Date.now()}`;
+    const product = source.product || {};
+    const common = {
+      tenant_id: tenantId,
+      product_id: productId,
+      sku: product.sku || source.sku || null,
+      qty: amount,
+      unit_cost: Number(source.avg_cost || 0),
+      doc_no: reference,
+      reference,
+      note: note || 'Daxili anbar transferi',
+    };
+    const { error: err } = await supabase.from('stock_movements').insert([
+      { ...common, warehouse_id: fromWarehouseId, move_type: 'out' },
+      { ...common, warehouse_id: toWarehouseId, move_type: 'in' },
+    ]);
+    if (err) throw err;
+    await refresh();
+    return reference;
   };
 
   const setReorderPoint = async (balanceId, value) => {
@@ -260,8 +312,10 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     error,
     refresh,
     createWarehouse,
+    updateWarehouse,
     removeWarehouse,
     addMovement,
+    transferStock,
     setReorderPoint,
   };
 }

@@ -20,7 +20,7 @@ const segmentBadge = {
   vip:        { label: 'VIP',    bg: '#fef3c7', color: '#92400e' },
 };
 
-export default function CrmCustomersPage() {
+export default function CrmCustomersPage({ onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
   const { customers, create, update, remove } = useCustomers(activeTenantId);
   const [q, setQ] = useState('');
@@ -70,7 +70,7 @@ export default function CrmCustomersPage() {
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</span>
-            <span style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 21, lineHeight: 1.2, fontWeight: 750, color: s.color }}>{s.value}</span>
           </div>
         ))}
       </div>
@@ -140,7 +140,7 @@ export default function CrmCustomersPage() {
         </div>
       )}
 
-      {openId && <CustomerDrawer customerId={openId} onClose={() => setOpenId(null)} onUpdate={(v) => update(openId, v)} />}
+      {openId && <CustomerDrawer customerId={openId} onClose={() => setOpenId(null)} onUpdate={(v) => update(openId, v)} onOpenSalesOrder={onOpenSalesOrder} />}
       {showNew && <NewCustomerModal onClose={() => setShowNew(false)} onCreate={async (v) => { await create(v); setShowNew(false); }} />}
     </div>
   );

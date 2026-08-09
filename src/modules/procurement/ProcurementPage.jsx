@@ -27,6 +27,7 @@ import {
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
+import "./procurement.css";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -914,7 +915,7 @@ export default function ProcurementPage() {
 
   if (!tenantId) {
     return (
-      <main style={styles.page}>
+      <main style={styles.page} className="procurement-page">
         <section style={styles.emptyPanel}>
           <AlertTriangle size={28} />
           <h1>Aktiv şirkət seçilməyib</h1>
@@ -929,27 +930,11 @@ export default function ProcurementPage() {
   }
 
   return (
-    <main style={styles.page}>
+    <main style={styles.page} className="procurement-page">
       <header style={styles.header}>
         <div>
-          <Link to="/" style={styles.backLink}>
-            <ArrowLeft size={16} />
-            Panelə qayıt
-          </Link>
           <h1 style={styles.title}>Satınalma</h1>
           <p style={styles.subtitle}>Vendor, zavod sifarişi, mədaxil, faktura və 3-way match axını.</p>
-          <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 8, fontFamily: "monospace", fontSize: 12, color: "#065f46" }}>
-            <strong>Aktiv tenant:</strong>
-            <span>{profile?.active_tenant_id ? `${profile.active_tenant_id}` : "—"}</span>
-            <span style={{ opacity: 0.6 }}>| sorğu: {tenantId || "—"}</span>
-            <button
-              type="button"
-              onClick={() => { navigator.clipboard?.writeText(tenantId || ""); }}
-              style={{ marginLeft: 4, border: "none", background: "transparent", cursor: "pointer", color: "#047857", fontSize: 11 }}
-            >
-              copy
-            </button>
-          </div>
         </div>
         <div style={styles.headerActions}>
           <IconButton icon={RefreshCw} label={loading ? "Yüklənir" : "Yenilə"} onClick={load} disabled={loading || saving} />
@@ -957,7 +942,7 @@ export default function ProcurementPage() {
         </div>
       </header>
 
-      <section style={styles.metricGrid}>
+      <section style={styles.metricGrid} className="procurement-metrics">
         <Metric icon={Building2} label="Aktiv vendor" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} vendor`} tone="blue" />
         <Metric icon={ShoppingCart} label="Açıq PO" value={stats.openPo.length} hint={`${purchaseOrders.length} ümumi PO`} tone="amber" />
         <Metric icon={Truck} label="Mədaxil gözləyir" value={stats.waitingReceipt.length} hint="Təsdiqli və qismən PO" tone="green" />
@@ -1227,8 +1212,8 @@ function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo
   const exceptionInvoices = invoices.filter((invoice) => invoice.status === "exception").slice(0, 6);
 
   return (
-    <section style={styles.dashboardGrid}>
-      <Panel title="Satınalma axını" icon={ClipboardCheck} action={<IconButton icon={Plus} label="Yeni PO" onClick={onCreatePo} tone="primary" />}>
+    <section style={styles.dashboardGrid} className="procurement-dashboard-grid">
+      <Panel title="Satınalma axını" icon={ClipboardCheck}>
         <div style={styles.flowRow}>
           {[
             ["1", "Vendor", `${vendors.filter((vendor) => vendor.is_active).length} aktiv vendor`],
@@ -1822,19 +1807,20 @@ function DataTable({ columns, rows, empty, detail, sourceRows }) {
 
 const styles = {
   page: {
-    minHeight: "100vh",
-    background: "#f5f7fb",
+    width: "100%",
+    boxSizing: "border-box",
+    background: "transparent",
     color: "#0f172a",
-    padding: "24px",
-    fontFamily: "Manrope, system-ui, sans-serif",
+    padding: "0",
+    fontFamily: "inherit",
   },
   header: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: "18px",
-    maxWidth: "1440px",
-    margin: "0 auto 18px",
+    width: "100%",
+    margin: "0 0 14px",
   },
   headerActions: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" },
   backLink: {
@@ -1847,55 +1833,55 @@ const styles = {
     fontWeight: 700,
     marginBottom: "8px",
   },
-  title: { margin: 0, fontFamily: "Sora, sans-serif", fontSize: "30px", color: "#0f172a" },
-  subtitle: { margin: "6px 0 0", color: "#64748b" },
+  title: { margin: 0, fontSize: "22px", lineHeight: 1.25, color: "#15372d" },
+  subtitle: { margin: "4px 0 0", color: "#71867f", fontSize: "12px" },
   metricGrid: {
-    maxWidth: "1440px",
-    margin: "0 auto 16px",
+    width: "100%",
+    margin: "0 0 12px",
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "12px",
+    gap: "10px",
   },
   metricCard: {
     display: "flex",
     gap: "12px",
     alignItems: "center",
     background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    padding: "16px",
-    boxShadow: "0 8px 28px rgba(15, 23, 42, 0.05)",
+    border: "1px solid #ded8c4",
+    borderRadius: "12px",
+    padding: "13px",
+    boxShadow: "none",
   },
   metricIcon: { width: "44px", height: "44px", borderRadius: "10px", display: "grid", placeItems: "center" },
-  metric_blue: { background: "#dbeafe", color: "#1d4ed8" },
+  metric_blue: { background: "#dff3e9", color: "#08745a" },
   metric_amber: { background: "#fef3c7", color: "#b45309" },
   metric_green: { background: "#dcfce7", color: "#15803d" },
   metric_rose: { background: "#ffe4e6", color: "#be123c" },
   metricLabel: { display: "block", color: "#64748b", fontSize: "12px", fontWeight: 700 },
   metricValue: { display: "block", fontSize: "22px", marginTop: "2px" },
   metricHint: { display: "block", color: "#94a3b8", marginTop: "2px" },
-  toolbar: { maxWidth: "1440px", margin: "0 auto 12px", display: "flex", gap: "10px", alignItems: "center" },
+  toolbar: { width: "100%", margin: "0 0 10px", display: "flex", gap: "8px", alignItems: "center" },
   searchBox: {
     flex: 1,
     display: "flex",
     alignItems: "center",
     gap: "8px",
     background: "#fff",
-    border: "1px solid #e5e7eb",
+    border: "1px solid #d8d3c2",
     borderRadius: "10px",
     padding: "0 12px",
-    minHeight: "42px",
+    minHeight: "38px",
     color: "#64748b",
   },
   searchInput: { flex: 1, border: 0, outline: 0, minHeight: "38px", font: "inherit", background: "transparent" },
   select: { height: "42px", border: "1px solid #e5e7eb", borderRadius: "10px", background: "#fff", padding: "0 12px", fontWeight: 700 },
-  tabs: { maxWidth: "1440px", margin: "0 auto 16px", display: "flex", gap: "8px", flexWrap: "wrap" },
+  tabs: { width: "100%", margin: "0 0 12px", display: "flex", gap: "6px", flexWrap: "wrap" },
   tabButton: {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    minHeight: "40px",
-    padding: "0 14px",
+    minHeight: "36px",
+    padding: "0 12px",
     border: "1px solid #e5e7eb",
     borderRadius: "10px",
     background: "#fff",
@@ -1903,13 +1889,13 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  tabActive: { border: "1px solid #2563eb", color: "#1d4ed8", background: "#eff6ff" },
-  panel: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "18px", boxShadow: "0 8px 28px rgba(15, 23, 42, 0.05)" },
+  tabActive: { border: "1px solid #08745a", color: "#075e4b", background: "#e8f5ef" },
+  panel: { background: "#fff", border: "1px solid #ded8c4", borderRadius: "12px", padding: "15px", boxShadow: "none", minWidth: 0 },
   panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "14px" },
   panelTools: { display: "flex", alignItems: "center", gap: "8px", color: "#64748b" },
-  dashboardGrid: { maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: "12px" },
-  splitGrid: { maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: "390px 1fr", gap: "12px" },
-  stack: { maxWidth: "1440px", margin: "0 auto", display: "grid", gap: "12px" },
+  dashboardGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) repeat(2, minmax(250px, 1fr))", gap: "10px" },
+  splitGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(300px, 380px) minmax(0, 1fr)", gap: "10px" },
+  stack: { width: "100%", display: "grid", gap: "10px" },
   stackSmall: { display: "grid", gap: "10px" },
   form: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px" },
   field: { display: "grid", gap: "6px", color: "#475569", fontSize: "12px", fontWeight: 800 },
@@ -1949,7 +1935,7 @@ const styles = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
-  button_primary: { background: "#2563eb", color: "#fff", borderColor: "#2563eb" },
+  button_primary: { background: "#08745a", color: "#fff", borderColor: "#08745a" },
   button_success: { background: "#16a34a", color: "#fff", borderColor: "#16a34a" },
   button_danger: { background: "#fff1f2", color: "#be123c", borderColor: "#fecdd3" },
   button_ghost: {},
@@ -1972,8 +1958,8 @@ const styles = {
   progressTrack: { height: "7px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" },
   progressFill: { display: "block", height: "100%", background: "#2563eb", borderRadius: "999px" },
   emptyInline: { minHeight: "120px", display: "grid", placeItems: "center", gap: "8px", color: "#64748b", textAlign: "center" },
-  flowRow: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px" },
-  flowItem: { border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px", background: "#f8fafc", display: "grid", gap: "5px" },
+  flowRow: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" },
+  flowItem: { border: "1px solid #e5e7eb", borderRadius: "9px", padding: "11px", background: "#f8fafc", display: "grid", gap: "4px", minWidth: 0 },
   compactRow: { display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #eef2f7" },
   warningRow: { display: "flex", gap: "8px", alignItems: "center", padding: "10px", border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: "10px", marginBottom: "8px" },
   message: { maxWidth: "1440px", margin: "0 auto 12px", borderRadius: "10px", padding: "10px 42px 10px 12px", position: "relative", fontWeight: 800, fontSize: "13px" },
