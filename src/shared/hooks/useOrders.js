@@ -115,7 +115,7 @@ export function useOrders(tenantId) {
   };
 
   const updateStatus = async (id, status) => {
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+    const { error } = await supabase.rpc('process_sales_order_status', { _order_id: id, _status: status });
     if (error) throw error;
     await fetchAll();
   };
@@ -150,7 +150,13 @@ export function useOrders(tenantId) {
       }
     }
 
-    const { data: transaction, error: cashError } = await supabase.from('cash_transactions').insert({
+    const { error: paymentError } = await supabase.rpc('register_order_payment', {
+      _order_id: order.id,
+      _amount: payment,
+      _account_id: resolvedAccountId,
+    });
+    if (paymentError) throw paymentError;
+    /*const { data: transaction, error: cashError } = await supabase.from('cash_transactions').insert({
       tenant_id: tenantId,
       account_id: resolvedAccountId,
       direction: 'in',
@@ -173,7 +179,7 @@ export function useOrders(tenantId) {
     if (orderError) {
       await supabase.from('cash_transactions').delete().eq('id', transaction.id).eq('tenant_id', tenantId);
       throw orderError;
-    }
+    }*/
     await fetchAll();
   };
 
