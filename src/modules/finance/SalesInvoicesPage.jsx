@@ -7,6 +7,7 @@ import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
 import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
+import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
@@ -244,22 +245,18 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
           {lines.map((line, index) => (
             <tr key={index}>
               <td style={td}>
-                <select
+                <ProductSearchSelect
+                  products={products}
                   value={line.product_id}
-                  onChange={(e) => {
-                    const product = products.find((p) => p.id === e.target.value);
+                  onChange={(productId, product) => {
                     patchLine(index, {
-                      product_id: e.target.value,
+                      product_id: productId,
                       description: product?.name || line.description,
                       unit_price: product?.price ?? line.unit_price,
                       vat_rate: product?.vat_rate ?? line.vat_rate,
                     });
                   }}
-                  style={{ ...input, width: "100%" }}
-                >
-                  <option value="">Sərbəst sətir…</option>
-                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                />
                 <input
                   placeholder="Təsvir"
                   value={line.description}
@@ -586,22 +583,18 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
                 <td style={td}>{row.line_no}</td>
                 <td style={td}>
                   {!!products.length && (
-                    <select
-                      style={{ ...input, width: "100%" }}
+                    <ProductSearchSelect
+                      products={products}
                       value={row.product_id || ""}
-                      onChange={(e) => {
-                        const product = products.find((p) => p.id === e.target.value);
+                      onChange={(productId, product) => {
                         patchLine(index, {
-                          product_id: e.target.value || null,
+                          product_id: productId || null,
                           description: product?.name ?? row.description,
                           unit_price: product?.price ?? row.unit_price,
                           vat_rate: product?.vat_rate ?? row.vat_rate,
                         });
                       }}
-                    >
-                      <option value="">Sərbəst sətir…</option>
-                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    />
                   )}
                   <input
                     style={fieldStyle(index, "description", { ...input, width: "100%", marginTop: 4 })}

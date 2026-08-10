@@ -19,16 +19,12 @@ export const navItems = [
 
   // Satış
   { id: "sales-dashboard", label: "Satış paneli", group: "sales" },
-  { id: "sales-quotes", label: "Kotirovkalar", group: "sales" },
-  { id: "sales", label: "Sifarişlər", group: "sales" },
-  { id: "sales-shipments", label: "Çatdırılmalar", group: "sales" },
-  { id: "ar-invoices", label: "Satış fakturaları", group: "sales" },
+  { id: "sales", label: "Satış yarat", group: "sales" },
 
   // Təchizat & Anbar
   { id: "procurement", label: "Satınalma", group: "supply" },
-  { id: "vendors", label: "Vendorlar", group: "supply" },
-  { id: "stock", label: "Anbar qalıqları", group: "supply" },
-  { id: "warehouse", label: "Məhsullar", group: "supply" },
+  { id: "stock", label: "Anbar idarəetməsi", group: "supply" },
+  { id: "products", label: "Məhsullar", group: "supply" },
   { id: "deliveries", label: "Təhvil-təslim", group: "supply" },
 
   // Maliyyə
@@ -36,14 +32,9 @@ export const navItems = [
   { id: "accounting", label: "Mühasibat jurnalı", group: "finance" },
   { id: "receivables", label: "Borclar", group: "finance" },
   { id: "credits", label: "Kreditlər", group: "finance" },
-  { id: "tax", label: "Vergi", group: "finance" },
-  { id: "periods", label: "Mühasibat dövrləri", group: "finance" },
-  { id: "currencies", label: "Valyuta & məzənnə", group: "finance" },
 
 
   // Əməliyyat
-  { id: "projects", label: "Layihələr", group: "ops" },
-  { id: "production", label: "İstehsalat", group: "ops" },
   { id: "contracts", label: "Müqavilələr", group: "ops" },
   { id: "hr", label: "HR", group: "ops" },
 

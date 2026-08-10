@@ -18,6 +18,7 @@ import {
   Save,
   Search,
   ShoppingCart,
+  Ship,
   Trash2,
   Truck,
   WalletCards,
@@ -27,6 +28,8 @@ import {
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
+import "./procurement.css";
+import LandedCostPanel from "./LandedCostPanel.jsx";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -60,10 +63,10 @@ const INVOICE_STATUS = {
 };
 
 const emptyVendor = { name: "", tax_id: "", email: "", phone: "", address: "", is_active: true };
-const emptyPo = { vendor_id: "", po_number: "", order_date: today(), expected_date: "", currency: "AZN", notes: "" };
+const emptyPo = { vendor_id: "", po_number: "", factory_name: "", order_date: today(), expected_date: "", currency: "AZN", exchange_rate: "1", payment_terms: "", notes: "" };
 const emptyReceipt = { po_id: "", grn_number: "", receipt_date: today(), notes: "" };
 const emptyInvoice = { po_id: "", invoice_number: "", invoice_date: today(), due_date: "", currency: "AZN", match_notes: "" };
-const emptyPoLine = { product_sku: "", description: "", qty_ordered: "1", unit_price: "0", tax_rate: "0" };
+const emptyPoLine = { product_id: "", product_sku: "", description: "", qty_ordered: "1", unit: "ədəd", unit_price: "0" };
 const emptyRfq = { title: "", description: "", quantity: "1", due_at: "", vendor_ids: [] };
 
 function nextNumber(prefix) {
@@ -113,6 +116,67 @@ function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = fal
       <Icon size={15} />
       <span>{label}</span>
     </button>
+  );
+}
+
+function ProductAutocomplete({ products, value, onSelect }) {
+  const selected = products.find((product) => product.id === value);
+  const [query, setQuery] = useState(selected?.name || "");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setQuery(selected?.name || "");
+  }, [selected?.id, selected?.name]);
+
+  const matches = useMemo(() => {
+    const term = normalize(query);
+    if (!term) return products.slice(0, 8);
+    return products
+      .filter((product) => normalize(`${product.name} ${product.sku}`).includes(term))
+      .sort((a, b) => {
+        const aStarts = normalize(a.name).startsWith(term) || normalize(a.sku).startsWith(term);
+        const bStarts = normalize(b.name).startsWith(term) || normalize(b.sku).startsWith(term);
+        return Number(bStarts) - Number(aStarts) || a.name.localeCompare(b.name, "az");
+      })
+      .slice(0, 8);
+  }, [products, query]);
+
+  const choose = (product) => {
+    setQuery(product.name);
+    setOpen(false);
+    setActiveIndex(0);
+    onSelect(product);
+  };
+
+  return (
+    <div className="product-autocomplete">
+      <Search size={15} aria-hidden="true" />
+      <input
+        value={query}
+        placeholder="Məhsul adı və ya SKU yazın"
+        autoComplete="off"
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onChange={(event) => { setQuery(event.target.value); setOpen(true); setActiveIndex(0); }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((index) => Math.min(index + 1, matches.length - 1)); }
+          if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((index) => Math.max(index - 1, 0)); }
+          if (event.key === "Enter" && open && matches[activeIndex]) { event.preventDefault(); choose(matches[activeIndex]); }
+          if (event.key === "Escape") setOpen(false);
+        }}
+      />
+      {open && (
+        <div className="product-autocomplete__menu">
+          {matches.length ? matches.map((product, index) => (
+            <button key={product.id} type="button" className={index === activeIndex ? "active" : ""} onMouseDown={() => choose(product)}>
+              <span>{product.name}</span>
+              <small>{product.sku || "SKU yoxdur"}</small>
+            </button>
+          )) : <div className="product-autocomplete__empty">Uyğun məhsul tapılmadı</div>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -378,10 +442,10 @@ export default function ProcurementPage() {
         lineIndex === index
           ? {
               ...line,
+              product_id: product?.id || line.product_id || "",
               product_sku: sku,
               description: product?.name || line.description,
               unit_price: product ? String(product.price || 0) : line.unit_price,
-              tax_rate: product ? String(product.vat_rate || 0) : line.tax_rate,
             }
           : line,
       ),
@@ -403,6 +467,7 @@ export default function ProcurementPage() {
         outstanding,
         qty_received: existingLine ? String(existingLine.qty_received) : String(outstanding || ""),
         qty_rejected: existingLine ? String(existingLine.qty_rejected || 0) : "0",
+        unit_volume_m3: existingLine ? String(existingLine.unit_volume_m3 || 0) : "",
       };
     });
   }
@@ -517,7 +582,9 @@ export default function ProcurementPage() {
         description: line.description.trim() || null,
         qty_ordered: toNumber(line.qty_ordered),
         unit_price: toNumber(line.unit_price),
-        tax_rate: toNumber(line.tax_rate),
+        tax_rate: 0,
+        product_id: line.product_id || null,
+        unit: line.unit || "ədəd",
       }));
     if (!validLines.length) {
       setError("PO üçün ən azı bir məhsul sətri tələb olunur.");
@@ -531,6 +598,9 @@ export default function ProcurementPage() {
       order_date: poForm.order_date || today(),
       expected_date: poForm.expected_date || null,
       currency: poForm.currency || "AZN",
+      factory_name: poForm.factory_name?.trim() || null,
+      exchange_rate: toNumber(poForm.exchange_rate) || 1,
+      payment_terms: poForm.payment_terms?.trim() || null,
       notes: poForm.notes.trim() || null,
       created_by: user?.id || null,
     };
@@ -595,6 +665,9 @@ export default function ProcurementPage() {
       order_date: po.order_date || today(),
       expected_date: po.expected_date || "",
       currency: po.currency || "AZN",
+      factory_name: po.factory_name || "",
+      exchange_rate: String(po.exchange_rate || 1),
+      payment_terms: po.payment_terms || "",
       notes: po.notes || "",
     });
     setPoDraftLines(
@@ -605,6 +678,13 @@ export default function ProcurementPage() {
             qty_ordered: String(line.qty_ordered || ""),
             unit_price: String(line.unit_price || ""),
             tax_rate: String(line.tax_rate || 0),
+            product_id: line.product_id || "",
+            unit: line.unit || "ədəd",
+            unit_volume_m3: String(line.unit_volume_m3 || 0),
+            unit_net_weight_kg: String(line.unit_net_weight_kg || 0),
+            unit_gross_weight_kg: String(line.unit_gross_weight_kg || 0),
+            hs_code: line.hs_code || "",
+            duty_rate: String(line.duty_rate || 0),
           }))
         : [{ ...emptyPoLine }],
     );
@@ -683,12 +763,22 @@ export default function ProcurementPage() {
       setError("PO və GRN nömrəsi tələb olunur.");
       return;
     }
+    const invalidLine = receiptDraftLines.find((line) => {
+      const received = toNumber(line.qty_received);
+      const rejected = toNumber(line.qty_rejected);
+      return received < 0 || rejected < 0 || rejected > received || received > toNumber(line.outstanding) + 0.000001 || (received > rejected && toNumber(line.unit_volume_m3) <= 0);
+    });
+    if (invalidLine) {
+      setError(`${invalidLine.label}: miqdarları yoxlayın və mədaxil edilən məhsul üçün vahid həcmi daxil edin.`);
+      return;
+    }
     const items = receiptDraftLines
       .filter((line) => toNumber(line.qty_received) > 0)
       .map((line) => ({
         po_line_id: line.po_line_id,
         qty_received: toNumber(line.qty_received),
         qty_rejected: toNumber(line.qty_rejected),
+        unit_volume_m3: toNumber(line.unit_volume_m3),
       }));
     if (!items.length) {
       setError("Ən azı bir mədaxil sətri tələb olunur.");
@@ -914,7 +1004,7 @@ export default function ProcurementPage() {
 
   if (!tenantId) {
     return (
-      <main style={styles.page}>
+      <main style={styles.page} className="procurement-page">
         <section style={styles.emptyPanel}>
           <AlertTriangle size={28} />
           <h1>Aktiv şirkət seçilməyib</h1>
@@ -929,58 +1019,33 @@ export default function ProcurementPage() {
   }
 
   return (
-    <main style={styles.page}>
+    <main style={styles.page} className="procurement-page">
       <header style={styles.header}>
         <div>
-          <Link to="/" style={styles.backLink}>
-            <ArrowLeft size={16} />
-            Panelə qayıt
-          </Link>
           <h1 style={styles.title}>Satınalma</h1>
-          <p style={styles.subtitle}>Vendor, zavod sifarişi, mədaxil, faktura və 3-way match axını.</p>
-          <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 8, fontFamily: "monospace", fontSize: 12, color: "#065f46" }}>
-            <strong>Aktiv tenant:</strong>
-            <span>{profile?.active_tenant_id ? `${profile.active_tenant_id}` : "—"}</span>
-            <span style={{ opacity: 0.6 }}>| sorğu: {tenantId || "—"}</span>
-            <button
-              type="button"
-              onClick={() => { navigator.clipboard?.writeText(tenantId || ""); }}
-              style={{ marginLeft: 4, border: "none", background: "transparent", cursor: "pointer", color: "#047857", fontSize: 11 }}
-            >
-              copy
-            </button>
-          </div>
+          <p style={styles.subtitle}>Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.</p>
         </div>
         <div style={styles.headerActions}>
           <IconButton icon={RefreshCw} label={loading ? "Yüklənir" : "Yenilə"} onClick={load} disabled={loading || saving} />
-          <IconButton icon={Plus} label="Yeni PO" onClick={() => { resetPoForm(); setTab("po"); }} tone="primary" />
         </div>
       </header>
 
-      <section style={styles.metricGrid}>
+      <section style={styles.metricGrid} className="procurement-metrics">
         <Metric icon={Building2} label="Aktiv vendor" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} vendor`} tone="blue" />
         <Metric icon={ShoppingCart} label="Açıq PO" value={stats.openPo.length} hint={`${purchaseOrders.length} ümumi PO`} tone="amber" />
         <Metric icon={Truck} label="Mədaxil gözləyir" value={stats.waitingReceipt.length} hint="Təsdiqli və qismən PO" tone="green" />
-        <Metric icon={WalletCards} label="PO dəyəri" value={money(stats.approvedSpend)} hint={`${stats.exceptions.length} match fərqi`} tone="rose" />
+        <Metric icon={WalletCards} label="PO dəyəri" value={money(stats.approvedSpend)} hint={`${purchaseOrders.length} ümumi PO`} tone="rose" />
       </section>
 
       <section style={styles.toolbar}>
         <div style={styles.searchBox}>
           <Search size={17} />
-          <input style={styles.searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, faktura, SKU axtar..." />
+          <input style={styles.searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, GRN və ya SKU axtar..." />
         </div>
         {tab === "po" && (
           <select value={poStatus} onChange={(event) => setPoStatusFilter(event.target.value)} style={styles.select}>
             <option value="all">Bütün PO statusları</option>
             {Object.entries(PO_STATUS).map(([key, meta]) => (
-              <option key={key} value={key}>{meta.label}</option>
-            ))}
-          </select>
-        )}
-        {tab === "invoices" && (
-          <select value={invoiceStatus} onChange={(event) => setInvoiceStatusFilter(event.target.value)} style={styles.select}>
-            <option value="all">Bütün faktura statusları</option>
-            {Object.entries(INVOICE_STATUS).map(([key, meta]) => (
               <option key={key} value={key}>{meta.label}</option>
             ))}
           </select>
@@ -1003,7 +1068,7 @@ export default function ProcurementPage() {
           ["vendors", Building2, "Vendorlar"],
           ["po", ShoppingCart, "PO"],
           ["grn", PackageCheck, "Mədaxil"],
-          ["invoices", Receipt, "Fakturalar"],
+          ["landed", Ship, "Göndəriş və maya"],
         ].map(([id, Icon, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} style={{ ...styles.tabButton, ...(tab === id ? styles.tabActive : {}) }}>
             <Icon size={16} />
@@ -1024,13 +1089,12 @@ export default function ProcurementPage() {
             <DashboardTab
               purchaseOrders={purchaseOrders}
               vendors={vendors}
-              invoices={invoices}
               poMetrics={poMetrics}
               onCreatePo={() => { resetPoForm(); setTab("po"); }}
               onReceive={choosePoForReceipt}
-              onInvoice={choosePoForInvoice}
             />
           )}
+          {tab === "landed" && <LandedCostPanel tenantId={tenantId} />}
           {tab === "rfq" && (
             <RfqTab
               rfqs={rfqs}
@@ -1221,20 +1285,19 @@ function Metric({ icon: Icon, label, value, hint, tone }) {
   );
 }
 
-function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo, onReceive, onInvoice }) {
+function DashboardTab({ purchaseOrders, vendors, poMetrics, onCreatePo, onReceive }) {
   const latePo = purchaseOrders.filter((po) => po.expected_date && po.expected_date < today() && ["draft", "approved", "partial"].includes(po.status));
   const actionPo = purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status)).slice(0, 6);
-  const exceptionInvoices = invoices.filter((invoice) => invoice.status === "exception").slice(0, 6);
 
   return (
-    <section style={styles.dashboardGrid}>
-      <Panel title="Satınalma axını" icon={ClipboardCheck} action={<IconButton icon={Plus} label="Yeni PO" onClick={onCreatePo} tone="primary" />}>
+    <section style={styles.dashboardGrid} className="procurement-dashboard-grid">
+      <Panel title="Satınalma axını" icon={ClipboardCheck}>
         <div style={styles.flowRow}>
           {[
             ["1", "Vendor", `${vendors.filter((vendor) => vendor.is_active).length} aktiv vendor`],
             ["2", "PO", "Qaralama → təsdiq"],
             ["3", "Mədaxil", "GRN ilə anbara qəbul"],
-            ["4", "Faktura", "3-way match və ödəniş"],
+            ["4", "Maya", "Xərclərin bölgüsü və anbar qəbulu"],
           ].map(([step, title, text]) => (
             <div key={step} style={styles.flowItem}>
               <span>{step}</span>
@@ -1257,7 +1320,6 @@ function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo
               </div>
               <div style={styles.rowActions}>
                 <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} />
-                <IconButton icon={Receipt} label="Faktura" onClick={() => onInvoice(po.id)} />
               </div>
             </div>
           ))
@@ -1265,8 +1327,8 @@ function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo
       </Panel>
 
       <Panel title="Risk və istisnalar" icon={AlertTriangle}>
-        {latePo.length === 0 && exceptionInvoices.length === 0 ? (
-          <Empty title="Gecikən PO və match istisnası yoxdur." />
+        {latePo.length === 0 ? (
+          <Empty title="Gecikən PO yoxdur." />
         ) : (
           <>
             {latePo.map((po) => (
@@ -1278,15 +1340,6 @@ function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo
                 </div>
               </div>
             ))}
-            {exceptionInvoices.map((invoice) => (
-              <div key={invoice.id} style={styles.warningRow}>
-                <XCircle size={16} />
-                <div>
-                  <strong>{invoice.invoice_number}</strong>
-                  <small>Fakturada miqdar və ya qiymət fərqi var.</small>
-                </div>
-              </div>
-            ))}
           </>
         )}
       </Panel>
@@ -1295,8 +1348,17 @@ function DashboardTab({ purchaseOrders, vendors, invoices, poMetrics, onCreatePo
 }
 
 function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onEdit, onToggle, onDelete, purchaseOrders, saving }) {
+  const [showForm, setShowForm] = useState(false);
+  useEffect(() => { if (editingId) setShowForm(true); }, [editingId]);
   return (
-    <section style={styles.splitGrid}>
+    <section style={styles.stack}>
+      <div style={styles.sectionActions}>
+        <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni vendor"} tone={showForm ? "ghost" : "primary"} onClick={() => {
+          if (showForm && editingId) onCancel();
+          setShowForm((value) => !value);
+        }} />
+      </div>
+      {showForm && (
       <Panel title={editingId ? "Vendoru redaktə et" : "Yeni vendor"} icon={Building2}>
         <form onSubmit={onSubmit} style={styles.form}>
           <Field label="Ad" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
@@ -1314,6 +1376,7 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
           </div>
         </form>
       </Panel>
+      )}
 
       <Panel title="Vendor reyestri" icon={Building2}>
         <DataTable
@@ -1329,7 +1392,7 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
                 {vendor.is_active ? "Aktiv" : "Passiv"}
               </span>,
               <div key="actions" style={styles.rowActions}>
-                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(vendor)} />
+                <IconButton icon={Pencil} label="Edit" onClick={() => { setShowForm(true); onEdit(vendor); }} />
                 <IconButton icon={vendor.is_active ? XCircle : CheckCircle2} label={vendor.is_active ? "Passiv" : "Aktiv"} onClick={() => onToggle(vendor)} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(vendor)} tone="danger" />
               </div>,
@@ -1370,8 +1433,17 @@ function PurchaseOrdersTab({
   saving,
 }) {
   const activeVendors = vendors.filter((vendor) => vendor.is_active);
+  const [showForm, setShowForm] = useState(false);
+  useEffect(() => { if (editingPoId) setShowForm(true); }, [editingPoId]);
   return (
     <section style={styles.stack}>
+      <div style={styles.sectionActions}>
+        <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni PO yarat"} tone={showForm ? "ghost" : "primary"} onClick={() => {
+          if (showForm && editingPoId) onCancel();
+          setShowForm((value) => !value);
+        }} />
+      </div>
+      {showForm && (
       <Panel title={editingPoId ? "PO redaktəsi" : "Yeni satınalma sifarişi"} icon={ShoppingCart}>
         <form onSubmit={onSubmit} style={styles.form}>
           <label style={styles.field}>
@@ -1383,6 +1455,7 @@ function PurchaseOrdersTab({
               ))}
             </select>
           </label>
+          <Field label="Zavod" value={form.factory_name} onChange={(value) => setForm({ ...form, factory_name: value })} />
           <Field label="PO nömrəsi" value={form.po_number} onChange={(value) => setForm({ ...form, po_number: value })} required />
           <Field label="Sifariş tarixi" type="date" value={form.order_date} onChange={(value) => setForm({ ...form, order_date: value })} />
           <Field label="Gözlənilən tarix" type="date" value={form.expected_date} onChange={(value) => setForm({ ...form, expected_date: value })} />
@@ -1394,6 +1467,8 @@ function PurchaseOrdersTab({
               <option value="EUR">EUR</option>
             </select>
           </label>
+          <Field label="Məzənnə" type="number" value={form.exchange_rate} onChange={(value) => setForm({ ...form, exchange_rate: value })} />
+          <Field label="Ödəniş şərti" value={form.payment_terms} onChange={(value) => setForm({ ...form, payment_terms: value })} />
           <Field label="Qeyd" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} wide />
 
           <div style={styles.linesBlock}>
@@ -1407,13 +1482,21 @@ function PurchaseOrdersTab({
               ))}
             </datalist>
             {draftLines.map((line, index) => (
-              <div key={index} style={styles.lineGrid}>
-                <input list="procurement-products" placeholder="SKU / məhsul kodu" value={line.product_sku} onChange={(event) => setProductOnLine(index, event.target.value)} style={styles.input} />
-                <input placeholder="Məhsul adı / izah" value={line.description} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, description: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.001" placeholder="Miqdar" value={line.qty_ordered} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_ordered: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.0001" placeholder="Vahid qiymət" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.01" placeholder="ƏDV %" value={line.tax_rate} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, tax_rate: event.target.value } : item)))} style={styles.input} />
-                <IconButton icon={Trash2} label="Sil" tone="danger" disabled={draftLines.length === 1} onClick={() => setDraftLines(draftLines.filter((_, itemIndex) => itemIndex !== index))} />
+              <div key={index} className="po-line-card">
+                <div className="po-line-card__header">
+                  <strong>Məhsul {index + 1}</strong>
+                  <IconButton icon={Trash2} label="Sil" tone="danger" disabled={draftLines.length === 1} onClick={() => setDraftLines(draftLines.filter((_, itemIndex) => itemIndex !== index))} />
+                </div>
+                <div className="po-line-grid po-line-grid--main">
+                  <label><span>SKU / məhsul kodu</span><input list="procurement-products" placeholder="Məsələn: SN-G5" value={line.product_sku} onChange={(event) => setProductOnLine(index, event.target.value)} /></label>
+                  <label>
+                    <span>Məhsul seçin</span>
+                    <ProductAutocomplete products={products} value={line.product_id} onSelect={(product) => setProductOnLine(index, product.sku)} />
+                  </label>
+                  <label><span>Miqdar</span><input type="number" min="0" step="0.001" value={line.qty_ordered} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_ordered: event.target.value } : item)))} /></label>
+                  <label><span>Ölçü vahidi</span><input placeholder="ədəd" value={line.unit} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => itemIndex === index ? { ...item, unit:event.target.value } : item))} /></label>
+                  <label><span>Vahid invoice qiyməti</span><input type="number" min="0" step="0.0001" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} /></label>
+                </div>
               </div>
             ))}
           </div>
@@ -1425,6 +1508,7 @@ function PurchaseOrdersTab({
           {activeVendors.length === 0 && <p style={styles.helperText}>PO yaratmaq üçün əvvəl aktiv vendor yaradın.</p>}
         </form>
       </Panel>
+      )}
 
       <Panel title="PO reyestri" icon={ClipboardCheck}>
         <DataTable
@@ -1442,14 +1526,13 @@ function PurchaseOrdersTab({
               <StatusPill key="status" status={po.status} />,
               <Progress key="progress" value={metrics.progress || 0} label={`${qty(metrics.received)} / ${qty(metrics.ordered)} ədəd`} />,
               <div key="actions" style={styles.rowActions}>
+                <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
+                <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
-                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(po)} disabled={po.status === "closed"} />
                 {po.status === "draft" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(po)} tone="success" />}
                 {["approved", "partial"].includes(po.status) && <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} tone="success" />}
-                {["approved", "partial", "received"].includes(po.status) && <IconButton icon={Receipt} label="Faktura" onClick={() => onInvoice(po.id)} />}
                 {po.status === "received" && <IconButton icon={CheckCircle2} label="Bağla" onClick={() => onClose(po)} />}
                 {!["closed", "cancelled"].includes(po.status) && <IconButton icon={XCircle} label="Ləğv" onClick={() => onCancelPo(po)} tone="danger" />}
-                {["draft", "cancelled"].includes(po.status) && <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />}
               </div>,
             ];
           })}
@@ -1508,8 +1591,20 @@ function ReceiptsTab({
             {draftLines.map((line, index) => (
               <div key={line.po_line_id} style={styles.receiptLineGrid}>
                 <TwoLine title={line.label} subtitle={`Sifariş: ${qty(line.ordered)} · Qalıq: ${qty(line.outstanding)}`} />
-                <input type="number" min="0" step="0.001" placeholder="Qəbul edildi" value={line.qty_received} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_received: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.001" placeholder="Rədd edildi" value={line.qty_rejected} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_rejected: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" max={line.outstanding} step="0.001" placeholder="Qəbul edildi" value={line.qty_received} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => {
+                  if (itemIndex !== index) return item;
+                  const raw = event.target.value;
+                  if (raw === "") return { ...item, qty_received: "" };
+                  const received = Math.min(Math.max(0, toNumber(raw)), toNumber(item.outstanding));
+                  return { ...item, qty_received: String(received), qty_rejected: String(Math.min(toNumber(item.qty_rejected), received)) };
+                }))} style={styles.input} />
+                <input type="number" min="0.000001" step="0.000001" placeholder="Vahid həcm, m³" value={line.unit_volume_m3} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => itemIndex === index ? { ...item, unit_volume_m3: event.target.value } : item))} style={styles.input} />
+                <input type="number" min="0" max={line.qty_received || 0} step="0.001" placeholder="Rədd edildi" value={line.qty_rejected} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => {
+                  if (itemIndex !== index) return item;
+                  const raw = event.target.value;
+                  if (raw === "") return { ...item, qty_rejected: "" };
+                  return { ...item, qty_rejected: String(Math.min(Math.max(0, toNumber(raw)), toNumber(item.qty_received))) };
+                }))} style={styles.input} />
               </div>
             ))}
           </div>
@@ -1822,19 +1917,20 @@ function DataTable({ columns, rows, empty, detail, sourceRows }) {
 
 const styles = {
   page: {
-    minHeight: "100vh",
-    background: "#f5f7fb",
+    width: "100%",
+    boxSizing: "border-box",
+    background: "transparent",
     color: "#0f172a",
-    padding: "24px",
-    fontFamily: "Manrope, system-ui, sans-serif",
+    padding: "0",
+    fontFamily: "inherit",
   },
   header: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: "18px",
-    maxWidth: "1440px",
-    margin: "0 auto 18px",
+    width: "100%",
+    margin: "0 0 14px",
   },
   headerActions: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" },
   backLink: {
@@ -1847,55 +1943,55 @@ const styles = {
     fontWeight: 700,
     marginBottom: "8px",
   },
-  title: { margin: 0, fontFamily: "Sora, sans-serif", fontSize: "30px", color: "#0f172a" },
-  subtitle: { margin: "6px 0 0", color: "#64748b" },
+  title: { margin: 0, fontSize: "22px", lineHeight: 1.25, color: "#15372d" },
+  subtitle: { margin: "4px 0 0", color: "#71867f", fontSize: "12px" },
   metricGrid: {
-    maxWidth: "1440px",
-    margin: "0 auto 16px",
+    width: "100%",
+    margin: "0 0 12px",
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "12px",
+    gap: "10px",
   },
   metricCard: {
     display: "flex",
     gap: "12px",
     alignItems: "center",
     background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    padding: "16px",
-    boxShadow: "0 8px 28px rgba(15, 23, 42, 0.05)",
+    border: "1px solid #ded8c4",
+    borderRadius: "12px",
+    padding: "13px",
+    boxShadow: "none",
   },
   metricIcon: { width: "44px", height: "44px", borderRadius: "10px", display: "grid", placeItems: "center" },
-  metric_blue: { background: "#dbeafe", color: "#1d4ed8" },
+  metric_blue: { background: "#dff3e9", color: "#08745a" },
   metric_amber: { background: "#fef3c7", color: "#b45309" },
   metric_green: { background: "#dcfce7", color: "#15803d" },
   metric_rose: { background: "#ffe4e6", color: "#be123c" },
   metricLabel: { display: "block", color: "#64748b", fontSize: "12px", fontWeight: 700 },
   metricValue: { display: "block", fontSize: "22px", marginTop: "2px" },
   metricHint: { display: "block", color: "#94a3b8", marginTop: "2px" },
-  toolbar: { maxWidth: "1440px", margin: "0 auto 12px", display: "flex", gap: "10px", alignItems: "center" },
+  toolbar: { width: "100%", margin: "0 0 10px", display: "flex", gap: "8px", alignItems: "center" },
   searchBox: {
     flex: 1,
     display: "flex",
     alignItems: "center",
     gap: "8px",
     background: "#fff",
-    border: "1px solid #e5e7eb",
+    border: "1px solid #d8d3c2",
     borderRadius: "10px",
     padding: "0 12px",
-    minHeight: "42px",
+    minHeight: "38px",
     color: "#64748b",
   },
   searchInput: { flex: 1, border: 0, outline: 0, minHeight: "38px", font: "inherit", background: "transparent" },
   select: { height: "42px", border: "1px solid #e5e7eb", borderRadius: "10px", background: "#fff", padding: "0 12px", fontWeight: 700 },
-  tabs: { maxWidth: "1440px", margin: "0 auto 16px", display: "flex", gap: "8px", flexWrap: "wrap" },
+  tabs: { width: "100%", margin: "0 0 12px", display: "flex", gap: "6px", flexWrap: "wrap" },
   tabButton: {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    minHeight: "40px",
-    padding: "0 14px",
+    minHeight: "36px",
+    padding: "0 12px",
     border: "1px solid #e5e7eb",
     borderRadius: "10px",
     background: "#fff",
@@ -1903,13 +1999,14 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer",
   },
-  tabActive: { border: "1px solid #2563eb", color: "#1d4ed8", background: "#eff6ff" },
-  panel: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "18px", boxShadow: "0 8px 28px rgba(15, 23, 42, 0.05)" },
+  tabActive: { border: "1px solid #08745a", color: "#075e4b", background: "#e8f5ef" },
+  panel: { background: "#fff", border: "1px solid #ded8c4", borderRadius: "12px", padding: "15px", boxShadow: "none", minWidth: 0 },
   panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "14px" },
   panelTools: { display: "flex", alignItems: "center", gap: "8px", color: "#64748b" },
-  dashboardGrid: { maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: "12px" },
-  splitGrid: { maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: "390px 1fr", gap: "12px" },
-  stack: { maxWidth: "1440px", margin: "0 auto", display: "grid", gap: "12px" },
+  dashboardGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) repeat(2, minmax(250px, 1fr))", gap: "10px" },
+  splitGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(300px, 380px) minmax(0, 1fr)", gap: "10px" },
+  stack: { width: "100%", display: "grid", gap: "10px" },
+  sectionActions: { display: "flex", justifyContent: "flex-end", alignItems: "center", minHeight: "34px" },
   stackSmall: { display: "grid", gap: "10px" },
   form: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px" },
   field: { display: "grid", gap: "6px", color: "#475569", fontSize: "12px", fontWeight: 800 },
@@ -1928,7 +2025,7 @@ const styles = {
   linesBlock: { gridColumn: "1 / -1", border: "1px solid #edf2f7", background: "#f8fafc", borderRadius: "10px", padding: "12px", display: "grid", gap: "8px" },
   linesHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", color: "#334155" },
   lineGrid: { display: "grid", gridTemplateColumns: "1.1fr 1.4fr 0.7fr 0.8fr 0.65fr auto", gap: "8px", alignItems: "center" },
-  receiptLineGrid: { display: "grid", gridTemplateColumns: "1.6fr 0.6fr 0.6fr", gap: "8px", alignItems: "center" },
+  receiptLineGrid: { display: "grid", gridTemplateColumns: "1.5fr 0.55fr 0.65fr 0.55fr", gap: "8px", alignItems: "center" },
   invoiceLineGrid: { display: "grid", gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.45fr", gap: "8px", alignItems: "center" },
   formActions: { gridColumn: "1 / -1", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
   checkLine: { gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontWeight: 700 },
@@ -1949,7 +2046,7 @@ const styles = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
-  button_primary: { background: "#2563eb", color: "#fff", borderColor: "#2563eb" },
+  button_primary: { background: "#08745a", color: "#fff", borderColor: "#08745a" },
   button_success: { background: "#16a34a", color: "#fff", borderColor: "#16a34a" },
   button_danger: { background: "#fff1f2", color: "#be123c", borderColor: "#fecdd3" },
   button_ghost: {},
@@ -1972,8 +2069,8 @@ const styles = {
   progressTrack: { height: "7px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" },
   progressFill: { display: "block", height: "100%", background: "#2563eb", borderRadius: "999px" },
   emptyInline: { minHeight: "120px", display: "grid", placeItems: "center", gap: "8px", color: "#64748b", textAlign: "center" },
-  flowRow: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px" },
-  flowItem: { border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px", background: "#f8fafc", display: "grid", gap: "5px" },
+  flowRow: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" },
+  flowItem: { border: "1px solid #e5e7eb", borderRadius: "9px", padding: "11px", background: "#f8fafc", display: "grid", gap: "4px", minWidth: 0 },
   compactRow: { display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #eef2f7" },
   warningRow: { display: "flex", gap: "8px", alignItems: "center", padding: "10px", border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: "10px", marginBottom: "8px" },
   message: { maxWidth: "1440px", margin: "0 auto 12px", borderRadius: "10px", padding: "10px 42px 10px 12px", position: "relative", fontWeight: 800, fontSize: "13px" },
