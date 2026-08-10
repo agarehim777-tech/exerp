@@ -6,6 +6,7 @@ import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
+import { useStock } from "./shared/hooks/useStock.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -120,32 +121,27 @@ import {
   localDbSchemaVersion,
 } from "./services/persistence.js";
 import { total } from "./shared/utils/aggregate.js";
+import { createClientId } from "./shared/utils/id.js";
+import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
-const ProjectsPage = lazy(() => import("./modules/projects/ProjectsPage.jsx").then(m => ({ default: m.ProjectsPage })));
-const ProductionPage = lazy(() => import("./modules/production/ProductionPage.jsx").then(m => ({ default: m.ProductionPage })));
 const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
 const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.jsx"));
 const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
 const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
-const PeriodsPage = lazy(() => import("./modules/accounting/PeriodsPage.jsx"));
-const CurrenciesPage = lazy(() => import("./modules/finance/CurrenciesPage.jsx"));
 const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
 const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
 
 const CrmActivitiesPage = lazy(() => import("./modules/crm/CrmActivitiesPage.jsx"));
 const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
 const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
-const QuotesPage = lazy(() => import("./modules/sales/QuotesPage.jsx"));
 const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx"));
-const ShipmentsPage = lazy(() => import("./modules/sales/ShipmentsPage.jsx"));
 const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
 import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
 const DeliveriesPage = lazy(() => import("./pages/DeliveriesPage.jsx"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage.jsx"));
-const TaxPage = lazy(() => import("./pages/TaxPage.jsx"));
 const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
 const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
@@ -164,8 +160,8 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
 const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
 const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
+const ProductsPage = lazy(() => import("./modules/warehouse/ProductBalancesPage.jsx"));
 const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
-const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
 const VendorManagementPage = lazy(() => import("./pages/VendorManagementPage.jsx"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
 const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
@@ -2755,6 +2751,49 @@ function normalizeOperationalLabels(snapshot = {}) {
   };
 }
 
+function normalizeContractNumbers(snapshot = {}) {
+  const found = [];
+  const add = value => {
+    if (typeof value !== "string" || !value || /^İN-\d+$/u.test(value) || found.includes(value)) return;
+    if (/^(MQ-|MÜQ-|CONTRACT-)/iu.test(value)) found.push(value);
+  };
+  (snapshot.contracts || []).forEach(item => add(item.id));
+  (snapshot.orders || []).forEach(item => add(item.contractId));
+  (snapshot.credits || []).forEach(item => add(item.contractId));
+  (snapshot.cashEntries || []).forEach(item => add(item.contractId));
+  (snapshot.invoices || []).forEach(item => add(item.contractId));
+  if (!found.length) return snapshot;
+  const used = [];
+  const collectUsed = value => { if (typeof value === "string") { const match = value.match(/^İN-(\d+)$/u); if (match) used.push(Number(match[1])); } };
+  [...(snapshot.contracts || []), ...(snapshot.orders || []), ...(snapshot.credits || [])].forEach(item => { collectUsed(item.id); collectUsed(item.contractId); });
+  let next = Math.max(1000, ...used) + 1;
+  const replacements = new Map(found.map(oldId => [oldId, `İN-${next++}`]));
+  const replaceDeep = value => {
+    if (typeof value === "string") return replacements.get(value) || value;
+    if (Array.isArray(value)) return value.map(replaceDeep);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replaceDeep(item)]));
+    return value;
+  };
+  return replaceDeep(snapshot);
+}
+
+function nextContractNumber(state = {}) {
+  const numbers = [];
+  [...(state.contracts || []), ...(state.orders || []), ...(state.credits || [])].forEach(item => {
+    [item.id, item.contractId].forEach(value => {
+      const match = String(value || "").match(/^İN-(\d+)$/u);
+      if (match) numbers.push(Number(match[1]));
+    });
+  });
+  return `İN-${Math.max(1000, ...numbers) + 1}`;
+}
+
+function nextSalesOrderNumber(orders = []) {
+  const numbers = orders.map(order => String(order.order_no || order.orderNo || "").match(/^SF-(\d+)$/u))
+    .filter(Boolean).map(match => Number(match[1]));
+  return `SF-${Math.max(1000, ...numbers) + 1}`;
+}
+
 function hydrateState(snapshot = {}) {
   const warehouseStock = ensureWarehouseSerials(
     snapshot.warehouseStock || initialState.warehouseStock || {},
@@ -2799,7 +2838,7 @@ function hydrateState(snapshot = {}) {
     },
   });
 
-  return merged;
+  return normalizeContractNumbers(merged);
 }
 
 function loadPersistentState() {
@@ -3576,6 +3615,38 @@ function App() {
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
+  const dbInventory = useStock(activeTenantId);
+
+  useEffect(() => {
+    if (!activeTenantId || !dbOrders.length) return;
+    const used = dbOrders.map(order => String(order.order_no || "").match(/^SF-(\d+)$/u)).filter(Boolean).map(match => Number(match[1]));
+    let next = Math.max(1000, ...used) + 1;
+    dbOrders.filter(order => !/^SF-\d+$/u.test(String(order.order_no || "")))
+      .sort((a, b) => String(a.created_at || a.order_date).localeCompare(String(b.created_at || b.order_date)))
+      .forEach(order => {
+        const orderNo = `SF-${next++}`;
+        updateDbOrder(order.id, { order_no: orderNo }).catch(error => console.error("Sifariş nömrəsi yenilənmədi:", error));
+      });
+  }, [activeTenantId, dbOrders, updateDbOrder]);
+
+  useEffect(() => {
+    if (!activeTenantId || !dbOrders.length || !(state.cashEntries || []).length) return;
+    const paidByOrder = new Map();
+    (state.cashEntries || []).filter(entry => Number(entry.principal ?? entry.amount ?? 0) > 0).forEach(entry => {
+      let target = dbOrders.find(order => normalize(order.id) === normalize(entry.orderId) || normalize(order.order_no) === normalize(entry.orderId));
+      if (!target && entry.customer) {
+        const matches = dbOrders.filter(order => normalize(order.customer?.name) === normalize(entry.customer));
+        if (matches.length === 1) target = matches[0];
+      }
+      if (target) paidByOrder.set(target.id, Number(paidByOrder.get(target.id) || 0) + Number(entry.principal ?? entry.amount));
+    });
+    paidByOrder.forEach((legacyPaid, orderId) => {
+      const order = dbOrders.find(item => item.id === orderId);
+      const currentPaid = Number(order?.paid_amount || 0);
+      const nextPaid = Math.min(Number(order?.total || 0), Math.max(currentPaid, legacyPaid));
+      if (nextPaid > currentPaid) updateDbOrder(orderId, { paid_amount: nextPaid, payment_status: nextPaid >= Number(order.total || 0) ? "paid" : "partial" }).catch(error => console.error("Sifariş ödənişi sinxronlaşdırılmadı:", error));
+    });
+  }, [activeTenantId, dbOrders, state.cashEntries, updateDbOrder]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3616,14 +3687,76 @@ function App() {
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
     if (!activeTenantId || !tenantStateReady) return;
-    if (dbCustomers.length === 0 && dbProducts.length === 0 && dbOrders.length === 0) return;
+    if (
+      dbCustomers.length === 0 &&
+      dbProducts.length === 0 &&
+      dbOrders.length === 0 &&
+      dbInventory.warehouses.length === 0 &&
+      dbInventory.balances.length === 0
+    ) return;
+
+    const warehouseStock = dbInventory.balances.reduce((byWarehouse, balance) => {
+      const warehouseId = balance.warehouse_id || balance.warehouse?.id;
+      if (!warehouseId) return byWarehouse;
+      const rows = byWarehouse[warehouseId] || [];
+      rows.push({
+        id: balance.id || `${warehouseId}-${balance.product_id}`,
+        productId: balance.product_id,
+        product: balance.product?.name || balance.product?.sku || "Məhsul",
+        sku: balance.product?.sku || "",
+        total: Number(balance.qty ?? balance.on_hand ?? 0),
+        reserved: Number(balance.reserved || 0),
+        reorderLevel: Number(balance.reorder_point ?? balance.minimum_level ?? 0),
+        price: Number(balance.product?.price ?? balance.avg_cost ?? 0),
+      });
+      byWarehouse[warehouseId] = rows;
+      return byWarehouse;
+    }, {});
+
+    const aggregateStock = Object.values(warehouseStock)
+      .flat()
+      .reduce((byProduct, row) => {
+        const key = row.productId || row.sku || row.product;
+        const current = byProduct.get(key) || { ...row, total: 0, reserved: 0 };
+        current.total += row.total;
+        current.reserved += row.reserved;
+        byProduct.set(key, current);
+        return byProduct;
+      }, new Map());
+
     setState((prev) => ({
       ...prev,
       ...(dbCustomers.length ? { customers: dbCustomers.map(dbCustomerToLegacy) } : {}),
       ...(dbProducts.length ? { products: dbProducts.map(dbProductToLegacy) } : {}),
       ...(dbOrders.length ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
+      ...(dbInventory.warehouses.length ? {
+        warehouses: dbInventory.warehouses.map((warehouse) => ({
+          id: warehouse.id,
+          code: warehouse.code,
+          name: warehouse.name,
+          address: warehouse.address || "—",
+          city: warehouse.address?.split(",")[0]?.trim() || "—",
+          manager: "Təyin edilməyib",
+          type: "Mərkəzi",
+          capacity: Math.max(
+            100,
+            (warehouseStock[warehouse.id] || []).reduce((sum, row) => sum + Number(row.total || 0), 0),
+          ),
+          status: warehouse.is_active === false ? "Passiv" : "Aktiv",
+        })),
+        warehouseStock,
+        stock: [...aggregateStock.values()],
+      } : {}),
     }));
-  }, [activeTenantId, tenantStateReady, dbCustomers, dbProducts, dbOrders]);
+  }, [
+    activeTenantId,
+    tenantStateReady,
+    dbCustomers,
+    dbProducts,
+    dbOrders,
+    dbInventory.warehouses,
+    dbInventory.balances,
+  ]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -3703,7 +3836,8 @@ function App() {
       if (item.id === "platform") return isPlatformAdmin;
       if (item.id === "roles") return dbRole === "owner" || dbRole === "admin";
       const legacyOk = canAccessNavItem(state.settings, item.id);
-      const dbOk = dbRole ? dbCan(item.id, "view") : true;
+      const dbModule = item.id === "products" ? "warehouse" : item.id;
+      const dbOk = dbRole ? dbCan(dbModule, "view") : true;
       return legacyOk && dbOk;
     }),
     [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
@@ -6272,20 +6406,18 @@ function App() {
               qty,
               unit_price: unitPrice,
               discount_pct: 0,
-              vat_rate: Number(prod?.vat_rate ?? 18),
+              vat_rate: Number(it.vatRate ?? 0),
             };
           });
         const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
-        const orderNo = `SO-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
-          Math.random() * 9000 + 1000,
-        )}`;
+        const orderNo = nextSalesOrderNumber(dbOrders);
         createDbOrder({
           order_no: orderNo,
           customer_id: customerRow?.id || null,
           order_date: values.date || new Date().toISOString().slice(0, 10),
           status: "draft",
           currency: "AZN",
-          notes: values.note || null,
+          notes: serializeOrderNotes(values.note, values.internalNotes),
           items,
         }).catch((err) => {
           console.error("[orders] DB insert failed:", err);
@@ -6427,9 +6559,7 @@ function App() {
             ? amount
             : 0;
         const creditId = isCreditSale ? `KR-${String(nextId).replace(/\D/g, "")}` : null;
-        const contractId = isCreditSale
-          ? `MQ-${currentBusinessDate.slice(0, 4)}-${Date.now()}`
-          : null;
+        const contractId = isCreditSale ? nextContractNumber(current) : null;
         const warehouseId = values.warehouseId || current.warehouses?.[0]?.id;
         const warehouseName =
           current.warehouses.find((warehouse) => warehouse.id === warehouseId)?.name || "Baş Anbar";
@@ -6528,7 +6658,7 @@ function App() {
               creditMonthly: creditPlan?.monthly || 0,
               creditLastPayment: creditPlan?.lastPayment || 0,
               deliveryStatus: "Təhvil gözləyir",
-              note: values.note || "",
+              note: serializeOrderNotes(values.note, values.internalNotes) || "",
               bonusTotal: Number(values.bonusTotal || 0),
             },
             ...current.orders,
@@ -6579,7 +6709,7 @@ function App() {
             {
               id: `KR-${Date.now()}`,
               customer: values.customer,
-              contractId: values.contractId,
+              contractId: nextContractNumber(current),
               product: values.product,
               device: values.product,
               total: creditPlan.total,
@@ -6658,7 +6788,7 @@ function App() {
           ...current,
           contracts: [
             {
-              id: `MQ-${currentBusinessDate.slice(0, 4)}-${Date.now()}`,
+              id: nextContractNumber(current),
               customer: values.customer,
               fin: values.fin || "Yeni FİN",
               product: values.product,
@@ -7230,6 +7360,10 @@ function App() {
       return;
     }
 
+    const deliveryWillComplete = initialCheck.plan?.lines?.every(
+      (line) => Number(line.delivered || 0) + Number(line.deliverable || 0) >= Number(line.ordered || 0),
+    );
+
     setState((current) => {
       const order = current.orders.find((item) => item.id === orderId);
       if (!order || order.status === "Təhvil verilib" || !Array.isArray(order.productLines)) {
@@ -7313,6 +7447,19 @@ function App() {
         },
       );
     });
+
+    if (deliveryWillComplete && activeTenantId) {
+      const dbOrder = dbOrders.find((order) =>
+        String(order.id) === String(orderId) || String(order.order_no) === String(targetOrder.orderNo || orderId),
+      );
+      if (dbOrder?.id) {
+        supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id }).then(({ error }) => {
+          if (!error) return;
+          console.error("[delivery] order status sync failed:", error);
+          notify(`Təhvil tamamlandı, lakin satış statusu yenilənmədi: ${error.message || error}`, "warning");
+        });
+      }
+    }
 
     const resultPlan = initialCheck.plan;
     if (resultPlan && resultPlan.shortageTotal > 0) {
@@ -7420,21 +7567,31 @@ function App() {
   }
 
   function openLinkedSalesOrder(orderId) {
-    const targetOrder = state.orders.find((order) => order.id === orderId);
+    const linkedCredit = creditRecords.find((credit) => String(credit.orderId) === String(orderId));
+    const normalizedOrderId = normalize(orderId);
+    const targetOrder = state.orders.find((order) =>
+      normalize(order.id) === normalizedOrderId ||
+      normalize(order.orderNo || order.order_no) === normalizedOrderId
+    ) || (linkedCredit ? state.orders.find((order) => {
+      const sameCustomer = normalize(order.customer) === normalize(linkedCredit.customer);
+      const sameAmount = Math.abs(Number(order.amount || order.total || 0) - Number(linkedCredit.total || 0)) < 0.01;
+      const sameDate = !linkedCredit.date || !order.date || String(order.date).slice(0, 10) === String(linkedCredit.date).slice(0, 10);
+      return sameCustomer && sameAmount && sameDate;
+    }) : null);
 
     if (!targetOrder) {
       notify("Bağlı sifariş tapılmadı.", "warning");
       return;
     }
 
-    setSelectedOrder(orderId);
+    setSelectedOrder(targetOrder.id);
     setQuery("");
     setActive("sales");
     setMobileNav(false);
     auditOperation({
       module: "Kredit/Satış",
       action: "Bağlı sifarişə keçid edildi",
-      detail: `${orderId} · ${targetOrder.customer}`,
+      detail: `${targetOrder.orderNo || targetOrder.id} · ${targetOrder.customer}`,
     });
   }
 
@@ -7586,7 +7743,7 @@ function App() {
       const paymentStatus = isCreditSale ? "Kredit satış" : paid >= amount ? "Ödənilib" : paid > 0 ? "Qalıqlı" : "Ödəniş gözləyir";
       const linkedCredit = getSalesOrderLinkedCredit(current, order);
       const creditId = isCreditSale ? order.creditId || linkedCredit?.id || getCreditIdForOrder(order) : null;
-      const contractId = isCreditSale ? order.contractId || linkedCredit?.contractId || `MQ-${currentBusinessDate.slice(0, 4)}-${Date.now()}` : null;
+      const contractId = isCreditSale ? order.contractId || linkedCredit?.contractId || nextContractNumber(current) : null;
       const delivered = order.status === "Təhvil verilib";
       const productOrWarehouseChanged =
         nextWarehouseId !== oldWarehouseId ||
@@ -9327,8 +9484,6 @@ function App() {
           {active === "roles" && <RolesPermissionsPage />}
           {active === "access-check" && <AccessCheckPage />}
           {active === "audit" && <AuditLogPage />}
-          {active === "periods" && <PeriodsPage />}
-          {active === "currencies" && <CurrenciesPage />}
           {active === "financial-statements" && <FinancialStatementsPage />}
           {active === "data-reconciliation" && <DataReconciliationPage />}
 
@@ -9350,19 +9505,33 @@ function App() {
               setActive={choosePage}
             />
           )}
-          {active === "crm" && <CrmCustomersPageV2 />}
+          {active === "crm" && <CrmCustomersPageV2 onOpenSalesOrder={openLinkedSalesOrder} />}
           {active === "crm-deals" && <CrmDealsPage />}
           {active === "crm-activities" && <CrmActivitiesPage />}
           {active === "crm-tasks" && <CrmTasksPage />}
 
 
           {active === "sales-dashboard" && <SalesDashboardPage />}
-          {active === "sales-quotes" && <QuotesPage />}
-          {active === "sales-shipments" && <ShipmentsPage />}
-          {active === "sales" && <SalesOrdersPage />}
+          {active === "sales" && <SalesOrdersPage selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
           {active === "stock" && <StockPage />}
-          {active === "cashbook" && <CashbookPage />}
-          {active === "ar-invoices" && <SalesInvoicesPage />}
+          {active === "products" && (
+            <ProductsPage
+              warehouses={state.warehouses}
+              warehouseStock={state.warehouseStock}
+              products={state.products || []}
+              purchaseOrders={state.purchaseOrders || []}
+              orders={state.orders || []}
+              stockMovements={dbInventory.movements || []}
+              fetchAllMovements={dbInventory.fetchAllMovements}
+              onReceiveStock={() => setModal({ type: "stockIntake" })}
+              onOpenImport={() => setModal({ type: "warehouseImport" })}
+              onCreateProduct={() => setModal({ type: "product", mode: "create" })}
+              onEditProduct={(productId) => setModal({ type: "product", mode: "edit", productId })}
+              onOpenWarehouse={() => choosePage("stock")}
+              onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
+            />
+          )}
+          {active === "cashbook" && <CashbookPage legacyCashEntries={state.cashEntries || []} />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}
@@ -9423,14 +9592,6 @@ function App() {
             />
           )}
           {active === "accounting" && <AccountingPageV2 />}
-          {active === "tax" && (
-            <TaxPage
-              taxRows={filtered.taxCalendar}
-              payrollTaxRows={payrollTaxRows}
-              invoiceSummary={buildInvoiceSummary(invoiceRows)}
-              accounting={accountingData}
-            />
-          )}
           {active === "credits" && (
             <CreditsPage
               credits={filtered.credits}
@@ -9449,6 +9610,7 @@ function App() {
               syncMeta={state.receivableSync}
               closures={state.receivableClosures || []}
               onCloseDebt={closeReceivableDebt}
+              onOpenSalesOrder={openLinkedSalesOrder}
             />
           )}
           {active === "vendors" && (
@@ -9470,20 +9632,6 @@ function App() {
             />
           )}
           {active === "procurement" && <ProcurementPage />}
-          {active === "projects" && <ProjectsPage projects={filtered.projects} snapshot={state.projectRoiSnapshot} />}
-          {active === "production" && (
-            <ProductionPage
-              plans={filtered.productionPlans}
-              warehouses={state.warehouses}
-              warehouseStock={state.warehouseStock}
-              onCreatePlan={createProductionPlan}
-              onUpdatePlan={updateProductionPlan}
-              onDeletePlan={deleteProductionPlan}
-              onStartPlan={startProductionPlan}
-              onCompletePlan={completeProductionPlan}
-              canManage={can("production.manage")}
-            />
-          )}
           {active === "hr" && (
             <HrPage
               employees={filtered.employees}
@@ -11853,14 +12001,14 @@ function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
   const [productRows, setProductRows] = useState(() => {
     const rows = normalizeOrderProductLines(order.productLines || []);
     return (rows.length > 0 ? rows : [{ product: firstProduct.product, qty: 1, price: firstProduct.price }]).map((row) => ({
-      id: crypto.randomUUID(),
+      id: createClientId(),
       ...row,
     }));
   });
   const [sellerRows, setSellerRows] = useState(() => {
     const rows = getOrderSellerBonuses(order);
     return (rows.length > 0 ? rows : [{ seller: firstSeller.name, bonus: 0 }]).map((row) => ({
-      id: crypto.randomUUID(),
+      id: createClientId(),
       ...row,
     }));
   });
@@ -11911,7 +12059,7 @@ function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
     setProductRows((rows) => [
       ...rows,
       {
-        id: crypto.randomUUID(),
+        id: createClientId(),
         product: firstProduct.product,
         qty: 1,
         price: firstProduct.price,
@@ -11932,7 +12080,7 @@ function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
     if (sellerRows.length >= 3) return;
     const used = new Set(sellerRows.map((row) => row.seller));
     const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
-    setSellerRows((rows) => [...rows, { id: crypto.randomUUID(), seller: nextSeller.name, bonus: 0 }]);
+    setSellerRows((rows) => [...rows, { id: createClientId(), seller: nextSeller.name, bonus: 0 }]);
   }
 
   function removeSellerRow(rowId) {
@@ -12259,23 +12407,32 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
   const [initialPayment, setInitialPayment] = useState(0);
   const [productRows, setProductRows] = useState([
     {
-      id: crypto.randomUUID(),
+      id: createClientId(),
       product: firstProduct.product,
       qty: 1,
       price: firstProduct.price,
+      vatRate: 0,
       serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
     },
   ]);
   const [sellerRows, setSellerRows] = useState([
-    { id: crypto.randomUUID(), seller: firstSeller.name, bonus: 3 },
+    { id: createClientId(), seller: firstSeller.name, bonus: 3 },
   ]);
   const [note, setNote] = useState("");
+  const [internalNotes, setInternalNotes] = useState([
+    { id: createClientId(), recipient: "Maliyyə", text: "" },
+  ]);
 
   const selectedCustomer = customers.find((customer) => customer.fin === customerFin) || customers[0];
-  const orderTotal = productRows.reduce(
+  const orderSubtotal = productRows.reduce(
     (sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0),
     0,
   );
+  const orderVat = productRows.reduce(
+    (sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0) * Number(item.vatRate || 0) / 100,
+    0,
+  );
+  const orderTotal = orderSubtotal + orderVat;
   const creditPlan = buildCreditPlan({
     total: orderTotal,
     initialPayment,
@@ -12396,10 +12553,11 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
     setProductRows((rows) => [
       ...rows,
       {
-        id: crypto.randomUUID(),
+        id: createClientId(),
         product: firstProduct.product,
         qty: 1,
         price: firstProduct.price,
+        vatRate: 0,
         serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
       },
     ]);
@@ -12421,7 +12579,7 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
     const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
     setSellerRows((rows) => [
       ...rows,
-      { id: crypto.randomUUID(), seller: nextSeller.name, bonus: 1 },
+      { id: createClientId(), seller: nextSeller.name, bonus: 1 },
     ]);
   }
 
@@ -12447,6 +12605,7 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
       orderTotal,
       bonusTotal,
       note,
+      internalNotes,
     });
   }
 
@@ -12506,6 +12665,34 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
 
           <section className="order-section">
             <div className="section-title-row">
+              <div>
+                <span className="order-label">DAXİLİ QEYDLƏR</span>
+                <small style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>Qeydin kim üçün olduğunu seçin. Bu məlumat sifariş kartında saxlanacaq.</small>
+              </div>
+              <button type="button" className="secondary-btn" onClick={() => setInternalNotes((rows) => [...rows, { id: createClientId(), recipient: "Maliyyə", text: "" }])}>
+                <Plus size={16} /> Qeyd əlavə et
+              </button>
+            </div>
+            <div className="order-lines">
+              {internalNotes.map((item) => (
+                <div className="order-internal-note-line" key={item.id}>
+                  <select value={item.recipient} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, recipient: event.target.value } : row))}>
+                    <option>Maliyyə</option>
+                    <option>Təhvil əməkdaşı</option>
+                    <option>Anbar</option>
+                    <option>Satış</option>
+                    <option>Rəhbərlik</option>
+                    <option>Ümumi</option>
+                  </select>
+                  <input value={item.text} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, text: event.target.value } : row))} placeholder={`${item.recipient} üçün qeyd yazın…`} />
+                  <button type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={17} /></button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="order-section">
+            <div className="section-title-row">
               <span className="order-label">MƏHSULLAR</span>
               <button type="button" className="secondary-btn" onClick={addProductRow}>
                 <Plus size={16} />
@@ -12540,6 +12727,14 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
                     value={row.price}
                     onChange={(event) => changeProduct(row.id, "price", event.target.value)}
                   />
+                  <select
+                    aria-label="ƏDV seçimi"
+                    value={row.vatRate || 0}
+                    onChange={(event) => changeProduct(row.id, "vatRate", Number(event.target.value))}
+                  >
+                    <option value="0">ƏDV yoxdur</option>
+                    <option value="18">ƏDV 18%</option>
+                  </select>
                   <button
                     type="button"
                     className="line-delete"
@@ -12572,8 +12767,9 @@ function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} 
               ))}
             </div>
             <div className="order-total">
-              <span>Ümumi:</span>
-              <strong>{money(orderTotal)}</strong>
+              <span>Ara cəm: <b>{money(orderSubtotal)}</b></span>
+              <span>ƏDV: <b>{money(orderVat)}</b></span>
+              <strong>Ümumi: {money(orderTotal)}</strong>
             </div>
             {backorderRows.length > 0 && (
               <div className="order-backorder-box">
@@ -13154,7 +13350,7 @@ const createConfig = {
     subtitle: "Aylıq ödəniş cədvəli avtomatik hesablanır.",
     fields: [
       { name: "customer", label: "Müştəri", required: true },
-      { name: "contractId", label: "Müqavilə №", value: `MQ-${currentBusinessDate.slice(0, 4)}-` },
+      { name: "contractId", label: "Müqavilə №", value: nextContractNumber(initialState) },
       { name: "product", label: "Cihaz", required: true },
       { name: "total", label: "Ümumi məbləğ", type: "number", required: true },
       { name: "initialPayment", label: "İlkin ödəniş", type: "number", value: "0" },

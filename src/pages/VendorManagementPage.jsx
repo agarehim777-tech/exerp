@@ -333,9 +333,7 @@ function VendorManagementPage({
             po.expectedAt || "—",
             <StatusBadge status={po.status} />,
             po.status === "Təsdiq gözləyir" ? (
-              <button className="text-btn" disabled={!canManagePo} onClick={() => onApprovePurchaseOrder(po.id)}>
-                Təsdiq et
-              </button>
+              <button className="text-btn" disabled={!canManagePo} onClick={() => onApprovePurchaseOrder(po.id)}>Təsdiq et</button>
             ) : (
               <TwoLine title="Mədaxil edilib" subtitle={po.receivedAt || po.approvedAt} />
             ),

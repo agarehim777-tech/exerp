@@ -100,4 +100,15 @@ describe('buildCashFlow', () => {
   it('tarixi olmayan sətirləri atır', () => {
     expect(buildCashFlow([{ direction: 'in', amount: 50 }]).rows).toHaveLength(0);
   });
+
+  it('kassalararası daxili transferi mədaxil və məxaric saymır', () => {
+    const cf = buildCashFlow([
+      { occurred_at: '2026-02-10', direction: 'in', amount: 42, category: 'sales_payment' },
+      { occurred_at: '2026-02-11', direction: 'out', amount: 5, category: 'internal_transfer' },
+      { occurred_at: '2026-02-11', direction: 'in', amount: 5, category: 'internal_transfer' },
+    ]);
+    expect(cf.inflow).toBe(42);
+    expect(cf.outflow).toBe(0);
+    expect(cf.net).toBe(42);
+  });
 });

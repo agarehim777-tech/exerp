@@ -39,7 +39,7 @@ export function PanelHeader({ title, subtitle, icon: Icon }) {
   );
 }
 
-export function DataTable({ columns, rows }) {
+export function DataTable({ columns, rows, onRowClick }) {
   return (
     <div className="table-wrap">
       <table>
@@ -52,7 +52,7 @@ export function DataTable({ columns, rows }) {
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
+            <tr key={rowIndex} onClick={() => onRowClick?.(rowIndex)} style={onRowClick ? { cursor: "pointer" } : undefined}>
               {row.map((cell, cellIndex) => (
                 <td key={`${rowIndex}-${cellIndex}`}>{cell}</td>
               ))}

@@ -3,23 +3,23 @@ export const card = {
   background: "#fff",
   border: "1px solid #e6dfc9",
   borderRadius: 12,
-  padding: 20,
+  padding: 16,
   boxShadow: "0 4px 18px rgba(6,78,59,0.06)",
 };
-export const table = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
+export const table = { width: "100%", borderCollapse: "collapse", fontSize: 13, lineHeight: 1.4 };
 export const th = {
   textAlign: "left",
-  padding: "8px 10px",
+  padding: "10px 12px",
   background: "#f0e6c8",
   color: "#5a4a1e",
-  fontSize: 11,
+  fontSize: 12,
   textTransform: "uppercase",
   letterSpacing: 0.4,
   borderBottom: "1px solid #e6dfc9",
 };
-export const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb" };
+export const td = { padding: "9px 11px", borderBottom: "1px solid #f0ecdb", color: "#33443e" };
 export const input = {
-  padding: "6px 10px",
+  padding: "9px 11px",
   borderRadius: 6,
   border: "1px solid #d4c9a3",
   fontSize: 13,
@@ -89,13 +89,13 @@ export const statTile = {
   flex: "1 1 160px",
 };
 export const statLabel = {
-  fontSize: 11,
+  fontSize: 12,
   textTransform: "uppercase",
   letterSpacing: 0.5,
   color: "#8a7a4a",
   marginBottom: 6,
 };
-export const statValue = { fontSize: 22, fontWeight: 700, color: "#064e3b" };
+export const statValue = { fontSize: 20, lineHeight: 1.2, fontWeight: 700, color: "#064e3b" };
 
 export function badge(tone = "gray") {
   const tones = {

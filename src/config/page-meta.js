@@ -15,7 +15,6 @@ export const pageMeta = {
   crm: {
     title: "CRM — Müştəri İdarəetməsi",
     subtitle: "FİN kodu, borc limiti, kateqoriya və 360° müştəri görünüşü.",
-    action: "Yeni müştəri",
   },
   "crm-deals": {
     title: "Sövdələşmələr (Deals)",
@@ -37,21 +36,21 @@ export const pageMeta = {
     subtitle: "Şirkət üzvləri, dəvətlər və modul-səviyyəli icazə matrisi.",
   },
   sales: {
-    title: "Satış Sifarişləri",
-    subtitle: "Sifariş kanban, ödəniş qeydi və çatdırılma yaratma.",
+    title: "Satışlar",
+    subtitle: "Yeni satış yaradın və mövcud satışları vahid ekrandan idarə edin.",
+    action: "Yeni satış yarat",
   },
   "sales-dashboard": {
     title: "Satış Dashboard",
     subtitle: "Dövriyyə, orta çek, top müştəri və məhsul göstəriciləri.",
   },
-  "sales-quotes": {
-    title: "Kotirovkalar",
-    subtitle: "Təklif hazırla, göndər, sifarişə çevir.",
-    action: "Yeni kotirovka",
+  stock: {
+    title: "Anbar idarəetməsi",
+    subtitle: "Anbarlar, qalıqlar, daxili transferlər və stok hərəkətləri vahid ekranda.",
   },
-  "sales-shipments": {
-    title: "Çatdırılmalar",
-    subtitle: "Yığım, göndərmə və çatdırma statusu izləməsi.",
+  products: {
+    title: "Məhsullar",
+    subtitle: "Məhsul kataloqu, SKU, qiymət, vahid və ƏDV məlumatlarının idarə edilməsi.",
   },
   warehouse: {
     title: "Anbar qalıqları",

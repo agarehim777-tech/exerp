@@ -4,6 +4,7 @@ import { DataTable, EmptyState, Panel, PanelHeader, StatusBadge, TwoLine } from 
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useInventoryUnits } from "../../shared/hooks/useInventoryUnits.js";
 import { money } from "../../services/format.js";
+import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
 const emptyUnit = {
   warehouse_id: "", product_id: "", serial_no: "", imei: "", batch_no: "", expiry_date: "",
@@ -71,7 +72,7 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
             <div className="modal-head"><div><h2>{editor.id ? "Stok vahidini redaktə et" : "Yeni stok vahidi"}</h2><p>Seriya və ya partiya izləmə məlumatlarını daxil edin.</p></div><button type="button" className="icon-btn" onClick={() => setEditor(null)}><X size={18} /></button></div>
             <div className="production-form-grid">
               <label><span>Anbar</span><select value={editor.warehouse_id} onChange={(event) => setEditor({ ...editor, warehouse_id: event.target.value })} required>{warehouses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <label><span>Məhsul</span><select value={editor.product_id} onChange={(event) => setEditor({ ...editor, product_id: event.target.value })} required>{products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label><span>Məhsul</span><ProductSearchSelect products={products} value={editor.product_id} onChange={(productId) => setEditor({ ...editor, product_id: productId })} /></label>
               <label><span>IMEI</span><input value={editor.imei || ""} onChange={(event) => setEditor({ ...editor, imei: event.target.value })} /></label>
               <label><span>Serial</span><input value={editor.serial_no || ""} onChange={(event) => setEditor({ ...editor, serial_no: event.target.value })} /></label>
               <label><span>Partiya</span><input value={editor.batch_no || ""} onChange={(event) => setEditor({ ...editor, batch_no: event.target.value })} /></label>

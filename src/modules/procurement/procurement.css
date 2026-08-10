@@ -1,0 +1,138 @@
+.procurement-page {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.procurement-page *,
+.procurement-page *::before,
+.procurement-page *::after {
+  box-sizing: border-box;
+}
+
+.procurement-page input,
+.procurement-page select,
+.procurement-page textarea,
+.procurement-page button {
+  max-width: 100%;
+  font-size: 13px;
+}
+
+.procurement-page h2,
+.procurement-page h3 {
+  line-height: 1.25;
+}
+
+.po-line-card { display:grid; gap:12px; padding:12px; border:1px solid #dbe3e0; border-radius:10px; background:#fff; }
+.po-line-card__header { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#15372d; font-size:13px; }
+.po-line-grid { display:grid; gap:9px; min-width:0; }
+.po-line-grid--main { grid-template-columns:minmax(130px,.85fr) minmax(190px,1.3fr) repeat(3,minmax(100px,.65fr)); }
+.po-line-grid--details { grid-template-columns:repeat(5,minmax(120px,1fr)); padding-top:10px; border-top:1px dashed #dbe3e0; }
+.po-line-grid label { display:grid; gap:5px; min-width:0; color:#5f746d; font-size:11px; font-weight:800; }
+.po-line-grid input,
+.po-line-grid select { width:100%; height:36px; box-sizing:border-box; border:1px solid #d5dfdc; border-radius:8px; padding:0 9px; background:#fff; color:#18332b; outline:none; }
+.po-line-grid input:focus,
+.po-line-grid select:focus { border-color:#08745a; box-shadow:0 0 0 2px rgba(8,116,90,.1); }
+.product-autocomplete { position:relative; min-width:0; }
+.product-autocomplete > svg { position:absolute; z-index:2; left:10px; top:10px; color:#82948e; pointer-events:none; }
+.po-line-grid .product-autocomplete > input { padding-left:32px; }
+.product-autocomplete__menu { position:absolute; z-index:30; top:calc(100% + 5px); left:0; right:0; max-height:260px; overflow-y:auto; padding:5px; border:1px solid #d5dfdc; border-radius:9px; background:#fff; box-shadow:0 12px 30px rgba(21,55,45,.16); }
+.product-autocomplete__menu button { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:38px; padding:7px 9px; border:0; border-radius:6px; background:transparent; color:#18332b; text-align:left; cursor:pointer; }
+.product-autocomplete__menu button:hover,
+.product-autocomplete__menu button.active { background:#e8f5ef; }
+.product-autocomplete__menu button span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800; }
+.product-autocomplete__menu button small { flex:0 0 auto; color:#71867f; font-size:10px; }
+.product-autocomplete__empty { padding:12px 9px; color:#71867f; text-align:center; font-size:12px; }
+
+@media (max-width: 1180px) {
+  .po-line-grid--main,
+  .po-line-grid--details { grid-template-columns:repeat(3,minmax(0,1fr)); }
+
+  .procurement-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .procurement-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .procurement-dashboard-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .po-line-grid--main,
+  .po-line-grid--details { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+  .procurement-page > header {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .procurement-page > header > :last-child {
+    justify-content: flex-start !important;
+  }
+
+  .procurement-metrics,
+  .procurement-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .procurement-dashboard-grid > :first-child {
+    grid-column: auto;
+  }
+
+  .procurement-page table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 520px) {
+  .po-line-grid--main,
+  .po-line-grid--details { grid-template-columns:minmax(0,1fr); }
+
+  .procurement-metrics {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+.landed-cost-workspace { display:grid; gap:10px; }
+.landed-toolbar,.landed-actions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+.landed-toolbar-hint { margin-right:auto; align-self:center; color:#71867f; font-size:11px; }
+.landed-warehouse-picker { display:grid; gap:3px; min-width:210px; margin-right:auto; font-size:11px; font-weight:700; color:#60776f; }
+.landed-warehouse-picker select { min-height:36px; border:1px solid #08745a; border-radius:8px; padding:0 10px; background:#fff; color:#17372e; font-weight:600; }
+.landed-toolbar button,.landed-actions button,.landed-inline button { display:inline-flex; align-items:center; gap:6px; min-height:36px; border:1px solid #08745a; border-radius:8px; padding:0 12px; cursor:pointer; font-weight:700; }
+.landed-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:10px; }
+.landed-list { display:grid; align-content:start; gap:6px; }
+.landed-list button { text-align:left; display:grid; gap:3px; border:1px solid #ded8c4; background:#fff; border-radius:10px; padding:10px; cursor:pointer; }
+.landed-list button.active { border-color:#08745a; background:#e8f5ef; }
+.landed-list button.completed { border-left:4px solid #169b72; }
+.landed-list-title,.landed-shipment-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.landed-list-title svg { color:#07815f; }
+.landed-list em { width:max-content; margin-top:3px; border-radius:999px; padding:3px 7px; color:#526b63; background:#eef3f1; font-size:10px; font-style:normal; font-weight:700; }
+.landed-list button.completed em { color:#08745a; background:#dff4eb; }
+.landed-list small { color:#71867f; }
+.landed-main { min-width:0; display:grid; gap:10px; }
+.landed-card { background:#fff; border:1px solid #ded8c4; border-radius:12px; padding:14px; overflow-x:auto; }
+.landed-card h3 { display:flex; gap:7px; align-items:center; margin:0 0 12px; font-size:16px; }
+.landed-shipment-heading h3 { margin-bottom:0; }
+.landed-status-badge { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:5px 9px; color:#806000; background:#fff4c7; font-size:11px; font-weight:800; }
+.landed-shipment-head.is-complete { border-color:#94d3bd; background:#f7fcfa; }
+.landed-shipment-head.is-complete .landed-status-badge { color:#08745a; background:#dff4eb; }
+.landed-complete-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.landed-complete-summary div { display:grid; gap:3px; border:1px solid #d9ebe4; border-radius:8px; padding:9px 11px; background:#fff; }
+.landed-complete-summary span { color:#71867f; font-size:11px; }
+.landed-complete-summary strong { color:#17372e; font-size:13px; }
+.landed-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.landed-grid label { display:grid; gap:4px; font-size:12px; font-weight:700; }
+.landed-grid input,.landed-inline input,.landed-inline select { min-height:38px; border:1px solid #d8d3c2; border-radius:8px; padding:0 10px; }
+.landed-inline { display:grid; grid-template-columns:minmax(180px,2fr) minmax(100px,.7fr) minmax(180px,1.4fr) auto; gap:8px; margin-bottom:10px; }
+.landed-card table { width:100%; border-collapse:collapse; font-size:12px; }
+.landed-card th,.landed-card td { padding:8px; text-align:left; border-bottom:1px solid #eee8d8; }
+.landed-cost-row { display:grid; grid-template-columns:1.4fr .7fr 1.2fr auto; gap:8px; align-items:center; padding:8px; border-bottom:1px solid #eee8d8; }
+.landed-message { display:flex; justify-content:space-between; background:#fff8df; border:1px solid #e5d39a; border-radius:9px; padding:9px 12px; }
+.landed-message button,.landed-cost-row button,.landed-card td button { border:0; background:transparent; cursor:pointer; color:#c24141; }
+.landed-error { color:#b42318; background:#fff1f0; padding:10px; border-radius:8px; }
+@media(max-width:900px){.landed-layout{grid-template-columns:1fr}.landed-list{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.landed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.landed-inline{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.landed-grid,.landed-inline,.landed-complete-summary{grid-template-columns:1fr}.landed-shipment-heading{align-items:flex-start;flex-direction:column}}

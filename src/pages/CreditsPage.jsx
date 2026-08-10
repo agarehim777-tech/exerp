@@ -4,7 +4,6 @@ import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../component
 import { money, normalize } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
-import { CreditRiskPanel } from "../modules/credits/CreditRiskPanel.jsx";
 import {
   baseCreditDate,
   currentBusinessYear,
@@ -221,8 +220,6 @@ function CreditsPage({
           </div>
         ))}
       </section>
-
-      <CreditRiskPanel />
 
       <section className="credit-management-shell">
         <div className="credit-management-topline">

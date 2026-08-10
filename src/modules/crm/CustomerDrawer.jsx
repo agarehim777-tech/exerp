@@ -3,10 +3,11 @@ import { useCustomer360 } from '../../shared/hooks/useCustomer360.js';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import Avatar from './Avatar.jsx';
+import BirthDateInput from './BirthDateInput.jsx';
 
-export default function CustomerDrawer({ customerId, onClose, onUpdate }) {
+export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
-  const { data, loading, refresh } = useCustomer360(customerId);
+  const { data, loading, error, refresh } = useCustomer360(customerId);
   const { create: createActivity } = useActivities(activeTenantId, { customerId });
   const [tab, setTab] = useState('overview');
   const [activityType, setActivityType] = useState('note');
@@ -31,8 +32,14 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate }) {
       }}>
         <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
 
-        {loading || !c ? (
+        {loading ? (
           <div style={{ padding: 40, textAlign: 'center' }}>Yüklənir...</div>
+        ) : error || !c ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <div style={{ color: '#dc2626', fontWeight: 700, marginBottom: 8 }}>Müştəri məlumatları yüklənmədi</div>
+            <div style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{error?.message || 'Müştəri tapılmadı.'}</div>
+            <button onClick={refresh} style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yenidən yoxla</button>
+          </div>
         ) : (
           <>
             <header style={{ padding: 20, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -46,6 +53,8 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate }) {
 
             <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
               <Stat label="LTV (Sifariş)" value={`${Number(data.orders_total || 0).toFixed(0)} ₼`} />
+              <Stat label="Ödənilib" value={`${Number(data.orders_paid || 0).toFixed(0)} ₼`} />
+              <Stat label="Qalıq borc" value={`${Number(data.orders_outstanding || 0).toFixed(0)} ₼`} />
               <Stat label="Qazanıldı" value={`${Number(data.won_amount || 0).toFixed(0)} ₼`} />
               <Stat label="Açıq deal" value={data.open_deals?.length || 0} />
             </div>
@@ -89,10 +98,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate }) {
               )}
               {tab === 'tasks' && <TasksTab tasks={data.tasks || []} />}
               {tab === 'orders' && (
-                <div style={{ color: '#64748b' }}>
-                  <div><b>Sifariş sayı:</b> {data.orders_count}</div>
-                  <div><b>Ümumi məbləğ:</b> {Number(data.orders_total || 0).toFixed(2)} ₼</div>
-                </div>
+                <OrdersTab orders={data.orders || []} count={data.orders_count} total={data.orders_total} onOpen={onOpenSalesOrder} />
               )}
             </div>
           </>
@@ -109,9 +115,27 @@ const Stat = ({ label, value }) => (
   </div>
 );
 
+const orderStatusLabels = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
+function OrdersTab({ orders, count, total, onOpen }) {
+  return <div style={{ display: 'grid', gap: 10 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#64748b', fontSize: 12 }}><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
+    {orders.length === 0 ? <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', borderRadius: 10 }}>Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <button key={order.id} type="button" onClick={() => onOpen?.(order.id)} style={{ width: '100%', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10, padding: 12, textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff', cursor: 'pointer' }}>
+      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', color: '#0f172a' }}>{order.order_no || order.id}</strong><small style={{ color: '#64748b' }}>{order.order_date ? new Date(order.order_date).toLocaleDateString('az-AZ') : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
+      <span style={{ textAlign: 'right' }}><strong style={{ display: 'block', color: '#0b7a5c' }}>{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small style={{ color: '#2563eb' }}>Sifarişə bax →</small></span>
+    </button>)}
+  </div>;
+}
+
 function OverviewTab({ c, tags, onUpdate }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(c);
+  const fieldLabels = {
+    name: 'Ad və soyad / şirkət adı',
+    phone: 'Telefon',
+    email: 'E-poçt',
+    tax_id: 'VÖEN / FİN',
+    address: 'Ünvan',
+  };
   React.useEffect(() => setForm(c), [c]);
 
   if (!edit) return (
@@ -120,7 +144,9 @@ function OverviewTab({ c, tags, onUpdate }) {
       <Row label="E-poçt" value={c.email} />
       <Row label="VÖEN" value={c.tax_id} />
       <Row label="Ünvan" value={c.address} />
+      <Row label="Doğum tarixi" value={c.birth_date ? new Date(`${c.birth_date}T00:00:00`).toLocaleDateString('az-AZ') : null} />
       <Row label="Seqment" value={c.segment} />
+      <Row label="Müştəri səviyyəsi" value={c.customer_level_override ? `${c.customer_level_override} (manual)` : (c.customer_level || 'standard')} />
       <div>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Teqlər</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -136,18 +162,25 @@ function OverviewTab({ c, tags, onUpdate }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {['name', 'phone', 'email', 'tax_id', 'address'].map(k => (
-        <label key={k}>{k}<input value={form[k] || ''} onChange={e => setForm({ ...form, [k]: e.target.value })}
+        <label key={k}>{fieldLabels[k]}<input value={form[k] || ''} onChange={e => setForm({ ...form, [k]: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
       ))}
-      <label>Seqment
+      <label>Doğum tarixi (məcburi deyil)<BirthDateInput value={form.birth_date || ''} onChange={value => setForm({ ...form, birth_date: value })} /></label>
+      <label>Müştəri tipi
         <select value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
-          <option value="individual">Fiziki</option><option value="business">Hüquqi</option><option value="vip">VIP</option>
+          <option value="individual">Fiziki şəxs</option><option value="business">Hüquqi şəxs</option>
+        </select>
+      </label>
+      <label>Müştəri səviyyəsi
+        <select value={form.customer_level_override || ''} onChange={e => setForm({ ...form, customer_level_override: e.target.value || null })}
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
+          <option value="">Avtomatik hesablansın</option><option value="standard">Adi</option><option value="silver">Gümüş</option><option value="gold">Qızıl</option><option value="platinum">Platin</option>
         </select>
       </label>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={() => setEdit(false)} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', background: '#fff' }}>Ləğv</button>
-        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.tax_id, address: form.address, segment: form.segment }); setEdit(false); }}
+        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.tax_id, address: form.address, birth_date: form.birth_date || null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
           style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yadda saxla</button>
       </div>
     </div>

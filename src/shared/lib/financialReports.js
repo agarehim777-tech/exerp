@@ -144,6 +144,7 @@ export function buildCashFlow(transactions = []) {
   let outflow = 0;
 
   transactions.forEach((tx) => {
+    if (tx.category === 'internal_transfer') return;
     const date = tx.occurred_at || tx.created_at;
     if (!date) return;
     const key = String(date).slice(0, 7);

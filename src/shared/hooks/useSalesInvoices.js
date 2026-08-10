@@ -181,10 +181,7 @@ export function useSalesInvoices(tenantId) {
   };
 
   const cancel = async (invoiceId) => {
-    const { error: err } = await supabase
-      .from('sales_invoices')
-      .update({ status: 'cancelled' })
-      .eq('id', invoiceId);
+    const { error: err } = await supabase.rpc('cancel_sales_invoice', { _invoice_id: invoiceId });
     if (err) throw err;
     await fetchAll();
   };
