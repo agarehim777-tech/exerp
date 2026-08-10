@@ -1768,6 +1768,7 @@ export type Database = {
           po_line_id: string
           qty_received: number
           qty_rejected: number
+          unit_volume_m3: number
           updated_at: string
         }
         Insert: {
@@ -1777,6 +1778,7 @@ export type Database = {
           po_line_id: string
           qty_received: number
           qty_rejected?: number
+          unit_volume_m3?: number
           updated_at?: string
         }
         Update: {
@@ -1786,6 +1788,7 @@ export type Database = {
           po_line_id?: string
           qty_received?: number
           qty_rejected?: number
+          unit_volume_m3?: number
           updated_at?: string
         }
         Relationships: [
@@ -2849,6 +2852,7 @@ export type Database = {
           received_by: string | null
           shipment_date: string | null
           shipment_no: string
+          source_grn_id: string | null
           status: string
           tenant_id: string
           transport_mode: string | null
@@ -2875,6 +2879,7 @@ export type Database = {
           received_by?: string | null
           shipment_date?: string | null
           shipment_no: string
+          source_grn_id?: string | null
           status?: string
           tenant_id: string
           transport_mode?: string | null
@@ -2901,6 +2906,7 @@ export type Database = {
           received_by?: string | null
           shipment_date?: string | null
           shipment_no?: string
+          source_grn_id?: string | null
           status?: string
           tenant_id?: string
           transport_mode?: string | null
@@ -2909,6 +2915,13 @@ export type Database = {
           warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "procurement_shipments_source_grn_id_fkey"
+            columns: ["source_grn_id"]
+            isOneToOne: true
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "procurement_shipments_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -4715,6 +4728,7 @@ export type Database = {
       }
       seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       seed_default_crm_pipeline: { Args: { _tenant: string }; Returns: string }
+      sync_grn_landed_cost_shipment: { Args: { _grn: string }; Returns: string }
       trial_balance: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: {
