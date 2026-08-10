@@ -3937,6 +3937,10 @@ export type Database = {
         Args: { _tenant: string; _user: string }
         Returns: boolean
       }
+      mark_sales_order_delivered: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       platform_bootstrap_admin: { Args: never; Returns: boolean }
       platform_create_tenant: {
         Args: {
