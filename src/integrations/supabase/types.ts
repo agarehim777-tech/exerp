@@ -1149,11 +1149,45 @@ export type Database = {
           },
         ]
       }
+      customer_level_settings: {
+        Row: {
+          gold_min: number
+          platinum_min: number
+          silver_min: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          gold_min?: number
+          platinum_min?: number
+          silver_min?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          gold_min?: number
+          platinum_min?: number
+          silver_min?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_level_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
+          birth_date: string | null
           created_at: string
           created_by: string | null
+          customer_level_override: string | null
           email: string | null
           fin: string | null
           id: string
@@ -1169,8 +1203,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birth_date?: string | null
           created_at?: string
           created_by?: string | null
+          customer_level_override?: string | null
           email?: string | null
           fin?: string | null
           id?: string
@@ -1186,8 +1222,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birth_date?: string | null
           created_at?: string
           created_by?: string | null
+          customer_level_override?: string | null
           email?: string | null
           fin?: string | null
           id?: string
@@ -1414,6 +1452,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "exchange_rates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
