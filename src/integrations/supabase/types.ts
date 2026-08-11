@@ -4796,6 +4796,17 @@ export type Database = {
       check_project_access: { Args: { _project: string }; Returns: Json }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
+      create_tenant_invite: {
+        Args: {
+          _email: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _tenant: string
+        }
+        Returns: {
+          id: string
+          token: string
+        }[]
+      }
       crm_pipeline_summary: {
         Args: { _pipeline: string }
         Returns: {
@@ -4850,6 +4861,7 @@ export type Database = {
         Args: { _code: string; _on_date?: string; _tenant: string }
         Returns: number
       }
+      get_tenant_invite_token: { Args: { _invite: string }; Returns: string }
       gl_account_by_code: {
         Args: { _code: string; _tenant: string }
         Returns: string

@@ -37,7 +37,8 @@ export default function RolesPermissionsPage() {
         : Promise.resolve({ data: [] }),
       tenantId
         ? supabase.from("tenant_invites")
-            .select("*").eq("tenant_id", tenantId).is("accepted_at", null)
+            .select("id, tenant_id, email, role, invited_by, accepted_at, expires_at, created_at")
+            .eq("tenant_id", tenantId).is("accepted_at", null)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
     ]);
@@ -93,14 +94,18 @@ export default function RolesPermissionsPage() {
   const sendInvite = async (e) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
+    if (!tenantId) { setMsg("Xəta: aktiv şirkət seçilməyib"); return; }
     setSaving(true); setMsg("");
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from("tenant_invites")
-      .insert({ tenant_id: tenantId, email: inviteEmail.trim().toLowerCase(), role: inviteRole, invited_by: user.id })
-      .select().single();
+    const { data, error } = await supabase.rpc("create_tenant_invite", {
+      _tenant: tenantId,
+      _email: inviteEmail.trim().toLowerCase(),
+      _role: inviteRole,
+    });
+    const row = Array.isArray(data) ? data[0] : data;
     if (error) setMsg("Xəta: " + error.message);
+    else if (!row?.token) setMsg("Xəta: dəvət yaradıla bilmədi");
     else {
-      const link = `${window.location.origin}/accept-invite?token=${data.token}`;
+      const link = `${window.location.origin}/accept-invite?token=${row.token}`;
       await navigator.clipboard?.writeText(link).catch(() => {});
       setMsg(`Dəvət yaradıldı — link kopyalandı: ${link}`);
       setInviteEmail("");
@@ -111,16 +116,20 @@ export default function RolesPermissionsPage() {
 
   const revokeInvite = async (id) => {
     setSaving(true);
-    await supabase.from("tenant_invites").delete().eq("id", id);
+    const { error } = await supabase.from("tenant_invites").delete().eq("id", id);
+    if (error) setMsg("Xəta: " + error.message);
     await reload();
     setSaving(false);
   };
 
-  const copyInviteLink = async (token) => {
-    const link = `${window.location.origin}/accept-invite?token=${token}`;
-    await navigator.clipboard?.writeText(link);
+  const copyInviteLink = async (inviteId) => {
+    const { data, error } = await supabase.rpc("get_tenant_invite_token", { _invite: inviteId });
+    if (error || !data) { setMsg("Xəta: link alına bilmədi"); return; }
+    const link = `${window.location.origin}/accept-invite?token=${data}`;
+    await navigator.clipboard?.writeText(link).catch(() => {});
     setMsg("Link kopyalandı: " + link);
   };
+
 
 
 
@@ -249,7 +258,7 @@ export default function RolesPermissionsPage() {
                 <td style={{ ...td, textAlign: "left" }}>{inv.email}</td>
                 <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
                 <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
-                <td style={td}><button onClick={() => copyInviteLink(inv.token)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
+                <td style={td}><button onClick={() => copyInviteLink(inv.id)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
                 <td style={td}><button onClick={() => confirm("Ləğv edilsin?") && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
               </tr>
             ))}
