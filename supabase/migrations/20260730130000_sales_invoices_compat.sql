@@ -131,17 +131,17 @@ BEGIN
   _rev := public.gl_account_by_code(inv.tenant_id, '4000');
   _vat := public.gl_account_by_code(inv.tenant_id, '2100');
   IF _ar IS NULL OR _rev IS NULL OR _vat IS NULL THEN
-    RAISE EXCEPTION 'Hesablar planД± natamamdД±r (1200/4000/2100). ЖЏvvЙ™lcЙ™ standart planД± yГјklЙ™yin.';
+    RAISE EXCEPTION 'Hesablar planı natamamdır (1200/4000/2100). Əvvəlcə standart planı yükləyin.';
   END IF;
 
   INSERT INTO public.journal_entries(tenant_id, entry_date, reference, description, source_type, source_id, created_by)
-  VALUES (inv.tenant_id, inv.invoice_date, inv.invoice_no, 'SatД±Еџ fakturasД± ' || inv.invoice_no, 'sales_invoice', inv.id, auth.uid())
+  VALUES (inv.tenant_id, inv.invoice_date, inv.invoice_no, 'Satış fakturası ' || inv.invoice_no, 'sales_invoice', inv.id, auth.uid())
   RETURNING id INTO _entry;
 
   INSERT INTO public.journal_lines(entry_id, account_id, debit, credit, memo, line_no) VALUES
     (_entry, _ar,  inv.total, 0, 'Debitor borcu', 1),
-    (_entry, _rev, 0, inv.total - inv.vat_total, 'SatД±Еџ gЙ™liri', 2),
-    (_entry, _vat, 0, inv.vat_total, 'ЖЏDV Г¶hdЙ™liyi', 3);
+    (_entry, _rev, 0, inv.total - inv.vat_total, 'Satış gəliri', 2),
+    (_entry, _vat, 0, inv.vat_total, 'ƏDV öhdəliyi', 3);
 
   UPDATE public.journal_entries SET posted = true WHERE id = _entry;
   UPDATE public.sales_invoices SET posted = true, journal_entry_id = _entry,
@@ -166,16 +166,16 @@ BEGIN
     INTO _cash FROM public.cash_accounts ca WHERE ca.id = pay.account_id;
   _cash := COALESCE(_cash, public.gl_account_by_code(pay.tenant_id, '1010'));
   IF _ar IS NULL OR _cash IS NULL THEN
-    RAISE EXCEPTION 'Hesablar planД± natamamdД±r (1200/1010).';
+    RAISE EXCEPTION 'Hesablar planı natamamdır (1200/1010).';
   END IF;
 
   INSERT INTO public.journal_entries(tenant_id, entry_date, reference, description, source_type, source_id, created_by)
-  VALUES (pay.tenant_id, pay.paid_at, pay.reference, 'MГјЕџtЙ™ri Г¶dЙ™niЕџi', 'invoice_payment', pay.id, auth.uid())
+  VALUES (pay.tenant_id, pay.paid_at, pay.reference, 'Müştəri ödənişi', 'invoice_payment', pay.id, auth.uid())
   RETURNING id INTO _entry;
 
   INSERT INTO public.journal_lines(entry_id, account_id, debit, credit, memo, line_no) VALUES
-    (_entry, _cash, pay.amount, 0, 'Kassa/Bank mЙ™daxil', 1),
-    (_entry, _ar, 0, pay.amount, 'Debitor baДџlanmasД±', 2);
+    (_entry, _cash, pay.amount, 0, 'Kassa/Bank mədaxil', 1),
+    (_entry, _ar, 0, pay.amount, 'Debitor bağlanması', 2);
 
   UPDATE public.journal_entries SET posted = true WHERE id = _entry;
   RETURN _entry;

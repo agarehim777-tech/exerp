@@ -45,6 +45,9 @@ jobs:
       - name: Security checks
         run: npm run verify:security
 
+      - name: Backup and restore checks
+        run: npm run verify:recovery
+
       - name: Validate production backend config
         shell: bash
         env:

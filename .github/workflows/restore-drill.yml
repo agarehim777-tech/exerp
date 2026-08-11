@@ -1,0 +1,71 @@
+name: Supabase restore drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RESTORE to rebuild the disposable recovery database"
+        required: true
+
+concurrency:
+  group: supabase-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-drill:
+    if: ${{ inputs.confirmation == 'RESTORE' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: disaster-recovery
+    permissions:
+      contents: read
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      RESTORE_DATABASE_URL: ${{ secrets.RESTORE_DATABASE_URL }}
+      PRODUCTION_PROJECT_REF: tcqdhwtnjrwpfdxoijmv
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Refuse production as restore target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RESTORE_DATABASE_URL" || (echo "RESTORE_DATABASE_URL is missing" && exit 1)
+          if [[ "$RESTORE_DATABASE_URL" == *"$PRODUCTION_PROJECT_REF"* ]]; then
+            echo "Restore target must be a separate disposable project"
+            exit 1
+          fi
+
+      - name: Export current production snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$PRODUCTION_PROJECT_REF"
+          mkdir -p recovery
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --role-only --file recovery/roles.sql
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --file recovery/schema.sql
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --data-only --use-copy \
+            --exclude "storage.buckets_vectors" --exclude "storage.vector_indexes" \
+            --file recovery/data.sql
+
+      - name: Restore into disposable recovery database
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f recovery/roles.sql
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f recovery/schema.sql
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f recovery/data.sql
+
+      - name: Verify restored core tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc \
+            "select case when to_regclass('public.tenant_state_snapshots') is not null and to_regclass('public.audit_events') is not null and to_regclass('public.credit_contracts') is not null and to_regclass('public.stock_movements') is not null then 'RESTORE_OK' else 'RESTORE_INCOMPLETE' end" \
+            | grep -qx RESTORE_OK
+

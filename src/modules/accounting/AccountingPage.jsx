@@ -19,7 +19,7 @@ export default function AccountingPage() {
         {[["coa","Hesablar planı"],["journal","Jurnal"],["tb","Trial Balance"]].map(([k,l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
-        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaЕџdД±rmasД±</button>
+        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaşdırması</button>
       </div>
       {tab === "coa" && <ChartOfAccountsPanel isAdmin={isAdmin} />}
       {tab === "journal" && <JournalPanel isAdmin={isAdmin} />}

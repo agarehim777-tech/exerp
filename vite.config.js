@@ -4,13 +4,17 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
-const CLOUD_URL = "https://rojwxgndtunssjdwngrh.supabase.co";
-const CLOUD_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU";
+const DEVELOPMENT_URL = "https://example.supabase.co";
+const DEVELOPMENT_PUBLISHABLE_KEY = "test-anon-key";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
-  const cloudUrl = env.VITE_SUPABASE_URL || CLOUD_URL;
-  const cloudPublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || CLOUD_PUBLISHABLE_KEY;
+  const cloudUrl = env.VITE_SUPABASE_URL || DEVELOPMENT_URL;
+  const cloudPublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || DEVELOPMENT_PUBLISHABLE_KEY;
+
+  if (mode === "production" && (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_PUBLISHABLE_KEY)) {
+    throw new Error("Production build requires VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY");
+  }
 
   return {
   base: process.env.VITE_BASE_PATH || "/",
@@ -31,7 +35,7 @@ export default defineConfig(({ mode }) => {
       manifest: {
         name: "Expert ERP",
         short_name: "ExERP",
-        description: "Expert ERP вЂ” Г§oxЕџirkЙ™tli idarЙ™etmЙ™ platformasД±",
+        description: "Expert ERP — çoxşirkətli idarəetmə platforması",
         theme_color: "#0F2A2E",
         background_color: "#0F2A2E",
         display: "standalone",
@@ -92,7 +96,7 @@ export default defineConfig(({ mode }) => {
           if (normalizedId.includes("/src/config/")) return "app-config";
           if (normalizedId.includes("/src/services/")) return "app-services";
           if (normalizedId.includes("/src/components/")) return "app-ui";
-          // Note: /src/modules/ intentionally NOT bundled together вЂ” each lazy() import
+          // Note: /src/modules/ intentionally NOT bundled together — each lazy() import
           // becomes its own route-based chunk for optimal code splitting.
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
           if (id.includes("node_modules/lucide-react")) return "icons";

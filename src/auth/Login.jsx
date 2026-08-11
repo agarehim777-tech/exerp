@@ -27,11 +27,13 @@ const MODULES = [
 ];
 
 const METRICS = [
-  { v: "3–7", l: "gündə tətbiq" },
-  { v: "99.9%", l: "uptime SLA" },
-  { v: "24/7", l: "yerli dəstək" },
-  { v: "IFRS", l: "sertifikatlı" },
+  { v: "1 baza", l: "vahid məlumat axını" },
+  { v: "RBAC", l: "rol əsaslı giriş" },
+  { v: "Audit", l: "dəyişiklik tarixçəsi" },
+  { v: "AZN", l: "yerli biznes uyğunluğu" },
 ];
+
+const FLOW = ["Satış", "Rezerv", "Təhvil", "Kredit", "Kassa", "Mühasibat"];
 
 export default function Login() {
   const next = sanitizeNext(new URLSearchParams(window.location.search).get("next"));
@@ -99,12 +101,12 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
         .xp, .xp * { box-sizing: border-box; }
         .xp {
           /* Typography scale */
-          --fs-display: clamp(2.5rem, 5vw, 4.25rem);
-          --fs-h2: clamp(1.75rem, 3vw, 2.375rem);
+          --fs-display: 3.75rem;
+          --fs-h2: 2.375rem;
           --fs-h3: 1.5rem;
           --fs-h4: 1.0625rem;
           --fs-lead: 1.0625rem;
@@ -116,70 +118,123 @@ export default function Login() {
           --lh-snug: 1.2;
           --lh-normal: 1.55;
           --lh-loose: 1.7;
-          --ls-display: -0.02em;
-          --ls-tight: -0.015em;
+          --ls-display: 0;
+          --ls-tight: 0;
           --ls-wide: 0.1em;
           --ls-widest: 0.18em;
 
           min-height: 100vh; font-family: 'Inter', system-ui, sans-serif;
           font-size: var(--fs-base); line-height: var(--lh-normal);
           color: #e6f2ec; -webkit-font-smoothing: antialiased;
-          background: #061511;
-          background-image:
-            radial-gradient(1200px 600px at 85% -10%, rgba(201,168,76,.10), transparent 60%),
-            radial-gradient(900px 500px at 10% 20%, rgba(13,122,95,.35), transparent 60%),
-            linear-gradient(180deg, #061511 0%, #06201a 50%, #041a15 100%);
+          background: #07120f;
           position: relative; overflow-x: hidden;
         }
         .xp::before { content:''; position:absolute; inset:0; pointer-events:none;
-          background: linear-gradient(rgba(230,242,236,.04) 1px, transparent 1px) 0 0/100% 64px,
-                      linear-gradient(90deg, rgba(230,242,236,.04) 1px, transparent 1px) 0 0/64px 100%;
-          mask-image: radial-gradient(ellipse at 50% 30%, #000 40%, transparent 80%);
+          background: linear-gradient(rgba(230,242,236,.035) 1px, transparent 1px) 0 0/100% 72px,
+                      linear-gradient(90deg, rgba(230,242,236,.035) 1px, transparent 1px) 0 0/72px 100%;
+          opacity:.65;
         }
 
         /* Top bar */
-        .xp-top { position: relative; z-index: 2; display:flex; align-items:center; justify-content:space-between; padding: 1.5rem 2.5rem; }
+        .xp-top { position: relative; z-index: 2; width:min(100% - 2rem,76rem); min-height:4.75rem; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding: .8rem 0; border-bottom:1px solid rgba(230,242,236,.08); }
         .xp-brand { display:flex; align-items:center; gap:.7rem; }
-        .xp-mark { width:2.2rem; height:2.2rem; border-radius:.5rem; background:linear-gradient(135deg,#c9a84c,#8a6f2a); color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:900; font-family:'Instrument Serif',serif; font-size:1.25rem; line-height:1; box-shadow: 0 8px 24px -8px rgba(201,168,76,.5);}
-        .xp-brand b { font-size: var(--fs-base); letter-spacing:.02em; color:#fff; font-weight:700; line-height:1.2; }
+        .xp-mark { width:2.25rem; height:2.25rem; border-radius:.45rem; background:#c9a84c; color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Sora',sans-serif; font-size:.95rem; line-height:1; box-shadow:0 10px 26px -12px rgba(201,168,76,.65);}
+        .xp-brand b { font-family:'Sora',sans-serif; font-size: var(--fs-base); color:#fff; font-weight:700; line-height:1.2; }
         .xp-brand span { color:#c9a84c; font-weight:600; margin-left:.15rem; font-size: var(--fs-base); }
         .xp-links { display:flex; gap:.25rem; }
         .xp-links a { color:#9fb8ae; text-decoration:none; font-size:var(--fs-sm); font-weight:500; padding:.5rem .85rem; border-radius:.4rem; transition:.15s; }
         .xp-links a:hover { color:#fff; background: rgba(255,255,255,.04); }
         .xp-top-cta { display:flex; gap:.5rem; align-items:center; }
-        .xp-ghost { background:transparent; border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.45rem; font:inherit; font-size:var(--fs-sm); font-weight:500; cursor:pointer; transition:.15s; white-space:nowrap; }
+        .xp-ghost { min-height:2.55rem; background:rgba(255,255,255,.025); border:1px solid rgba(230,242,236,.18); color:#e6f2ec; padding:.55rem 1rem; border-radius:.4rem; font:inherit; font-size:var(--fs-sm); font-weight:600; cursor:pointer; transition:.15s; white-space:nowrap; }
         .xp-ghost:hover { border-color:#c9a84c; color:#c9a84c; }
-        .xp-cta { background:#c9a84c; color:#0b1f1a; border:0; padding:.6rem 1.1rem; border-radius:.45rem; font:inherit; font-size:var(--fs-sm); font-weight:700; cursor:pointer; transition:.2s; box-shadow: 0 10px 30px -12px rgba(201,168,76,.6); white-space:nowrap;}
+        .xp-cta { min-height:2.55rem; background:#d2b45a; color:#102019; border:1px solid #d2b45a; padding:.6rem 1.1rem; border-radius:.4rem; font:inherit; font-size:var(--fs-sm); font-weight:700; cursor:pointer; transition:.2s; box-shadow:0 12px 30px -16px rgba(210,180,90,.8); white-space:nowrap;}
         .xp-cta:hover { background:#d9ba5e; transform: translateY(-1px); }
-        @media(max-width:900px){ .xp-links{ display:none;} .xp-top{padding:1rem 1.25rem;} }
+        @media(max-width:900px){ .xp{--fs-display:3.15rem;} .xp-links{ display:none;} .xp-top{width:calc(100% - 2rem); min-height:4.25rem; padding:.65rem 0;} }
         @media(max-width:520px){ .xp-brand div{ display:none;} }
 
         /* Hero */
-        .xp-hero { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem 3rem; text-align:center; }
-        .xp-eyebrow { display:inline-flex; align-items:center; gap:.55rem; padding:.4rem .9rem; border:1px solid rgba(201,168,76,.35); border-radius:999px; color:#c9a84c; font-size:var(--fs-xs); font-weight:500; margin-bottom:1.75rem; background: rgba(201,168,76,.06); }
+        .xp-hero { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 2.6rem 2rem 2rem; text-align:center; }
+        .xp-eyebrow { display:inline-flex; align-items:center; gap:.55rem; padding:.42rem .8rem; border:1px solid rgba(201,168,76,.3); border-radius:999px; color:#d8be70; font-size:var(--fs-xs); font-weight:600; margin-bottom:1.35rem; background:#101c18; }
         .xp-eyebrow i { width:.4rem; height:.4rem; border-radius:999px; background:#c9a84c; box-shadow:0 0 10px #c9a84c; }
-        .xp-h1 { font-family:'Instrument Serif', serif; font-weight:400; font-size: var(--fs-display); line-height: var(--lh-tight); letter-spacing: var(--ls-display); margin: 0 0 1.5rem; color:#fff; }
-        .xp-h1 em { font-style: italic; color:#c9a84c; font-family:'Instrument Serif', serif; }
-        .xp-lede { max-width: 38rem; margin: 0 auto 2.25rem; font-size: var(--fs-lead); line-height:1.65; color:#9fb8ae; }
+        .xp-h1 { max-width:58rem; margin:0 auto 1.2rem; font-family:'Sora',sans-serif; font-weight:600; font-size:var(--fs-display); line-height:1.12; letter-spacing:0; color:#f7faf8; text-wrap:balance; }
+        .xp-h1 em { font-style:normal; color:#d5bc72; font-family:inherit; }
+        .xp-lede { max-width: 46rem; margin: 0 auto 1.5rem; font-size: 1rem; line-height:1.7; color:#aec2ba; text-wrap:balance; }
         .xp-hero-cta { display:inline-flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
 
+        /* Product preview */
+        .xp-product { max-width:68rem; margin:2rem auto 0; text-align:left; border:1px solid rgba(230,242,236,.16); border-radius:.5rem; overflow:hidden; background:#f4f7f6; color:#10241e; box-shadow:0 36px 90px -34px rgba(0,0,0,.9); }
+        .xp-product-bar { min-height:3rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.65rem .9rem; background:#fff; border-bottom:1px solid #dce5e1; }
+        .xp-product-brand { display:flex; align-items:center; gap:.55rem; font-size:.8rem; font-weight:700; }
+        .xp-product-logo { width:1.75rem; height:1.75rem; display:grid; place-items:center; border-radius:.35rem; background:#0b4b3b; color:#fff; }
+        .xp-product-actions { display:flex; gap:.45rem; }
+        .xp-product-actions span { width:1.85rem; height:1.85rem; display:grid; place-items:center; border:1px solid #dce5e1; border-radius:.35rem; color:#527067; font-size:.72rem; }
+        .xp-product-body { display:grid; grid-template-columns:10rem 1fr; min-height:24rem; }
+        .xp-product-nav { background:#0b241d; padding:.8rem .65rem; color:#9fb8ae; }
+        .xp-product-nav b { display:block; color:#fff; font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; padding:.5rem .6rem .7rem; }
+        .xp-product-nav span { display:block; padding:.55rem .65rem; border-radius:.3rem; font-size:.72rem; margin-bottom:.15rem; }
+        .xp-product-nav span:first-of-type { background:#164b3d; color:#fff; }
+        .xp-product-main { padding:1.25rem; min-width:0; }
+        .xp-product-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+        .xp-product-head h3 { margin:0 0 .2rem; font-size:1.05rem; }
+        .xp-product-head p { margin:0; color:#6b8179; font-size:.72rem; }
+        .xp-live { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:#e6f7ef; color:#137052; border-radius:.3rem; font-size:.68rem; font-weight:700; }
+        .xp-live::before { content:''; width:.38rem; height:.38rem; border-radius:50%; background:#20a775; }
+        .xp-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; margin-bottom:.8rem; }
+        .xp-kpi { background:#fff; border:1px solid #dfe7e4; border-radius:.4rem; padding:.8rem; min-width:0; }
+        .xp-kpi small { display:block; color:#72867f; font-size:.64rem; margin-bottom:.35rem; }
+        .xp-kpi strong { display:block; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .xp-kpi i { display:block; font-style:normal; color:#1b8b68; font-size:.62rem; margin-top:.3rem; }
+        .xp-product-grid { display:grid; grid-template-columns:1.45fr .8fr; gap:.65rem; }
+        .xp-chart, .xp-activity { background:#fff; border:1px solid #dfe7e4; border-radius:.4rem; padding:.85rem; min-width:0; }
+        .xp-panel-title { font-size:.72rem; font-weight:700; margin-bottom:.8rem; }
+        .xp-bars { height:8.6rem; display:flex; align-items:flex-end; gap:.55rem; border-bottom:1px solid #e4ebe8; }
+        .xp-bars span { flex:1; min-width:.45rem; background:#19775c; border-radius:.2rem .2rem 0 0; }
+        .xp-bars span:nth-child(2n) { background:#d2ad48; }
+        .xp-activity ul { list-style:none; margin:0; padding:0; }
+        .xp-activity li { display:grid; grid-template-columns:.5rem 1fr; gap:.45rem; padding:.42rem 0; border-bottom:1px solid #edf1ef; color:#60776f; font-size:.66rem; }
+        .xp-activity li::before { content:''; width:.42rem; height:.42rem; border-radius:50%; background:#278c6d; margin-top:.22rem; }
+        .xp-product-note { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.65rem 1rem; background:#0a1d17; color:#a8bdb5; font-size:.7rem; }
+        .xp-product-note b { color:#d8b552; }
+
+        .xp-flow { max-width:68rem; margin:1rem auto 0; display:grid; grid-template-columns:repeat(6,1fr); border:1px solid rgba(230,242,236,.1); border-radius:.45rem; overflow:hidden; background:rgba(3,17,13,.7); }
+        .xp-flow span { position:relative; padding:.8rem .5rem; color:#c2d2cc; font-size:.7rem; font-weight:600; border-right:1px solid rgba(230,242,236,.09); }
+        .xp-flow span:last-child { border-right:0; }
+        .xp-flow span:not(:last-child)::after { content:'›'; position:absolute; right:-.28rem; top:50%; transform:translateY(-50%); z-index:2; color:#c9a84c; background:#061511; padding:0 .1rem; font-size:1rem; }
+
         /* Metrics strip */
-        .xp-metrics { max-width: 60rem; margin: 3rem auto 0; display:grid; grid-template-columns: repeat(4,1fr); gap:0; border-top: 1px solid rgba(230,242,236,.08); border-bottom: 1px solid rgba(230,242,236,.08); padding: 1.5rem 0; }
+        .xp-metrics { max-width: 60rem; margin: 2rem auto 0; display:grid; grid-template-columns: repeat(4,1fr); gap:0; border-top: 1px solid rgba(230,242,236,.08); border-bottom: 1px solid rgba(230,242,236,.08); padding: 1.25rem 0; }
         .xp-metric { text-align:center; border-right:1px solid rgba(230,242,236,.08); }
         .xp-metric:last-child { border-right:0; }
-        .xp-metric b { display:block; font-family:'Instrument Serif',serif; font-weight:400; font-size:var(--fs-h3); color:#c9a84c; line-height:1; margin-bottom:.4rem; }
+        .xp-metric b { display:block; font-family:'Sora',sans-serif; font-weight:600; font-size:1.25rem; color:#d5bc72; line-height:1; margin-bottom:.4rem; }
         .xp-metric span { font-size:var(--fs-2xs); color:#9fb8ae; text-transform:uppercase; letter-spacing:var(--ls-wide); }
-        @media(max-width:700px){ .xp-metrics{ grid-template-columns:repeat(2,1fr); gap:1rem 0;} .xp-metric{ border-right:0;} .xp-metric:nth-child(odd){ border-right:1px solid rgba(230,242,236,.08);} }
+        @media(max-width:900px){ .xp-product-body{grid-template-columns:7.5rem 1fr;} .xp-kpis{grid-template-columns:repeat(2,1fr);} }
+        @media(max-width:700px){
+          .xp { --fs-display:2.35rem; --fs-h2:1.9rem; }
+          .xp-hero{padding:1.8rem 1rem 1.5rem;}
+          .xp-product{margin-top:1.8rem;}
+          .xp-product-body{grid-template-columns:1fr; min-height:0;}
+          .xp-product-nav{display:none;}
+          .xp-product-main{padding:.8rem;}
+          .xp-product-grid{grid-template-columns:1fr;}
+          .xp-activity{display:none;}
+          .xp-bars{height:6rem;}
+          .xp-flow{grid-template-columns:repeat(3,1fr);}
+          .xp-flow span:nth-child(3){border-right:0;}
+          .xp-flow span:nth-child(-n+3){border-bottom:1px solid rgba(230,242,236,.09);}
+          .xp-metrics{ grid-template-columns:repeat(2,1fr); gap:1rem 0;}
+          .xp-metric{ border-right:0;}
+          .xp-metric:nth-child(odd){ border-right:1px solid rgba(230,242,236,.08);}
+        }
 
         /* Modules */
         .xp-sec { position:relative; z-index:1; max-width:76rem; margin:0 auto; padding: 4rem 2rem; }
         .xp-sec-h { text-align:center; margin-bottom:2.5rem; }
         .xp-sec-lbl { color:#c9a84c; font-size:var(--fs-2xs); font-weight:600; letter-spacing:var(--ls-wide); text-transform:uppercase; margin-bottom:.75rem; }
-        .xp-sec-t { font-family:'Instrument Serif',serif; font-weight:400; font-size: var(--fs-h2); line-height: var(--lh-snug); color:#fff; margin:0; letter-spacing: var(--ls-tight); }
+        .xp-sec-t { font-family:'Sora',sans-serif; font-weight:600; font-size: var(--fs-h2); line-height: var(--lh-snug); color:#fff; margin:0; letter-spacing:0; }
         .xp-mods { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
         @media(max-width:900px){ .xp-mods{ grid-template-columns:repeat(2,1fr);} }
         @media(max-width:560px){ .xp-mods{ grid-template-columns:1fr;} }
-        .xp-mod { position:relative; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border:1px solid rgba(230,242,236,.08); border-radius:.75rem; padding: 1.6rem 1.4rem; transition:.25s; overflow:hidden; }
+        .xp-mod { position:relative; background:#0b1915; border:1px solid rgba(230,242,236,.09); border-radius:.5rem; padding: 1.6rem 1.4rem; transition:.25s; overflow:hidden; }
         .xp-mod::after { content:''; position:absolute; inset:0; border-radius:.75rem; padding:1px; background:linear-gradient(135deg, rgba(201,168,76,.4), transparent 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity:0; transition:.25s; }
         .xp-mod:hover { transform:translateY(-3px); border-color:rgba(201,168,76,.3); }
         .xp-mod:hover::after { opacity:1; }
@@ -189,7 +244,7 @@ export default function Login() {
 
         /* Terminal preview */
         .xp-term-wrap { max-width:56rem; margin: 0 auto; position:relative; }
-        .xp-term-wrap::before{ content:''; position:absolute; inset:-40px; background:radial-gradient(circle, rgba(201,168,76,.15),transparent 60%); filter:blur(30px); }
+        .xp-term-wrap::before{ display:none; }
         .xp-term { position:relative; background:#03110d; border:1px solid rgba(230,242,236,.1); border-radius:.75rem; font-family: 'JetBrains Mono', ui-monospace, monospace; overflow:hidden; box-shadow: 0 40px 100px -30px rgba(0,0,0,.7); }
         .xp-term-h { display:flex; align-items:center; gap:.4rem; padding:.7rem 1rem; border-bottom:1px solid rgba(230,242,236,.08); background: rgba(0,0,0,.3); }
         .xp-term-h span { width:.6rem; height:.6rem; border-radius:999px; background:rgba(230,242,236,.15); }
@@ -202,17 +257,17 @@ export default function Login() {
 
         /* Footer CTA */
         .xp-cta-band { text-align:center; padding: 2rem 2rem 4rem; }
-        .xp-cta-band h2 { font-family:'Instrument Serif',serif; font-weight:400; font-size: var(--fs-h2); line-height: var(--lh-snug); color:#fff; margin:0 0 1rem; letter-spacing: var(--ls-tight); }
+        .xp-cta-band h2 { font-family:'Sora',sans-serif; font-weight:600; font-size: var(--fs-h2); line-height: var(--lh-snug); color:#fff; margin:0 0 1rem; letter-spacing:0; }
         .xp-cta-band p { color:#9fb8ae; max-width:34rem; margin:0 auto 2rem; font-size: var(--fs-base); }
 
         .xp-foot { border-top:1px solid rgba(230,242,236,.08); padding: 2rem; text-align:center; color:#5f7a70; font-size:var(--fs-xs); }
 
         /* Modal */
         .xp-bd { position:fixed; inset:0; background:rgba(3,10,8,.8); backdrop-filter:blur(10px); z-index:100; display:flex; align-items:center; justify-content:center; padding:1.25rem; animation: xpFade .2s both; }
-        .xp-mod-x { width:100%; max-width:24rem; background: linear-gradient(180deg,#0a2620,#061511); border:1px solid rgba(201,168,76,.2); border-radius:.75rem; padding:2rem; position:relative; animation: xpPop .3s cubic-bezier(.2,.9,.3,1.15) both; }
+        .xp-mod-x { width:100%; max-width:24rem; background:#0a211b; border:1px solid rgba(201,168,76,.2); border-radius:.5rem; padding:2rem; position:relative; animation: xpPop .3s cubic-bezier(.2,.9,.3,1.15) both; }
         .xp-x { position:absolute; top:.85rem; right:.85rem; background:rgba(255,255,255,.05); border:1px solid rgba(230,242,236,.1); color:#9fb8ae; width:2rem; height:2rem; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
         .xp-x:hover { color:#fff; }
-        .xp-mt { font-family:'Instrument Serif',serif; font-weight:400; font-size:var(--fs-h3); line-height:var(--lh-snug); color:#fff; margin:0 0 .35rem; letter-spacing: var(--ls-tight); }
+        .xp-mt { font-family:'Sora',sans-serif; font-weight:600; font-size:var(--fs-h3); line-height:var(--lh-snug); color:#fff; margin:0 0 .35rem; letter-spacing:0; }
         .xp-ms { color:#9fb8ae; font-size:var(--fs-base); margin:0 0 1.5rem; }
         .xp-f { margin-bottom:.85rem; }
         .xp-lr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
@@ -247,29 +302,63 @@ export default function Login() {
           </div>
           <nav className="xp-links">
             <a href="#mods">Modullar</a>
-            <a href="#preview">İnteqrasiya</a>
+            <a href="#preview">Platforma</a>
             <a href="#qiymet">Qiymət</a>
             <a href="#elaqe">Əlaqə</a>
           </nav>
           <div className="xp-top-cta">
             <button className="xp-ghost" onClick={() => setAuthOpen(true)}>Daxil ol</button>
-            <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo istə →</button>
+            <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo sifariş et</button>
           </div>
         </header>
 
         <section className="xp-hero">
-          <div className="xp-eyebrow"><i/>Azərbaycan biznesi üçün, yerli komanda</div>
+          <div className="xp-eyebrow"><i/>Azərbaycan biznesi üçün vahid ERP platforması</div>
           <h1 className="xp-h1">
-            Bir platforma —<br/>
-            <em>bütün</em> əməliyyatlarınız
+            Satışdan maliyyəyə<br/>
+            <em>bütün biznesiniz</em> bir sistemdə
           </h1>
           <p className="xp-lede">
-            ExERP CRM, satış, anbar, mühasibat və HR modullarını vahid bulud sistemində birləşdirir.
-            IFRS uyğun, e-taxes və e-qaimə inteqrasiyalı, 3–7 gündə hazır.
+            CRM, satış, kredit, anbar, maliyyə, satınalma və HR əməliyyatlarını vahid məlumat bazasında idarə edin.
+            Hər əməliyyat növbəti modula avtomatik ötürülsün, rəhbərlik isə nəticəni real vaxtda görsün.
           </p>
           <div className="xp-hero-cta">
-            <button className="xp-cta" onClick={() => setAuthOpen(true)}>3 gün pulsuz sına →</button>
+            <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo sifariş et</button>
             <button className="xp-ghost" onClick={() => document.getElementById('mods')?.scrollIntoView({behavior:'smooth'})}>Modullara bax</button>
+          </div>
+
+          <div className="xp-product" id="preview" aria-label="ExERP idarəetmə panelinin nümunə görünüşü">
+            <div className="xp-product-bar">
+              <div className="xp-product-brand"><span className="xp-product-logo">E</span> ExERP idarəetmə paneli</div>
+              <div className="xp-product-actions"><span>⌕</span><span>◌</span><span>KS</span></div>
+            </div>
+            <div className="xp-product-body">
+              <aside className="xp-product-nav">
+                <b>İdarəetmə</b>
+                <span>İcmal</span><span>Satış</span><span>Kreditlər</span><span>Anbar</span><span>Maliyyə</span><span>Hesabatlar</span>
+              </aside>
+              <div className="xp-product-main">
+                <div className="xp-product-head">
+                  <div><h3>Biznes icmalı</h3><p>Əsas göstəricilər və əməliyyat nəzarəti</p></div>
+                  <span className="xp-live">Canlı məlumat</span>
+                </div>
+                <div className="xp-kpis">
+                  <div className="xp-kpi"><small>Aylıq satış</small><strong>184 320 ₼</strong><i>+12.4% artım</i></div>
+                  <div className="xp-kpi"><small>Brüt mənfəət</small><strong>47 860 ₼</strong><i>26% marja</i></div>
+                  <div className="xp-kpi"><small>Aktiv kredit</small><strong>126</strong><i>8 ödəniş bu gün</i></div>
+                  <div className="xp-kpi"><small>Stok riski</small><strong>7 məhsul</strong><i>Minimum qalıq</i></div>
+                </div>
+                <div className="xp-product-grid">
+                  <div className="xp-chart"><div className="xp-panel-title">Gəlir və xərc dinamikası</div><div className="xp-bars"><span style={{height:'42%'}}/><span style={{height:'28%'}}/><span style={{height:'58%'}}/><span style={{height:'36%'}}/><span style={{height:'72%'}}/><span style={{height:'45%'}}/><span style={{height:'88%'}}/><span style={{height:'54%'}}/></div></div>
+                  <div className="xp-activity"><div className="xp-panel-title">Son əməliyyatlar</div><ul><li>Satış sifarişi təsdiqləndi</li><li>Kredit ödənişi kassaya düşdü</li><li>Anbar təhvili tamamlandı</li><li>Satınalma mədaxili yaradıldı</li></ul></div>
+                </div>
+              </div>
+            </div>
+            <div className="xp-product-note"><b>Vahid axın:</b> satış, stok, kredit və maliyyə bir-birinə bağlı işləyir</div>
+          </div>
+
+          <div className="xp-flow" aria-label="Əməliyyat axını">
+            {FLOW.map(step => <span key={step}>{step}</span>)}
           </div>
 
           <div className="xp-metrics">
@@ -297,7 +386,7 @@ export default function Login() {
           </div>
         </section>
 
-        <section className="xp-sec" id="preview">
+        <section className="xp-sec" id="integration">
           <div className="xp-sec-h">
             <div className="xp-sec-lbl">API · MCP</div>
             <h2 className="xp-sec-t">Sisteminizlə birbaşa danışın</h2>
@@ -325,7 +414,7 @@ export default function Login() {
         <section className="xp-cta-band" id="qiymet">
           <h2>Şirkətinizi rəqəmsallaşdırmağa hazırsınız?</h2>
           <p>3 günlük tam funksional sınaq. Kart tələb olunmur, quraşdırma bizdən.</p>
-          <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo istə →</button>
+          <button className="xp-cta" onClick={() => setAuthOpen(true)}>Demo sifariş et</button>
         </section>
 
         <footer className="xp-foot" id="elaqe">© {new Date().getFullYear()} ExERP · Bakı, Azərbaycan</footer>

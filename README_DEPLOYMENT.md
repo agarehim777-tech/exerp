@@ -42,12 +42,21 @@ npx playwright install chromium
 
 ## Backup and recovery
 
-- Enable daily Supabase database backups and point-in-time recovery where the
-  selected plan supports it.
-- Keep an encrypted offsite logical backup.
-- Test restore into a separate project at least monthly.
+- `.github/workflows/backup-supabase.yml` creates role, schema and data dumps
+  every day at 02:17 UTC, records SHA-256 checksums and retains the compressed
+  GitHub artifact for 30 days.
+- Configure `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in the GitHub
+  `production` environment. GitHub encrypts workflow artifacts at rest.
+- Configure `RESTORE_DATABASE_URL` only in the protected `disaster-recovery`
+  environment. It must point to a disposable Supabase project and must never
+  contain the production project reference.
+- Run `Supabase restore drill` at least monthly, enter `RESTORE`, and retain the
+  successful workflow result as recovery evidence.
+- Target **RPO: 24 hours** for scheduled logical backup and **RTO: 4 hours** for
+  a verified restore. Enable Supabase PITR to reduce production RPO further.
 - Take a verified backup before destructive migrations.
-- Record RPO, RTO and the person authorized to approve a restore.
+- A production restore requires approval by the platform owner and finance/data
+  owner. The drill workflow restores only into the disposable recovery project.
 
 ## Hosting
 

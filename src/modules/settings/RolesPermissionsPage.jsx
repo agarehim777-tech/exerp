@@ -3,6 +3,7 @@ import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { navItems } from "../../data.js";
+import { normalizeUserModuleAccess } from "../../shared/lib/appDomain.jsx";
 
 const ROLES = [
   { key: "owner", label: "Sahib", locked: true, hint: "Bütün icazələr avtomatik" },
@@ -13,7 +14,14 @@ const ROLES = [
 
 const MODULES = navItems.filter((n) => n.id !== "platform");
 
-export default function RolesPermissionsPage() {
+export default function RolesPermissionsPage({
+  appUsers = [],
+  appRoles = [],
+  modulePermissionCatalog = [],
+  onChangeAppUserRole,
+  onToggleAppUserModule,
+  canOverrideUserPermissions = false,
+}) {
   const { activeMembership } = useAuth();
   const { isAdmin, role: currentRole } = usePermissions();
   const tenantId = activeMembership?.tenant_id;
@@ -25,6 +33,7 @@ export default function RolesPermissionsPage() {
   const [msg, setMsg] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const reload = async () => {
     setLoading(true);
@@ -58,6 +67,49 @@ export default function RolesPermissionsPage() {
     }
     return m;
   }, [rows]);
+
+  const unifiedUsers = useMemo(() => {
+    const normalizedEmail = (value) => String(value || "").trim().toLowerCase();
+    const remoteEmails = new Set(members.map((member) => normalizedEmail(member.profiles?.email)).filter(Boolean));
+    const appUsersByEmail = new Map(appUsers.map((user) => [normalizedEmail(user.email), user]));
+    const remoteUsers = members.map((member) => ({
+      id: `member-${member.id}`,
+      memberId: member.id,
+      userId: member.user_id,
+      name: member.profiles?.full_name || "Ad qeyd edilməyib",
+      email: member.profiles?.email || "—",
+      role: member.role,
+      source: "Supabase üzvü",
+      status: "Aktiv",
+      appUser: appUsersByEmail.get(normalizedEmail(member.profiles?.email)) || null,
+    }));
+    const localOnly = appUsers
+      .filter((user) => !remoteEmails.has(normalizedEmail(user.email)))
+      .map((user) => ({
+        id: `app-${user.id}`,
+        memberId: null,
+        userId: user.id,
+        name: user.name || "Ad qeyd edilməyib",
+        email: user.email || "—",
+        role: user.role || "member",
+        source: "Tətbiq profili",
+        status: user.status === "Bloklanıb" ? "Bloklanıb" : "Dəvət gözləyir",
+        appUser: user,
+      }));
+    return [...remoteUsers, ...localOnly];
+  }, [members, appUsers]);
+
+  const selectedUser = unifiedUsers.find((user) => user.id === selectedUserId) || null;
+  const selectedAppUser = selectedUser?.appUser || null;
+  const selectedRole = appRoles.find((role) => role.name === selectedAppUser?.role);
+  const selectedAccess = selectedAppUser
+    ? normalizeUserModuleAccess(selectedAppUser, appRoles)
+    : [];
+
+  const roleLabel = (roleName) =>
+    ROLES.find((role) => role.key === roleName)?.label ||
+    appRoles.find((role) => role.name === roleName)?.name ||
+    roleName || "—";
 
   if (!isAdmin) {
     return (
@@ -135,6 +187,25 @@ export default function RolesPermissionsPage() {
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      <div style={overviewCard}>
+        <div style={overviewItem}>
+          <span style={overviewLabel}>İstifadəçilər</span>
+          <strong style={overviewValue}>{unifiedUsers.length}</strong>
+        </div>
+        <div style={overviewItem}>
+          <span style={overviewLabel}>Rollar</span>
+          <strong style={overviewValue}>{ROLES.length}</strong>
+        </div>
+        <div style={overviewItem}>
+          <span style={overviewLabel}>Aktiv dəvətlər</span>
+          <strong style={overviewValue}>{invites.length}</strong>
+        </div>
+        <div style={overviewItem}>
+          <span style={overviewLabel}>Permission qeydləri</span>
+          <strong style={overviewValue}>{rows.length}</strong>
+        </div>
+      </div>
+
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div>
@@ -198,9 +269,9 @@ export default function RolesPermissionsPage() {
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: 0, marginBottom: 4 }}>Şirkət üzvləri</h2>
+        <h2 style={{ margin: 0, marginBottom: 4 }}>İstifadəçilər</h2>
         <p style={{ margin: "0 0 12px", color: "#6b7a72", fontSize: 13 }}>
-          Cari şirkət: <b>{activeMembership?.tenants?.name || "—"}</b>
+          Cari şirkət: <b>{activeMembership?.tenants?.name || "—"}</b> · Tətbiq profilləri və Supabase üzvləri vahid siyahıda göstərilir.
         </p>
         <table style={table}>
           <thead>
@@ -208,30 +279,92 @@ export default function RolesPermissionsPage() {
               <th style={th}>İstifadəçi</th>
               <th style={th}>E-poçt</th>
               <th style={th}>Rol</th>
+              <th style={th}>Mənbə</th>
+              <th style={th}>Status</th>
+              <th style={th}>Fərdi icazə</th>
             </tr>
           </thead>
           <tbody>
-            {members.length === 0 && (
-              <tr><td style={td} colSpan={3}><i style={{ color: "#8a9a92" }}>Üzv yoxdur</i></td></tr>
+            {unifiedUsers.length === 0 && (
+              <tr><td style={td} colSpan={6}><i style={{ color: "#8a9a92" }}>İstifadəçi yoxdur</i></td></tr>
             )}
-            {members.map((m) => (
-              <tr key={m.id}>
-                <td style={td}>{m.profiles?.full_name || "—"}</td>
-                <td style={td}>{m.profiles?.email || "—"}</td>
+            {unifiedUsers.map((user) => (
+              <tr key={user.id}>
+                <td style={{ ...td, textAlign: "left", fontWeight: 600 }}>{user.name}</td>
+                <td style={{ ...td, textAlign: "left" }}>{user.email}</td>
                 <td style={td}>
-                  <select
-                    value={m.role}
-                    disabled={saving || m.user_id === activeMembership?.user_id}
-                    onChange={(e) => changeRole(m.id, e.target.value)}
-                    style={select}
+                  {user.memberId ? (
+                    <select
+                      value={user.role}
+                      disabled={saving || user.userId === activeMembership?.user_id}
+                      onChange={(event) => changeRole(user.memberId, event.target.value)}
+                      style={select}
+                    >
+                      {ROLES.map((role) => <option key={role.key} value={role.key}>{role.label}</option>)}
+                    </select>
+                  ) : (
+                    <select
+                      value={user.role}
+                      disabled={saving || !onChangeAppUserRole}
+                      onChange={(event) => onChangeAppUserRole?.(user.userId, event.target.value)}
+                      style={select}
+                    >
+                      {appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}
+                    </select>
+                  )}
+                </td>
+                <td style={td}>{user.source}</td>
+                <td style={td}><span style={user.status === "Aktiv" ? activeBadge : pendingBadge}>{user.status}</span></td>
+                <td style={td}>
+                  <button
+                    type="button"
+                    disabled={!user.appUser || user.appUser.role === "Super Admin"}
+                    onClick={() => setSelectedUserId((current) => current === user.id ? null : user.id)}
+                    style={user.appUser ? permissionButton : disabledPermissionButton}
+                    title={!user.appUser ? "Bu üzv üçün tətbiq profili yaradılmalıdır" : "Modul icazələrini idarə et"}
                   >
-                    {ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-                  </select>
+                    {selectedUserId === user.id ? "Bağla" : "İdarə et"}
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {selectedUser && (
+          <div style={permissionPanel}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <strong>{selectedUser.name}</strong>
+                <div style={{ color: "#6b7a72", fontSize: 12 }}>{selectedUser.email} · {selectedAppUser?.role}</div>
+              </div>
+              <span style={permissionCount}>{selectedAccess.length}/{modulePermissionCatalog.length} aktiv modul</span>
+            </div>
+            <div style={permissionGrid}>
+              {modulePermissionCatalog.map((module) => {
+                const checked = selectedAccess.includes(module.id);
+                const roleAllows = (selectedRole?.permissions || []).includes(module.permission);
+                const editable = Boolean(onToggleAppUserModule) && (roleAllows || canOverrideUserPermissions);
+                return (
+                  <label key={module.id} style={editable ? permissionOption : disabledPermissionOption}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!editable || saving}
+                      onChange={() => onToggleAppUserModule?.(selectedAppUser.id, module.id)}
+                    />
+                    <span>{module.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {canOverrideUserPermissions && (
+              <p style={{ margin: "12px 0 0", color: "#6b7a72", fontSize: 11 }}>
+                Super Admin rol limitindən kənar fərdi icazəni də aktiv və ya deaktiv edə bilər.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={card}>
@@ -276,3 +409,16 @@ const subTh = { textAlign: "center", padding: "4px 6px", background: "#faf5e2", 
 const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb", verticalAlign: "middle", textAlign: "center" };
 const select = { padding: "4px 8px", borderRadius: 6, border: "1px solid #d4c9a3", background: "#fff", fontSize: 13 };
 const lockBadge = { fontSize: 9, background: "#064e3b", color: "#fbe89a", padding: "1px 5px", borderRadius: 4, marginLeft: 6, verticalAlign: "middle" };
+const overviewCard = { display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 1, overflow: "hidden", background: "#e6dfc9", border: "1px solid #e6dfc9", borderRadius: 8 };
+const overviewItem = { padding: "14px 16px", background: "#fff" };
+const overviewLabel = { display: "block", color: "#6b7a72", fontSize: 11, marginBottom: 5 };
+const overviewValue = { display: "block", color: "#123c31", fontSize: 22 };
+const activeBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#e7f6ef", color: "#147052", fontSize: 11, fontWeight: 700 };
+const pendingBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#fff5d8", color: "#8a6517", fontSize: 11, fontWeight: 700 };
+const permissionButton = { border: "1px solid #b8cfc5", background: "#f4faf7", color: "#075e49", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const disabledPermissionButton = { ...permissionButton, opacity: 0.45, cursor: "not-allowed" };
+const permissionPanel = { marginTop: 16, borderTop: "1px solid #e6dfc9", paddingTop: 16 };
+const permissionGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 8 };
+const permissionOption = { display: "flex", alignItems: "center", gap: 8, minHeight: 36, padding: "7px 10px", border: "1px solid #dbe8e2", borderRadius: 6, background: "#fbfdfc", color: "#28483e", fontSize: 12, cursor: "pointer" };
+const disabledPermissionOption = { ...permissionOption, opacity: 0.48, cursor: "not-allowed" };
+const permissionCount = { whiteSpace: "nowrap", padding: "5px 8px", borderRadius: 6, background: "#edf6f1", color: "#17634d", fontSize: 11, fontWeight: 700 };

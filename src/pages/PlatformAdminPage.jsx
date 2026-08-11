@@ -4,6 +4,10 @@ import { supabase } from "../integrations/supabase/client";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCallback, useEffect, useState } from "react";
 import { PLATFORM_MODULE_CHOICES, PLATFORM_PLANS, dayInMs, slugifyPlatform } from "../shared/lib/appDomain.jsx";
+
+const platformModuleIds = new Set(PLATFORM_MODULE_CHOICES.map((module) => module.id));
+const normalizePlatformModules = (modules = []) => [...new Set(modules)].filter((id) => platformModuleIds.has(id));
+
 export default function PlatformAdminPage() {
   const { user, refresh: refreshAuth } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -64,7 +68,7 @@ export default function PlatformAdminPage() {
       plan_name: t.plan_name || "starter",
       expires_at: t.expires_at || "",
       notes: t.notes || "",
-      modules: t.modules?.length ? t.modules : PLATFORM_MODULE_CHOICES.map((m) => m.id),
+      modules: t.modules?.length ? normalizePlatformModules(t.modules) : PLATFORM_MODULE_CHOICES.map((m) => m.id),
     });
   }
   function cancelEdit() { setEditing(null); setForm(emptyForm); }
@@ -180,10 +184,10 @@ export default function PlatformAdminPage() {
   return (
     <div className="page-grid">
       <section className="metric-grid four" style={{ gridColumn: "1 / -1" }}>
-        <MetricCard label="Aktiv ЕџirkЙ™t" value={activeTenantCount} trend={`${tenants.length} tenant`} icon={Building2} tone="success" />
-        <MetricCard label="Platform istifadЙ™Г§isi" value={totalPlatformUsers} trend="BГјtГјn tenant-lЙ™r" icon={Users} tone="primary" />
-        <MetricCard label="DondurulmuЕџ" value={frozenTenantCount} trend="GiriЕџ mЙ™hdudiyyЙ™ti" icon={ShieldCheck} tone={frozenTenantCount ? "warning" : "success"} />
-        <MetricCard label="30 gГјnЙ™ bitЙ™n" value={expiringTenantCount} trend="Lisenziya nЙ™zarЙ™ti" icon={CalendarClock} tone={expiringTenantCount ? "warning" : "info"} />
+        <MetricCard label="Aktiv şirkət" value={activeTenantCount} trend={`${tenants.length} tenant`} icon={Building2} tone="success" />
+        <MetricCard label="Platform istifadəçisi" value={totalPlatformUsers} trend="Bütün tenant-lər" icon={Users} tone="primary" />
+        <MetricCard label="Dondurulmuş" value={frozenTenantCount} trend="Giriş məhdudiyyəti" icon={ShieldCheck} tone={frozenTenantCount ? "warning" : "success"} />
+        <MetricCard label="30 günə bitən" value={expiringTenantCount} trend="Lisenziya nəzarəti" icon={CalendarClock} tone={expiringTenantCount ? "warning" : "info"} />
       </section>
       <Panel>
         <PanelHeader
@@ -290,7 +294,7 @@ export default function PlatformAdminPage() {
               <StatusBadge status={t.status === "active" ? "Aktiv" : t.status === "frozen" ? "Dondurulub" : "Silinib"} />,
               `${t.member_count}/${t.max_users}`,
               t.expires_at || "—",
-              `${(t.modules || []).length}/${PLATFORM_MODULE_CHOICES.length}`,
+              `${normalizePlatformModules(t.modules || []).length}/${PLATFORM_MODULE_CHOICES.length}`,
               <div className="table-actions" style={{ display: "flex", gap: 4 }}>
                 <button type="button" className="icon-btn" title="Redaktə" onClick={() => startEdit(t)}><Pencil size={14} /></button>
                 {t.status === "active" ? (

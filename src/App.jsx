@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
+import { resolveModalKind } from "./config/modal-registry.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
@@ -28,6 +29,7 @@ import {
   Filter,
   GitBranch,
   LayoutDashboard,
+  LogOut,
   Menu,
   MessageSquare,
   Package,
@@ -58,13 +60,29 @@ import {
   stages,
 } from "./data.js";
 import { pageMeta } from "./config/page-meta.js";
+import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
+import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
+const ExpenseOperationModal = lazy(() => import("./components/modals/OperationModals.jsx").then((module) => ({ default: module.ExpenseOperationModal })));
+const OperationDeleteModal = lazy(() => import("./components/modals/OperationModals.jsx").then((module) => ({ default: module.OperationDeleteModal })));
+const ProductFormModal = lazy(() => import("./modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.ProductFormModal })));
+const WarehouseFormModal = lazy(() => import("./modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.WarehouseFormModal })));
+const HrDepartmentModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrDepartmentModal })));
+const HrEmployeeDeleteModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeDeleteModal })));
+const HrEmployeeModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeModal })));
+const HrLeaveRequestModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrLeaveRequestModal })));
+const HrVacancyModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrVacancyModal })));
+const FinanceAccountModal = lazy(() => import("./modules/finance/components/FinanceAccountModal.jsx").then((module) => ({ default: module.FinanceAccountModal })));
+const StockIntakeModal = lazy(() => import("./modules/warehouse/components/StockIntakeModal.jsx").then((module) => ({ default: module.StockIntakeModal })));
+const FactoryPurchaseOrderModal = lazy(() => import("./modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.FactoryPurchaseOrderModal })));
+const VendorFormModal = lazy(() => import("./modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.VendorFormModal })));
+const SalesOperationModal = lazy(() => import("./modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOperationModal })));
+const SalesOrderModal = lazy(() => import("./modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOrderModal })));
 const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
 const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
 const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
 const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
 const DataReconciliationPage = lazy(() => import("./modules/admin/DataReconciliationPage.jsx"));
 import {
-  changeRemotePassword,
   createRemoteCompany,
   createRemoteUser,
   deleteRemoteCompany,
@@ -155,7 +173,7 @@ const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage.jsx"));
 const ApiPage = lazy(() => import("./pages/ApiPage.jsx"));
 const PlatformAdminPage = lazy(() => import("./pages/PlatformAdminPage.jsx"));
-import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, navIcons, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
+import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
 const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
 const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
 const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
@@ -3611,7 +3629,7 @@ function App() {
   const [state, setState] = useState(() => hydrateState(initialState));
   const [tenantStateReady, setTenantStateReady] = useState(false);
   const tenantSnapshotUnavailable = useRef(false);
-  const { activeTenantId, isPlatformAdmin, user: authUser } = useAuth();
+  const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
   const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
@@ -4566,32 +4584,37 @@ function App() {
     }
   }
 
-  function logoutUser() {
+  async function logoutUser() {
     const userName = currentUser?.name || "İstifadəçi";
-    setState((current) =>
-      appendAudit(
-        {
-          ...current,
-          settings: {
-            ...current.settings,
-            sessionUserId: null,
+    try {
+      if (remoteApiEnabled) {
+        await logoutRemote().catch(() => undefined);
+        setRemoteToken("");
+        setRemoteUser(null);
+        setRemoteAuthStatus("signedOut");
+      }
+      await signOut();
+      setState((current) =>
+        appendAudit(
+          {
+            ...current,
+            settings: {
+              ...current.settings,
+              sessionUserId: null,
+            },
           },
-        },
-        {
-          module: "Auth",
-          action: "Çıxış edildi",
-          detail: userName,
-          role: activeRoleInfo?.name || "System",
-        },
-      ),
-    );
-    if (remoteApiEnabled) {
-      logoutRemote().catch(() => undefined);
-      setRemoteToken("");
-      setRemoteUser(null);
-      setRemoteAuthStatus("signedOut");
+          {
+            module: "Auth",
+            action: "Çıxış edildi",
+            detail: userName,
+            role: activeRoleInfo?.name || "System",
+          },
+        ),
+      );
+      navigate("/login", { replace: true });
+    } catch (error) {
+      notify(error instanceof Error ? `Çıxış alınmadı: ${error.message}` : "Çıxış alınmadı. Yenidən cəhd edin.");
     }
-    notify(`${userName} sistemdən çıxdı.`);
   }
 
   async function createUser(values) {
@@ -4693,7 +4716,8 @@ function App() {
       if (!targetUser || targetUser.role === "Super Admin") return current;
       const module = modulePermissionCatalog.find((item) => item.id === moduleId);
       const role = (current.settings.roles || defaultRoles).find((item) => item.name === targetUser.role);
-      if (module?.permission && !(role?.permissions || []).includes(module.permission)) {
+      const canOverrideRole = ["Super Admin", "Platform Super Admin"].includes(currentUser?.role);
+      if (module?.permission && !(role?.permissions || []).includes(module.permission) && !canOverrideRole) {
         return appendAudit(current, {
           module: "Ayarlar/Auth",
           action: "Modul icazəsi bloklandı",
@@ -4703,11 +4727,17 @@ function App() {
         });
       }
 
-      const currentAccess = normalizeUserModuleAccess(targetUser, current.settings.roles || defaultRoles);
+      const currentAccess = Array.isArray(targetUser.moduleAccess)
+        ? [...new Set(targetUser.moduleAccess)]
+        : normalizeUserModuleAccess(targetUser, current.settings.roles || defaultRoles);
+      const willEnable = !currentAccess.includes(moduleId);
       const nextAccess = currentAccess.includes(moduleId)
         ? currentAccess.filter((id) => id !== moduleId)
         : [...currentAccess, moduleId];
       const safeAccess = nextAccess.length > 0 ? nextAccess : ["dashboard"];
+      const permissionOverrides = module?.permission && canOverrideRole
+        ? { ...(targetUser.permissionOverrides || {}), [module.permission]: willEnable }
+        : targetUser.permissionOverrides;
 
       return auditCurrentState(
         {
@@ -4715,14 +4745,48 @@ function App() {
           settings: {
             ...current.settings,
             users: users.map((user) =>
-              user.id === userId ? { ...user, moduleAccess: safeAccess } : user,
+              user.id === userId ? { ...user, moduleAccess: safeAccess, permissionOverrides } : user,
             ),
           },
         },
         {
           module: "Ayarlar/Auth",
           action: "Modul icazəsi dəyişdi",
-          detail: `${targetUser.name}: ${moduleId}`,
+          detail: `${targetUser.name}: ${moduleId} ${willEnable ? "verildi" : "ləğv edildi"}`,
+        },
+      );
+    });
+  }
+
+  function updateUserRole(userId, roleName) {
+    if (!requirePermission("settings.manage", "istifadəçi rolunu dəyişmək")) return;
+    setState((current) => {
+      const roles = current.settings.roles || defaultRoles;
+      const targetRole = roles.find((role) => role.name === roleName);
+      if (!targetRole) return current;
+      const targetUser = (current.settings.users || []).find((user) => user.id === userId);
+      if (!targetUser) return current;
+      return auditCurrentState(
+        {
+          ...current,
+          settings: {
+            ...current.settings,
+            users: (current.settings.users || []).map((user) =>
+              user.id === userId
+                ? {
+                    ...user,
+                    role: roleName,
+                    moduleAccess: getDefaultModuleAccessForRole(roleName, roles),
+                    permissionOverrides: {},
+                  }
+                : user,
+            ),
+          },
+        },
+        {
+          module: "Ayarlar/Auth",
+          action: "İstifadəçi rolu dəyişdi",
+          detail: `${targetUser.name}: ${roleName}`,
         },
       );
     });
@@ -5187,7 +5251,7 @@ function App() {
           completed_at: new Date().toISOString(),
           payload: exportRow,
         },
-      }).catch((error) => notify(`Hesabat exportu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+      }).catch((error) => notify(`Hesabat exportu sinxronlaşmadı: ${error.message}`, "warning"));
     });
   }
 
@@ -5368,7 +5432,7 @@ function App() {
         payload: item,
       },
       approvals,
-    }).catch((error) => notify(`HR workflow sinxronlaЕџmadД±: ${error.message}`, "warning"));
+    }).catch((error) => notify(`HR workflow sinxronlaşmadı: ${error.message}`, "warning"));
   }
 
   function syncCommunicationWorkflow(thread, status = "active") {
@@ -5380,7 +5444,7 @@ function App() {
         record_type: thread.type === "group" ? "group_thread" : "direct_thread",
         record_no: thread.id,
         status,
-        title: thread.title || thread.person || "Daxili yazД±Еџma",
+        title: thread.title || thread.person || "Daxili yazışma",
         payload: {
           participant_ids: thread.participantIds || [],
           participants: thread.participants || [],
@@ -5394,7 +5458,7 @@ function App() {
           messages: thread.messages || [],
         },
       },
-    }).catch((error) => notify(`Mesaj workflow sinxronlaЕџmadД±: ${error.message}`, "warning"));
+    }).catch((error) => notify(`Mesaj workflow sinxronlaşmadı: ${error.message}`, "warning"));
   }
 
   function persistNotificationDeliveries(deliveries = []) {
@@ -5410,7 +5474,7 @@ function App() {
           channel: channelMap[delivery.channel] || "in_app",
           provider: delivery.providerName || null,
           subject: delivery.subject || null,
-          body: delivery.body || delivery.subject || "BildiriЕџ",
+          body: delivery.body || delivery.subject || "Bildiriş",
           status: wasSent ? "sent" : "failed",
           sent_at: wasSent ? delivery.sentAtIso : null,
           last_error: wasSent ? null : delivery.status,
@@ -5421,7 +5485,7 @@ function App() {
             action_target: delivery.actionTarget,
           },
         },
-      }).catch((error) => notify(`BildiriЕџ logu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+      }).catch((error) => notify(`Bildiriş logu sinxronlaşmadı: ${error.message}`, "warning"));
     });
   }
 
@@ -6032,10 +6096,10 @@ function App() {
             channel: channelMap[delivery.channel] || "in_app",
             provider: delivery.providerName || null,
             subject: delivery.subject || null,
-            body: delivery.body || delivery.subject || "BildiriЕџ",
-            status: delivery.status === "GГ¶ndЙ™rildi" ? "sent" : "failed",
-            sent_at: delivery.status === "GГ¶ndЙ™rildi" ? delivery.sentAtIso : null,
-            last_error: delivery.status === "GГ¶ndЙ™rildi" ? null : delivery.status,
+            body: delivery.body || delivery.subject || "Bildiriş",
+            status: delivery.status === "Göndərildi" ? "sent" : "failed",
+            sent_at: delivery.status === "Göndərildi" ? delivery.sentAtIso : null,
+            last_error: delivery.status === "Göndərildi" ? null : delivery.status,
             metadata: {
               rule_id: delivery.ruleId,
               dedupe_key: delivery.dedupeKey,
@@ -6043,7 +6107,7 @@ function App() {
               action_target: delivery.actionTarget,
             },
           },
-        }).catch((error) => notify(`BildiriЕџ logu sinxronlaЕџmadД±: ${error.message}`, "warning"));
+        }).catch((error) => notify(`Bildiriş logu sinxronlaşmadı: ${error.message}`, "warning"));
       });
     }
     const touchedRuleIds = new Set(deliveries.map((item) => item.ruleId));
@@ -8240,7 +8304,7 @@ function App() {
     queueMicrotask(() => syncHrWorkflow(
       "leave_request",
       { ...request, status: nextStatus, decidedAt: stamp },
-      status === "TЙ™sdiq edildi" ? "approved" : "rejected",
+      status === "Təsdiq edildi" ? "approved" : "rejected",
     ));
   }
 
@@ -9403,7 +9467,7 @@ function App() {
         archived: false,
         messages: [
           ...(selectedThreadForSync.messages || []),
-          { id: comment.id, from: sender, text: body, time: stamp, status: "GГ¶ndЙ™rildi", readAt: stamp },
+          { id: comment.id, from: sender, text: body, time: stamp, status: "Göndərildi", readAt: stamp },
         ],
       }));
     }
@@ -9449,6 +9513,7 @@ function App() {
         mobileNav={mobileNav}
         onClose={() => setMobileNav(false)}
         onSelect={choosePage}
+        onLogout={logoutUser}
       />
 
       <div className="workspace">
@@ -9481,7 +9546,16 @@ function App() {
           <Suspense fallback={<div className="page-suspense-loader" style={{ padding: 32, opacity: 0.6 }}>Yüklənir…</div>}>
           {active === "platform" && <PlatformAdminPage />}
           {active === "assistant" && <AssistantPage />}
-          {active === "roles" && <RolesPermissionsPage />}
+          {active === "roles" && (
+            <RolesPermissionsPage
+              appUsers={state.settings.users || []}
+              appRoles={state.settings.roles || defaultRoles}
+              modulePermissionCatalog={modulePermissionCatalog}
+              onChangeAppUserRole={updateUserRole}
+              onToggleAppUserModule={toggleUserModuleAccess}
+              canOverrideUserPermissions={["Super Admin", "Platform Super Admin"].includes(currentUser?.role)}
+            />
+          )}
           {active === "access-check" && <AccessCheckPage />}
           {active === "audit" && <AuditLogPage />}
           {active === "financial-statements" && <FinancialStatementsPage />}
@@ -9803,7 +9877,9 @@ function App() {
               notify={notify}
               requiresPassword={remoteApiEnabled}
               canManageSettings={can("settings.manage")}
+              canOverrideUserPermissions={["Super Admin", "Platform Super Admin"].includes(currentUser?.role)}
               canRunSystemBackup={can("system.backup")}
+              onOpenAccessCenter={() => choosePage("roles")}
             />
           )}
           </Suspense>
@@ -9813,6 +9889,7 @@ function App() {
       <FloatingAssistant />
 
       {modal && (
+        <Suspense fallback={<div className="modal-shell" role="status"><div className="modal-card">Forma yüklənir…</div></div>}>
         <CreateModal
           type={modal.type}
           mode={modal.mode}
@@ -9895,434 +9972,13 @@ function App() {
           onCreateLeaveRequest={createLeaveRequest}
           onCreateVacancy={createVacancy}
         />
+        </Suspense>
       )}
       <ToastStack toasts={toasts} />
     </div>
   );
 }
 
-const GROUP_LABELS = {
-  crm: "CRM",
-  sales: "Satış",
-  supply: "Təchizat & Anbar",
-  finance: "Maliyyə",
-  ops: "Əməliyyat",
-  analytics: "Analitika",
-  system: "Sistem",
-};
-const GROUP_ICONS = {
-  crm: Users,
-  sales: ShoppingCart,
-  supply: Warehouse,
-  finance: Wallet,
-  ops: Package,
-  analytics: BarChart3,
-  system: Settings,
-};
-
-function SidebarNav({ items, active, onSelect }) {
-  const groups = [];
-  const seen = new Set();
-  for (const item of items) {
-    if (item.group) {
-      if (!seen.has(item.group)) {
-        seen.add(item.group);
-        groups.push({ type: "group", id: item.group, children: items.filter((x) => x.group === item.group) });
-      }
-    } else {
-      groups.push({ type: "item", item });
-    }
-  }
-  const activeGroup = items.find((x) => x.id === active)?.group;
-  const [open, setOpen] = useState(() => ({ [activeGroup]: true }));
-  useEffect(() => {
-    if (activeGroup) setOpen((o) => ({ ...o, [activeGroup]: true }));
-  }, [activeGroup]);
-
-  return (
-    <nav className="nav-list">
-      {groups.map((entry) => {
-        if (entry.type === "item") {
-          const Icon = navIcons[entry.item.id] || Settings;
-          return (
-            <button
-              key={entry.item.id}
-              className={`nav-item ${active === entry.item.id ? "active" : ""}`}
-              onClick={() => onSelect(entry.item.id)}
-            >
-              <Icon size={17} />
-              <span>{entry.item.label}</span>
-            </button>
-          );
-        }
-        const isOpen = !!open[entry.id];
-        const GroupIcon = GROUP_ICONS[entry.id] || Users;
-        const hasActive = entry.children.some((c) => c.id === active);
-        return (
-          <div key={entry.id} className={`nav-group ${isOpen ? "open" : ""}`}>
-            <button
-              type="button"
-              className={`nav-item nav-group-head ${hasActive ? "active-group" : ""}`}
-              onClick={() => setOpen((o) => ({ ...o, [entry.id]: !o[entry.id] }))}
-              aria-expanded={isOpen}
-            >
-              <GroupIcon size={17} />
-              <span style={{ flex: 1, textAlign: "left" }}>{GROUP_LABELS[entry.id] || entry.id}</span>
-              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            {isOpen && (
-              <div className="nav-group-children" style={{ display: "flex", flexDirection: "column", gap: 2, paddingLeft: 18, marginTop: 2 }}>
-                {entry.children.map((child) => {
-                  const Icon = navIcons[child.id];
-                  return (
-                    <button
-                      key={child.id}
-                      className={`nav-item ${active === child.id ? "active" : ""}`}
-                      onClick={() => onSelect(child.id)}
-                    >
-                      {Icon && <Icon size={15} />}
-                      <span>{child.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-function Sidebar({ active, items = navItems, currentUser, activeRole, mobileNav, onClose, onSelect }) {
-  return (
-    <>
-      <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
-        <div className="brand">
-          <div className="brand-mark">E</div>
-          <div>
-            <div className="brand-name">ERP+CRM AZ</div>
-            <div className="brand-subtitle">Azərbaycan Sistemi</div>
-          </div>
-          <button className="icon-btn sidebar-close" onClick={onClose} aria-label="Menyunu bağla">
-            <X size={18} />
-          </button>
-        </div>
-
-        <SidebarNav items={items} active={active} onSelect={onSelect} />
-
-
-        <div className="admin-card">
-          <div className="avatar">
-            {String(currentUser?.name || "AD")
-              .split(" ")
-              .map((part) => part[0])
-              .join("")
-              .slice(0, 2)
-              .toLocaleUpperCase("az-AZ")}
-          </div>
-          <div>
-            <div className="admin-name">{currentUser?.name || "Administrator"}</div>
-            <div className="admin-mail">{activeRole?.name || currentUser?.email}</div>
-          </div>
-        </div>
-      </aside>
-      {mobileNav && <button className="scrim" onClick={onClose} aria-label="Menyunu bağla" />}
-    </>
-  );
-}
-
-function formatTimeAgo(date) {
-  if (!date) return "";
-  const diff = Date.now() - new Date(date).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "indicə";
-  if (minutes < 60) return `${minutes} dəq əvvəl`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} saat əvvəl`;
-  return `${Math.floor(hours / 24)} gün əvvəl`;
-}
-
-function Topbar({
-  query,
-  setQuery,
-  unread,
-  messages,
-  onMenu,
-  onMessages,
-  onNotifications,
-  currentUser,
-  activeRole,
-  users = [],
-  onLogin,
-  onLogout,
-  canSwitchUser = true,
-  gitHubSync,
-}) {
-  return (
-    <header className="topbar">
-      <button className="icon-btn mobile-menu" onClick={onMenu} aria-label="Menyunu aç">
-        <Menu size={20} />
-      </button>
-      <div className="searchbox">
-        <Search size={17} />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Müştəri, sifariş, məhsul axtar..."
-        />
-        {query && (
-          <button className="clear-search" onClick={() => setQuery("")} aria-label="Axtarışı sil">
-            <X size={14} />
-          </button>
-        )}
-      </div>
-      <div className="top-actions">
-        {canSwitchUser && (
-          <label className="user-switcher">
-            <UserCog size={16} />
-            <select
-              aria-label="Aktiv istifadəçi"
-              value={currentUser?.id || ""}
-              onChange={(event) => onLogin(event.target.value)}
-            >
-              {users
-                .filter((user) => user.status === "Aktiv")
-                .map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} · {user.role}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
-        <div className="session-pill">
-          <span>{currentUser?.name}</span>
-          <strong>{activeRole?.name}</strong>
-        </div>
-        <button className="icon-btn badge-host" onClick={onMessages} aria-label="Mesajlar">
-          <MessageSquare size={20} />
-          <span className="counter">{messages}</span>
-        </button>
-        <button className="icon-btn badge-host" onClick={onNotifications} aria-label="Bildirişlər">
-          <Bell size={20} />
-          <span className="counter danger">{unread}</span>
-        </button>
-        {gitHubSync && (
-          <div
-            className="sync-pill"
-            title={
-              gitHubSync?.isLovableOnly
-                ? "Layihə Lovable Cloud ilə sinxronizasiya olunur"
-                : gitHubSync?.lastCommit
-                  ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}`
-                  : gitHubSync?.error || "GitHub sync status"
-            }
-          >
-            <GitBranch size={16} />
-            <span className={`sync-dot ${gitHubSync?.status || "idle"}`} />
-            <span className="sync-label">
-              {gitHubSync?.isLovableOnly
-                ? "Lovable Cloud"
-                : gitHubSync?.status === "error"
-                  ? "Sync xətası"
-                  : gitHubSync?.lastSyncAt
-                    ? formatTimeAgo(gitHubSync.lastSyncAt)
-                    : "Yoxlanır..."}
-            </span>
-          </div>
-        )}
-
-        <button className="secondary-btn logout-btn" onClick={onLogout}>
-          Çıxış
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function PageHeader({ meta, onAction, showAction = true, canAct = true, disabledReason = "" }) {
-  if (!meta) return null;
-  const actionLabel = meta.action || "";
-  return (
-    <div className="page-header">
-      <div>
-        <h1>{meta.title}</h1>
-        <p>{meta.subtitle}</p>
-      </div>
-      {showAction && actionLabel && (
-        <button className="primary-btn" onClick={onAction} disabled={!canAct} title={!canAct ? disabledReason : ""}>
-          {actionLabel.includes("Yeni") ? <Plus size={16} /> : <Check size={16} />}
-          {actionLabel}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function PasswordChangeScreen({ user, onLogout }) {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmation, setConfirmation] = useState("");
-  const [error, setError] = useState("");
-
-  async function submit(event) {
-    event.preventDefault();
-    if (newPassword.length < 8 || newPassword !== confirmation) {
-      setError("Yeni parol ən azı 8 simvol olmalı və təkrar ilə uyğun gəlməlidir.");
-      return;
-    }
-    try {
-      await changeRemotePassword(currentPassword, newPassword);
-      window.location.reload();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Parol dəyişdirilmədi.");
-    }
-  }
-
-  return (
-    <div className="login-screen">
-      <div className="login-card">
-        <ShieldCheck size={36} />
-        <h1>Yeni parol təyin edin</h1>
-        <p>{user.name}, təhlükəsizlik üçün ilkin parolu dəyişdirin.</p>
-        <form className="login-form" onSubmit={submit}>
-          <label><span>İlkin parol</span><input type="password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></label>
-          <label><span>Yeni parol</span><input type="password" required minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></label>
-          <label><span>Yeni parolun təkrarı</span><input type="password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
-          {error ? <div className="login-error">{error}</div> : null}
-          <button type="submit" className="primary-btn">Parolu dəyiş</button>
-          <button type="button" className="secondary-btn" onClick={onLogout}>Çıxış</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-const companyModuleCopy = {
-  dashboard: ["İdarəetmə paneli", "Əsas göstəricilər və ümumi əməliyyat icmalı"],
-  crm: ["Müştərilər (CRM)", "Müştəri bazası, əlaqələr və 360° görünüş"],
-  sales: ["Satış", "Sifarişlər, satış axını və bonuslar"],
-  warehouse: ["Anbar və stok", "Qalıqlar, rezervlər və anbar əməliyyatları"],
-  deliveries: ["Təhvil və logistika", "Çatdırılma mərhələləri və təhvil nəzarəti"],
-  finance: ["Maliyyə", "Kassa, xərclər və maliyyə təsdiqləri"],
-  invoices: ["Fakturalar və e-qaimə", "Faktura yaradılması və ödəniş izləmə"],
-  accounting: ["Mühasibat", "Mühasibat yazılışları və maliyyə hesabatları"],
-  tax: ["Vergi təqvimi", "Vergi öhdəlikləri və son tarixlər"],
-  credits: ["Kreditlər", "Kredit satışları və ödəniş cədvəlləri"],
-  receivables: ["Debitor və kreditor", "Alacaq və borc balanslarının idarəsi"],
-  vendors: ["Təchizatçılar", "Vendorlar, kvotalar və satınalma əlaqələri"],
-  projects: ["Layihələr və ROI", "Layihə gəlirliliyi və investisiya analizi"],
-  production: ["İstehsalat", "İstehsal planları və material axını"],
-  hr: ["İnsan resursları (HR)", "Əməkdaşlar, şöbələr və məzuniyyətlər"],
-  kpi: ["KPI və performans", "Hədəflər, nəticələr və bonus hesablamaları"],
-  contracts: ["Müqavilələr", "Müqavilə şablonları və sənədlər"],
-  reports: ["Hesabatlar", "İdarəetmə hesabatları və export"],
-  support: ["Dəstək", "Sorğular, tapşırıqlar və xidmət izləmə"],
-  help: ["Kömək mərkəzi", "Təlimatlar və istifadəçi bələdçisi"],
-  onboarding: ["İlkin quraşdırma", "Şirkətin sistemə qoşulma addımları"],
-  messages: ["Daxili mesajlar", "Komanda daxilində yazışmalar"],
-  notifications: ["Bildirişlər", "Sistem xəbərdarlıqları və avtomatlaşdırma"],
-  api: ["API inteqrasiyaları", "Xarici sistemlər və webhook bağlantıları"],
-  settings: ["Sistem ayarları", "İstifadəçilər, rollar və ümumi sazlamalar"],
-};
-
-function CompanyModulePicker({ modules, value, onToggle }) {
-  return (
-    <div className="company-module-picker">
-      {modules.map((module) => {
-        const Icon = navIcons[module.id] || Boxes;
-        const [label, description] = companyModuleCopy[module.id] || [module.label, "ERP modulu"];
-        const selected = value.includes(module.id);
-        const required = module.id === "dashboard";
-        return (
-          <label key={module.id} className="company-module-card">
-            <input type="checkbox" checked={selected} disabled={required} onChange={() => onToggle(module.id)} />
-            <span className="company-module-icon"><Icon size={18} /></span>
-            <span className="company-module-copy"><strong>{label}</strong><small>{description}</small></span>
-            <span className="company-module-state">{selected ? <Check size={16} /> : null}</span>
-            {required ? <em>Məcburi</em> : null}
-          </label>
-        );
-      })}
-    </div>
-  );
-}
-
-function LoginScreen({ users = [], roles = [], onLogin, authMode = "local", onPasswordLogin, isLoading = false, authError = "" }) {
-  const activeUsers = users.filter((user) => user.status === "Aktiv");
-  const [selectedUserId, setSelectedUserId] = useState(activeUsers[0]?.id || "");
-  const selectedUser = activeUsers.find((user) => user.id === selectedUserId) || activeUsers[0] || null;
-  const selectedRole = roles.find((role) => role.name === selectedUser?.role);
-
-  return (
-    <main className="login-shell">
-      <section className="login-card">
-        <div className="brand-mark login-brand">E</div>
-        <div>
-          <h1>ERP+CRM AZ</h1>
-          <p>İstifadəçi seçin və rol icazələri ilə sistemə daxil olun.</p>
-        </div>
-        {authMode === "password" ? (
-          <PasswordLoginForm onLogin={onPasswordLogin} isLoading={isLoading} error={authError} />
-        ) : (
-          <>
-            <label>
-              <span>İstifadəçi</span>
-              <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
-                {activeUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} · {user.role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {selectedUser && (
-              <div className="login-role-preview">
-                <TwoLine title={selectedUser.email} subtitle={selectedRole?.scope || selectedUser.role} />
-                <StatusBadge status={selectedUser.role} />
-              </div>
-            )}
-            <button className="primary-btn full" onClick={() => onLogin(selectedUserId)} disabled={!selectedUserId}>
-              <ShieldCheck size={16} />
-              Sistemə daxil ol
-            </button>
-          </>
-        )}
-      </section>
-    </main>
-  );
-}
-
-function PasswordLoginForm({ onLogin, isLoading, error }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  function submit(event) {
-    event.preventDefault();
-    onLogin({ email, password });
-  }
-
-  return (
-    <form className="login-password-form" onSubmit={submit}>
-      <label>
-        <span>Email</span>
-        <input type="email" autoComplete="username" value={email} required onChange={(event) => setEmail(event.target.value)} />
-      </label>
-      <label>
-        <span>Parol</span>
-        <input type="password" autoComplete="current-password" value={password} required onChange={(event) => setPassword(event.target.value)} />
-      </label>
-      {error && <p className="form-error">{error}</p>}
-      <button className="primary-btn full" type="submit" disabled={isLoading}>
-        <ShieldCheck size={16} />
-        {isLoading ? "Yoxlanılır..." : "Sistemə daxil ol"}
-      </button>
-    </form>
-  );
-}
-
-// DashboardPage moved to ./pages/DashboardPage.jsx (lazy chunk)
 
 const warehouseImportHeaderAliases = {
   product: ["məhsul", "məhsul adı", "product", "name"],
@@ -10917,958 +10573,6 @@ function TaskItem({ tone, title, value, label }) {
   );
 }
 
-function WarehouseFormModal({ mode, warehouse, onClose, onSubmit }) {
-  const [values, setValues] = useState({
-    code: warehouse?.code || "",
-    name: warehouse?.name || "",
-    city: warehouse?.city || "",
-    address: warehouse?.address || "",
-    manager: warehouse?.manager || "",
-    type: warehouse?.type || "Regional",
-    capacity: warehouse?.capacity || 100,
-    status: warehouse?.status || "Aktiv",
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head">
-          <div>
-            <h2>{mode === "edit" ? "Anbarı redaktə et" : "Yeni anbar yarat"}</h2>
-            <p>Anbar adı, kodu, ünvanı, məsul şəxsi və tutum məlumatlarını daxil edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label>
-            <span>Anbar kodu</span>
-            <input
-              value={values.code}
-              required
-              onChange={(event) => updateValue("code", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Anbar adı</span>
-            <input
-              value={values.name}
-              required
-              onChange={(event) => updateValue("name", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Şəhər</span>
-            <input
-              value={values.city}
-              required
-              onChange={(event) => updateValue("city", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Məsul şəxs</span>
-            <input
-              value={values.manager}
-              required
-              onChange={(event) => updateValue("manager", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Növ</span>
-            <select value={values.type} onChange={(event) => updateValue("type", event.target.value)}>
-              <option>Mərkəzi</option>
-              <option>Regional</option>
-              <option>Təhvil</option>
-              <option>Servis</option>
-            </select>
-          </label>
-          <label>
-            <span>Tutum</span>
-            <input
-              type="number"
-              min="0"
-              value={values.capacity}
-              required
-              onChange={(event) => updateValue("capacity", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
-              <option>Aktiv</option>
-              <option>Passiv</option>
-              <option>Təmir</option>
-            </select>
-          </label>
-          <label className="full">
-            <span>Ünvan</span>
-            <input
-              value={values.address}
-              required
-              onChange={(event) => updateValue("address", event.target.value)}
-            />
-          </label>
-          <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>
-              Ləğv et
-            </button>
-            <button type="submit" className="primary-btn">
-              {mode === "edit" ? "Yadda saxla" : "Anbar yarat"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
-  const [values, setValues] = useState({
-    name: product?.name || "",
-    sku: product?.sku || "",
-    category: product?.category || "Elektronika",
-    unit: product?.unit || "ədəd",
-    costPrice: product?.costPrice || 0,
-    salePrice: product?.salePrice || 0,
-    reorderLevel: product?.reorderLevel || 0,
-    serialTracked: product?.serialTracked ? "Bəli" : "Xeyr",
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head">
-          <div>
-            <h2>{product ? "Məhsulu redaktə et" : "Yeni məhsul"}</h2>
-            <p>SKU, qiymət, minimum stok və serial izləmə qaydasını təyin edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label>
-            <span>Məhsul adı</span>
-            <input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
-          </label>
-          <label>
-            <span>SKU</span>
-            <input value={values.sku} required onChange={(event) => updateValue("sku", event.target.value)} />
-          </label>
-          <label>
-            <span>Kateqoriya</span>
-            <select value={values.category} onChange={(event) => updateValue("category", event.target.value)}>
-              <option>Elektronika</option>
-              <option>Məişət texnikası</option>
-              <option>Aksesuar</option>
-              <option>Xidmət</option>
-              <option>Digər</option>
-            </select>
-          </label>
-          <label>
-            <span>Ölçü vahidi</span>
-            <select value={values.unit} onChange={(event) => updateValue("unit", event.target.value)}>
-              <option>ədəd</option>
-              <option>qutu</option>
-              <option>kg</option>
-              <option>metr</option>
-              <option>litr</option>
-            </select>
-          </label>
-          <label>
-            <span>Minimum stok</span>
-            <input type="number" min="0" value={values.reorderLevel} onChange={(event) => updateValue("reorderLevel", event.target.value)} />
-          </label>
-          <label>
-            <span>Alış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.costPrice} onChange={(event) => updateValue("costPrice", event.target.value)} />
-          </label>
-          <label>
-            <span>Satış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.salePrice} onChange={(event) => updateValue("salePrice", event.target.value)} />
-          </label>
-          <label className="full">
-            <span>IMEI / serial izləmə</span>
-            <select value={values.serialTracked} onChange={(event) => updateValue("serialTracked", event.target.value)}>
-              <option>Bəli</option>
-              <option>Xeyr</option>
-            </select>
-          </label>
-          <div className="modal-actions">
-            {onDelete && (
-              <button type="button" className="secondary-btn danger-outline" onClick={onDelete}>
-                <Trash2 size={16} /> Sil
-              </button>
-            )}
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn">
-              <Check size={16} />
-              {product ? "Yadda saxla" : "Məhsul yarat"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HrEmployeeModal({ employee = null, employees = [], departments: departmentRecords = [], onClose, onSubmit }) {
-  const existingManager = employee ? getEmployeeManager(employee, employees) : null;
-  const savedDocumentsComplete =
-    employee?.documentReviewRequired || employee?.hrStatus === "Məlumat gözləyir"
-      ? Number(employee.documentsComplete || 0)
-      : 100;
-  const departments = [...new Set([
-    ...employees.map((employee) => employee.department),
-    ...departmentRecords.map((department) => department.name),
-  ].filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "az"),
-  );
-  const parentDepartments = [...new Set([
-    ...departments,
-    ...employees.map((employee) => getDepartmentParentName(employee)),
-    ...departmentRecords.map((department) => department.parentDepartment),
-  ].filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "az"),
-  );
-  const [values, setValues] = useState({
-    name: employee?.name || "",
-    position: employee?.position || "",
-    department: employee?.department || "",
-    departmentParent: employee ? getDepartmentParentName(employee) : "",
-    managerId: existingManager ? getEmployeeKey(existingManager) : "",
-    level: employee ? getEmployeeLevel(employee) : "Komanda üzvü",
-    salary: employee?.salary ?? "",
-    kpi: employee?.kpi ?? "85",
-    hireDate: employee?.hireDate || currentBusinessDate,
-    workMode: employee?.workMode || "Ofis",
-    shift: employee?.shift || "09:00-18:00",
-    employmentType: employee?.employmentType || "Tam ştat",
-    leaveBalance: employee?.leaveBalance ?? "0",
-    documentsComplete: String(savedDocumentsComplete),
-    hrStatus: employee?.hrStatus === "Məlumat gözləyir" ? "Məlumat gözləyir" : "Stabil",
-    skills: Array.isArray(employee?.skills) ? employee.skills.join(", ") : "",
-  });
-  const managerOptions = employees.filter((item) => getEmployeeKey(item) !== getEmployeeKey(employee || {}));
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit({ ...values, documentsComplete: Number(values.documentsComplete || 0) });
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card hr-employee-modal">
-        <div className="modal-head">
-          <div>
-            <h2>{employee ? "Əməkdaşı redaktə et" : "Yeni əməkdaş"}</h2>
-            <p>{employee ? "Əməkdaşın şəxsi, iş və tabeçilik məlumatlarını yeniləyin." : "Şöbə və tabeçilik məlumatını daxil edin."}</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <form className="modal-form" onSubmit={submit}>
-          <label><span>Ad Soyad</span><input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} /></label>
-          <label><span>Vəzifə</span><input value={values.position} required onChange={(event) => updateValue("position", event.target.value)} /></label>
-          <label>
-            <span>Şöbə</span>
-            <input value={values.department} list="employee-departments" required onChange={(event) => updateValue("department", event.target.value)} />
-            <datalist id="employee-departments">{departments.map((department) => <option key={department} value={department} />)}</datalist>
-          </label>
-          <label>
-            <span>Üst şöbə</span>
-            <input value={values.departmentParent} list="employee-parent-departments" onChange={(event) => updateValue("departmentParent", event.target.value)} />
-            <datalist id="employee-parent-departments"><option value="" />{parentDepartments.map((department) => <option key={department} value={department} />)}</datalist>
-          </label>
-          <label>
-            <span>Kimə tabedir</span>
-            <select value={values.managerId} onChange={(event) => updateValue("managerId", event.target.value)}>
-              <option value="">Birbaşa rəhbərlik</option>
-              {managerOptions.map((manager) => <option key={getEmployeeKey(manager)} value={getEmployeeKey(manager)}>{manager.name} · {manager.position}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Səviyyə</span>
-            <select value={values.level} onChange={(event) => updateValue("level", event.target.value)}>{hrLevelOptions.map((level) => <option key={level}>{level}</option>)}</select>
-          </label>
-          <label><span>Maaş</span><input type="number" min="0" value={values.salary} required onChange={(event) => updateValue("salary", event.target.value)} /></label>
-          <label><span>KPI</span><input type="number" min="0" value={values.kpi} onChange={(event) => updateValue("kpi", event.target.value)} /></label>
-          <label><span>Sənəd uyğunluğu, %</span><input type="number" min="0" max="100" value={values.documentsComplete} onChange={(event) => updateValue("documentsComplete", event.target.value)} /></label>
-          <label><span>HR statusu</span><select value={values.hrStatus} onChange={(event) => updateValue("hrStatus", event.target.value)}><option>Stabil</option><option>Məlumat gözləyir</option></select></label>
-          <label><span>İşə qəbul tarixi</span><input type="date" value={values.hireDate} onChange={(event) => updateValue("hireDate", event.target.value)} /></label>
-          <label><span>İş rejimi</span><select value={values.workMode} onChange={(event) => updateValue("workMode", event.target.value)}><option>Ofis</option><option>Hybrid</option><option>Sahə</option><option>Uzaqdan</option></select></label>
-          <label><span>Növbə</span><input value={values.shift} onChange={(event) => updateValue("shift", event.target.value)} /></label>
-          <label><span>Məşğulluq tipi</span><select value={values.employmentType} onChange={(event) => updateValue("employmentType", event.target.value)}><option>Tam ştat</option><option>Yarım ştat</option><option>Müqaviləli</option><option>Sınaq müddəti</option></select></label>
-          <label><span>Məzuniyyət balansı</span><input type="number" min="0" value={values.leaveBalance} onChange={(event) => updateValue("leaveBalance", event.target.value)} /></label>
-          <label className="full"><span>Bacarıqlar</span><input value={values.skills} onChange={(event) => updateValue("skills", event.target.value)} /></label>
-          <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn">{employee ? <Check size={16} /> : <Plus size={16} />}{employee ? "Yadda saxla" : "Əməkdaş yarat"}</button></div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HrDepartmentModal({ employees = [], departments = [], onClose, onSubmit }) {
-  const parentDepartments = [...new Set([
-    ...employees.map((employee) => employee.department),
-    ...employees.map((employee) => getDepartmentParentName(employee)),
-    ...departments.map((department) => department.name),
-    ...departments.map((department) => department.parentDepartment),
-  ].filter(Boolean))].sort((a, b) => a.localeCompare(b, "az"));
-  const [values, setValues] = useState({ name: "", parentDepartment: "", description: "", status: "Aktiv" });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card hr-department-modal">
-        <div className="modal-head">
-          <div>
-            <h2>Yeni şöbə</h2>
-            <p>Şöbəni struktur ağacına əlavə edin və istəsəniz onu üst şöbəyə bağlayın.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <form className="modal-form" onSubmit={submit}>
-          <label><span>Şöbə adı</span><input value={values.name} required autoFocus onChange={(event) => updateValue("name", event.target.value)} /></label>
-          <label>
-            <span>Üst şöbə</span>
-            <input value={values.parentDepartment} list="new-department-parents" onChange={(event) => updateValue("parentDepartment", event.target.value)} />
-            <datalist id="new-department-parents"><option value="" />{parentDepartments.map((department) => <option key={department} value={department} />)}</datalist>
-          </label>
-          <label className="full"><span>Qısa izah</span><textarea value={values.description} onChange={(event) => updateValue("description", event.target.value)} /></label>
-          <label><span>Status</span><select value={values.status} onChange={(event) => updateValue("status", event.target.value)}><option>Aktiv</option><option>Planlanır</option><option>Passiv</option></select></label>
-          <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn"><Plus size={16} /> Şöbə əlavə et</button></div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HrEmployeeDeleteModal({ employee, employees = [], onClose, onConfirm }) {
-  const employeeId = getEmployeeKey(employee);
-  const directReports = employees.filter(
-    (item) => item.managerId === employeeId || (!item.managerId && item.managerName === employee.name),
-  );
-  const directReportIds = new Set(directReports.map((item) => getEmployeeKey(item)));
-  const replacementOptions = employees.filter(
-    (item) => getEmployeeKey(item) !== employeeId && !directReportIds.has(getEmployeeKey(item)),
-  );
-  const currentManager = getEmployeeManager(employee, employees);
-  const [replacementManagerId, setReplacementManagerId] = useState(
-    currentManager ? getEmployeeKey(currentManager) : "",
-  );
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card hr-delete-modal">
-        <div className="modal-head">
-          <div>
-            <h2>Əməkdaşı sil</h2>
-            <p>Bu əməliyyat əməkdaşı HR reyestrindən silir və audit izini saxlayır.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <div className="hr-delete-summary">
-          <AvatarLine initials={employee.initials} title={employee.name} subtitle={`${employee.position} · ${employee.department}`} />
-          <span>{directReports.length ? `${directReports.length} əməkdaş bu şəxsə tabedir` : "Birbaşa tabe əməkdaş yoxdur"}</span>
-        </div>
-        {directReports.length > 0 && (
-          <label className="hr-delete-reassignment">
-            <span>Tabe əməkdaşların yeni rəhbəri</span>
-            <select value={replacementManagerId} onChange={(event) => setReplacementManagerId(event.target.value)}>
-              <option value="">Birbaşa rəhbərlik</option>
-              {replacementOptions.map((manager) => <option key={getEmployeeKey(manager)} value={getEmployeeKey(manager)}>{manager.name} · {manager.position}</option>)}
-            </select>
-            <small>{directReports.map((report) => report.name).join(", ")}</small>
-          </label>
-        )}
-        <div className="modal-actions">
-          <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-          <button type="button" className="secondary-btn danger-outline" onClick={() => onConfirm(replacementManagerId)}><Trash2 size={16} /> Sil</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HrLeaveRequestModal({ employees = [], onClose, onSubmit }) {
-  const [values, setValues] = useState({
-    employeeId: employees[0] ? getEmployeeKey(employees[0]) : "",
-    type: "İllik məzuniyyət",
-    from: currentBusinessDate,
-    to: currentBusinessDate,
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card hr-operation-modal">
-        <div className="modal-head">
-          <div>
-            <h2>Məzuniyyət qeydi</h2>
-            <p>Əməkdaş, məzuniyyət növü və tarix aralığını qeyd edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <form className="modal-form" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
-          <label><span>Əməkdaş</span><select value={values.employeeId} required onChange={(event) => updateValue("employeeId", event.target.value)}><option value="">Əməkdaş seçin</option>{employees.map((employee) => <option key={getEmployeeKey(employee)} value={getEmployeeKey(employee)}>{employee.name} · {employee.department}</option>)}</select></label>
-          <label><span>Məzuniyyət növü</span><select value={values.type} onChange={(event) => updateValue("type", event.target.value)}><option>İllik məzuniyyət</option><option>Ödənişsiz məzuniyyət</option><option>Xəstəlik vərəqəsi</option><option>Ezamiyyət</option></select></label>
-          <label><span>Başlanğıc tarixi</span><input type="date" value={values.from} required onChange={(event) => updateValue("from", event.target.value)} /></label>
-          <label><span>Bitmə tarixi</span><input type="date" value={values.to} required onChange={(event) => updateValue("to", event.target.value)} /></label>
-          <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn"><CalendarClock size={16} /> Qeyd yarat</button></div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HrVacancyModal({ employees = [], departments = [], onClose, onSubmit }) {
-  const departmentOptions = [...new Set([
-    ...employees.map((employee) => employee.department),
-    ...departments.map((department) => department.name),
-  ].filter(Boolean))].sort((a, b) => a.localeCompare(b, "az"));
-  const [values, setValues] = useState({
-    role: "",
-    department: departmentOptions[0] || "",
-    owner: "HR",
-    targetDate: currentBusinessDate,
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card hr-operation-modal">
-        <div className="modal-head">
-          <div>
-            <h2>Yeni vakansiya</h2>
-            <p>Rol, şöbə və hədəf tarixi qeyd etməklə recruitment pipeline başlayın.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <form className="modal-form" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
-          <label><span>Rol</span><input value={values.role} required autoFocus onChange={(event) => updateValue("role", event.target.value)} /></label>
-          <label><span>Şöbə</span><input value={values.department} list="vacancy-departments" required onChange={(event) => updateValue("department", event.target.value)} /><datalist id="vacancy-departments">{departmentOptions.map((department) => <option key={department} value={department} />)}</datalist></label>
-          <label><span>Owner</span><input value={values.owner} required onChange={(event) => updateValue("owner", event.target.value)} /></label>
-          <label><span>Hədəf tarixi</span><input type="date" value={values.targetDate} onChange={(event) => updateValue("targetDate", event.target.value)} /></label>
-          <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn"><Plus size={16} /> Vakansiya yarat</button></div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function FinanceAccountModal({ account, onClose, onSubmit }) {
-  const [values, setValues] = useState({
-    name: account?.name || "",
-    code: account?.code || "",
-    type: account?.type || "Kassa",
-    currency: account?.currency || "AZN",
-    openingBalance: account?.openingBalance || 0,
-    status: account?.status || "Aktiv",
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head">
-          <div>
-            <h2>{account ? "Hesabı redaktə et" : "Yeni maliyyə hesabı"}</h2>
-            <p>Kassa və bank açılış balansını düzgün qeyd edin; bu dəyər maliyyə hesabatlarına daxil olur.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label>
-            <span>Hesab adı</span>
-            <input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
-          </label>
-          <label>
-            <span>Hesab kodu</span>
-            <input value={values.code} required onChange={(event) => updateValue("code", event.target.value)} />
-          </label>
-          <label>
-            <span>Tip</span>
-            <select value={values.type} onChange={(event) => updateValue("type", event.target.value)}>
-              <option>Kassa</option>
-              <option>Bank</option>
-              <option>POS</option>
-            </select>
-          </label>
-          <label>
-            <span>Valyuta</span>
-            <select value={values.currency} onChange={(event) => updateValue("currency", event.target.value)}>
-              <option>AZN</option>
-              <option>USD</option>
-              <option>EUR</option>
-            </select>
-          </label>
-          <label>
-            <span>Açılış balansı</span>
-            <input type="number" min="0" step="0.01" value={values.openingBalance} onChange={(event) => updateValue("openingBalance", event.target.value)} />
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
-              <option>Aktiv</option>
-              <option>Passiv</option>
-            </select>
-          </label>
-          <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn"><Check size={16} /> Yadda saxla</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function StockIntakeModal({ warehouses, products = [], onClose, onSubmit }) {
-  const [values, setValues] = useState({
-    warehouseId: warehouses[0]?.id || "",
-    product: "",
-    qty: 1,
-    price: 0,
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head">
-          <div>
-            <h2>İlkin mədaxil</h2>
-            <p>İlk məhsulu seçilmiş anbara daxil edin. Məhsul avtomatik ümumi stokda da görünəcək.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label className="full">
-            <span>Anbar</span>
-            <select
-              value={values.warehouseId}
-              required
-              onChange={(event) => updateValue("warehouseId", event.target.value)}
-            >
-              {warehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name} · {warehouse.city}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="full">
-            <span>Məhsul adı</span>
-            {products.length > 0 ? (
-              <select
-                value={values.product}
-                required
-                onChange={(event) => {
-                  const selected = products.find((product) => product.name === event.target.value);
-                  setValues((current) => ({
-                    ...current,
-                    product: event.target.value,
-                    price: selected?.salePrice ?? current.price,
-                  }));
-                }}
-              >
-                <option value="">Məhsul seçin</option>
-                {products.filter((product) => product.status !== "Passiv").map((product) => (
-                  <option key={product.id} value={product.name}>{product.sku} · {product.name}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={values.product}
-                required
-                onChange={(event) => updateValue("product", event.target.value)}
-              />
-            )}
-          </label>
-          <label>
-            <span>Miqdar</span>
-            <input
-              type="number"
-              min="1"
-              value={values.qty}
-              required
-              onChange={(event) => updateValue("qty", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Satış qiyməti</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={values.price}
-              required
-              onChange={(event) => updateValue("price", event.target.value)}
-            />
-          </label>
-          <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>
-              Ləğv et
-            </button>
-            <button type="submit" className="primary-btn">
-              <Plus size={16} />
-              Mədaxil et
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function VendorFormModal({ vendor, onClose, onSubmit, onDelete }) {
-  const normalizedVendor = normalizeVendor(vendor || {});
-  const [values, setValues] = useState({
-    name: vendor?.name || "",
-    country: vendor?.country || "",
-    sku: vendor?.sku ?? 0,
-    quota: vendor?.quota ?? 0,
-    sold: vendor?.sold ?? 0,
-    status: vendor?.status || "Aktiv",
-    contact: vendor?.contact || "",
-    phone: vendor?.phone || "",
-    email: vendor?.email || "",
-    leadTimeDays: vendor?.leadTimeDays ?? 14,
-    paymentTerms: vendor?.paymentTerms || "30 gün",
-    note: vendor?.note || "",
-  });
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card vendor-form-modal">
-        <div className="modal-head">
-          <div>
-            <h2>{vendor ? "Vendoru redaktə et" : "Yeni vendor"}</h2>
-            <p>Vendor məlumatları, kontakt, kvota və təchizat şərtlərini bir yerdə idarə edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        {vendor && (
-          <div className="vendor-form-summary">
-            <TwoLine title={normalizedVendor.name} subtitle={`${normalizedVendor.country} · ${normalizedVendor.sku} SKU`} />
-            <ProgressRow value={normalizedVendor.quota > 0 ? (normalizedVendor.sold / normalizedVendor.quota) * 100 : 0} caption={`${normalizedVendor.sold}/${normalizedVendor.quota} kvota`} compact />
-          </div>
-        )}
-        <form onSubmit={submit} className="modal-form">
-          <label>
-            <span>Vendor adı</span>
-            <input value={values.name} required autoFocus onChange={(event) => updateValue("name", event.target.value)} />
-          </label>
-          <label>
-            <span>Ölkə</span>
-            <input value={values.country} required onChange={(event) => updateValue("country", event.target.value)} />
-          </label>
-          <label>
-            <span>SKU sayı</span>
-            <input type="number" min="0" value={values.sku} required onChange={(event) => updateValue("sku", event.target.value)} />
-          </label>
-          <label>
-            <span>Kvota</span>
-            <input type="number" min="0" value={values.quota} required onChange={(event) => updateValue("quota", event.target.value)} />
-          </label>
-          <label>
-            <span>Satılıb</span>
-            <input type="number" min="0" value={values.sold} onChange={(event) => updateValue("sold", event.target.value)} />
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
-              <option>Aktiv</option>
-              <option>Nəzarət</option>
-              <option>Risk</option>
-              <option>Passiv</option>
-            </select>
-          </label>
-          <label>
-            <span>Kontakt şəxs</span>
-            <input value={values.contact} onChange={(event) => updateValue("contact", event.target.value)} />
-          </label>
-          <label>
-            <span>Telefon</span>
-            <input value={values.phone} onChange={(event) => updateValue("phone", event.target.value)} />
-          </label>
-          <label>
-            <span>Email</span>
-            <input type="email" value={values.email} onChange={(event) => updateValue("email", event.target.value)} />
-          </label>
-          <label>
-            <span>Lead time, gün</span>
-            <input type="number" min="0" value={values.leadTimeDays} onChange={(event) => updateValue("leadTimeDays", event.target.value)} />
-          </label>
-          <label className="full">
-            <span>Ödəniş şərti</span>
-            <input value={values.paymentTerms} onChange={(event) => updateValue("paymentTerms", event.target.value)} />
-          </label>
-          <label className="full">
-            <span>Qeyd</span>
-            <input value={values.note} placeholder="Müqavilə, servis, çatdırılma və ya keyfiyyət qeydi" onChange={(event) => updateValue("note", event.target.value)} />
-          </label>
-          <div className="modal-actions vendor-modal-actions">
-            {onDelete && (
-              <button type="button" className="secondary-btn danger-outline" onClick={onDelete}>
-                <Trash2 size={16} />
-                Sil
-              </button>
-            )}
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn"><Check size={16} /> Yadda saxla</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function getProductProcurementSnapshot(productName, warehouseStock = {}, products = [], purchaseOrders = []) {
-  const product = (products || []).find((item) => item.name === productName);
-  const productsByName = buildProductLookup(products);
-  const orderCoverage = buildPurchaseOrderCoverage(purchaseOrders);
-  const stockRows = Object.values(warehouseStock).flatMap((items) => items || []).filter((item) => item.product === productName);
-  const total = stockRows.reduce((sum, item) => sum + Number(item.total || 0), 0);
-  const reserved = stockRows.reduce((sum, item) => sum + Number(item.reserved || 0), 0);
-  const available = Math.max(0, total - reserved);
-  const reorderPoint = getReorderPoint(
-    {
-      product: productName,
-      total,
-      reserved,
-      price: Number(product?.salePrice || stockRows[0]?.price || 0),
-      reorderLevel: product?.reorderLevel,
-    },
-    productsByName,
-  );
-  const targetQty = Math.max(reorderPoint > 0 ? reorderPoint * 2 : 0, 4);
-  const suggestedQty = Math.max(0, targetQty - available);
-  const coverage = orderCoverage.get(normalize(productName)) || { orderedQty: 0, count: 0, latest: null };
-  return {
-    product,
-    total,
-    reserved,
-    available,
-    reorderPoint,
-    targetQty,
-    suggestedQty,
-    orderedQty: Number(coverage.orderedQty || 0),
-    openPoCount: Number(coverage.count || 0),
-    latestPoId: coverage.latest?.id || "",
-    orderGap: Math.max(0, suggestedQty - Number(coverage.orderedQty || 0)),
-  };
-}
-
-function FactoryPurchaseOrderModal({
-  vendors = [],
-  warehouses = [],
-  products = [],
-  warehouseStock = {},
-  purchaseOrders = [],
-  onClose,
-  onSubmit,
-}) {
-  const productOptions = products.filter((product) => product.status !== "Passiv");
-  const firstProduct = productOptions[0] || null;
-  const initialSnapshot = getProductProcurementSnapshot(firstProduct?.name || "", warehouseStock, products, purchaseOrders);
-  const [values, setValues] = useState({
-    product: firstProduct?.name || "",
-    vendor: vendors[0]?.name || "",
-    supplierSource: vendors[0]?.name || "",
-    warehouseId: warehouses[0]?.id || "",
-    qty: Math.max(1, initialSnapshot.orderGap || initialSnapshot.suggestedQty || 1),
-    unitCost: Number(firstProduct?.costPrice || 0),
-    salePrice: Number(firstProduct?.salePrice || firstProduct?.costPrice || 0),
-    expectedAt: formatDateInput(addDays(currentBusinessDate, 14)),
-    note: "",
-  });
-  const snapshot = getProductProcurementSnapshot(values.product, warehouseStock, products, purchaseOrders);
-  const amount = Math.max(0, Math.round(Number(values.qty || 0) * Number(values.unitCost || 0)));
-
-  function updateValue(field, value) {
-    setValues((current) => ({ ...current, [field]: value }));
-  }
-
-  function selectProduct(productName) {
-    const nextProduct = products.find((product) => product.name === productName);
-    const nextSnapshot = getProductProcurementSnapshot(productName, warehouseStock, products, purchaseOrders);
-    setValues((current) => ({
-      ...current,
-      product: productName,
-      qty: Math.max(1, nextSnapshot.orderGap || nextSnapshot.suggestedQty || current.qty || 1),
-      unitCost: Number(nextProduct?.costPrice || current.unitCost || 0),
-      salePrice: Number(nextProduct?.salePrice || current.salePrice || nextProduct?.costPrice || 0),
-    }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    const saved = onSubmit({
-      ...values,
-      qty: Number(values.qty || 0),
-      unitCost: Number(values.unitCost || 0),
-      salePrice: Number(values.salePrice || 0),
-      amount,
-      available: snapshot.available,
-      reorderPoint: snapshot.reorderPoint,
-      orderGap: snapshot.orderGap || Number(values.qty || 0),
-      procurementType: "Zavod sifarişi",
-    });
-    if (saved !== false) onClose();
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card factory-order-modal">
-        <div className="modal-head">
-          <div>
-            <h2>Zavod sifarişi yarat</h2>
-            <p>Məhsulun hardan alındığını, sayını, alış qiymətini və gözlənən mədaxil tarixini qeyd edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label className="full">
-            <span>Məhsul</span>
-            <select value={values.product} required onChange={(event) => selectProduct(event.target.value)}>
-              <option value="">Məhsul seçin</option>
-              {productOptions.map((product) => (
-                <option key={product.id} value={product.name}>{product.sku} · {product.name}</option>
-              ))}
-            </select>
-          </label>
-          <div className="factory-order-snapshot full">
-            <div><span>Satış üçün</span><strong>{snapshot.available}</strong></div>
-            <div><span>Minimum</span><strong>{snapshot.reorderPoint || "—"}</strong></div>
-            <div><span>Açıq sifariş</span><strong>{snapshot.orderedQty}</strong></div>
-            <div><span>Təklif</span><strong>{snapshot.orderGap || snapshot.suggestedQty || 1}</strong></div>
-          </div>
-          <label>
-            <span>Haradan alınır</span>
-            <input
-              list="factory-vendors"
-              value={values.supplierSource}
-              required
-              onChange={(event) => {
-                updateValue("supplierSource", event.target.value);
-                updateValue("vendor", event.target.value);
-              }}
-            />
-            <datalist id="factory-vendors">
-              {vendors.map((vendor) => <option key={vendor.name} value={vendor.name} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Anbar</span>
-            <select value={values.warehouseId} required onChange={(event) => updateValue("warehouseId", event.target.value)}>
-              {warehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>{warehouse.name} · {warehouse.city}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Miqdar</span>
-            <input type="number" min="1" value={values.qty} required onChange={(event) => updateValue("qty", event.target.value)} />
-          </label>
-          <label>
-            <span>Alış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.unitCost} required onChange={(event) => updateValue("unitCost", event.target.value)} />
-          </label>
-          <label>
-            <span>Stok/satış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.salePrice} required onChange={(event) => updateValue("salePrice", event.target.value)} />
-          </label>
-          <label>
-            <span>Gözlənən tarix</span>
-            <input type="date" value={values.expectedAt} onChange={(event) => updateValue("expectedAt", event.target.value)} />
-          </label>
-          <label className="full">
-            <span>Qeyd</span>
-            <input value={values.note} placeholder="Zavod partiyası, invoice və ya çatdırılma qeydi" onChange={(event) => updateValue("note", event.target.value)} />
-          </label>
-          <div className="factory-order-total full">
-            <span>Toplam alış məbləği</span>
-            <strong>{money(amount)}</strong>
-          </div>
-          <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn"><Plus size={16} /> PO yarat</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function WarehouseImportModal({ warehouses, onClose, onImport }) {
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState("");
@@ -11958,1004 +10662,6 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
   );
 }
 
-function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
-  const customers = orderOptions.customers || [];
-  const stock = orderOptions.stock || [];
-  const warehouses = orderOptions.warehouses || [];
-  const warehouseStock = orderOptions.warehouseStock || {};
-  const sellers = orderOptions.sellers || [];
-  const delivered = order.status === "Təhvil verilib";
-  const firstWarehouseId = order.warehouseId || warehouses[0]?.id || "";
-  const firstSeller = sellers[0] || { name: "" };
-
-  const getStockOptions = (targetWarehouseId) => {
-    const rows = warehouseStock[targetWarehouseId]?.length ? warehouseStock[targetWarehouseId] : stock;
-    const byProduct = new Map(rows.map((item) => [item.product, item]));
-    (order.productLines || []).forEach((line) => {
-      if (!byProduct.has(line.product)) {
-        byProduct.set(line.product, {
-          product: line.product,
-          total: Number(line.qty || 0),
-          reserved: Number(line.qty || 0),
-          price: Number(line.price || 0),
-        });
-      }
-    });
-    return [...byProduct.values()];
-  };
-
-  const [warehouseId, setWarehouseId] = useState(firstWarehouseId);
-  const availableStock = getStockOptions(warehouseId);
-  const firstProduct = availableStock[0] || { product: "", price: 0 };
-  const [customerFin, setCustomerFin] = useState(order.fin || customers[0]?.fin || "");
-  const [customerName, setCustomerName] = useState(order.customer || customers.find((customer) => customer.fin === order.fin)?.name || "");
-  const [paymentMethod, setPaymentMethod] = useState(order.paymentMethod || "Nağd");
-  const [creditMonths, setCreditMonths] = useState(order.creditMonths || 12);
-  const [initialPayment, setInitialPayment] = useState(order.initialPayment ?? order.paid ?? 0);
-  const [paid, setPaid] = useState(order.paid ?? order.amount ?? 0);
-  const [amount, setAmount] = useState(order.amount ?? calculateOrderLineTotal(order.productLines || []));
-  const [date, setDate] = useState(order.date || currentBusinessDate);
-  const [status, setStatus] = useState(order.status || stages[0]);
-  const [address, setAddress] = useState(order.address || "");
-  const [note, setNote] = useState(order.note || "");
-  const [productRows, setProductRows] = useState(() => {
-    const rows = normalizeOrderProductLines(order.productLines || []);
-    return (rows.length > 0 ? rows : [{ product: firstProduct.product, qty: 1, price: firstProduct.price }]).map((row) => ({
-      id: createClientId(),
-      ...row,
-    }));
-  });
-  const [sellerRows, setSellerRows] = useState(() => {
-    const rows = getOrderSellerBonuses(order);
-    return (rows.length > 0 ? rows : [{ seller: firstSeller.name, bonus: 0 }]).map((row) => ({
-      id: createClientId(),
-      ...row,
-    }));
-  });
-
-  const selectedCustomer = customers.find((customer) => customer.fin === customerFin);
-  const lineTotal = calculateOrderLineTotal(productRows);
-  const paymentPreview = paymentMethod === "Kredit" ? Number(initialPayment || 0) : Number(paid || 0);
-  const bonusRate = sellerRows.reduce((sum, row) => sum + Number(row.bonus || 0), 0);
-  const canSubmit = Boolean(customerName && warehouseId && productRows.some((row) => row.product) && Number(amount || 0) > 0);
-
-  function changeCustomer(fin) {
-    const customer = customers.find((item) => item.fin === fin);
-    setCustomerFin(fin);
-    if (customer) setCustomerName(customer.name);
-  }
-
-  function changeWarehouse(nextWarehouseId) {
-    const nextStock = getStockOptions(nextWarehouseId);
-    const nextFirst = nextStock[0] || { product: "", price: 0 };
-    setWarehouseId(nextWarehouseId);
-    setProductRows((rows) =>
-      rows.map((row) => {
-        const match = nextStock.find((item) => item.product === row.product) || nextFirst;
-        return {
-          ...row,
-          product: match.product,
-          price: match.price ?? row.price,
-          serials: [],
-        };
-      }),
-    );
-  }
-
-  function changeProduct(rowId, field, value) {
-    setProductRows((rows) =>
-      rows.map((row) => {
-        if (row.id !== rowId) return row;
-        if (field === "product") {
-          const match = availableStock.find((item) => item.product === value);
-          return { ...row, product: value, price: match?.price ?? row.price, serials: [] };
-        }
-        return { ...row, [field]: value };
-      }),
-    );
-  }
-
-  function addProductRow() {
-    setProductRows((rows) => [
-      ...rows,
-      {
-        id: createClientId(),
-        product: firstProduct.product,
-        qty: 1,
-        price: firstProduct.price,
-        serials: [],
-      },
-    ]);
-  }
-
-  function removeProductRow(rowId) {
-    setProductRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== rowId)));
-  }
-
-  function changeSeller(rowId, field, value) {
-    setSellerRows((rows) => rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)));
-  }
-
-  function addSellerRow() {
-    if (sellerRows.length >= 3) return;
-    const used = new Set(sellerRows.map((row) => row.seller));
-    const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
-    setSellerRows((rows) => [...rows, { id: createClientId(), seller: nextSeller.name, bonus: 0 }]);
-  }
-
-  function removeSellerRow(rowId) {
-    setSellerRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== rowId)));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    if (!canSubmit) return;
-    onSubmit({
-      customer: customerName,
-      fin: customerFin,
-      warehouseId,
-      productLines: productRows,
-      sellers: sellerRows,
-      amount: Number(amount || lineTotal),
-      paid,
-      paymentMethod,
-      creditMonths,
-      initialPayment,
-      date,
-      status,
-      address,
-      note,
-      bonusTotal: (paymentPreview * bonusRate) / 100,
-    });
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card order-modal-card">
-        <div className="modal-head order-modal-head">
-          <div>
-            <h2>Satış əməliyyatını redaktə et</h2>
-            <p>{order.id} üzrə müştəri, ödəniş, bonus və rezerv məlumatlarını yeniləyin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="order-modal-form">
-          <section className="order-section">
-            <label className="order-label">MÜŞTƏRİ VƏ ÖDƏNİŞ</label>
-            <div className="order-two-col">
-              <select value={customerFin} onChange={(event) => changeCustomer(event.target.value)}>
-                {customers.map((customer) => (
-                  <option key={customer.fin} value={customer.fin}>
-                    {customer.name} — {customer.fin}
-                  </option>
-                ))}
-                {!customers.some((customer) => customer.fin === customerFin) && <option value={customerFin}>{customerName}</option>}
-              </select>
-              <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
-                <option>Nağd</option>
-                <option>Kart</option>
-                <option>Köçürmə</option>
-                <option>Kredit</option>
-              </select>
-            </div>
-            <div className="order-two-col">
-              <label className="order-sub-field">
-                <span>Müştəri adı</span>
-                <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
-              </label>
-              <label className="order-sub-field">
-                <span>Tarix</span>
-                <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-              </label>
-            </div>
-            <label className="order-sub-field">
-              <span>ANBAR</span>
-              <select value={warehouseId} onChange={(event) => changeWarehouse(event.target.value)} disabled={delivered}>
-                {warehouses.map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name} — {warehouse.city}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <section className="order-section">
-            <div className="section-title-row">
-              <span className="order-label">MƏHSULLAR</span>
-              <button type="button" className="secondary-btn" onClick={addProductRow} disabled={delivered}>
-                <Plus size={16} />
-                Sətr əlavə et
-              </button>
-            </div>
-            <div className="order-lines">
-              {productRows.map((row) => (
-                <div className="order-line-grid" key={row.id}>
-                  <select value={row.product} onChange={(event) => changeProduct(row.id, "product", event.target.value)} disabled={delivered}>
-                    {availableStock.map((item) => (
-                      <option key={item.product} value={item.product}>
-                        {item.product} — {getAvailableQuantity(item)} satış üçün
-                      </option>
-                    ))}
-                  </select>
-                  <input type="number" min="1" value={row.qty} onChange={(event) => changeProduct(row.id, "qty", event.target.value)} disabled={delivered} />
-                  <input type="number" min="0" value={row.price} onChange={(event) => changeProduct(row.id, "price", event.target.value)} disabled={delivered} />
-                  <button type="button" className="line-delete" onClick={() => removeProductRow(row.id)} disabled={delivered} aria-label="Məhsul sətrini sil">
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="order-total edit-order-total">
-              <span>Sətir cəmi: {money(lineTotal)}</span>
-              <label>
-                <span>Yekun məbləğ</span>
-                <input type="number" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} />
-              </label>
-            </div>
-          </section>
-
-          {paymentMethod === "Kredit" ? (
-            <section className="order-section credit-order-section">
-              <span className="order-label">
-                <CreditCard size={16} />
-                KREDİT ŞƏRTLƏRİ
-              </span>
-              <div className="credit-order-grid">
-                <label className="order-sub-field">
-                  <span>Müddət</span>
-                  <select value={creditMonths} onChange={(event) => setCreditMonths(Number(event.target.value))}>
-                    {creditTermOptions.map((month) => (
-                      <option key={month} value={month}>{month} ay</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="order-sub-field">
-                  <span>İlkin ödəniş</span>
-                  <input type="number" min="0" max={amount} value={initialPayment} onChange={(event) => setInitialPayment(event.target.value)} />
-                </label>
-              </div>
-            </section>
-          ) : (
-            <section className="order-section">
-              <label className="order-sub-field">
-                <span>Daxil olan</span>
-                <input type="number" min="0" max={amount} value={paid} onChange={(event) => setPaid(event.target.value)} />
-              </label>
-            </section>
-          )}
-
-          <section className="order-section">
-            <div className="section-title-row">
-              <span className="order-label seller-title">
-                <Users size={16} />
-                SATICI BONUSLARI
-              </span>
-              <button type="button" className="secondary-btn" disabled={sellerRows.length >= 3} onClick={addSellerRow}>
-                <Plus size={16} />
-                Satıcı əlavə et
-              </button>
-            </div>
-            <div className="order-lines">
-              {sellerRows.map((row) => (
-                <div className="seller-line-grid" key={row.id}>
-                  <select value={row.seller} onChange={(event) => changeSeller(row.id, "seller", event.target.value)}>
-                    {sellers.map((seller) => (
-                      <option key={seller.name} value={seller.name}>{seller.name}</option>
-                    ))}
-                    {row.seller && !sellers.some((seller) => seller.name === row.seller) && <option value={row.seller}>{row.seller}</option>}
-                  </select>
-                  <label className="bonus-input">
-                    <input type="number" min="0" max="100" value={row.bonus} onChange={(event) => changeSeller(row.id, "bonus", event.target.value)} />
-                    <span>% bonus</span>
-                  </label>
-                  <button type="button" className="line-delete" onClick={() => removeSellerRow(row.id)} aria-label="Satıcı sətrini sil">
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="order-section">
-            <div className="order-two-col">
-              <label className="order-sub-field">
-                <span>Status</span>
-                <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                  {stages
-                    .filter((stage) => delivered || stage !== "Təhvil verilib")
-                    .map((stage) => (
-                      <option key={stage}>{stage}</option>
-                    ))}
-                </select>
-              </label>
-              <label className="order-sub-field">
-                <span>Ünvan</span>
-                <input value={address} onChange={(event) => setAddress(event.target.value)} />
-              </label>
-            </div>
-            <label className="order-sub-field">
-              <span>Qeyd</span>
-              <textarea value={note} onChange={(event) => setNote(event.target.value)} />
-            </label>
-          </section>
-
-          <div className="modal-actions order-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={!canSubmit}>Yadda saxla</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ExpenseOperationModal({ expense, onClose, onSubmit }) {
-  const [values, setValues] = useState({
-    description: expense.description || "",
-    category: expense.category || "",
-    date: expense.date || currentBusinessDate,
-    amount: expense.amount || 0,
-    status: expense.status || "Təsdiq gözləyir",
-    note: expense.note || "",
-  });
-
-  function updateValue(key, value) {
-    setValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    onSubmit(values);
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head">
-          <div>
-            <h2>Xərc əməliyyatını redaktə et</h2>
-            <p>{expense.id} üzrə məbləğ, kateqoriya və statusu yeniləyin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="modal-form">
-          <label className="full">
-            <span>Təsvir</span>
-            <input value={values.description} onChange={(event) => updateValue("description", event.target.value)} required />
-          </label>
-          <label>
-            <span>Kateqoriya</span>
-            <input value={values.category} onChange={(event) => updateValue("category", event.target.value)} required />
-          </label>
-          <label>
-            <span>Tarix</span>
-            <input type="date" value={values.date} onChange={(event) => updateValue("date", event.target.value)} />
-          </label>
-          <label>
-            <span>Məbləğ</span>
-            <input type="number" min="0" value={values.amount} onChange={(event) => updateValue("amount", event.target.value)} required />
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
-              <option>Təsdiq gözləyir</option>
-              <option>Təsdiq edildi</option>
-              <option>İmtina edildi</option>
-            </select>
-          </label>
-          <label className="full">
-            <span>Qeyd</span>
-            <textarea value={values.note} onChange={(event) => updateValue("note", event.target.value)} />
-          </label>
-          <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn">Yadda saxla</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function OperationDeleteModal({ title, description, warning, confirmDisabled = false, confirmLabel = "Sil", onClose, onConfirm }) {
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card operation-delete-modal">
-        <div className="modal-head">
-          <div>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="operation-delete-warning">
-          <CircleAlert size={18} />
-          <span>{warning}</span>
-        </div>
-        <div className="modal-actions">
-          <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-          <button type="button" className="secondary-btn danger-outline" disabled={confirmDisabled} onClick={onConfirm}>
-            <Trash2 size={16} />
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} }) {
-  const customers = orderOptions.customers;
-  const stock = orderOptions.stock;
-  const sellers = orderOptions.sellers;
-  const warehouses = orderOptions.warehouses || [];
-  const warehouseStock = orderOptions.warehouseStock || {};
-  const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id || "");
-  const availableStock = warehouseStock[warehouseId]?.length ? warehouseStock[warehouseId] : stock;
-  const firstProduct = availableStock[0] || stock[0] || { product: "", price: 0 };
-  const firstSeller = sellers[0] || { name: "" };
-  const [customerFin, setCustomerFin] = useState(customers[0]?.fin || "");
-  const [paymentMethod, setPaymentMethod] = useState(defaults.paymentMethod || "Nağd");
-  const [creditMonths, setCreditMonths] = useState(12);
-  const [initialPayment, setInitialPayment] = useState(0);
-  const [productRows, setProductRows] = useState([
-    {
-      id: createClientId(),
-      product: firstProduct.product,
-      qty: 1,
-      price: firstProduct.price,
-      vatRate: 0,
-      serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
-    },
-  ]);
-  const [sellerRows, setSellerRows] = useState([
-    { id: createClientId(), seller: firstSeller.name, bonus: 3 },
-  ]);
-  const [note, setNote] = useState("");
-  const [internalNotes, setInternalNotes] = useState([
-    { id: createClientId(), recipient: "Maliyyə", text: "" },
-  ]);
-
-  const selectedCustomer = customers.find((customer) => customer.fin === customerFin) || customers[0];
-  const orderSubtotal = productRows.reduce(
-    (sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0),
-    0,
-  );
-  const orderVat = productRows.reduce(
-    (sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0) * Number(item.vatRate || 0) / 100,
-    0,
-  );
-  const orderTotal = orderSubtotal + orderVat;
-  const creditPlan = buildCreditPlan({
-    total: orderTotal,
-    initialPayment,
-    months: creditMonths,
-  });
-  const paidAmount = paymentMethod === "Kredit" ? creditPlan.initialPayment : orderTotal;
-  const bonusRate = sellerRows.reduce((sum, item) => sum + Number(item.bonus || 0), 0);
-  const bonusTotal = (paidAmount * bonusRate) / 100;
-  const selectedSerials = productRows.flatMap((row) => row.serials || []);
-  const backorderRows = productRows
-    .filter((row) => row.product)
-    .map((row) => {
-      const item = availableStock.find((stockItem) => stockItem.product === row.product);
-      const available = item ? getAvailableQuantity(item) : 0;
-      const requested = Math.max(1, Number(row.qty || 1));
-      if (available >= requested) return null;
-      return {
-        rowId: row.id,
-        product: row.product,
-        available,
-        requested,
-        plan: getBackorderPlan({
-          product: row.product,
-          missingQty: requested - available,
-          purchaseOrders: orderOptions.purchaseOrders || [],
-        }),
-      };
-    })
-    .filter(Boolean);
-  
-
-  const canCreateOrder = Boolean(
-    selectedCustomer &&
-      warehouseId &&
-      availableStock.length > 0 &&
-      orderTotal > 0 &&
-      productRows.some((row) => row.product),
-  );
-
-
-  function getRowSerialOptions(row) {
-    const allSerials = getAvailableSerialsForProduct(warehouseStock, warehouseId, row.product);
-    const rowSerials = new Set(row.serials || []);
-    const usedOutsideRow = new Set(selectedSerials.filter((serial) => !rowSerials.has(serial)));
-    return allSerials.filter((serial) => !usedOutsideRow.has(serial) || rowSerials.has(serial));
-  }
-
-  function normalizeRowSerials(product, qty, currentSerials = []) {
-    const amount = Math.max(1, Math.round(Number(qty || 1)));
-    const options = getAvailableSerialsForProduct(warehouseStock, warehouseId, product);
-    if (options.length === 0) return [];
-    const next = [...currentSerials.filter((serial) => options.includes(serial))];
-
-    for (const serial of options) {
-      if (next.length >= amount) break;
-      if (!selectedSerials.includes(serial) && !next.includes(serial)) next.push(serial);
-    }
-
-    return next.slice(0, amount);
-  }
-
-  function changeWarehouse(nextWarehouseId) {
-    const nextStock = warehouseStock[nextWarehouseId]?.length
-      ? warehouseStock[nextWarehouseId]
-      : stock;
-    const nextFirstProduct = nextStock[0] || { product: "", price: 0 };
-    setWarehouseId(nextWarehouseId);
-    setProductRows((rows) =>
-      rows.map((row) => {
-        const match = nextStock.find((item) => item.product === row.product) || nextFirstProduct;
-        return {
-          ...row,
-          product: match.product,
-          price: match.price,
-          serials: getAvailableSerialsForProduct(warehouseStock, nextWarehouseId, match.product).slice(0, Math.max(1, Number(row.qty || 1))),
-        };
-      }),
-    );
-  }
-
-  function changeProduct(rowId, field, value) {
-    setProductRows((rows) =>
-      rows.map((row) => {
-        if (row.id !== rowId) return row;
-        if (field === "product") {
-          const match = availableStock.find((item) => item.product === value);
-          return {
-            ...row,
-            product: value,
-            price: match?.price || row.price,
-            serials: normalizeRowSerials(value, row.qty, []),
-          };
-        }
-        if (field === "qty") {
-          return {
-            ...row,
-            qty: value,
-            serials: normalizeRowSerials(row.product, value, row.serials),
-          };
-        }
-        return { ...row, [field]: value };
-      }),
-    );
-  }
-
-  function changeRowSerial(rowId, index, value) {
-    setProductRows((rows) =>
-      rows.map((row) => {
-        if (row.id !== rowId) return row;
-        const serials = [...(row.serials || [])];
-        serials[index] = value;
-        return { ...row, serials };
-      }),
-    );
-  }
-
-  function addProductRow() {
-    setProductRows((rows) => [
-      ...rows,
-      {
-        id: createClientId(),
-        product: firstProduct.product,
-        qty: 1,
-        price: firstProduct.price,
-        vatRate: 0,
-        serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
-      },
-    ]);
-  }
-
-  function removeProductRow(rowId) {
-    setProductRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== rowId)));
-  }
-
-  function changeSeller(rowId, field, value) {
-    setSellerRows((rows) =>
-      rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
-    );
-  }
-
-  function addSellerRow() {
-    if (sellerRows.length >= 3) return;
-    const used = new Set(sellerRows.map((row) => row.seller));
-    const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
-    setSellerRows((rows) => [
-      ...rows,
-      { id: createClientId(), seller: nextSeller.name, bonus: 1 },
-    ]);
-  }
-
-  function removeSellerRow(rowId) {
-    setSellerRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== rowId)));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    if (!canCreateOrder) return;
-    onCreate(type, {
-      customer: selectedCustomer?.name || "",
-      fin: selectedCustomer?.fin || "",
-      paymentMethod,
-      warehouseId,
-      creditMonths,
-      initialPayment,
-      products: productRows.map((row) => ({
-        ...row,
-        serials: normalizeRowSerials(row.product, row.qty, row.serials),
-      })),
-      sellers: sellerRows,
-      orderTotal,
-      bonusTotal,
-      note,
-      internalNotes,
-    });
-  }
-
-  return (
-    <div className="modal-shell" role="dialog" aria-modal="true">
-      <div className="modal-card order-modal-card">
-        <div className="modal-head order-modal-head">
-          <div>
-            <h2>Yeni Satış Sifarişi</h2>
-            <p>Müştəri, məhsul və satıcı bonus faizlərini daxil edin.</p>
-          </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={submit} className="order-modal-form">
-          <section className="order-section">
-            <label className="order-label" htmlFor="order-customer">
-              MÜŞTƏRİ
-            </label>
-            <div className="order-two-col">
-              <select
-                id="order-customer"
-                value={customerFin}
-                onChange={(event) => setCustomerFin(event.target.value)}
-              >
-                {customers.map((customer) => (
-                  <option key={customer.fin} value={customer.fin}>
-                    {customer.name} — {customer.fin}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Ödəniş tipi"
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
-              >
-                <option>Nağd</option>
-                <option>Kredit</option>
-              </select>
-            </div>
-            <label className="order-sub-field">
-              <span>ANBAR</span>
-              <select
-                aria-label="Rezerv anbarı"
-                value={warehouseId}
-                onChange={(event) => changeWarehouse(event.target.value)}
-              >
-                {warehouses.map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name} — {warehouse.city}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <section className="order-section">
-            <div className="section-title-row">
-              <div>
-                <span className="order-label">DAXİLİ QEYDLƏR</span>
-                <small style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>Qeydin kim üçün olduğunu seçin. Bu məlumat sifariş kartında saxlanacaq.</small>
-              </div>
-              <button type="button" className="secondary-btn" onClick={() => setInternalNotes((rows) => [...rows, { id: createClientId(), recipient: "Maliyyə", text: "" }])}>
-                <Plus size={16} /> Qeyd əlavə et
-              </button>
-            </div>
-            <div className="order-lines">
-              {internalNotes.map((item) => (
-                <div className="order-internal-note-line" key={item.id}>
-                  <select value={item.recipient} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, recipient: event.target.value } : row))}>
-                    <option>Maliyyə</option>
-                    <option>Təhvil əməkdaşı</option>
-                    <option>Anbar</option>
-                    <option>Satış</option>
-                    <option>Rəhbərlik</option>
-                    <option>Ümumi</option>
-                  </select>
-                  <input value={item.text} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, text: event.target.value } : row))} placeholder={`${item.recipient} üçün qeyd yazın…`} />
-                  <button type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={17} /></button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="order-section">
-            <div className="section-title-row">
-              <span className="order-label">MƏHSULLAR</span>
-              <button type="button" className="secondary-btn" onClick={addProductRow}>
-                <Plus size={16} />
-                Sətr əlavə et
-              </button>
-            </div>
-            <div className="order-lines">
-              {productRows.map((row) => (
-                <div className="order-line-grid" key={row.id}>
-                  <select
-                    aria-label="Məhsul seç"
-                    value={row.product}
-                    onChange={(event) => changeProduct(row.id, "product", event.target.value)}
-                  >
-                    {availableStock.map((item) => (
-                      <option key={item.product} value={item.product}>
-                        {item.product} — {item.total - item.reserved} satış üçün
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="Miqdar"
-                    type="number"
-                    min="1"
-                    value={row.qty}
-                    onChange={(event) => changeProduct(row.id, "qty", event.target.value)}
-                  />
-                  <input
-                    aria-label="Qiymət"
-                    type="number"
-                    min="0"
-                    value={row.price}
-                    onChange={(event) => changeProduct(row.id, "price", event.target.value)}
-                  />
-                  <select
-                    aria-label="ƏDV seçimi"
-                    value={row.vatRate || 0}
-                    onChange={(event) => changeProduct(row.id, "vatRate", Number(event.target.value))}
-                  >
-                    <option value="0">ƏDV yoxdur</option>
-                    <option value="18">ƏDV 18%</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="line-delete"
-                    onClick={() => removeProductRow(row.id)}
-                    aria-label="Məhsul sətrini sil"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                  {getRowSerialOptions(row).length > 0 && (
-                    <div className="serial-pick-list">
-                      {Array.from({ length: Math.max(1, Number(row.qty || 1)) }).map((_, index) => (
-                        <label key={`${row.id}-serial-${index}`}>
-                          <span>IMEI #{index + 1}</span>
-                          <select
-                            value={row.serials?.[index] || ""}
-                            onChange={(event) => changeRowSerial(row.id, index, event.target.value)}
-                          >
-                            <option value="">Serial seç</option>
-                            {getRowSerialOptions(row).map((serial) => (
-                              <option key={serial} value={serial}>
-                                {serial}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="order-total">
-              <span>Ara cəm: <b>{money(orderSubtotal)}</b></span>
-              <span>ƏDV: <b>{money(orderVat)}</b></span>
-              <strong>Ümumi: {money(orderTotal)}</strong>
-            </div>
-            {backorderRows.length > 0 && (
-              <div className="order-backorder-box">
-                <div className="order-stock-warning">
-                  <CircleAlert size={16} />
-                  <span>
-                    Anbarda qalıq çatmır — sifariş yaradılır, çatışmayan hissə <strong>backorder</strong> kimi rezervdə
-                    saxlanılır və aşağıdakı addımda bağlanır.
-                  </span>
-                </div>
-                <ul className="order-backorder-list">
-                  {backorderRows.map((row) => (
-                    <li key={row.rowId}>
-                      <strong>{row.product}</strong>
-                      <span>
-                        {row.available}/{row.requested} mövcud · {row.plan?.missingQty} ədəd backorder
-                      </span>
-                      {row.plan && (
-                        <>
-                          <em>
-                            Gözlənilən bağlanma tarixi: <b>{row.plan.expectedLabel}</b>
-                          </em>
-                          <em>
-                            Addım: <b>{row.plan.step}</b> → {row.plan.closeStage}
-                          </em>
-                          <small>{row.plan.stepHint}</small>
-                          {row.plan.uncoveredQty > 0 && (
-                            <small className="order-backorder-gap">
-                              {row.plan.uncoveredQty} ədəd üçün hələ açıq PO yoxdur — satınalma tələbi yaradın.
-                            </small>
-                          )}
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-
-          </section>
-
-          {paymentMethod === "Kredit" && (
-            <section className="order-section credit-order-section">
-              <div className="section-title-row">
-                <span className="order-label">
-                  <CreditCard size={16} />
-                  KREDİT ŞƏRTLƏRİ
-                </span>
-              </div>
-              <div className="credit-order-grid">
-                <label className="order-sub-field">
-                  <span>MÜDDƏT</span>
-                  <select
-                    aria-label="Kredit müddəti"
-                    value={creditMonths}
-                    onChange={(event) => setCreditMonths(Number(event.target.value))}
-                  >
-                    {creditTermOptions.map((month) => (
-                      <option key={month} value={month}>
-                        {month} ay
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="order-sub-field">
-                  <span>İLKİN ÖDƏNİŞ</span>
-                  <input
-                    aria-label="İlkin ödəniş"
-                    type="number"
-                    min="0"
-                    max={orderTotal}
-                    value={initialPayment}
-                    onChange={(event) => setInitialPayment(event.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="credit-plan-summary">
-                <div>
-                  <span>Kredit məbləği</span>
-                  <strong>{money(creditPlan.total)}</strong>
-                </div>
-                <div>
-                  <span>Qalıq</span>
-                  <strong>{money(creditPlan.balance)}</strong>
-                </div>
-                <div>
-                  <span>{creditPlan.months > 1 ? `${creditPlan.months - 1} ay` : "Aylıq"}</span>
-                  <strong>{money(creditPlan.monthly)}</strong>
-                </div>
-                <div>
-                  <span>Son ay</span>
-                  <strong>{money(creditPlan.lastPayment)}</strong>
-                </div>
-              </div>
-              <p className="credit-plan-example">
-                Bölgü: {creditPlan.months > 1 ? `${creditPlan.months - 1} ay ${money(creditPlan.monthly)}, ` : ""}
-                sonuncu ay {money(creditPlan.lastPayment)}.
-              </p>
-            </section>
-          )}
-
-          <section className="order-section">
-            <div className="section-title-row">
-              <span className="order-label seller-title">
-                <Users size={16} />
-                SATICILAR (MAX. 3) — HƏR BİRİ ÖZ BONUS %
-              </span>
-              <button
-                type="button"
-                className="secondary-btn"
-                disabled={sellerRows.length >= 3}
-                onClick={addSellerRow}
-              >
-                <Plus size={16} />
-                Satıcı əlavə et
-              </button>
-            </div>
-            <div className="order-lines">
-              {sellerRows.map((row) => (
-                <div className="seller-line-grid" key={row.id}>
-                  <select
-                    aria-label="Satıcı seç"
-                    value={row.seller}
-                    onChange={(event) => changeSeller(row.id, "seller", event.target.value)}
-                  >
-                    {sellers.length === 0 && <option value="">Satıcı seçilməyib</option>}
-                    {sellers.map((seller) => (
-                      <option key={seller.name} value={seller.name}>
-                        {seller.name}
-                      </option>
-                    ))}
-                  </select>
-                  <label className="bonus-input">
-                    <input
-                      aria-label="Bonus faizi"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={row.bonus}
-                      onChange={(event) => changeSeller(row.id, "bonus", event.target.value)}
-                    />
-                    <span>% bonus</span>
-                  </label>
-                  <button
-                    type="button"
-                    className="line-delete"
-                    onClick={() => removeSellerRow(row.id)}
-                    aria-label="Satıcı sətrini sil"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <p className="bonus-note">
-              Nümunə: müştəri {money(paidAmount || 100)} ödəyərsə, bu sifariş üzrə cəmi{" "}
-              <strong>{bonusRate}%</strong> = <strong>{money(bonusTotal || bonusRate)}</strong> bonus paylanacaq.
-            </p>
-          </section>
-
-          <section className="order-section">
-            <label className="order-label" htmlFor="order-note">
-              QEYD
-            </label>
-            <textarea
-              id="order-note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Çatdırılma şərtləri, xüsusi istəklər..."
-            />
-          </section>
-
-          <div className="modal-actions order-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>
-              Ləğv et
-            </button>
-            <button type="submit" className="primary-btn" disabled={!canCreateOrder}>
-              Sifarişi yarat
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function CreateModal({
   type,
@@ -12994,7 +10700,9 @@ function CreateModal({
   onCreateLeaveRequest,
   onCreateVacancy,
 }) {
-  if (type === "warehouse") {
+  const modalKind = resolveModalKind(type);
+
+  if (modalKind === "warehouse") {
     return (
       <WarehouseFormModal
         mode={mode}
@@ -13011,7 +10719,7 @@ function CreateModal({
     );
   }
 
-  if (type === "stockIntake") {
+  if (modalKind === "stockIntake") {
     return (
       <StockIntakeModal
         warehouses={orderOptions.warehouses}
@@ -13022,11 +10730,11 @@ function CreateModal({
     );
   }
 
-  if (type === "warehouseImport") {
+  if (modalKind === "warehouseImport") {
     return <WarehouseImportModal warehouses={orderOptions.warehouses} onClose={onClose} onImport={onImportWarehouseStock} />;
   }
 
-  if (type === "purchaseOrder") {
+  if (modalKind === "purchaseOrder") {
     return (
       <FactoryPurchaseOrderModal
         vendors={orderOptions.vendors}
@@ -13040,7 +10748,7 @@ function CreateModal({
     );
   }
 
-  if (type === "vendors") {
+  if (modalKind === "vendor") {
     return (
       <VendorFormModal
         vendor={vendor}
@@ -13057,7 +10765,7 @@ function CreateModal({
     );
   }
 
-  if (type === "vendorDelete" && vendor) {
+  if (modalKind === "vendorDelete" && vendor) {
     const openPoCount = (orderOptions.purchaseOrders || []).filter(
       (po) =>
         isPurchaseOrderOpen(po) &&
@@ -13081,7 +10789,7 @@ function CreateModal({
     );
   }
 
-  if (type === "hr") {
+  if (modalKind === "employee") {
     return (
       <HrEmployeeModal
         employee={employee}
@@ -13099,23 +10807,23 @@ function CreateModal({
     );
   }
 
-  if (type === "department") {
+  if (modalKind === "department") {
     return <HrDepartmentModal employees={orderOptions.employees} departments={orderOptions.departments} onClose={onClose} onSubmit={onCreateDepartment} />;
   }
 
-  if (type === "leaveRequest") {
+  if (modalKind === "leaveRequest") {
     return <HrLeaveRequestModal employees={orderOptions.employees} onClose={onClose} onSubmit={onCreateLeaveRequest} />;
   }
 
-  if (type === "vacancy") {
+  if (modalKind === "vacancy") {
     return <HrVacancyModal employees={orderOptions.employees} departments={orderOptions.departments} onClose={onClose} onSubmit={onCreateVacancy} />;
   }
 
-  if (type === "employeeDelete" && employee) {
+  if (modalKind === "employeeDelete" && employee) {
     return <HrEmployeeDeleteModal employee={employee} employees={orderOptions.employees} onClose={onClose} onConfirm={(replacementManagerId) => onDeleteEmployee(getEmployeeKey(employee), replacementManagerId)} />;
   }
 
-  if (type === "product") {
+  if (modalKind === "product") {
     return (
       <ProductFormModal
         product={product}
@@ -13132,7 +10840,7 @@ function CreateModal({
     );
   }
 
-  if (type === "financeAccount") {
+  if (modalKind === "financeAccount") {
     return (
       <FinanceAccountModal
         account={financeAccount}
@@ -13142,11 +10850,11 @@ function CreateModal({
     );
   }
 
-  if (type === "contractPrint" && contract) {
+  if (modalKind === "contractPrint" && contract) {
     return <ContractPrintModal contract={contract} settings={companySettings} onClose={onClose} />;
   }
 
-  if (type === "salesOperation" && salesOrder) {
+  if (modalKind === "salesOperation" && salesOrder) {
     return (
       <SalesOperationModal
         order={salesOrder}
@@ -13157,7 +10865,7 @@ function CreateModal({
     );
   }
 
-  if (type === "salesOperationDelete" && salesOrder) {
+  if (modalKind === "salesOperationDelete" && salesOrder) {
     return (
       <OperationDeleteModal
         title="Satış əməliyyatını sil"
@@ -13169,7 +10877,7 @@ function CreateModal({
     );
   }
 
-  if (type === "expenseOperation" && expense) {
+  if (modalKind === "expenseOperation" && expense) {
     return (
       <ExpenseOperationModal
         expense={expense}
@@ -13179,7 +10887,7 @@ function CreateModal({
     );
   }
 
-  if (type === "expenseOperationDelete" && expense) {
+  if (modalKind === "expenseOperationDelete" && expense) {
     return (
       <OperationDeleteModal
         title="Xərc əməliyyatını sil"
@@ -13191,7 +10899,7 @@ function CreateModal({
     );
   }
 
-  if (type === "sales" || type === "dashboard") {
+  if (modalKind === "salesOrder") {
     return (
       <SalesOrderModal
         type={type}

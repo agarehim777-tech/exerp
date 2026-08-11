@@ -250,6 +250,41 @@ button {
   border-top: 1px solid rgba(255, 255, 255, 0.09);
 }
 
+.sidebar-logout {
+  width: calc(100% - 24px);
+  min-height: 42px;
+  margin: 8px 12px 0;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.05);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.sidebar-logout:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logout:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.sidebar-logout + .admin-card {
+  margin-top: 0;
+}
+
 .avatar,
 .small-avatar {
   flex: 0 0 auto;

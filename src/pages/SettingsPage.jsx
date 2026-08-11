@@ -48,7 +48,9 @@ function SettingsPage({
   notify,
   requiresPassword = false,
   canManageSettings = true,
+  canOverrideUserPermissions = false,
   canRunSystemBackup = true,
+  onOpenAccessCenter,
 }) {
   const [userDraft, setUserDraft] = useState({
     name: "",
@@ -191,6 +193,18 @@ function SettingsPage({
       </Panel>
 
       <Panel className="settings-security-panel">
+        <PanelHeader
+          title="İstifadəçilər, Rollar və İcazələr"
+          subtitle="İstifadəçi, rol, fərdi permission və dəvətləri vahid mərkəzdən idarə edin"
+          icon={UserCog}
+        />
+        <button type="button" className="primary-btn" onClick={onOpenAccessCenter}>
+          <UserCog size={16} />
+          İdarəetmə mərkəzini aç
+        </button>
+      </Panel>
+
+      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
         <PanelHeader title="İstifadəçilər & Login" subtitle="İstifadəçi yaradın, rol bağlayın və real permission görünüşünü yoxlayın" icon={UserCog} />
         <form className="user-create-form" onSubmit={submitUser}>
           <label>
@@ -282,12 +296,17 @@ function SettingsPage({
                   (() => {
                     const roleAllowsModule =
                       isSuperAdmin || !module.permission || (role?.permissions || []).includes(module.permission);
+                    const canEditModule = canOverrideUserPermissions || roleAllowsModule;
                     return (
-                      <label key={`${user.id}-${module.id}`} className="module-access-check" title={!roleAllowsModule ? "Rol bu modulun permission-unu daşımır" : ""}>
+                      <label
+                        key={`${user.id}-${module.id}`}
+                        className="module-access-check"
+                        title={!roleAllowsModule && canOverrideUserPermissions ? "Super Admin fərdi icazəsi" : !roleAllowsModule ? "Rol bu modulun permission-unu daşımır" : ""}
+                      >
                         <input
                           type="checkbox"
-                          checked={isSuperAdmin || (roleAllowsModule && userModuleAccess.includes(module.id))}
-                          disabled={isSuperAdmin || !canManageSettings || !roleAllowsModule}
+                          checked={isSuperAdmin || userModuleAccess.includes(module.id)}
+                          disabled={isSuperAdmin || !canManageSettings || !canEditModule}
                           onChange={() => onToggleUserModule(user.id, module.id)}
                         />
                         <span>{module.label}</span>
@@ -317,7 +336,7 @@ function SettingsPage({
         />
       </Panel>
 
-      <Panel className="settings-security-panel">
+      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
         <PanelHeader title="Rollar & İcazələr" subtitle="Modul səviyyəli girişlər" />
         <label className="role-selector">
           <span>Aktiv rol</span>

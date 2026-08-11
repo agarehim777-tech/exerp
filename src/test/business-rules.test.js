@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getDeliveryStockCheck,
+  userHasEffectivePermission,
 } from "../shared/lib/appDomain.jsx";
 import {
   applyCreditPrincipalPayment,
@@ -86,6 +87,30 @@ describe("inventory business rules", () => {
     expect(full.plan.deliverableTotal).toBe(2);
   });
 
+});
+
+describe("individual permission overrides", () => {
+  const roles = [{ name: "Operator", permissions: ["credits.view"] }];
+
+  it("allows a module explicitly granted outside the assigned role", () => {
+    const user = {
+      role: "Operator",
+      moduleAccess: ["credits"],
+      permissionOverrides: { "credits.manage": true },
+    };
+
+    expect(userHasEffectivePermission(user, roles, "credits.manage")).toBe(true);
+  });
+
+  it("denies a role permission explicitly disabled for the user", () => {
+    const user = {
+      role: "Operator",
+      moduleAccess: ["credits"],
+      permissionOverrides: { "credits.view": false },
+    };
+
+    expect(userHasEffectivePermission(user, roles, "credits.view")).toBe(false);
+  });
 });
 
 describe("receivable business rules", () => {

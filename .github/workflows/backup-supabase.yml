@@ -1,0 +1,65 @@
+name: Backup Supabase database
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: tcqdhwtnjrwpfdxoijmv
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate backup credentials
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || (echo "SUPABASE_ACCESS_TOKEN is missing" && exit 1)
+          test -n "$SUPABASE_DB_PASSWORD" || (echo "SUPABASE_DB_PASSWORD is missing" && exit 1)
+
+      - name: Link production project
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: Create logical backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          folder="backups/$stamp"
+          mkdir -p "$folder"
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --role-only --file "$folder/roles.sql"
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --file "$folder/schema.sql"
+          supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" --data-only --use-copy \
+            --exclude "storage.buckets_vectors" --exclude "storage.vector_indexes" \
+            --file "$folder/data.sql"
+          test -s "$folder/schema.sql"
+          test -s "$folder/data.sql"
+          sha256sum "$folder"/*.sql > "$folder/SHA256SUMS"
+          printf '{"project_ref":"%s","created_at":"%s","commit":"%s"}\n' \
+            "$PROJECT_REF" "$(date -u +%FT%TZ)" "$GITHUB_SHA" > "$folder/manifest.json"
+          tar -czf "supabase-backup-$stamp.tar.gz" -C backups "$stamp"
+
+      - name: Upload encrypted-at-rest backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: supabase-backup-*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+

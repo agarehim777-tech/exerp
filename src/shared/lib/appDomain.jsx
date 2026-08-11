@@ -3362,53 +3362,6 @@ export function hasExpenseCashImpact(expense = {}) {
 
 export const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
 
-export const navIcons = {
-  dashboard: LayoutDashboard,
-  assistant: Sparkles,
-  platform: Building2,
-  crm: Users,
-  "crm-deals": TrendingUp,
-  "crm-activities": MessageSquare,
-  "crm-tasks": ShieldCheck,
-  sales: ShoppingCart,
-  "sales-dashboard": BarChart3,
-  "sales-quotes": FileText,
-  "sales-shipments": Truck,
-  warehouse: Warehouse,
-  stock: Boxes,
-  deliveries: Truck,
-  finance: Wallet,
-  cashbook: Wallet,
-  "ar-invoices": FileText,
-  invoices: FileText,
-  accounting: BarChart3,
-  tax: CalendarClock,
-  credits: CreditCard,
-  receivables: Wallet,
-  vendors: Building2,
-  procurement: ShoppingCart,
-  projects: BarChart3,
-  production: Package,
-  hr: UserCog,
-  kpi: TrendingUp,
-  contracts: FileText,
-  reports: BarChart3,
-  support: MessageSquare,
-  help: FileText,
-  onboarding: ShieldCheck,
-  messages: MessageSquare,
-  notifications: Bell,
-  api: ShieldCheck,
-  settings: Settings,
-  roles: ShieldCheck,
-  "access-check": ShieldCheck,
-  audit: ShieldCheck,
-  periods: FileText,
-  currencies: FileText,
-  "financial-statements": FileText,
-
-};
-
 export function normalizeUserModuleAccess(user, roles) {
   return normalizeUserModuleAccessFromCatalog(user, roles, navItems);
 }
@@ -3427,6 +3380,8 @@ export function userHasEffectivePermission(user, roles, permission) {
   const roleAllows = Array.isArray(role?.permissions) && role.permissions.includes(permission);
   const moduleId = getModuleForPermission(permission);
   const moduleAllows = !moduleId || normalizeUserModuleAccess(user, roles).includes(moduleId);
+  const explicitOverride = user?.permissionOverrides?.[permission];
+  if (typeof explicitOverride === "boolean") return explicitOverride && moduleAllows;
   return roleAllows && moduleAllows;
 }
 

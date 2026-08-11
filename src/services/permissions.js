@@ -177,12 +177,13 @@ export function normalizeUserModuleAccess(user, roles = defaultRoles, navItems =
     : getDefaultModuleAccessForRole(user.role, roles, navItems);
   const role = roles.find((item) => item.name === user.role) || roles[0] || defaultRoles[0];
   const rolePermissions = new Set(role?.permissions || []);
+  const permissionOverrides = user?.permissionOverrides || {};
   const moduleAccess =
     role?.name === "Super Admin"
       ? navItems.map((item) => item.id)
       : rawModuleAccess.filter((moduleId) => {
           const permission = navPermissionByType[moduleId];
-          return !permission || rolePermissions.has(permission);
+          return !permission || rolePermissions.has(permission) || permissionOverrides[permission] === true;
         });
 
   return moduleAccess.length > 0 ? moduleAccess : ["dashboard"];
