@@ -94,14 +94,18 @@ export default function RolesPermissionsPage() {
   const sendInvite = async (e) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
+    if (!tenantId) { setMsg("Xəta: aktiv şirkət seçilməyib"); return; }
     setSaving(true); setMsg("");
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from("tenant_invites")
-      .insert({ tenant_id: tenantId, email: inviteEmail.trim().toLowerCase(), role: inviteRole, invited_by: user.id })
-      .select().single();
+    const { data, error } = await supabase.rpc("create_tenant_invite", {
+      _tenant: tenantId,
+      _email: inviteEmail.trim().toLowerCase(),
+      _role: inviteRole,
+    });
+    const row = Array.isArray(data) ? data[0] : data;
     if (error) setMsg("Xəta: " + error.message);
+    else if (!row?.token) setMsg("Xəta: dəvət yaradıla bilmədi");
     else {
-      const link = `${window.location.origin}/accept-invite?token=${data.token}`;
+      const link = `${window.location.origin}/accept-invite?token=${row.token}`;
       await navigator.clipboard?.writeText(link).catch(() => {});
       setMsg(`Dəvət yaradıldı — link kopyalandı: ${link}`);
       setInviteEmail("");
@@ -112,16 +116,20 @@ export default function RolesPermissionsPage() {
 
   const revokeInvite = async (id) => {
     setSaving(true);
-    await supabase.from("tenant_invites").delete().eq("id", id);
+    const { error } = await supabase.from("tenant_invites").delete().eq("id", id);
+    if (error) setMsg("Xəta: " + error.message);
     await reload();
     setSaving(false);
   };
 
-  const copyInviteLink = async (token) => {
-    const link = `${window.location.origin}/accept-invite?token=${token}`;
-    await navigator.clipboard?.writeText(link);
+  const copyInviteLink = async (inviteId) => {
+    const { data, error } = await supabase.rpc("get_tenant_invite_token", { _invite: inviteId });
+    if (error || !data) { setMsg("Xəta: link alına bilmədi"); return; }
+    const link = `${window.location.origin}/accept-invite?token=${data}`;
+    await navigator.clipboard?.writeText(link).catch(() => {});
     setMsg("Link kopyalandı: " + link);
   };
+
 
 
 
