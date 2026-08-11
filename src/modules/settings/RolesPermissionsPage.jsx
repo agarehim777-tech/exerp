@@ -37,7 +37,8 @@ export default function RolesPermissionsPage() {
         : Promise.resolve({ data: [] }),
       tenantId
         ? supabase.from("tenant_invites")
-            .select("*").eq("tenant_id", tenantId).is("accepted_at", null)
+            .select("id, tenant_id, email, role, invited_by, accepted_at, expires_at, created_at")
+            .eq("tenant_id", tenantId).is("accepted_at", null)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
     ]);
