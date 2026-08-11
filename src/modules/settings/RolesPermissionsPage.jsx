@@ -258,7 +258,7 @@ export default function RolesPermissionsPage() {
                 <td style={{ ...td, textAlign: "left" }}>{inv.email}</td>
                 <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
                 <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
-                <td style={td}><button onClick={() => copyInviteLink(inv.token)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
+                <td style={td}><button onClick={() => copyInviteLink(inv.id)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
                 <td style={td}><button onClick={() => confirm("Ləğv edilsin?") && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
               </tr>
             ))}
