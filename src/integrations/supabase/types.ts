@@ -1873,6 +1873,103 @@ export type Database = {
           },
         ]
       }
+      inventory_accounting_settings: {
+        Row: {
+          tenant_id: string
+          updated_at: string
+          valuation_method: string
+        }
+        Insert: {
+          tenant_id: string
+          updated_at?: string
+          valuation_method?: string
+        }
+        Update: {
+          tenant_id?: string
+          updated_at?: string
+          valuation_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_accounting_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_cost_layers: {
+        Row: {
+          id: string
+          original_qty: number
+          product_id: string
+          received_at: string
+          remaining_qty: number
+          source_id: string | null
+          source_movement_id: string | null
+          source_type: string
+          tenant_id: string
+          unit_cost: number
+          warehouse_id: string
+        }
+        Insert: {
+          id?: string
+          original_qty: number
+          product_id: string
+          received_at?: string
+          remaining_qty: number
+          source_id?: string | null
+          source_movement_id?: string | null
+          source_type: string
+          tenant_id: string
+          unit_cost: number
+          warehouse_id: string
+        }
+        Update: {
+          id?: string
+          original_qty?: number
+          product_id?: string
+          received_at?: string
+          remaining_qty?: number
+          source_id?: string | null
+          source_movement_id?: string | null
+          source_type?: string
+          tenant_id?: string
+          unit_cost?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_layers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_source_movement_id_fkey"
+            columns: ["source_movement_id"]
+            isOneToOne: true
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_units: {
         Row: {
           batch_no: string | null
@@ -2196,6 +2293,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notification_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_accounting_events: {
+        Row: {
+          amount: number
+          cogs: number
+          created_at: string
+          created_by: string | null
+          event_type: string
+          id: string
+          journal_entry_id: string
+          order_id: string
+          tenant_id: string
+        }
+        Insert: {
+          amount?: number
+          cogs?: number
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          journal_entry_id: string
+          order_id: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          cogs?: number
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          journal_entry_id?: string
+          order_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_accounting_events_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_accounting_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_accounting_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3456,6 +3611,104 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_cost_allocations: {
+        Row: {
+          cost_layer_id: string | null
+          created_at: string
+          id: string
+          order_id: string
+          order_item_id: string
+          product_id: string
+          quantity: number
+          reversed_at: string | null
+          stock_movement_id: string | null
+          tenant_id: string
+          total_cost: number
+          unit_cost: number
+          warehouse_id: string
+        }
+        Insert: {
+          cost_layer_id?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          order_item_id: string
+          product_id: string
+          quantity: number
+          reversed_at?: string | null
+          stock_movement_id?: string | null
+          tenant_id: string
+          total_cost: number
+          unit_cost: number
+          warehouse_id: string
+        }
+        Update: {
+          cost_layer_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          order_item_id?: string
+          product_id?: string
+          quantity?: number
+          reversed_at?: string | null
+          stock_movement_id?: string | null
+          tenant_id?: string
+          total_cost?: number
+          unit_cost?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_cost_allocations_cost_layer_id_fkey"
+            columns: ["cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: true
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_cost_allocations_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_invoice_lines: {
         Row: {
           created_at: string
@@ -4535,6 +4788,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["invoice_status"]
       }
+      cancel_sales_invoice: {
+        Args: { _invoice_id: string }
+        Returns: undefined
+      }
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
@@ -4554,6 +4811,10 @@ export type Database = {
       customer_360_snapshot: {
         Args: { _customer_id: string; _tenant_id: string }
         Returns: Json
+      }
+      ensure_inventory_accounts: {
+        Args: { _tenant: string }
+        Returns: undefined
       }
       ensure_rls_helper_grants: { Args: never; Returns: Json }
       evaluate_invoice_match: {
@@ -4707,6 +4968,10 @@ export type Database = {
       }
       post_invoice_to_gl: { Args: { _invoice_id: string }; Returns: string }
       post_payment_to_gl: { Args: { _payment_id: string }; Returns: string }
+      process_sales_order_status: {
+        Args: { _order_id: string; _status: string }
+        Returns: undefined
+      }
       recalculate_shipment_landed_cost: {
         Args: { _approve?: boolean; _shipment: string }
         Returns: number
@@ -4721,6 +4986,10 @@ export type Database = {
           overdue_contracts: number
           updated_installments: number
         }[]
+      }
+      register_order_payment: {
+        Args: { _account_id: string; _amount: number; _order_id: string }
+        Returns: string
       }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
