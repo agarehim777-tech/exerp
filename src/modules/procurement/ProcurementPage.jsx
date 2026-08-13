@@ -380,6 +380,20 @@ export default function ProcurementPage() {
     return map;
   }, [invoices, invoiceLinesByInvoice]);
 
+  const paymentByPo = useMemo(() => {
+    const map = new Map();
+    invoices.forEach((invoice) => {
+      if (!invoice.po_id || invoice.status === "cancelled") return;
+      const amount = invoiceTotals.get(invoice.id) || 0;
+      const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
+      current.billed += amount;
+      if (invoice.status === "paid") current.paid += amount;
+      map.set(invoice.po_id, current);
+    });
+    return map;
+  }, [invoices, invoiceTotals]);
+
+
   const filteredVendors = useMemo(
     () => vendors.filter((vendor) => matchesQuery([vendor.name, vendor.tax_id, vendor.email, vendor.phone], query)),
     [vendors, query],
