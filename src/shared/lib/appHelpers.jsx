@@ -3515,5 +3515,4 @@ export {
   canAccessNavItem,
   getPageActionPermission,
   hasPageAction,
-  dbBackedCollections,
 };
