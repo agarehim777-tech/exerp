@@ -34,7 +34,9 @@ export function useCustomers(tenantId) {
       setLevels(nextLevels);
       const paidByCustomer = new Map();
       (orderResult.data || []).forEach((order) => paidByCustomer.set(order.customer_id, (paidByCustomer.get(order.customer_id) || 0) + Number(order.paid_amount || 0)));
-      setCustomers((customerResult.data || []).map((customer) => {
+      const customerRows = customerResult.data || [];
+      setHasMore(customerRows.length > limit);
+      setCustomers(customerRows.slice(0, limit).map((customer) => {
         const meta = readMeta(customer.notes);
         customer = { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null };
         const paidTotal = paidByCustomer.get(customer.id) || 0;
@@ -43,21 +45,13 @@ export function useCustomers(tenantId) {
       }));
     }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, limit]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    const channel = supabase
-      .channel(`customers:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'customers', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const loadMore = useCallback(() => setLimit((value) => value + CUSTOMERS_PAGE_SIZE), []);
+
+  useRealtimeResync(tenantId, ['customers'], fetchAll, { channelPrefix: 'customers' });
 
   const create = async (values) => {
     const { data, error } = await supabase
