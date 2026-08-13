@@ -7,6 +7,7 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
+  CreditCard,
   Eye,
   FileText,
   PackageCheck,
