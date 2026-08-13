@@ -8,13 +8,11 @@ import RouteMeta from "./components/RouteMeta.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
-import { registerPWA, installChunkErrorRecovery, installVersionGuard } from "./lib/pwa.js";
+import { installChunkErrorRecovery } from "./lib/pwa.js";
 
 initObservability();
 instrumentSupabase();
 installChunkErrorRecovery();
-installVersionGuard();
-registerPWA();
 
 const routerBase = (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "/";
 

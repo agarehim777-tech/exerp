@@ -1,7 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
-import { VitePWA } from "vite-plugin-pwa";
 
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
 // Public Lovable Cloud values (safe in the browser bundle; RLS protects the data).
@@ -31,64 +30,6 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     mcpPlugin(),
-    VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: null,
-      filename: "sw.js",
-      devOptions: { enabled: false },
-      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
-      manifest: {
-        name: "Expert ERP",
-        short_name: "ExERP",
-        description: "Expert ERP — çoxşirkətli idarəetmə platforması",
-        theme_color: "#0F2A2E",
-        background_color: "#0F2A2E",
-        display: "standalone",
-        start_url: "./",
-        scope: "./",
-        lang: "az",
-        icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        ],
-      },
-      workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        navigateFallback: "index.html",
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/, /^\/functions\//],
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "html-nav",
-              networkTimeoutSeconds: 2,
-              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 5 },
-            },
-          },
-          {
-            urlPattern: ({ url }) => url.origin === self.location.origin && /\.(?:js|css|woff2)$/.test(url.pathname),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "static-assets",
-              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-          {
-            urlPattern: ({ url }) => url.origin === "https://fonts.gstatic.com",
-            handler: "CacheFirst",
-            options: {
-              cacheName: "gfonts",
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
-      },
-    }),
   ],
   build: {
     sourcemap: false,
