@@ -84,6 +84,7 @@ createRoot(document.getElementById("root")).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBase}>
         <AuthProvider>
+          <RouteMeta />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
