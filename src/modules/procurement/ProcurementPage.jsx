@@ -319,7 +319,7 @@ export default function ProcurementPage() {
   useEffect(() => {
     if (!tenantId) return undefined;
     const channel = supabase
-      .channel(`procurement:${tenantId}`)
+      .channel(`procurement:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "vendors", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "goods_receipts", filter: `tenant_id=eq.${tenantId}` }, load)

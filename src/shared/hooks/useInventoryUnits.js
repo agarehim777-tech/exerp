@@ -23,7 +23,7 @@ export function useInventoryUnits(tenantId) {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
     if (!tenantId) return undefined;
-    const channel = supabase.channel(`inventory-units:${tenantId}`)
+    const channel = supabase.channel(`inventory-units:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory_units", filter: `tenant_id=eq.${tenantId}` }, refresh)
       .subscribe();
     return () => { supabase.removeChannel(channel); };

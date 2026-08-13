@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { downloadEInvoice, printInvoice } from "../../lib/invoicePdf.js";
+import { downloadEInvoice, exportInvoicesCsv, printInvoice, printInvoiceRegister } from "../../lib/invoicePdf.js";
 import { useSalesInvoices } from "../../shared/hooks/useSalesInvoices.js";
 import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
@@ -137,6 +137,33 @@ export default function SalesInvoicesPage() {
             onChange={(event) => setSearch(event.target.value)}
             data-testid="invoice-search"
           />
+          <button
+            type="button"
+            style={secondaryBtn}
+            data-testid="invoice-export-csv"
+            disabled={!filteredInvoices.length}
+            onClick={() => run(async () => {
+              const count = exportInvoicesCsv(filteredInvoices);
+              setMsg(`${count} faktura CSV formatında ixrac edildi.`);
+            })}
+          >
+            CSV ixrac
+          </button>
+          <button
+            type="button"
+            style={secondaryBtn}
+            data-testid="invoice-export-pdf"
+            disabled={!filteredInvoices.length}
+            onClick={() => run(async () => {
+              printInvoiceRegister(filteredInvoices, {
+                company,
+                filterLabel: statusFilter === "all" ? "Hamısı" : STATUS_LABEL[statusFilter],
+                search,
+              });
+            })}
+          >
+            PDF ixrac
+          </button>
         </div>
 
         <table style={table}>
