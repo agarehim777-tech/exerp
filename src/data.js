@@ -29,6 +29,7 @@ export const navItems = [
 
   // Maliyyə
   { id: "cashbook", label: "Kassa & Xərclər", group: "finance" },
+  { id: "ar-invoices", label: "Satış fakturaları", group: "finance" },
   { id: "accounting", label: "Mühasibat jurnalı", group: "finance" },
   { id: "receivables", label: "Borclar", group: "finance" },
   { id: "credits", label: "Kreditlər", group: "finance" },

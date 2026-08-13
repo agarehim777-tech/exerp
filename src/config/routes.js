@@ -50,7 +50,6 @@ export const legacyModuleAliases = {
   invoices: "sales",
   "sales-quotes": "sales",
   "sales-shipments": "sales",
-  "ar-invoices": "sales",
   warehouse: "stock",
 };
 
@@ -60,7 +59,8 @@ export const historicalRoutes = {
   finance: ["/maliyye", "/jurnal"],
   accounting: ["/maliyye/muhasibat"],
   invoices: ["/fakturalar", "/satis/faktura"],
-  sales: ["/sifarisler", "/satis", "/satis/kotirovka", "/satis/catdirilma", "/maliyye/satis-fakturalari", "/satis-fakturalari"],
+  "ar-invoices": ["/satis-fakturalari"],
+  sales: ["/sifarisler", "/satis", "/satis/kotirovka", "/satis/catdirilma"],
   crm: ["/musteriler"],
   stock: ["/anbar", "/qaliqlar"],
   hr: ["/hr", "/emekdaslar"],
