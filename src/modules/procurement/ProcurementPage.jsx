@@ -1229,7 +1229,7 @@ export default function ProcurementPage() {
               linesByPo={linesByPo}
               poMetrics={poMetrics}
               paymentByPo={paymentByPo}
-
+              poPayments={poPayments}
               acceptedByLine={acceptedByLine}
               invoicedByLine={invoicedByLine}
               expandedPo={expandedPo}
@@ -1240,6 +1240,14 @@ export default function ProcurementPage() {
               setDraftLines={setPoDraftLines}
               setProductOnLine={setProductOnLine}
               editingPoId={editingPoId}
+              paymentPoId={paymentPoId}
+              paymentForm={paymentForm}
+              setPaymentForm={setPaymentForm}
+              editingPaymentId={editingPaymentId}
+              onPaymentOpen={openPaymentForm}
+              onPaymentEdit={editPayment}
+              onPaymentSubmit={savePoPayment}
+              onPaymentDelete={deletePayment}
               onSubmit={savePo}
               onCancel={resetPoForm}
               onEdit={editPo}
