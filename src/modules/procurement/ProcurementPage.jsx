@@ -1688,12 +1688,12 @@ function PurchaseOrdersTab({
   );
 }
 
-function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPoId, editingPaymentId, onPaymentEdit, onPaymentSubmit, onPaymentDelete, saving, paymentByPo }) {
+function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPoId, editingPaymentId, onPaymentEdit, onPaymentSubmit, onPaymentDelete, saving, paymentByPo, poMetrics }) {
   const payments = poPayments.filter((payment) => payment.po_id === po.id);
   const payment = paymentByPo.get(po.id) || { billed: 0, paid: 0 };
-  const total = payment.billed || 0;
+  const poValue = poMetrics.get(po.id)?.total || 0;
   const paid = payment.paid || 0;
-  const due = Math.max(0, total - paid);
+  const due = Math.max(0, poValue - paid);
   const isOpen = paymentPoId === po.id;
 
   return (
