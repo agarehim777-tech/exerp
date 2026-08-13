@@ -335,11 +335,13 @@ export default function ProcurementPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "goods_receipts", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "vendor_invoices", filter: `tenant_id=eq.${tenantId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "po_payments", filter: `tenant_id=eq.${tenantId}` }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [tenantId, load]);
+
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
   const receiptLinesByReceipt = useMemo(() => groupBy(receiptLines, "grn_id"), [receiptLines]);
