@@ -518,7 +518,7 @@ export type Database = {
           order_id: string | null
           principal: number
           risk_score: number
-          start_date: string
+          start_date: string | null
           status: string
           tenant_id: string
           term_months: number
@@ -539,7 +539,7 @@ export type Database = {
           order_id?: string | null
           principal: number
           risk_score?: number
-          start_date: string
+          start_date?: string | null
           status?: string
           tenant_id: string
           term_months: number
@@ -560,7 +560,7 @@ export type Database = {
           order_id?: string | null
           principal?: number
           risk_score?: number
-          start_date?: string
+          start_date?: string | null
           status?: string
           tenant_id?: string
           term_months?: number
@@ -4892,6 +4892,19 @@ export type Database = {
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
+      create_credit_contract: {
+        Args: {
+          _contract_no: string
+          _customer_id: string
+          _initial_payment: number
+          _order_id: string
+          _principal: number
+          _start_date: string
+          _tenant_id: string
+          _term_months: number
+        }
+        Returns: string
+      }
       create_sales_order_atomic: {
         Args: {
           _credit?: Json
@@ -5133,6 +5146,10 @@ export type Database = {
       }
       seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       seed_default_crm_pipeline: { Args: { _tenant: string }; Returns: string }
+      start_credit_contract: {
+        Args: { _credit_id: string; _start_date: string; _tenant_id: string }
+        Returns: string
+      }
       sync_grn_landed_cost_shipment: { Args: { _grn: string }; Returns: string }
       trial_balance: {
         Args: { _from: string; _tenant: string; _to: string }
