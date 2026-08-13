@@ -4,8 +4,10 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
-const DEVELOPMENT_URL = "https://example.supabase.co";
-const DEVELOPMENT_PUBLISHABLE_KEY = "test-anon-key";
+// Public Lovable Cloud values (safe in the browser bundle; RLS protects the data).
+const DEVELOPMENT_URL = "https://rojwxgndtunssjdwngrh.supabase.co";
+const DEVELOPMENT_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU";
 
 export default defineConfig(({ mode }) => {
   const fileEnv = loadEnv(mode, process.cwd(), "VITE_");
