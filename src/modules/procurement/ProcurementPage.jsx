@@ -1663,7 +1663,22 @@ function PurchaseOrdersTab({
           })}
           detail={(po) =>
             expandedPo === po.id && (
-              <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
+              <div style={{ display: "grid", gap: "16px" }}>
+                <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
+                <PoPaymentPanel
+                  po={po}
+                  poPayments={poPayments}
+                  paymentForm={paymentForm}
+                  setPaymentForm={setPaymentForm}
+                  paymentPoId={paymentPoId}
+                  editingPaymentId={editingPaymentId}
+                  onPaymentEdit={onPaymentEdit}
+                  onPaymentSubmit={onPaymentSubmit}
+                  onPaymentDelete={onPaymentDelete}
+                  saving={saving}
+                  paymentByPo={paymentByPo}
+                />
+              </div>
             )
           }
           sourceRows={purchaseOrders}
