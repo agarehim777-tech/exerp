@@ -263,8 +263,8 @@ export default function Login() {
         .xp-foot { border-top:1px solid rgba(230,242,236,.08); padding: 2rem; text-align:center; color:#5f7a70; font-size:var(--fs-xs); }
 
         /* Modal */
-        .xp-bd { position:fixed; inset:0; background:rgba(3,10,8,.8); backdrop-filter:blur(10px); z-index:100; display:flex; align-items:center; justify-content:center; padding:1.25rem; animation: xpFade .2s both; }
-        .xp-mod-x { width:100%; max-width:24rem; background:#0a211b; border:1px solid rgba(201,168,76,.2); border-radius:.5rem; padding:2rem; position:relative; animation: xpPop .3s cubic-bezier(.2,.9,.3,1.15) both; }
+        .xp-bd { position:fixed; inset:0; background:rgba(3,10,8,.8); backdrop-filter:blur(10px); z-index:100; display:flex; align-items:center; justify-content:center; padding:1.25rem; }
+        .xp-mod-x { width:100%; max-width:24rem; background:#0a211b; border:1px solid rgba(201,168,76,.2); border-radius:.5rem; padding:2rem; position:relative; }
         .xp-x { position:absolute; top:.85rem; right:.85rem; background:rgba(255,255,255,.05); border:1px solid rgba(230,242,236,.1); color:#9fb8ae; width:2rem; height:2rem; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
         .xp-x:hover { color:#fff; }
         .xp-mt { font-family:'Sora',sans-serif; font-weight:600; font-size:var(--fs-h3); line-height:var(--lh-snug); color:#fff; margin:0 0 .35rem; letter-spacing:0; }
@@ -290,8 +290,6 @@ export default function Login() {
         .xp-al { margin-top:.9rem; padding:.7rem .9rem; font-size:var(--fs-sm); border-radius:.4rem; border:1px solid;}
         .xp-al.e{ background:rgba(220,50,50,.1); color:#fca5a5; border-color:rgba(220,50,50,.3);}
         .xp-al.o{ background:rgba(92,189,158,.1); color:#7fd4b2; border-color:rgba(92,189,158,.3);}
-        @keyframes xpFade { from{opacity:0;} to{opacity:1;} }
-        @keyframes xpPop { from{opacity:0; transform:scale(.96) translateY(6px);} to{opacity:1; transform:none;} }
       `}</style>
 
       <main className="xp">
