@@ -1,0 +1,14 @@
+# Expert ERP (ExERP)
+
+> Azərbaycan bizneslər üçün çoxşirkətli ERP və CRM platforması: satış, anbar, maliyyə, mühasibat, satınalma, kredit və HR modulları bir sistemdə.
+
+ExERP bulud əsaslı, çoxşirkətli (multi-tenant) idarəetmə platformasıdır. Hər şirkətin datası tam izolyasiyalıdır; şirkət administratoru öz istifadəçilərini yaradır və modul səviyyəsində icazələr verir. Sistemin əsas hissəsi girişlə qorunur — yalnız tanıtım və giriş səhifələri ictimaidir.
+
+## Pages
+
+- [Ana səhifə](/): Platformanın tanıtımı, modullar və əsas imkanlar.
+- [Giriş](/login): Mövcud şirkət istifadəçiləri üçün sistemə giriş.
+
+## Optional
+
+- Modullar (CRM, Satış, Anbar, Maliyyə, Mühasibat, Satınalma, Kredit, HR, Hesabatlar) yalnız autentifikasiyadan sonra əlçatandır.
