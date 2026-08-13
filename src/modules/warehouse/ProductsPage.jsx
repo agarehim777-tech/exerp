@@ -3,6 +3,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { card, input, primaryBtn, secondaryBtn, delBtn, table, th, td, msgBox, badge, azn } from "../../shared/ui/tokens.js";
+import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 
 const emptyProduct = { id: "", sku: "", name: "", description: "", unit: "ədəd", price: "", currency: "AZN", vat_rate: 18, is_active: true };
 const summaryCard = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: "15px 18px", display: "grid", gap: 5 };
@@ -12,7 +13,7 @@ const summaryValue = { fontSize: 22, lineHeight: 1.2, color: "#173f32" };
 export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }) {
   const { activeTenantId } = useAuth();
   const { isAdmin } = usePermissions();
-  const { products: dbProducts, loading, error, create, update, remove } = useProducts(activeTenantId);
+  const { products: dbProducts, loading, error, create, update, remove, hasMore, loadMore } = useProducts(activeTenantId);
   const [query, setQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [form, setForm] = useState(emptyProduct);
@@ -123,6 +124,7 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
         {filtered.map((product) => <tr key={`${product._catalogSource}-${product.id}`}><td style={td}><b>{product.sku}</b></td><td style={td}>{product.name}<div style={{ fontSize: 12, color: "#7a8782" }}>{product.description || (product._catalogSource === "db" ? "—" : "Əvvəlki anbar məlumatından bərpa edilib")}</div></td><td style={{ ...td, fontWeight: 700 }}>{product.totalStock.toLocaleString("az-AZ")}</td><td style={{ ...td, color: product.reservedStock > 0 ? "#9a6700" : "#66756f", fontWeight: 650 }}>{product.reservedStock.toLocaleString("az-AZ")}</td><td style={{ ...td, color: product.availableStock > 0 ? "#087f5b" : "#c0392b", fontWeight: 750 }}>{product.availableStock.toLocaleString("az-AZ")}</td><td style={td}>{azn(product.price)}</td><td style={td}><span style={badge(product.availableStock <= 0 ? "red" : product.is_active ? "green" : "gray")}>{product.availableStock <= 0 ? "Stokda yoxdur" : product.is_active ? "Aktiv" : "Passiv"}</span></td>{isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button style={secondaryBtn} onClick={() => edit(product)}>{product._catalogSource === "db" ? "Redaktə et" : "Kataloqa köçür"}</button>{product._catalogSource === "db" && <button style={delBtn} onClick={() => deleteProduct(product)}>Sil</button>}</td>}</tr>)}
         {!filtered.length && <tr><td style={td} colSpan={8}>{loading ? "Yüklənir…" : "Məhsul yoxdur."}</td></tr>}
       </tbody></table>
+      <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={loading} />
     </div>
   </div>;
 }
