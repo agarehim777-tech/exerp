@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync';
 
 const META_PREFIX = '__crm_meta__:';
 const readMeta = (notes) => { try { return String(notes || '').startsWith(META_PREFIX) ? JSON.parse(String(notes).slice(META_PREFIX.length)) : {}; } catch { return {}; } };
@@ -84,5 +85,5 @@ export function useCustomers(tenantId) {
     if (error) throw error;
   };
 
-  return { customers, levels, loading, error, refresh: fetchAll, create, update, remove, saveLevels };
+  return { customers, levels, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
 }
