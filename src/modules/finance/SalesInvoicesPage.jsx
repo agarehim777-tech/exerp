@@ -118,6 +118,27 @@ export default function SalesInvoicesPage() {
         )}
 
 
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+          {[["all", "Hamısı"], ...Object.entries(STATUS_LABEL)].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              data-testid={`invoice-filter-${value}`}
+              style={statusFilter === value ? primaryBtn : secondaryBtn}
+              onClick={() => setStatusFilter(value)}
+            >
+              {label} ({statusCounts[value] || 0})
+            </button>
+          ))}
+          <input
+            style={{ ...input, minWidth: 220, marginLeft: "auto" }}
+            placeholder="Faktura № və ya müştəri axtar…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            data-testid="invoice-search"
+          />
+        </div>
+
         <table style={table}>
           <thead>
             <tr>
