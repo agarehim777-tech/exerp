@@ -69,6 +69,8 @@ const emptyReceipt = { po_id: "", grn_number: "", receipt_date: today(), notes: 
 const emptyInvoice = { po_id: "", invoice_number: "", invoice_date: today(), due_date: "", currency: "AZN", match_notes: "" };
 const emptyPoLine = { product_id: "", product_sku: "", description: "", qty_ordered: "1", unit: "ədəd", unit_price: "0" };
 const emptyRfq = { title: "", description: "", quantity: "1", due_at: "", vendor_ids: [] };
+const emptyPoPayment = { po_id: "", amount: "", payment_date: today(), payment_method: "bank", reference_no: "", notes: "" };
+
 
 function nextNumber(prefix) {
   const now = new Date();
