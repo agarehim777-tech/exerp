@@ -13,7 +13,10 @@ import { supabase } from '../../integrations/supabase/client';
  * @param {{ debounceMs?: number, channelPrefix?: string }} [options]
  */
 export function useRealtimeResync(tenantId, tables, refetch, options = {}) {
-  const { debounceMs = 300, channelPrefix = 'sync' } = options;
+  // Yüksək yükdə (çox istifadəçi, çox əməliyyat) event tufanını azaltmaq üçün
+  // default debounce 1200 ms-dir: 50 istifadəçi eyni tenant-da işləyəndə hər
+  // yazı hamıda ani tam refetch tetikləməsin.
+  const { debounceMs = 1200, channelPrefix = 'sync' } = options;
   const [degraded, setDegraded] = useState(null);
   const tableKey = tables.join(',');
 
