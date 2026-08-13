@@ -766,7 +766,71 @@ export default function ProcurementPage() {
     setSaving(false);
   }
 
-  function choosePoForReceipt(poId) {
+  function openPaymentForm(po) {
+    setPaymentPoId(po.id);
+    setEditingPaymentId(null);
+    setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
+    setExpandedPo(po.id);
+  }
+
+  function editPayment(payment) {
+    const po = purchaseOrders.find((item) => item.id === payment.po_id);
+    setPaymentPoId(payment.po_id);
+    setEditingPaymentId(payment.id);
+    setPaymentForm({
+      po_id: payment.po_id,
+      amount: String(payment.amount || ""),
+      payment_date: payment.payment_date || today(),
+      payment_method: payment.payment_method || "bank",
+      reference_no: payment.reference_no || "",
+      notes: payment.notes || "",
+    });
+    setExpandedPo(payment.po_id);
+  }
+
+  async function savePoPayment(event) {
+    event.preventDefault();
+    if (!paymentForm.po_id || toNumber(paymentForm.amount) <= 0) {
+      setError("PO və ödəniş məbləği tələb olunur.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const payload = {
+      po_id: paymentForm.po_id,
+      amount: toNumber(paymentForm.amount),
+      payment_date: paymentForm.payment_date || today(),
+      payment_method: paymentForm.payment_method?.trim() || "bank",
+      reference_no: paymentForm.reference_no?.trim() || null,
+      notes: paymentForm.notes?.trim() || null,
+    };
+    const { error: paymentError } = editingPaymentId
+      ? await supabase.from("po_payments").update(payload).eq("id", editingPaymentId)
+      : await supabase.from("po_payments").insert({ ...payload, tenant_id: tenantId, created_by: user?.id || null });
+    if (paymentError) setError(getError(paymentError));
+    else {
+      setNotice(editingPaymentId ? "Ödəniş yeniləndi." : "PO ödənişi qeyd edildi.");
+      setPaymentForm(emptyPoPayment);
+      setEditingPaymentId(null);
+      setPaymentPoId(null);
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function deletePayment(payment) {
+    if (!window.confirm("Bu ödənişi silmək istəyirsiniz?")) return;
+    setSaving(true);
+    const { error: paymentError } = await supabase.from("po_payments").delete().eq("id", payment.id);
+    if (paymentError) setError(getError(paymentError));
+    else {
+      setNotice("Ödəniş silindi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
+
     const po = purchaseOrders.find((item) => item.id === poId);
     if (!po) return;
     setEditingReceiptId(null);
