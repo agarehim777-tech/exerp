@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { downloadEInvoice, exportInvoicesCsv, printInvoice, printInvoiceRegister } from "../../lib/invoicePdf.js";
+import {
+  DEFAULT_INVOICE_EXPORT_COLUMNS, INVOICE_EXPORT_COLUMNS,
+  downloadEInvoice, exportInvoicesCsv, printInvoice, printInvoiceRegister,
+} from "../../lib/invoicePdf.js";
 import { useSalesInvoices } from "../../shared/hooks/useSalesInvoices.js";
 import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
