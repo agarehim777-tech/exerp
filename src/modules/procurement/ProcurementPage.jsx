@@ -1703,9 +1703,9 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
           <CreditCard size={18} /> PO ödənişləri
         </strong>
         <div style={{ display: "flex", gap: "10px", fontSize: "13px" }}>
-          <span>Faktura məbləği: <strong>{money(total, po.currency)}</strong></span>
+          <span>PO dəyəri: <strong>{money(poValue, po.currency)}</strong></span>
           <span>Ödənilib: <strong>{money(paid, po.currency)}</strong></span>
-          <span>Qalıq: <strong>{money(due, po.currency)}</strong></span>
+          <span>Qalıq ödəniş: <strong>{money(due, po.currency)}</strong></span>
         </div>
       </div>
 
