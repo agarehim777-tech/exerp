@@ -35,6 +35,23 @@ export default function SalesInvoicesPage() {
   const { accounts } = useCashbook(tenantId);
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const filteredInvoices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return ar.invoices.filter((invoice) => {
+      if (statusFilter !== "all" && invoice.status !== statusFilter) return false;
+      if (!q) return true;
+      return `${invoice.invoice_no || ""} ${invoice.customer?.name || ""}`.toLowerCase().includes(q);
+    });
+  }, [ar.invoices, statusFilter, search]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: ar.invoices.length };
+    for (const invoice of ar.invoices) counts[invoice.status] = (counts[invoice.status] || 0) + 1;
+    return counts;
+  }, [ar.invoices]);
 
   const totals = useMemo(() => {
     const active = ar.invoices.filter((i) => i.status !== "cancelled");
