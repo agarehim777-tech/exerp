@@ -9,8 +9,8 @@ import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
 import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
-import {
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
+import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
 } from "../../shared/ui/tokens.js";
