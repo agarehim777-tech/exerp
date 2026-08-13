@@ -148,7 +148,7 @@ export default function SalesInvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {ar.invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <InvoiceRow
                 key={invoice.id}
                 invoice={invoice}
@@ -159,8 +159,8 @@ export default function SalesInvoicesPage() {
                 company={company}
               />
             ))}
-            {!ar.invoices.length && !ar.loading && (
-              <tr><td style={td} colSpan={8}>Faktura yoxdur.</td></tr>
+            {!filteredInvoices.length && !ar.loading && (
+              <tr><td style={td} colSpan={8}>Faktura tapılmadı.</td></tr>
             )}
           </tbody>
         </table>
