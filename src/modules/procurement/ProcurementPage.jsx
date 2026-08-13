@@ -400,11 +400,16 @@ export default function ProcurementPage() {
       const amount = invoiceTotals.get(invoice.id) || 0;
       const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
       current.billed += amount;
-      if (invoice.status === "paid") current.paid += amount;
       map.set(invoice.po_id, current);
     });
+    poPayments.forEach((payment) => {
+      const current = map.get(payment.po_id) || { billed: 0, paid: 0 };
+      current.paid += toNumber(payment.amount);
+      map.set(payment.po_id, current);
+    });
     return map;
-  }, [invoices, invoiceTotals]);
+  }, [invoices, invoiceTotals, poPayments]);
+
 
 
   const filteredVendors = useMemo(
