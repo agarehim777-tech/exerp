@@ -143,10 +143,18 @@ export default function SalesInvoicesPage() {
           <button
             type="button"
             style={secondaryBtn}
+            data-testid="invoice-export-columns-toggle"
+            onClick={() => setShowColumnPicker((v) => !v)}
+          >
+            Sütunlar ({exportColumns.length})
+          </button>
+          <button
+            type="button"
+            style={secondaryBtn}
             data-testid="invoice-export-csv"
-            disabled={!filteredInvoices.length}
+            disabled={!filteredInvoices.length || !exportColumns.length}
             onClick={() => run(async () => {
-              const count = exportInvoicesCsv(filteredInvoices);
+              const count = exportInvoicesCsv(filteredInvoices, { columns: exportColumns });
               setMsg(`${count} faktura CSV formatında ixrac edildi.`);
             })}
           >
@@ -156,18 +164,62 @@ export default function SalesInvoicesPage() {
             type="button"
             style={secondaryBtn}
             data-testid="invoice-export-pdf"
-            disabled={!filteredInvoices.length}
+            disabled={!filteredInvoices.length || !exportColumns.length}
             onClick={() => run(async () => {
               printInvoiceRegister(filteredInvoices, {
                 company,
                 filterLabel: statusFilter === "all" ? "Hamısı" : STATUS_LABEL[statusFilter],
                 search,
+                columns: exportColumns,
               });
             })}
           >
             PDF ixrac
           </button>
         </div>
+
+        {showColumnPicker && (
+          <div
+            style={{ ...card, padding: 12, marginBottom: 12, display: "grid", gap: 8 }}
+            data-testid="invoice-export-columns"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>İxrac sütunları</strong>
+              <span style={{ fontSize: 12, color: "#64748b" }}>CSV və PDF üçün seçilmiş sütunlar</span>
+              <button
+                type="button"
+                style={{ ...secondaryBtn, marginLeft: "auto" }}
+                onClick={() => setExportColumns(INVOICE_EXPORT_COLUMNS.map((c) => c.key))}
+              >
+                Hamısı
+              </button>
+              <button
+                type="button"
+                style={secondaryBtn}
+                onClick={() => setExportColumns(DEFAULT_INVOICE_EXPORT_COLUMNS)}
+              >
+                Standart
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {INVOICE_EXPORT_COLUMNS.map((column) => (
+                <label key={column.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={exportColumns.includes(column.key)}
+                    data-testid={`invoice-export-col-${column.key}`}
+                    onChange={() => toggleExportColumn(column.key)}
+                  />
+                  {column.label}
+                </label>
+              ))}
+            </div>
+            {!exportColumns.length && (
+              <div style={{ fontSize: 12, color: "#b23a3a" }}>Ən azı bir sütun seçin.</div>
+            )}
+          </div>
+        )}
+
 
         <table style={table}>
           <thead>
