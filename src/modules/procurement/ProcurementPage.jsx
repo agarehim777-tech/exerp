@@ -380,6 +380,20 @@ export default function ProcurementPage() {
     return map;
   }, [invoices, invoiceLinesByInvoice]);
 
+  const paymentByPo = useMemo(() => {
+    const map = new Map();
+    invoices.forEach((invoice) => {
+      if (!invoice.po_id || invoice.status === "cancelled") return;
+      const amount = invoiceTotals.get(invoice.id) || 0;
+      const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
+      current.billed += amount;
+      if (invoice.status === "paid") current.paid += amount;
+      map.set(invoice.po_id, current);
+    });
+    return map;
+  }, [invoices, invoiceTotals]);
+
+
   const filteredVendors = useMemo(
     () => vendors.filter((vendor) => matchesQuery([vendor.name, vendor.tax_id, vendor.email, vendor.phone], query)),
     [vendors, query],
@@ -1131,6 +1145,8 @@ export default function ProcurementPage() {
               allPurchaseOrders={purchaseOrders}
               linesByPo={linesByPo}
               poMetrics={poMetrics}
+              paymentByPo={paymentByPo}
+
               acceptedByLine={acceptedByLine}
               invoicedByLine={invoicedByLine}
               expandedPo={expandedPo}
@@ -1411,6 +1427,8 @@ function PurchaseOrdersTab({
   allPurchaseOrders,
   linesByPo,
   poMetrics,
+  paymentByPo,
+
   acceptedByLine,
   invoicedByLine,
   expandedPo,
@@ -1512,18 +1530,25 @@ function PurchaseOrdersTab({
 
       <Panel title="PO reyestri" icon={ClipboardCheck}>
         <DataTable
-          columns={["PO", "Vendor", "Dəyər", "Status", "Mədaxil", "Əməl"]}
+          columns={["PO", "Vendor", "Dəyər", "Ödənilib", "Qalıq ödəniş", "Status", "Mədaxil", "Əməl"]}
           empty={allPurchaseOrders.length ? "Filterə uyğun PO yoxdur." : "PO yoxdur. Yuxarıdakı formadan ilk sifarişi yaradın."}
           rows={purchaseOrders.map((po) => {
             const metrics = poMetrics.get(po.id) || {};
+            const payment = (paymentByPo && paymentByPo.get(po.id)) || { billed: 0, paid: 0 };
+            const total = metrics.total || 0;
+            const paid = payment.paid || 0;
+            const due = Math.max(0, total - paid);
             const isExpanded = expandedPo === po.id;
             return [
               <button key="po" type="button" style={styles.linkCell} onClick={() => setExpandedPo(isExpanded ? null : po.id)}>
                 <TwoLine title={po.po_number} subtitle={`${po.order_date || "tarixsiz"} → ${po.expected_date || "plan yoxdur"}`} />
               </button>,
               po.vendors?.name || "Vendor yoxdur",
-              <TwoLine key="amount" title={money(metrics.total || 0, po.currency)} subtitle={`${metrics.lineCount || 0} sətir`} />,
+              <TwoLine key="amount" title={money(total, po.currency)} subtitle={`${metrics.lineCount || 0} sətir`} />,
+              <TwoLine key="paid" title={money(paid, po.currency)} subtitle={`Fakturalanıb: ${money(payment.billed || 0, po.currency)}`} />,
+              <TwoLine key="due" title={money(due, po.currency)} subtitle={due <= 0 && total > 0 ? "Tam ödənilib" : `${total > 0 ? Math.round((paid / total) * 100) : 0}% ödənilib`} />,
               <StatusPill key="status" status={po.status} />,
+
               <Progress key="progress" value={metrics.progress || 0} label={`${qty(metrics.received)} / ${qty(metrics.ordered)} ədəd`} />,
               <div key="actions" style={styles.rowActions}>
                 <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
