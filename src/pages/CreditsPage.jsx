@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, RefreshCw, Search, Wallet } from "lucide-react";
+import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
-import { money, normalize } from "../services/format.js";
+import { money } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import {
@@ -19,6 +19,7 @@ import {
   getCreditRowDate,
   getCreditSourceLabel,
   isCreditClosed,
+  isCreditStarted,
   matchesCreditManagementFilter,
   matchesCreditSearch,
   matchesCreditSourceFilter,
@@ -33,6 +34,7 @@ function CreditsPage({
   onUpdatePaymentDate,
   onReceivePayment,
   onCreateCredit,
+  onStartCredit,
   onOpenSalesOrder,
   selectedCreditId,
   onClearSelectedCredit,
@@ -45,6 +47,7 @@ function CreditsPage({
   const [pageSize, setPageSize] = useState(10);
   const [detailCreditId, setDetailCreditId] = useState("");
   const [quickCreditId, setQuickCreditId] = useState("");
+  const [startCreditId, setStartCreditId] = useState("");
 
   const enrichedCredits = useMemo(
     () =>
@@ -58,7 +61,8 @@ function CreditsPage({
       }),
     [credits],
   );
-  const activeCredits = enrichedCredits.filter((item) => normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan));
+  const activeCredits = enrichedCredits.filter((item) => isCreditStarted(item.credit) && !isCreditClosed(item.credit, item.plan));
+  const notStartedCredits = enrichedCredits.filter((item) => !isCreditStarted(item.credit) && !isCreditClosed(item.credit, item.plan));
   const todayCredits = enrichedCredits.filter((item) => item.paymentState.isDueToday);
   const overdueCredits = enrichedCredits.filter((item) => item.paymentState.isOverdue);
   const completedCredits = enrichedCredits.filter((item) => isCreditClosed(item.credit, item.plan));
@@ -106,10 +110,10 @@ function CreditsPage({
   ];
   const filterItems = [
     { label: "Hamısı", title: "Hamısı", count: enrichedCredits.length, tone: "primary" },
-    { label: "Aktiv", title: "Aktiv", count: activeCredits.length, tone: "success" },
-    { label: "Gözləyən", title: "Gözləyən", count: enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Gözləyən")).length, tone: "warning" },
+    { label: "Aktiv", title: "Aktiv kreditlər", count: activeCredits.length, tone: "success" },
+    { label: "Başlanmamış", title: "Başlanmamış", count: notStartedCredits.length, tone: "warning" },
     { label: "Gecikmiş", title: "Gecikmiş", count: overdueCredits.length, tone: "danger" },
-    { label: "Bağlanmış", title: "Bağlanmış", count: completedCredits.length, tone: "info" },
+    { label: "Bağlanmış", title: "Bağlanmış kreditlər", count: completedCredits.length, tone: "info" },
     { label: "Bugünkü", title: "Bugünkü", count: todayCredits.length, tone: "neutral" },
     { label: "Cari ay", title: "Cari ay", count: currentMonthCredits.length, tone: "neutral" },
   ];
@@ -145,6 +149,7 @@ function CreditsPage({
   const tableCredits = visibleCredits.slice(0, pageSize);
   const detailItem = detailCreditId ? enrichedCredits.find((item) => item.credit.id === detailCreditId) : null;
   const quickItem = quickCreditId ? enrichedCredits.find((item) => item.credit.id === quickCreditId) : null;
+  const startItem = startCreditId ? enrichedCredits.find((item) => item.credit.id === startCreditId) : null;
   const todayLabel = formatPaymentDate(parsePaymentDate(baseCreditDate));
 
   useEffect(() => {
@@ -359,7 +364,7 @@ function CreditsPage({
                 <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay · ${credit.date || "tarixsiz"}`} />,
                 <TwoLine title={money(debt.paid)} subtitle={`${credit.paidMonths || 0}/${plan.months} ay bağlanıb`} />,
                 <TwoLine title={money(debt.balance)} subtitle={`Növbəti ${money(debt.nextAmount)}`} />,
-                <TwoLine title={paymentState.nextInstallment?.due || credit.next || "—"} subtitle={nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
+                <TwoLine title={isCreditStarted(credit) ? paymentState.nextInstallment?.due || credit.next || "—" : "Tarix təyin edilməyib"} subtitle={!isCreditStarted(credit) ? "Başlatma gözləyir" : nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
                 <div className="credit-status-stack">
                   <StatusBadge status={getCreditManagementStatus(item)} />
                   {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
@@ -369,12 +374,18 @@ function CreditsPage({
                     className="primary-btn compact"
                     type="button"
                     title="Kredit üzrə ödəniş götür"
-                    disabled={debt.balance <= 0}
+                    disabled={debt.balance <= 0 || !isCreditStarted(credit)}
                     onClick={() => setQuickCreditId(credit.id)}
                   >
                     <Wallet size={15} />
                     Ödəniş götür
                   </button>
+                  {!isCreditStarted(credit) && !isCreditClosed(credit, plan) ? (
+                    <button className="primary-btn compact" type="button" onClick={() => setStartCreditId(credit.id)}>
+                      <Play size={15} />
+                      Krediti başlat
+                    </button>
+                  ) : null}
                   <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
                   </button>
@@ -393,6 +404,14 @@ function CreditsPage({
           />
         ) : null}
 
+        {startItem ? (
+          <StartCreditModal
+            item={startItem}
+            onStartCredit={onStartCredit}
+            onClose={() => setStartCreditId("")}
+          />
+        ) : null}
+
         {detailItem ? (
           <CreditDetailModal
             item={detailItem}
@@ -405,6 +424,51 @@ function CreditsPage({
         ) : null}
       </section>
 
+    </div>
+  );
+}
+
+function StartCreditModal({ item, onStartCredit, onClose }) {
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const firstPaymentDate = useMemo(() => {
+    const date = new Date(`${startDate}T00:00:00`);
+    date.setMonth(date.getMonth() + 1);
+    return Number.isNaN(date.getTime()) ? "—" : formatPaymentDate(date);
+  }, [startDate]);
+
+  function submit(event) {
+    event.preventDefault();
+    if (!startDate) return;
+    onStartCredit?.(item.credit.id, startDate);
+    onClose();
+  }
+
+  return (
+    <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="start-credit-title">
+      <div className="modal-card">
+        <div className="modal-head">
+          <div>
+            <h2 id="start-credit-title">Krediti başlat</h2>
+            <p>{item.credit.customer} · {item.credit.contractId || item.credit.id}</p>
+          </div>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
+        </div>
+        <form className="credit-payment-form" onSubmit={submit}>
+          <label>
+            <span>Kreditin başlanma tarixi</span>
+            <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          </label>
+          <div className="credit-payment-preview">
+            <span>İlk ödəniş tarixi <strong>{firstPaymentDate}</strong></span>
+            <span>Müddət <strong>{item.plan.months} ay</strong></span>
+          </div>
+          <p className="form-help">Təsdiqdən sonra ödəniş cədvəli yaradılacaq və kredit aktiv portfelə keçəcək.</p>
+          <div className="modal-actions">
+            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
+            <button type="submit" className="primary-btn"><Play size={15} /> Krediti başlat</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -8,5 +8,8 @@ data/*.sqlite
 data/*.sqlite-*
 work/
 *.log
+.npm-cache/
+.cli-home/
+.tmp-period-*.json
 .env.local
 .env.production

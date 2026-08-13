@@ -63,7 +63,26 @@ export function useOrders(tenantId) {
     return () => { supabase.removeChannel(channel); };
   }, [tenantId, fetchAll]);
 
-  const create = async ({ items = [], ...header }) => {
+  const create = async ({ items = [], request_key: requestKey, credit = null, ...header }) => {
+    if (requestKey && header.customer_id) {
+      const { data: atomicResult, error: atomicError } = await supabase.rpc('create_sales_order_atomic', {
+        _tenant_id: tenantId,
+        _request_key: requestKey,
+        _order_no: header.order_no,
+        _customer_id: header.customer_id,
+        _order_date: header.order_date || new Date().toISOString().slice(0, 10),
+        _currency: header.currency || 'AZN',
+        _notes: header.notes || null,
+        _items: items,
+        _credit: credit,
+      });
+      if (!atomicError) {
+        await fetchAll();
+        return { id: atomicResult.order_id, creditId: atomicResult.credit_id };
+      }
+      if (!isMissingRpc(atomicError)) throw atomicError;
+    }
+
     const { data: orderId, error } = await supabase.rpc('create_sales_order', {
       _tenant_id: tenantId,
       _order_no: header.order_no,

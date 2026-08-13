@@ -547,6 +547,51 @@ button {
   color: var(--muted);
 }
 
+.accounting-period-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(440px, 1.5fr);
+  gap: 24px;
+  padding: 4px 0 0;
+}
+
+.accounting-period-form {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding-right: 24px;
+  border-right: 1px solid var(--line);
+}
+
+.accounting-period-form textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.period-readiness {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: var(--radius);
+}
+
+.period-readiness.warning { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.period-readiness div { display: grid; gap: 3px; }
+.period-readiness span, .period-permission-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.period-confirmation { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45; }
+.period-confirmation input { margin-top: 3px; accent-color: var(--accent); }
+.period-error { padding: 10px 12px; border-radius: var(--radius); background: #fff1f2; color: var(--red); font-size: 13px; }
+.accounting-period-history h3 { margin: 0 0 12px; font-size: 15px; }
+.accounting-period-history .table-wrap { max-height: 310px; overflow: auto; }
+.period-empty { padding: 20px; color: var(--muted); text-align: center; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .accounting-period-layout { grid-template-columns: 1fr; }
+  .accounting-period-form { padding-right: 0; padding-bottom: 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+}
+
 .page-header p {
   margin: 7px 0 0;
   font-size: 14px;

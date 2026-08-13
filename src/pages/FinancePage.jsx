@@ -23,6 +23,7 @@ import { money, normalize, percent } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import { ReconciliationPanel } from "../modules/finance/ReconciliationPanel.jsx";
+import { AccountingPeriodPanel } from "../modules/finance/components/AccountingPeriodPanel.jsx";
 import {
   baseFinanceDate,
 } from "../shared/lib/appDomain.jsx";
@@ -55,6 +56,9 @@ function FinancePage({
   onOpenSalesOrder,
   onOpenCredit,
   onOpenVendors,
+  tenantId,
+  canManagePeriods = false,
+  notify,
 }) {
   const [financeFilter, setFinanceFilter] = useState("Hamısı");
   const [categoryFilter, setCategoryFilter] = useState("Bütün kateqoriyalar");
@@ -241,6 +245,12 @@ function FinancePage({
   return (
     <div className="stack">
       <ReconciliationPanel />
+      <AccountingPeriodPanel
+        tenantId={tenantId}
+        canManage={canManagePeriods}
+        expenses={expenses}
+        notify={notify}
+      />
       <section className="metric-grid four">
         <MetricCard label="Cash balans" value={money(cashTotal)} icon={Wallet} tone="success" />
         <MetricCard label="Daxilolma" value={money(inflowTotal)} trend={`${orders.length} satış/kredit mənbəyi`} icon={TrendingUp} tone="primary" />

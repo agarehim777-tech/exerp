@@ -37,6 +37,9 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN" || (echo "SUPABASE_ACCESS_TOKEN is missing" && exit 1)
           test -n "$SUPABASE_DB_PASSWORD" || (echo "SUPABASE_DB_PASSWORD is missing" && exit 1)
 
+      - name: Validate transaction hardening contract
+        run: npm run verify:hardening
+
       - name: Link Supabase project
         run: supabase link --project-ref "$PROJECT_REF"
 
@@ -45,6 +48,9 @@ jobs:
 
       - name: Apply migrations
         run: supabase db push --include-all
+
+      - name: Lint production database
+        run: supabase db lint --linked --level error
 
       - name: List applied migrations
         run: supabase migration list

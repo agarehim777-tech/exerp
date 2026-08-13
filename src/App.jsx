@@ -111,6 +111,7 @@ import {
 } from "./components/ui.jsx";
 import { money, normalize, percent } from "./services/format.js";
 import { queueNotification, saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
+import { createIdempotencyKey } from "./services/coreOperations.js";
 import {
   addMonths,
   formatDateInput,
@@ -2479,7 +2480,9 @@ function buildSalesCreditForOrder(order, storedCredit) {
     paidMonths: 0,
     rate: 0,
     next: installments[0]?.due || "—",
-    status: "Aktiv",
+    status: storedCredit?.status || "Başlanmamış",
+    startDate: storedCredit?.startDate ?? null,
+    startedAt: storedCredit?.startedAt ?? null,
     installments,
     payments,
   };
@@ -6463,6 +6466,8 @@ function App() {
             const prod = productsBySku.get(key) || productsByName.get(key) || null;
             const qty = Number(it.qty || 0);
             const unitPrice = Number(it.price || prod?.price || 0);
+            const stockRow = warehouseRows.find((row) => row.product === it.product);
+            const canReserve = stockRow && getFreeQuantity(stockRow) >= qty;
             return {
               line_no: idx + 1,
               product_id: prod?.id || null,
@@ -6471,11 +6476,15 @@ function App() {
               unit_price: unitPrice,
               discount_pct: 0,
               vat_rate: Number(it.vatRate ?? 0),
+              warehouse_id: canReserve && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(warehouseId)
+                ? warehouseId
+                : null,
             };
           });
         const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
         const orderNo = nextSalesOrderNumber(dbOrders);
         createDbOrder({
+          request_key: createIdempotencyKey("sales-order"),
           order_no: orderNo,
           customer_id: customerRow?.id || null,
           order_date: values.date || new Date().toISOString().slice(0, 10),
@@ -6483,6 +6492,19 @@ function App() {
           currency: "AZN",
           notes: serializeOrderNotes(values.note, values.internalNotes),
           items,
+          credit: values.paymentMethod === "Kredit"
+            ? {
+                contract_no: nextContractNumber({
+                  contracts: state.contracts,
+                  orders: state.orders,
+                  credits: creditRecords,
+                }),
+                principal: Number(values.orderTotal || 0),
+                initial_payment: Number(values.initialPayment || 0),
+                term_months: Number(values.creditMonths || 12),
+                start_date: values.date || new Date().toISOString().slice(0, 10),
+              }
+            : null,
         }).catch((err) => {
           console.error("[orders] DB insert failed:", err);
           notify(`DB-yə saxlanılmadı: ${err.message || err}`, "warning");
@@ -8709,6 +8731,57 @@ function App() {
     });
   }
 
+  function startCredit(creditId, startDate) {
+    if (!requirePermission("credits.manage", "krediti başlatmaq")) return;
+    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    if (!targetCredit) {
+      notify("Kredit tapılmadı.", "warning");
+      return;
+    }
+    if (targetCredit.status === "Başlanmamış" || targetCredit.status === "draft" || targetCredit.startedAt === null) {
+      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
+      return;
+    }
+    if (targetCredit.status !== "Başlanmamış" && targetCredit.status !== "draft") {
+      notify("Bu kredit artıq başladılıb.", "warning");
+      return;
+    }
+
+    const plan = buildCreditPlan({
+      total: targetCredit.total,
+      initialPayment: targetCredit.initialPayment,
+      months: targetCredit.months,
+      startDate,
+    });
+    const startedAt = new Date().toISOString();
+    const startedCredit = {
+      ...targetCredit,
+      status: "Aktiv",
+      startDate,
+      startedAt,
+      installments: plan.installments,
+      monthly: plan.monthly,
+      lastPayment: plan.lastPayment,
+      next: plan.installments[0]?.due || "—",
+    };
+
+    setState((current) => {
+      const exists = current.credits.some((credit) => credit.id === creditId);
+      return {
+        ...current,
+        credits: exists
+          ? current.credits.map((credit) => (credit.id === creditId ? startedCredit : credit))
+          : [startedCredit, ...current.credits],
+      };
+    });
+    notify("Kredit başladıldı və ödəniş cədvəli aktiv edildi.");
+    auditOperation({
+      module: "Kredit",
+      action: "Kredit başladıldı",
+      detail: `${creditId} · başlanma ${startDate} · ilk ödəniş ${plan.installments[0]?.due || "—"}`,
+    });
+  }
+
   function createPurchaseOrder(row) {
     if (!requirePermission("vendors.po", "PO yaratmaq")) return false;
 
@@ -9654,6 +9727,9 @@ function App() {
             onOpenSalesOrder={openLinkedSalesOrder}
             onOpenCredit={openLinkedCredit}
             onOpenVendors={openVendorModule}
+            tenantId={activeTenantId}
+            canManagePeriods={can("finance.manage")}
+            notify={notify}
             />
           )}
           {active === "invoices" && (
@@ -9672,6 +9748,7 @@ function App() {
               sendCreditSms={sendCreditSms}
               onUpdatePaymentDate={updateCreditPaymentDate}
               onReceivePayment={receiveCreditPayment}
+              onStartCredit={startCredit}
               onCreateCredit={() => setModal({ type: "sales", presetPaymentMethod: "Kredit" })}
               onOpenSalesOrder={openLinkedSalesOrder}
               selectedCreditId={selectedCreditId}

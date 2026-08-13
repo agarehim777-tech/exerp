@@ -83,3 +83,26 @@ include the exact Supabase and Sentry origins used by the production build.
 - Roll back the frontend to the previous artifact when needed.
 - Never roll back a database migration without a tested reverse migration or
   forward-fix plan.
+# Transaction and security hardening
+
+Migration `20260812090000_transaction_security_hardening.sql` adds the production safety layer for critical operations:
+
+- `create_sales_order_atomic` creates the order, stock reservations and optional credit contract in one database transaction;
+- `operation_requests` supplies tenant-scoped idempotency and prevents duplicate submissions;
+- cross-tenant references are rejected by database triggers;
+- locked accounting periods reject later finance mutations;
+- critical ledger rows are not directly deletable by authenticated clients;
+- portfolio, due-date, cash, expense and stock lookups have production indexes.
+
+Before deployment, run:
+
+```bash
+npm ci
+npm test
+npm run verify:security
+npm run verify:hardening
+npm run verify:recovery
+npm run build
+```
+
+GitHub Actions additionally runs `supabase db lint --linked --level error`, a post-deploy page health check and the scheduled production monitor. Configure `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VITE_SUPABASE_PUBLISHABLE_KEY` and the disaster-recovery database secret in the corresponding protected GitHub environments.

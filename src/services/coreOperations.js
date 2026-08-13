@@ -18,6 +18,66 @@ async function callRpc(name, payload) {
   return data;
 }
 
+export function createIdempotencyKey(prefix = "operation") {
+  const randomPart = globalThis.crypto?.randomUUID?.()
+    || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}:${randomPart}`;
+}
+
+export function createSalesOrderAtomic({
+  tenantId,
+  requestKey,
+  orderNo,
+  customerId,
+  orderDate,
+  currency = "AZN",
+  notes = null,
+  items,
+  credit = null,
+}) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("Sifariş üçün ən azı bir məhsul tələb olunur");
+  }
+  return callRpc("create_sales_order_atomic", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _request_key: requireValue(requestKey, "requestKey"),
+    _order_no: requireValue(orderNo, "orderNo"),
+    _customer_id: requireValue(customerId, "customerId"),
+    _order_date: requireValue(orderDate, "orderDate"),
+    _currency: currency,
+    _notes: notes,
+    _items: items,
+    _credit: credit,
+  });
+}
+
+export function lockAccountingPeriod({ tenantId, periodStart, periodEnd, reason = null }) {
+  return callRpc("lock_accounting_period", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _period_start: requireValue(periodStart, "periodStart"),
+    _period_end: requireValue(periodEnd, "periodEnd"),
+    _reason: reason,
+  });
+}
+
+export async function listAccountingPeriodLocks(tenantId) {
+  const { data, error } = await supabase
+    .from("accounting_period_locks")
+    .select("id, period_start, period_end, status, reason, locked_at, reopened_at")
+    .eq("tenant_id", requireValue(tenantId, "tenantId"))
+    .order("period_start", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export function reopenAccountingPeriod({ tenantId, periodLockId, reason }) {
+  return callRpc("reopen_accounting_period", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _period_lock_id: requireValue(periodLockId, "periodLockId"),
+    _reason: requireValue(reason, "reason"),
+  });
+}
+
 export async function detectCoreOperations() {
   const { error } = await supabase
     .from("credit_contracts")
@@ -73,6 +133,14 @@ export function createCreditContract({
     _principal: Number(requireValue(principal, "principal")),
     _initial_payment: Number(initialPayment || 0),
     _term_months: Number(requireValue(termMonths, "termMonths")),
+    _start_date: requireValue(startDate, "startDate"),
+  });
+}
+
+export function startCreditContract({ tenantId, creditId, startDate }) {
+  return callRpc("start_credit_contract", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _credit_id: requireValue(creditId, "creditId"),
     _start_date: requireValue(startDate, "startDate"),
   });
 }

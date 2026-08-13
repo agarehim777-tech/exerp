@@ -8,15 +8,74 @@ vi.mock("../integrations/supabase/client", () => ({
 
 import {
   completeDelivery,
+  createIdempotencyKey,
+  createSalesOrderAtomic,
   createCreditContract,
+  lockAccountingPeriod,
+  reopenAccountingPeriod,
   postCreditPayment,
   reserveStock,
+  startCreditContract,
 } from "../services/coreOperations";
 
 describe("normalized core operations", () => {
   beforeEach(() => {
     rpc.mockReset();
     rpc.mockResolvedValue({ data: "operation-id", error: null });
+  });
+
+  it("creates an idempotent atomic sales request", async () => {
+    await createSalesOrderAtomic({
+      tenantId: "tenant-1",
+      requestKey: "sales-order:req-1",
+      orderNo: "SF-1002",
+      customerId: "customer-1",
+      orderDate: "2026-08-12",
+      items: [{ product_id: "product-1", qty: 1, unit_price: 500 }],
+      credit: { contract_no: "IN-1002", principal: 500, term_months: 12 },
+    });
+
+    expect(rpc).toHaveBeenCalledWith("create_sales_order_atomic", expect.objectContaining({
+      _tenant_id: "tenant-1",
+      _request_key: "sales-order:req-1",
+      _order_no: "SF-1002",
+      _credit: expect.objectContaining({ contract_no: "IN-1002" }),
+    }));
+  });
+
+  it("generates a unique client request key", () => {
+    const first = createIdempotencyKey("payment");
+    const second = createIdempotencyKey("payment");
+    expect(first).toMatch(/^payment:/);
+    expect(second).not.toBe(first);
+  });
+
+  it("locks accounting periods through an admin RPC", async () => {
+    await lockAccountingPeriod({
+      tenantId: "tenant-1",
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31",
+      reason: "Month close",
+    });
+    expect(rpc).toHaveBeenCalledWith("lock_accounting_period", {
+      _tenant_id: "tenant-1",
+      _period_start: "2026-07-01",
+      _period_end: "2026-07-31",
+      _reason: "Month close",
+    });
+  });
+
+  it("reopens an accounting period with an audited reason", async () => {
+    await reopenAccountingPeriod({
+      tenantId: "tenant-1",
+      periodLockId: "period-1",
+      reason: "Audit correction",
+    });
+    expect(rpc).toHaveBeenCalledWith("reopen_accounting_period", {
+      _tenant_id: "tenant-1",
+      _period_lock_id: "period-1",
+      _reason: "Audit correction",
+    });
   });
 
   it("keeps every sale credit linked to its own order", async () => {
@@ -40,6 +99,16 @@ describe("normalized core operations", () => {
       _initial_payment: 100,
       _term_months: 12,
       _start_date: "2026-07-29",
+    });
+  });
+
+  it("starts a draft credit on an explicit date", async () => {
+    await startCreditContract({ tenantId: "tenant-1", creditId: "credit-1", startDate: "2026-08-13" });
+
+    expect(rpc).toHaveBeenCalledWith("start_credit_contract", {
+      _tenant_id: "tenant-1",
+      _credit_id: "credit-1",
+      _start_date: "2026-08-13",
     });
   });
 

@@ -18,6 +18,7 @@
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "verify:security": "node scripts/verify-security-posture.mjs",
     "verify:core-backend": "node scripts/verify-core-backend.mjs",
+    "verify:hardening": "node scripts/verify-transaction-hardening.mjs",
     "verify:recovery": "node scripts/verify-recovery.mjs",
     "audit:interactions": "node scripts/interactive-audit.mjs",
     "audit:flows": "node scripts/business-flow-audit.mjs",

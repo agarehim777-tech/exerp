@@ -45,6 +45,9 @@ jobs:
       - name: Security checks
         run: npm run verify:security
 
+      - name: Transaction and tenant hardening checks
+        run: npm run verify:hardening
+
       - name: Backup and restore checks
         run: npm run verify:recovery
 
@@ -82,3 +85,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Post-deploy health check
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            code="$(curl --silent --show-error --location --output /tmp/exerp.html --write-out '%{http_code}' "$SITE_URL")"
+            if [[ "$code" == "200" ]] && grep -q '<div id="root"' /tmp/exerp.html; then
+              echo "Production health check passed on attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt failed with HTTP $code"
+            sleep 10
+          done
+          echo "Production health check failed"
+          exit 1

@@ -9,6 +9,8 @@ import {
   getAvailableQuantity,
   getReceivableClosureAmount,
   isCreditClosed,
+  isCreditStarted,
+  matchesCreditManagementFilter,
 } from "../shared/lib/appDomain.jsx";
 
 describe("credit business rules", () => {
@@ -100,6 +102,16 @@ describe("individual permission overrides", () => {
     };
 
     expect(userHasEffectivePermission(user, roles, "credits.manage")).toBe(true);
+  });
+
+  it("keeps a draft credit outside payment calculations until it is started", () => {
+    const draft = { status: "Başlanmamış", startedAt: null, balance: 1100, months: 12 };
+    const item = { credit: draft, plan: { balance: 1100, months: 12 }, paymentState: {} };
+
+    expect(isCreditStarted(draft)).toBe(false);
+    expect(matchesCreditManagementFilter(item, "Başlanmamış")).toBe(true);
+    expect(matchesCreditManagementFilter(item, "Aktiv")).toBe(false);
+    expect(isCreditStarted({ ...draft, status: "Aktiv", startedAt: "2026-08-13T10:00:00Z", startDate: "2026-08-13" })).toBe(true);
   });
 
   it("denies a role permission explicitly disabled for the user", () => {
