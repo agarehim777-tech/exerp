@@ -7,6 +7,7 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
+  CreditCard,
   Eye,
   FileText,
   PackageCheck,
@@ -68,6 +69,8 @@ const emptyReceipt = { po_id: "", grn_number: "", receipt_date: today(), notes: 
 const emptyInvoice = { po_id: "", invoice_number: "", invoice_date: today(), due_date: "", currency: "AZN", match_notes: "" };
 const emptyPoLine = { product_id: "", product_sku: "", description: "", qty_ordered: "1", unit: "ədəd", unit_price: "0" };
 const emptyRfq = { title: "", description: "", quantity: "1", due_at: "", vendor_ids: [] };
+const emptyPoPayment = { po_id: "", amount: "", payment_date: today(), payment_method: "bank", reference_no: "", notes: "" };
+
 
 function nextNumber(prefix) {
   const now = new Date();
@@ -201,12 +204,16 @@ export default function ProcurementPage() {
   const [receiptLines, setReceiptLines] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [invoiceLines, setInvoiceLines] = useState([]);
+  const [poPayments, setPoPayments] = useState([]);
   const [matchRows, setMatchRows] = useState({});
   const [rfqs, setRfqs] = useState([]);
   const [rfqForm, setRfqForm] = useState(emptyRfq);
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
+  const [paymentPoId, setPaymentPoId] = useState(null);
+  const [paymentForm, setPaymentForm] = useState(emptyPoPayment);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
 
   const [vendorForm, setVendorForm] = useState(emptyVendor);
   const [editingVendorId, setEditingVendorId] = useState(null);
@@ -220,11 +227,12 @@ export default function ProcurementPage() {
   const [invoiceDraftLines, setInvoiceDraftLines] = useState([]);
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
+
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     setError("");
-    const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes] = await Promise.all([
+    const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
       supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }),
       supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
@@ -233,9 +241,10 @@ export default function ProcurementPage() {
       supabase.from("goods_receipt_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
       supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("vendor_invoice_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
+      supabase.from("po_payments").select("*").eq("tenant_id", tenantId).order("payment_date", { ascending: false }),
     ]);
 
-    const firstError = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes].find((result) => result.error)?.error;
+    const firstError = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes].find((result) => result.error)?.error;
     if (firstError) setError(getError(firstError));
 
     setVendors(vendorRes.data || []);
@@ -246,8 +255,10 @@ export default function ProcurementPage() {
     setReceiptLines(grnLineRes.data || []);
     setInvoices(invoiceRes.data || []);
     setInvoiceLines(invoiceLineRes.data || []);
+    setPoPayments(paymentRes.data || []);
     setLoading(false);
   }, [tenantId]);
+
 
   useEffect(() => {
     load();
@@ -324,11 +335,13 @@ export default function ProcurementPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "goods_receipts", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "vendor_invoices", filter: `tenant_id=eq.${tenantId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "po_payments", filter: `tenant_id=eq.${tenantId}` }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [tenantId, load]);
+
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
   const receiptLinesByReceipt = useMemo(() => groupBy(receiptLines, "grn_id"), [receiptLines]);
@@ -387,11 +400,16 @@ export default function ProcurementPage() {
       const amount = invoiceTotals.get(invoice.id) || 0;
       const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
       current.billed += amount;
-      if (invoice.status === "paid") current.paid += amount;
       map.set(invoice.po_id, current);
     });
+    poPayments.forEach((payment) => {
+      const current = map.get(payment.po_id) || { billed: 0, paid: 0 };
+      current.paid += toNumber(payment.amount);
+      map.set(payment.po_id, current);
+    });
     return map;
-  }, [invoices, invoiceTotals]);
+  }, [invoices, invoiceTotals, poPayments]);
+
 
 
   const filteredVendors = useMemo(
@@ -747,6 +765,71 @@ export default function ProcurementPage() {
     }
     setSaving(false);
   }
+
+  function openPaymentForm(po) {
+    setPaymentPoId(po.id);
+    setEditingPaymentId(null);
+    setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
+    setExpandedPo(po.id);
+  }
+
+  function editPayment(payment) {
+    const po = purchaseOrders.find((item) => item.id === payment.po_id);
+    setPaymentPoId(payment.po_id);
+    setEditingPaymentId(payment.id);
+    setPaymentForm({
+      po_id: payment.po_id,
+      amount: String(payment.amount || ""),
+      payment_date: payment.payment_date || today(),
+      payment_method: payment.payment_method || "bank",
+      reference_no: payment.reference_no || "",
+      notes: payment.notes || "",
+    });
+    setExpandedPo(payment.po_id);
+  }
+
+  async function savePoPayment(event) {
+    event.preventDefault();
+    if (!paymentForm.po_id || toNumber(paymentForm.amount) <= 0) {
+      setError("PO və ödəniş məbləği tələb olunur.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const payload = {
+      po_id: paymentForm.po_id,
+      amount: toNumber(paymentForm.amount),
+      payment_date: paymentForm.payment_date || today(),
+      payment_method: paymentForm.payment_method?.trim() || "bank",
+      reference_no: paymentForm.reference_no?.trim() || null,
+      notes: paymentForm.notes?.trim() || null,
+    };
+    const { error: paymentError } = editingPaymentId
+      ? await supabase.from("po_payments").update(payload).eq("id", editingPaymentId)
+      : await supabase.from("po_payments").insert({ ...payload, tenant_id: tenantId, created_by: user?.id || null });
+    if (paymentError) setError(getError(paymentError));
+    else {
+      setNotice(editingPaymentId ? "Ödəniş yeniləndi." : "PO ödənişi qeyd edildi.");
+      setPaymentForm(emptyPoPayment);
+      setEditingPaymentId(null);
+      setPaymentPoId(null);
+      await load();
+    }
+    setSaving(false);
+  }
+
+  async function deletePayment(payment) {
+    if (!window.confirm("Bu ödənişi silmək istəyirsiniz?")) return;
+    setSaving(true);
+    const { error: paymentError } = await supabase.from("po_payments").delete().eq("id", payment.id);
+    if (paymentError) setError(getError(paymentError));
+    else {
+      setNotice("Ödəniş silindi.");
+      await load();
+    }
+    setSaving(false);
+  }
+
 
   function choosePoForReceipt(poId) {
     const po = purchaseOrders.find((item) => item.id === poId);
@@ -1146,7 +1229,7 @@ export default function ProcurementPage() {
               linesByPo={linesByPo}
               poMetrics={poMetrics}
               paymentByPo={paymentByPo}
-
+              poPayments={poPayments}
               acceptedByLine={acceptedByLine}
               invoicedByLine={invoicedByLine}
               expandedPo={expandedPo}
@@ -1157,6 +1240,14 @@ export default function ProcurementPage() {
               setDraftLines={setPoDraftLines}
               setProductOnLine={setProductOnLine}
               editingPoId={editingPoId}
+              paymentPoId={paymentPoId}
+              paymentForm={paymentForm}
+              setPaymentForm={setPaymentForm}
+              editingPaymentId={editingPaymentId}
+              onPaymentOpen={openPaymentForm}
+              onPaymentEdit={editPayment}
+              onPaymentSubmit={savePoPayment}
+              onPaymentDelete={deletePayment}
               onSubmit={savePo}
               onCancel={resetPoForm}
               onEdit={editPo}
@@ -1428,7 +1519,7 @@ function PurchaseOrdersTab({
   linesByPo,
   poMetrics,
   paymentByPo,
-
+  poPayments,
   acceptedByLine,
   invoicedByLine,
   expandedPo,
@@ -1439,6 +1530,14 @@ function PurchaseOrdersTab({
   setDraftLines,
   setProductOnLine,
   editingPoId,
+  paymentPoId,
+  paymentForm,
+  setPaymentForm,
+  editingPaymentId,
+  onPaymentOpen,
+  onPaymentEdit,
+  onPaymentSubmit,
+  onPaymentDelete,
   onSubmit,
   onCancel,
   onEdit,
@@ -1554,6 +1653,7 @@ function PurchaseOrdersTab({
                 <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
+                <IconButton icon={CreditCard} label="Ödəniş" onClick={() => { setExpandedPo(po.id); onPaymentOpen(po); }} />
                 {po.status === "draft" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(po)} tone="success" />}
                 {["approved", "partial"].includes(po.status) && <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} tone="success" />}
                 {po.status === "received" && <IconButton icon={CheckCircle2} label="Bağla" onClick={() => onClose(po)} />}
@@ -1563,13 +1663,114 @@ function PurchaseOrdersTab({
           })}
           detail={(po) =>
             expandedPo === po.id && (
-              <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
+              <div style={{ display: "grid", gap: "16px" }}>
+                <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
+                <PoPaymentPanel
+                  po={po}
+                  poPayments={poPayments}
+                  paymentForm={paymentForm}
+                  setPaymentForm={setPaymentForm}
+                  paymentPoId={paymentPoId}
+                  editingPaymentId={editingPaymentId}
+                  onPaymentEdit={onPaymentEdit}
+                  onPaymentSubmit={onPaymentSubmit}
+                  onPaymentDelete={onPaymentDelete}
+                  saving={saving}
+                  paymentByPo={paymentByPo}
+                  poMetrics={poMetrics}
+                />
+              </div>
             )
           }
           sourceRows={purchaseOrders}
         />
       </Panel>
     </section>
+  );
+}
+
+function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPoId, editingPaymentId, onPaymentEdit, onPaymentSubmit, onPaymentDelete, saving, paymentByPo, poMetrics }) {
+  const payments = poPayments.filter((payment) => payment.po_id === po.id);
+  const payment = paymentByPo.get(po.id) || { billed: 0, paid: 0 };
+  const poValue = poMetrics.get(po.id)?.total || 0;
+  const paid = payment.paid || 0;
+  const due = Math.max(0, poValue - paid);
+  const isOpen = paymentPoId === po.id;
+
+  return (
+    <div style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", background: "#f8fafc", display: "grid", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <strong style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <CreditCard size={18} /> PO ödənişləri
+        </strong>
+        <div style={{ display: "flex", gap: "10px", fontSize: "13px" }}>
+          <span>PO dəyəri: <strong>{money(poValue, po.currency)}</strong></span>
+          <span>Ödənilib: <strong>{money(paid, po.currency)}</strong></span>
+          <span>Qalıq ödəniş: <strong>{money(due, po.currency)}</strong></span>
+        </div>
+      </div>
+
+      {payments.length > 0 ? (
+        <table style={{ ...styles.table, background: "#fff", borderRadius: "8px", overflow: "hidden" }}>
+          <thead>
+            <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+              <th style={{ padding: "8px 10px" }}>Tarix</th>
+              <th style={{ padding: "8px 10px" }}>Məbləğ</th>
+              <th style={{ padding: "8px 10px" }}>Üsul</th>
+              <th style={{ padding: "8px 10px" }}>Referans</th>
+              <th style={{ padding: "8px 10px" }}>Qeyd</th>
+              <th style={{ padding: "8px 10px", textAlign: "right" }}>Əməl</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map((payment) => (
+              <tr key={payment.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                <td style={{ padding: "8px 10px" }}>{payment.payment_date}</td>
+                <td style={{ padding: "8px 10px", fontWeight: 700 }}>{money(payment.amount, po.currency)}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.payment_method || "bank"}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.reference_no || "—"}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.notes || "—"}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>
+                  <div style={styles.rowActions}>
+                    <IconButton icon={Pencil} label="Edit" onClick={() => onPaymentEdit(payment)} />
+                    <IconButton icon={Trash2} label="Sil" onClick={() => onPaymentDelete(payment)} tone="danger" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p style={styles.helperText}>Bu PO üzrə hələ ödəniş qeyd edilməyib.</p>
+      )}
+
+      {isOpen && (
+        <form onSubmit={onPaymentSubmit} style={{ ...styles.form, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "12px", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <Field label="Məbləğ" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })} required />
+          <Field label="Tarix" type="date" value={paymentForm.payment_date} onChange={(value) => setPaymentForm({ ...paymentForm, payment_date: value })} required />
+          <label style={styles.field}>
+            <span>Üsul</span>
+            <select value={paymentForm.payment_method} onChange={(event) => setPaymentForm({ ...paymentForm, payment_method: event.target.value })}>
+              <option value="bank">Bank köçürməsi</option>
+              <option value="cash">Nağd</option>
+              <option value="card">Kart</option>
+              <option value="other">Digər</option>
+            </select>
+          </label>
+          <Field label="Referans №" value={paymentForm.reference_no} onChange={(value) => setPaymentForm({ ...paymentForm, reference_no: value })} />
+          <Field label="Qeyd" value={paymentForm.notes} onChange={(value) => setPaymentForm({ ...paymentForm, notes: value })} wide />
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label={editingPaymentId ? "Yenilə" : "Ödəniş qeyd et"} tone="primary" disabled={saving} submit />
+            {editingPaymentId && (
+              <IconButton icon={X} label="Ləğv et" onClick={() => {
+                setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
+                onPaymentEdit({ id: null, po_id: po.id });
+              }} />
+            )}
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 
