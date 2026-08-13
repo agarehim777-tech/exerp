@@ -1677,6 +1677,7 @@ function PurchaseOrdersTab({
                   onPaymentDelete={onPaymentDelete}
                   saving={saving}
                   paymentByPo={paymentByPo}
+                  poMetrics={poMetrics}
                 />
               </div>
             )
