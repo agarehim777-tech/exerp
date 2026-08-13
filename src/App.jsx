@@ -186,6 +186,54 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
 const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
 
 import {
+  addDays,
+  applyCreditPrincipalPayment,
+  buildCreditPlan,
+  creditTermOptions,
+  daysBetween,
+  getCreditDebtFormula,
+  getCreditDisplayPlan,
+  getCreditInitials,
+  getCreditManagementStatus,
+  getCreditPaidTotal,
+  getCreditPaymentState,
+  getCreditPlanStartDate,
+  getCreditRemainingMonths,
+  getCreditRiskLabel,
+  getCreditRowDate,
+  getCreditSourceLabel,
+  getReceivableClosureAmount,
+  isCreditClosed,
+  matchesCreditDashboardFilter,
+  matchesCreditManagementFilter,
+  matchesCreditSearch,
+  matchesCreditSourceFilter,
+  monthNamesAz,
+  roundMoney,
+  shiftPaymentDate,
+} from "./shared/lib/credit.js";
+export {
+  applyCreditPrincipalPayment,
+  buildCreditPlan,
+  getCreditDebtFormula,
+  getCreditDisplayPlan,
+  getCreditInitials,
+  getCreditManagementStatus,
+  getCreditPaidTotal,
+  getCreditPaymentState,
+  getCreditRowDate,
+  getCreditSourceLabel,
+  getReceivableClosureAmount,
+  isCreditClosed,
+  matchesCreditManagementFilter,
+  matchesCreditSearch,
+  matchesCreditSourceFilter,
+  monthNamesAz,
+};
+
+const baseCashBalance = 0;
+
+import {
   deploymentToolkitReady,
   getCreditIdForOrder,
   buildSalesCreditRecord,
