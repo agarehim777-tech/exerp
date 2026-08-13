@@ -97,7 +97,7 @@ export default function SalesInvoicesPage() {
 
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Satış fakturaları ({ar.invoices.length})</h3>
+          <h3 style={{ margin: 0 }}>Satış fakturaları ({filteredInvoices.length}/{ar.invoices.length})</h3>
           <button style={primaryBtn} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Bağla" : "+ Yeni faktura"}
           </button>
