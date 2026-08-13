@@ -108,6 +108,50 @@ export type Database = {
           },
         ]
       }
+      ai_insight_feedback: {
+        Row: {
+          action: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          insight_key: string
+          note: string | null
+          tenant_id: string
+          title: string | null
+        }
+        Insert: {
+          action: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insight_key: string
+          note?: string | null
+          tenant_id: string
+          title?: string | null
+        }
+        Update: {
+          action?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insight_key?: string
+          note?: string | null
+          tenant_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_logs: {
         Row: {
           context: Json | null
@@ -1245,6 +1289,7 @@ export type Database = {
           phone: string | null
           segment: string
           tax_id: string | null
+          telegram_chat_id: string | null
           tenant_id: string
           updated_at: string
         }
@@ -1264,6 +1309,7 @@ export type Database = {
           phone?: string | null
           segment?: string
           tax_id?: string | null
+          telegram_chat_id?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -1283,6 +1329,7 @@ export type Database = {
           phone?: string | null
           segment?: string
           tax_id?: string | null
+          telegram_chat_id?: string | null
           tenant_id?: string
           updated_at?: string
         }
