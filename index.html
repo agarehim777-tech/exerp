@@ -34,16 +34,35 @@
   <body>
     <div id="root"></div>
     <script>
-      // exerp-cache-reset-v1: GitHub Pages must never be pinned to a stale ERP build.
-      if (location.hostname.endsWith(".github.io") && "serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations()
-          .then((registrations) => Promise.allSettled(registrations.map((item) => item.unregister())))
-          .then(() => {
-            if (!("caches" in window)) return;
-            return caches.keys().then((names) => Promise.allSettled(names.map((name) => caches.delete(name))));
-          })
-          .catch(() => {});
-      }
+      // One-time recovery for browsers pinned to a stale app shell. This runs
+      // before React, removes the legacy worker/caches, then reloads once so the
+      // current build and backend configuration are guaranteed to be used.
+      (function recoverStaleBuild() {
+        var recoveryVersion = "exerp-cache-reset-v2";
+        try {
+          if (localStorage.getItem(recoveryVersion) === "done") return;
+          localStorage.setItem(recoveryVersion, "done");
+        } catch (_) {
+          return;
+        }
+
+        var removeWorkers = "serviceWorker" in navigator
+          ? navigator.serviceWorker.getRegistrations().then(function (registrations) {
+              return Promise.allSettled(registrations.map(function (item) { return item.unregister(); }));
+            })
+          : Promise.resolve();
+        var removeCaches = "caches" in window
+          ? caches.keys().then(function (names) {
+              return Promise.allSettled(names.map(function (name) { return caches.delete(name); }));
+            })
+          : Promise.resolve();
+
+        Promise.allSettled([removeWorkers, removeCaches]).then(function () {
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            location.reload();
+          }
+        }).catch(function () {});
+      })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
