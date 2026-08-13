@@ -1,10 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync';
+
+const PRODUCTS_PAGE_SIZE = 500;
 
 export function useProducts(tenantId) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(PRODUCTS_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
@@ -13,25 +18,22 @@ export function useProducts(tenantId) {
       .from('products')
       .select('*')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
     if (error) setError(error);
-    else setProducts(data || []);
+    else {
+      const rows = data || [];
+      setHasMore(rows.length > limit);
+      setProducts(rows.slice(0, limit));
+    }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, limit]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    const channel = supabase
-      .channel(`products:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'products', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const loadMore = useCallback(() => setLimit((value) => value + PRODUCTS_PAGE_SIZE), []);
+
+  useRealtimeResync(tenantId, ['products'], fetchAll, { channelPrefix: 'products' });
 
   const create = async (values) => {
     const { data, error } = await supabase
@@ -57,5 +59,5 @@ export function useProducts(tenantId) {
     setProducts((current) => current.filter((item) => item.id !== id));
   };
 
-  return { products, loading, error, refresh: fetchAll, create, update, remove };
+  return { products, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove };
 }

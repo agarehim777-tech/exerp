@@ -10,6 +10,7 @@ import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, v
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
 import {
+import LoadMoreBar from "../../components/LoadMoreBar.jsx";
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
 } from "../../shared/ui/tokens.js";
@@ -125,6 +126,7 @@ export default function SalesInvoicesPage() {
             )}
           </tbody>
         </table>
+        <LoadMoreBar hasMore={ar.hasMore} onLoadMore={ar.loadMore} loading={ar.loading} />
       </div>
     </div>
   );

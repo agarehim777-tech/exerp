@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync';
 
 const META_PREFIX = '__crm_meta__:';
 const readMeta = (notes) => { try { return String(notes || '').startsWith(META_PREFIX) ? JSON.parse(String(notes).slice(META_PREFIX.length)) : {}; } catch { return {}; } };
@@ -9,18 +10,22 @@ const customerPayload = (values, previousNotes = null) => {
   return { ...base, notes: `${META_PREFIX}${JSON.stringify(meta)}` };
 };
 
+const CUSTOMERS_PAGE_SIZE = 500;
+
 export function useCustomers(tenantId) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState({ silver: 1000, gold: 5000, platinum: 15000 });
+  const [limit, setLimit] = useState(CUSTOMERS_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
-      supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-      supabase.from('orders').select('customer_id,paid_amount').eq('tenant_id', tenantId),
+      supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit + 1),
+      supabase.from('orders').select('customer_id,paid_amount').eq('tenant_id', tenantId).limit(20000),
       supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
     if (customerResult.error) setError(customerResult.error);
@@ -30,7 +35,9 @@ export function useCustomers(tenantId) {
       setLevels(nextLevels);
       const paidByCustomer = new Map();
       (orderResult.data || []).forEach((order) => paidByCustomer.set(order.customer_id, (paidByCustomer.get(order.customer_id) || 0) + Number(order.paid_amount || 0)));
-      setCustomers((customerResult.data || []).map((customer) => {
+      const customerRows = customerResult.data || [];
+      setHasMore(customerRows.length > limit);
+      setCustomers(customerRows.slice(0, limit).map((customer) => {
         const meta = readMeta(customer.notes);
         customer = { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null };
         const paidTotal = paidByCustomer.get(customer.id) || 0;
@@ -39,21 +46,13 @@ export function useCustomers(tenantId) {
       }));
     }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, limit]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    const channel = supabase
-      .channel(`customers:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'customers', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const loadMore = useCallback(() => setLimit((value) => value + CUSTOMERS_PAGE_SIZE), []);
+
+  useRealtimeResync(tenantId, ['customers'], fetchAll, { channelPrefix: 'customers' });
 
   const create = async (values) => {
     const { data, error } = await supabase
@@ -86,5 +85,5 @@ export function useCustomers(tenantId) {
     if (error) throw error;
   };
 
-  return { customers, levels, loading, error, refresh: fetchAll, create, update, remove, saveLevels };
+  return { customers, levels, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
 }

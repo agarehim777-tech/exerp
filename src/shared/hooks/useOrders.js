@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useRealtimeResync } from './useRealtimeResync';
 
 function isMissingRpc(error) {
   return error?.code === 'PGRST202'
@@ -27,10 +28,14 @@ function lineValues(item, index, tenantId, orderId) {
   };
 }
 
+const ORDERS_PAGE_SIZE = 200;
+
 export function useOrders(tenantId) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(ORDERS_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
@@ -39,29 +44,22 @@ export function useOrders(tenantId) {
       .from('orders')
       .select('*, customer:customers(id,name), items:order_items(*)')
       .eq('tenant_id', tenantId)
-      .order('order_date', { ascending: false });
+      .order('order_date', { ascending: false })
+      .limit(limit + 1);
     if (error) setError(error);
-    else setOrders(data || []);
+    else {
+      const rows = data || [];
+      setHasMore(rows.length > limit);
+      setOrders(rows.slice(0, limit));
+    }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, limit]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    const channel = supabase
-      .channel(`orders:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll()
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'order_items', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [tenantId, fetchAll]);
+  const loadMore = useCallback(() => setLimit((value) => value + ORDERS_PAGE_SIZE), []);
+
+  useRealtimeResync(tenantId, ['orders', 'order_items'], fetchAll, { channelPrefix: 'orders' });
 
   const create = async ({ items = [], request_key: requestKey, credit = null, ...header }) => {
     if (requestKey && header.customer_id) {
@@ -231,5 +229,5 @@ export function useOrders(tenantId) {
     await fetchAll();
   };
 
-  return { orders, loading, error, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
+  return { orders, loading, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
 }
