@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 const REPO = import.meta.env.VITE_GITHUB_REPO || "";
 const BRANCH = import.meta.env.VITE_GITHUB_BRANCH || "main";
-const TOKEN = import.meta.env.VITE_GITHUB_TOKEN || "";
 const POLL_MS = 60_000;
 
 export function useGitHubSync({ enabled = true, onPush } = {}) {
@@ -35,14 +34,13 @@ export function useGitHubSync({ enabled = true, onPush } = {}) {
 
     async function check() {
       try {
+        // No credentials are sent: any token embedded in the browser bundle
+        // would be publicly readable. Only unauthenticated (public repo)
+        // GitHub endpoints are used here.
         const headers = {
           Accept: "application/vnd.github+json",
           "X-GitHub-Api-Version": "2022-11-28",
         };
-        if (TOKEN) {
-          headers.Authorization = `Bearer ${TOKEN}`;
-        }
-
         const res = await fetch(
           `https://api.github.com/repos/${REPO}/commits/${BRANCH}`,
           { headers }
