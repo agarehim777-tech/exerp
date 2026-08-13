@@ -831,6 +831,7 @@ export default function ProcurementPage() {
   }
 
 
+  function choosePoForReceipt(poId) {
     const po = purchaseOrders.find((item) => item.id === poId);
     if (!po) return;
     setEditingReceiptId(null);
