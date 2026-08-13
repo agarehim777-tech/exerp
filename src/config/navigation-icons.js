@@ -1,12 +1,13 @@
 import {
   BarChart3, Bell, Boxes, Building2, CalendarClock, CreditCard, FileText,
   LayoutDashboard, MessageSquare, Package, Settings, ShieldCheck, ShoppingCart,
-  Sparkles, TrendingUp, Truck, UserCog, Users, Wallet, Warehouse,
+  Brain, Sparkles, TrendingUp, Truck, UserCog, Users, Wallet, Warehouse,
 } from "lucide-react";
 
 export const navIcons = {
   dashboard: LayoutDashboard,
   assistant: Sparkles,
+  insights: Brain,
   platform: Building2,
   crm: Users,
   "crm-deals": TrendingUp,

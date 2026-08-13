@@ -2,6 +2,7 @@
 export const moduleRoutes = {
   dashboard: "/",
   assistant: "/ai-komekci",
+  insights: "/ai-tovsiyeler",
   platform: "/platform/sirketler",
   crm: "/crm/musteriler",
   "crm-deals": "/crm/sovdelesmeler",
