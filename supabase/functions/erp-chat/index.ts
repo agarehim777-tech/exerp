@@ -29,8 +29,10 @@ Deno.serve(async (req) => {
       },
     );
 
-    const { data: userRes } = await supabase.auth.getUser();
-    if (!userRes?.user) return json({ error: "Invalid session" }, 401);
+    const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userRes?.user) {
+      return json({ error: "Sessiya bitib. Yenidən daxil olun." }, 401);
+    }
 
     const { messages, tenantId }: { messages: UIMessage[]; tenantId?: string } = await req.json();
 
