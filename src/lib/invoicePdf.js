@@ -188,16 +188,39 @@ function registerRows(invoices) {
   });
 }
 
-export function exportInvoicesCsv(invoices, { fileName } = {}) {
+// İxrac sütunları — istifadəçi seçiminə açıqdır.
+export const INVOICE_EXPORT_COLUMNS = [
+  { key: 'invoice_no', label: 'Faktura №', type: 'text' },
+  { key: 'invoice_date', label: 'Tarix', type: 'date' },
+  { key: 'due_date', label: 'Son ödəniş', type: 'date' },
+  { key: 'customer', label: 'Müştəri', type: 'text' },
+  { key: 'subtotal', label: 'Net', type: 'money' },
+  { key: 'vat', label: 'ƏDV', type: 'money' },
+  { key: 'total', label: 'Cəmi', type: 'money' },
+  { key: 'paid', label: 'Ödənilib', type: 'money' },
+  { key: 'outstanding', label: 'Qalıq', type: 'money' },
+  { key: 'status', label: 'Status', type: 'text' },
+  { key: 'posted', label: 'Jurnal', type: 'text' },
+];
+
+export const DEFAULT_INVOICE_EXPORT_COLUMNS = [
+  'invoice_no', 'invoice_date', 'customer', 'total', 'paid', 'outstanding', 'status',
+];
+
+function resolveColumns(columns) {
+  const keys = Array.isArray(columns) && columns.length ? columns : DEFAULT_INVOICE_EXPORT_COLUMNS;
+  const picked = INVOICE_EXPORT_COLUMNS.filter((column) => keys.includes(column.key));
+  return picked.length ? picked : INVOICE_EXPORT_COLUMNS.filter((c) => DEFAULT_INVOICE_EXPORT_COLUMNS.includes(c.key));
+}
+
+export function exportInvoicesCsv(invoices, { fileName, columns } = {}) {
   const rows = registerRows(invoices);
-  const header = ['Faktura', 'Tarix', 'Son ödəniş', 'Müştəri', 'Net', 'ƏDV', 'Cəmi', 'Ödənilib', 'Qalıq', 'Status', 'Jurnal'];
+  const cols = resolveColumns(columns);
   const esc = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
-  const body = rows.map((row) => [
-    row.invoice_no, row.invoice_date, row.due_date, row.customer,
-    row.subtotal.toFixed(2), row.vat.toFixed(2), row.total.toFixed(2),
-    row.paid.toFixed(2), row.outstanding.toFixed(2), row.status, row.posted,
-  ].map(esc).join(','));
-  const csv = `\uFEFF${[header.map(esc).join(','), ...body].join('\n')}`;
+  const cell = (row, column) => (column.type === 'money' ? (Number(row[column.key]) || 0).toFixed(2) : row[column.key]);
+  const header = cols.map((column) => esc(column.label)).join(',');
+  const body = rows.map((row) => cols.map((column) => esc(cell(row, column))).join(','));
+  const csv = `\uFEFF${[header, ...body].join('\n')}`;
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
@@ -207,19 +230,25 @@ export function exportInvoicesCsv(invoices, { fileName } = {}) {
   return rows.length;
 }
 
-export function buildInvoiceRegisterHtml(invoices, { company = {}, filterLabel = 'Hamısı', search = '' } = {}) {
+export function buildInvoiceRegisterHtml(invoices, { company = {}, filterLabel = 'Hamısı', search = '', columns } = {}) {
   const rows = registerRows(invoices);
-  const sum = (key) => rows.reduce((acc, row) => acc + row[key], 0);
-  const body = rows.map((row) => `<tr>
-      <td>${escapeHtml(row.invoice_no)}</td>
-      <td>${date(row.invoice_date)}</td>
-      <td>${date(row.due_date)}</td>
-      <td>${escapeHtml(row.customer || '—')}</td>
-      <td class="num">${money(row.total)}</td>
-      <td class="num">${money(row.paid)}</td>
-      <td class="num">${money(row.outstanding)}</td>
-      <td>${escapeHtml(row.status)}</td>
-    </tr>`).join('');
+  const cols = resolveColumns(columns);
+  const sum = (key) => rows.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
+  const render = (row, column) => {
+    if (column.type === 'money') return money(row[column.key]);
+    if (column.type === 'date') return date(row[column.key]);
+    return escapeHtml(row[column.key] || '—');
+  };
+  const head = cols.map((column) => `<th${column.type === 'money' ? ' class="num"' : ''}>${escapeHtml(column.label)}</th>`).join('');
+  const body = rows.map((row) => `<tr>${cols
+    .map((column) => `<td${column.type === 'money' ? ' class="num"' : ''}>${render(row, column)}</td>`)
+    .join('')}</tr>`).join('');
+  let labelSpent = false;
+  const foot = cols.map((column) => {
+    if (column.type === 'money') return `<td class="num">${money(sum(column.key))}</td>`;
+    if (!labelSpent) { labelSpent = true; return '<td>Yekun</td>'; }
+    return '<td></td>';
+  }).join('');
   return `<!doctype html>
 <html lang="az"><head><meta charset="utf-8" />
 <title>Satış fakturaları registri</title>
@@ -238,21 +267,13 @@ export function buildInvoiceRegisterHtml(invoices, { company = {}, filterLabel =
   <h1>${escapeHtml(company.name || 'ExERP')} — Satış fakturaları</h1>
   <div class="muted">Filtr: ${escapeHtml(filterLabel)}${search ? ` · Axtarış: “${escapeHtml(search)}”` : ''} · ${rows.length} sənəd · ${date(new Date())}</div>
   <table>
-    <thead><tr>
-      <th>Faktura</th><th>Tarix</th><th>Son ödəniş</th><th>Müştəri</th>
-      <th class="num">Cəmi</th><th class="num">Ödənilib</th><th class="num">Qalıq</th><th>Status</th>
-    </tr></thead>
-    <tbody>${body || '<tr><td colspan="8">Faktura tapılmadı.</td></tr>'}</tbody>
-    <tfoot><tr>
-      <td colspan="4">Yekun</td>
-      <td class="num">${money(sum('total'))}</td>
-      <td class="num">${money(sum('paid'))}</td>
-      <td class="num">${money(sum('outstanding'))}</td>
-      <td></td>
-    </tr></tfoot>
+    <thead><tr>${head}</tr></thead>
+    <tbody>${body || `<tr><td colspan="${cols.length}">Faktura tapılmadı.</td></tr>`}</tbody>
+    <tfoot><tr>${foot}</tr></tfoot>
   </table>
 </body></html>`;
 }
+
 
 export function printInvoiceRegister(invoices, options = {}) {
   const html = buildInvoiceRegisterHtml(invoices, options);
