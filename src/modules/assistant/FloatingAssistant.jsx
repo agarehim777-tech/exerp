@@ -14,16 +14,9 @@ const SUGGESTIONS = [
 
 export default function FloatingAssistant() {
   const { session, activeTenantId } = useAuth();
-  const [token, setToken] = useState(session?.access_token || "");
   const [input, setInput] = useState("");
   const [open, setOpen] = useState(false);
   const scrollRef = useRef(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.access_token) setToken(data.session.access_token);
-    });
-  }, [session?.user?.id]);
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/erp-chat`;
 
@@ -31,10 +24,14 @@ export default function FloatingAssistant() {
     id: `floating-assistant-${activeTenantId || "none"}`,
     transport: new DefaultChatTransport({
       api: url,
-      headers: () => ({
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      }),
+      headers: async () => {
+        const { data } = await supabase.auth.getSession();
+        const fresh = data.session?.access_token || session?.access_token || "";
+        return {
+          Authorization: `Bearer ${fresh}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        };
+      },
       body: () => ({ tenantId: activeTenantId }),
     }),
   });
