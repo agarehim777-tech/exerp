@@ -1145,6 +1145,8 @@ export default function ProcurementPage() {
               allPurchaseOrders={purchaseOrders}
               linesByPo={linesByPo}
               poMetrics={poMetrics}
+              paymentByPo={paymentByPo}
+
               acceptedByLine={acceptedByLine}
               invoicedByLine={invoicedByLine}
               expandedPo={expandedPo}
