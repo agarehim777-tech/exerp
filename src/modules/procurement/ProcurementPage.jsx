@@ -204,12 +204,16 @@ export default function ProcurementPage() {
   const [receiptLines, setReceiptLines] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [invoiceLines, setInvoiceLines] = useState([]);
+  const [poPayments, setPoPayments] = useState([]);
   const [matchRows, setMatchRows] = useState({});
   const [rfqs, setRfqs] = useState([]);
   const [rfqForm, setRfqForm] = useState(emptyRfq);
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
+  const [paymentPoId, setPaymentPoId] = useState(null);
+  const [paymentForm, setPaymentForm] = useState(emptyPoPayment);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
 
   const [vendorForm, setVendorForm] = useState(emptyVendor);
   const [editingVendorId, setEditingVendorId] = useState(null);
@@ -222,6 +226,7 @@ export default function ProcurementPage() {
   const [invoiceForm, setInvoiceForm] = useState({ ...emptyInvoice, invoice_number: nextNumber("INV") });
   const [invoiceDraftLines, setInvoiceDraftLines] = useState([]);
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+
 
   const load = useCallback(async () => {
     if (!tenantId) return;
