@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_period_locks: {
+        Row: {
+          id: string
+          locked_at: string
+          locked_by: string
+          period_end: string
+          period_start: string
+          reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          period_end: string
+          period_start: string
+          reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          period_end?: string
+          period_start?: string
+          reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_period_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounting_periods: {
         Row: {
           created_at: string
@@ -2293,6 +2340,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notification_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_code: string | null
+          id: string
+          operation: string
+          request_hash: string
+          request_key: string
+          result: Json | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          id?: string
+          operation: string
+          request_hash: string
+          request_key: string
+          result?: Json | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          id?: string
+          operation?: string
+          request_hash?: string
+          request_key?: string
+          result?: Json | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4795,6 +4892,20 @@ export type Database = {
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
+      create_sales_order_atomic: {
+        Args: {
+          _credit?: Json
+          _currency: string
+          _customer_id: string
+          _items: Json
+          _notes: string
+          _order_date: string
+          _order_no: string
+          _request_key: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
       create_tenant_invite: {
         Args: {
@@ -4878,6 +4989,15 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant: string; _user: string }
         Returns: boolean
+      }
+      lock_accounting_period: {
+        Args: {
+          _period_end: string
+          _period_start: string
+          _reason?: string
+          _tenant_id: string
+        }
+        Returns: string
       }
       mark_sales_order_delivered: {
         Args: { _order_id: string }
@@ -5002,6 +5122,10 @@ export type Database = {
       register_order_payment: {
         Args: { _account_id: string; _amount: number; _order_id: string }
         Returns: string
+      }
+      reopen_accounting_period: {
+        Args: { _period_lock_id: string; _reason: string; _tenant_id: string }
+        Returns: undefined
       }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
