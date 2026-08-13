@@ -9,18 +9,22 @@ const customerPayload = (values, previousNotes = null) => {
   return { ...base, notes: `${META_PREFIX}${JSON.stringify(meta)}` };
 };
 
+const CUSTOMERS_PAGE_SIZE = 500;
+
 export function useCustomers(tenantId) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState({ silver: 1000, gold: 5000, platinum: 15000 });
+  const [limit, setLimit] = useState(CUSTOMERS_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
-      supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-      supabase.from('orders').select('customer_id,paid_amount').eq('tenant_id', tenantId),
+      supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit + 1),
+      supabase.from('orders').select('customer_id,paid_amount').eq('tenant_id', tenantId).limit(20000),
       supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
     if (customerResult.error) setError(customerResult.error);
