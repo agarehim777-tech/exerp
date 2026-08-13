@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { useFinancialStatements } from "../../shared/hooks/useFinancialStatements.js";
+import { useFinancialStatements } from "../../shared/hooks/useFinancialStatements";
 import { AGING_BUCKETS, AGING_LABELS } from "../../shared/lib/financialReports.js";
 import {
   azn, badge, card, input, msgBox, primaryBtn,

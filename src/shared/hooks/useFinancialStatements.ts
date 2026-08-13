@@ -5,9 +5,17 @@ import {
   buildBalanceSheet,
   buildReceivablesAging,
   buildCashFlow,
-} from '../lib/financialReports.js';
+  type TrialBalanceRow,
+  type InvoiceLike,
+  type CashTransactionLike,
+} from '../lib/financialReports';
 
-function defaultRange() {
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+function defaultRange(): DateRange {
   const now = new Date();
   const from = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
   const to = now.toISOString().slice(0, 10);
@@ -17,13 +25,13 @@ function defaultRange() {
 /**
  * Maliyyə hesabatları üçün data qatı: trial balance + AR + kassa axını.
  */
-export function useFinancialStatements(tenantId, initialRange = defaultRange()) {
-  const [range, setRange] = useState(initialRange);
-  const [trialRows, setTrialRows] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+export function useFinancialStatements(tenantId?: string | null, initialRange: DateRange = defaultRange()) {
+  const [range, setRange] = useState<DateRange>(initialRange);
+  const [trialRows, setTrialRows] = useState<TrialBalanceRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceLike[]>([]);
+  const [transactions, setTransactions] = useState<CashTransactionLike[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -43,9 +51,9 @@ export function useFinancialStatements(tenantId, initialRange = defaultRange()) 
         .order('occurred_at', { ascending: true }),
     ]);
     setError(tb.error || ar.error || cash.error || null);
-    setTrialRows(tb.data || []);
-    setInvoices(ar.data || []);
-    setTransactions(cash.data || []);
+    setTrialRows((tb.data as TrialBalanceRow[]) || []);
+    setInvoices((ar.data as unknown as InvoiceLike[]) || []);
+    setTransactions((cash.data as unknown as CashTransactionLike[]) || []);
     setLoading(false);
   }, [tenantId, range.from, range.to]);
 

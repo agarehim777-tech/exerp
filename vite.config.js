@@ -44,8 +44,15 @@ export default defineConfig(({ mode }) => {
           if (normalizedId.includes("/src/components/")) return "app-ui";
           // Note: /src/modules/ intentionally NOT bundled together — each lazy() import
           // becomes its own route-based chunk for optimal code splitting.
-          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
+          if (id.includes("node_modules/react-router")) return "router-vendor";
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom") || id.includes("node_modules/scheduler")) return "react-vendor";
           if (id.includes("node_modules/lucide-react")) return "icons";
+          if (id.includes("node_modules/@supabase")) return "supabase-vendor";
+          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-") || id.includes("node_modules/victory")) return "charts-vendor";
+          if (id.includes("node_modules/@sentry")) return "sentry-vendor";
+          if (id.includes("node_modules/@ai-sdk") || id.includes("node_modules/ai/")) return "ai-vendor";
+          if (id.includes("node_modules/@dnd-kit")) return "dnd-vendor";
+          if (id.includes("node_modules/zod")) return "zod-vendor";
           if (id.includes("node_modules")) return "vendor";
         },
       },
