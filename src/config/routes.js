@@ -14,6 +14,7 @@ export const moduleRoutes = {
   deliveries: "/tehvil",
   finance: "/maliyye/jurnal",
   cashbook: "/maliyye/kassa",
+  "ar-invoices": "/maliyye/satis-fakturalari",
   invoices: "/faktura",
   accounting: "/muhasibat",
   credits: "/kredit",
