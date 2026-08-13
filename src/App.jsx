@@ -181,6 +181,7 @@ const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
 const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
 const ProductsPage = lazy(() => import("./modules/warehouse/ProductBalancesPage.jsx"));
 const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
+const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
 const VendorManagementPage = lazy(() => import("./pages/VendorManagementPage.jsx"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
 const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
@@ -6405,6 +6406,7 @@ function App() {
             />
           )}
           {active === "cashbook" && <CashbookPage legacyCashEntries={state.cashEntries || []} />}
+          {active === "ar-invoices" && <SalesInvoicesPage />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}

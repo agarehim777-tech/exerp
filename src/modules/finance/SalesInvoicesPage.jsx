@@ -35,6 +35,23 @@ export default function SalesInvoicesPage() {
   const { accounts } = useCashbook(tenantId);
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const filteredInvoices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return ar.invoices.filter((invoice) => {
+      if (statusFilter !== "all" && invoice.status !== statusFilter) return false;
+      if (!q) return true;
+      return `${invoice.invoice_no || ""} ${invoice.customer?.name || ""}`.toLowerCase().includes(q);
+    });
+  }, [ar.invoices, statusFilter, search]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: ar.invoices.length };
+    for (const invoice of ar.invoices) counts[invoice.status] = (counts[invoice.status] || 0) + 1;
+    return counts;
+  }, [ar.invoices]);
 
   const totals = useMemo(() => {
     const active = ar.invoices.filter((i) => i.status !== "cancelled");
@@ -80,7 +97,7 @@ export default function SalesInvoicesPage() {
 
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Satış fakturaları ({ar.invoices.length})</h3>
+          <h3 style={{ margin: 0 }}>Satış fakturaları ({filteredInvoices.length}/{ar.invoices.length})</h3>
           <button style={primaryBtn} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Bağla" : "+ Yeni faktura"}
           </button>
@@ -101,6 +118,27 @@ export default function SalesInvoicesPage() {
         )}
 
 
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+          {[["all", "Hamısı"], ...Object.entries(STATUS_LABEL)].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              data-testid={`invoice-filter-${value}`}
+              style={statusFilter === value ? primaryBtn : secondaryBtn}
+              onClick={() => setStatusFilter(value)}
+            >
+              {label} ({statusCounts[value] || 0})
+            </button>
+          ))}
+          <input
+            style={{ ...input, minWidth: 220, marginLeft: "auto" }}
+            placeholder="Faktura № və ya müştəri axtar…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            data-testid="invoice-search"
+          />
+        </div>
+
         <table style={table}>
           <thead>
             <tr>
@@ -110,7 +148,7 @@ export default function SalesInvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {ar.invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <InvoiceRow
                 key={invoice.id}
                 invoice={invoice}
@@ -121,8 +159,8 @@ export default function SalesInvoicesPage() {
                 company={company}
               />
             ))}
-            {!ar.invoices.length && !ar.loading && (
-              <tr><td style={td} colSpan={8}>Faktura yoxdur.</td></tr>
+            {!filteredInvoices.length && !ar.loading && (
+              <tr><td style={td} colSpan={8}>Faktura tapılmadı.</td></tr>
             )}
           </tbody>
         </table>
