@@ -156,6 +156,8 @@ const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
 const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
 const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx"));
 const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
+const InsightsPage = lazy(() => import("./modules/assistant/InsightsPage.jsx"));
+const CustomerMessengerPanel = lazy(() => import("./modules/notifications/CustomerMessengerPanel.jsx"));
 import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
@@ -6346,6 +6348,7 @@ function App() {
           <Suspense fallback={<div className="page-suspense-loader" style={{ padding: 32, opacity: 0.6 }}>Yüklənir…</div>}>
           {active === "platform" && <PlatformAdminPage />}
           {active === "assistant" && <AssistantPage />}
+          {active === "insights" && <InsightsPage />}
           {active === "roles" && (
             <RolesPermissionsPage
               appUsers={state.settings.users || []}
@@ -6623,6 +6626,9 @@ function App() {
               onOpenSupportTicket={openSupportTicket}
               onOpenCustomer={openLinkedCustomer}
             />
+          )}
+          {active === "notifications" && (
+            <div className="stack" style={{ marginBottom: 16 }}><CustomerMessengerPanel /></div>
           )}
           {active === "notifications" && (
             <NotificationsPage
