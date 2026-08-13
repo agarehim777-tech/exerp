@@ -1427,6 +1427,8 @@ function PurchaseOrdersTab({
   allPurchaseOrders,
   linesByPo,
   poMetrics,
+  paymentByPo,
+
   acceptedByLine,
   invoicedByLine,
   expandedPo,
