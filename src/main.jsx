@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 import ProtectedRoute from "./auth/ProtectedRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import RouteMeta from "./components/RouteMeta.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
@@ -83,6 +84,7 @@ createRoot(document.getElementById("root")).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBase}>
         <AuthProvider>
+          <RouteMeta />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
