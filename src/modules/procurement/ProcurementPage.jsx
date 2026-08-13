@@ -1653,6 +1653,7 @@ function PurchaseOrdersTab({
                 <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
+                <IconButton icon={CreditCard} label="Ödəniş" onClick={() => { setExpandedPo(po.id); onPaymentOpen(po); }} />
                 {po.status === "draft" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(po)} tone="success" />}
                 {["approved", "partial"].includes(po.status) && <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} tone="success" />}
                 {po.status === "received" && <IconButton icon={CheckCircle2} label="Bağla" onClick={() => onClose(po)} />}
