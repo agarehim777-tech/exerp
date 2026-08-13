@@ -5117,6 +5117,7 @@ export type Database = {
         Args: { _order_id: string; _status: string }
         Returns: undefined
       }
+      prune_operational_logs: { Args: never; Returns: Json }
       recalculate_shipment_landed_cost: {
         Args: { _approve?: boolean; _shipment: string }
         Returns: number
