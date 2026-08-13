@@ -1688,6 +1688,91 @@ function PurchaseOrdersTab({
   );
 }
 
+function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPoId, editingPaymentId, onPaymentEdit, onPaymentSubmit, onPaymentDelete, saving, paymentByPo }) {
+  const payments = poPayments.filter((payment) => payment.po_id === po.id);
+  const payment = paymentByPo.get(po.id) || { billed: 0, paid: 0 };
+  const total = payment.billed || 0;
+  const paid = payment.paid || 0;
+  const due = Math.max(0, total - paid);
+  const isOpen = paymentPoId === po.id;
+
+  return (
+    <div style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", background: "#f8fafc", display: "grid", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <strong style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <CreditCard size={18} /> PO ödənişləri
+        </strong>
+        <div style={{ display: "flex", gap: "10px", fontSize: "13px" }}>
+          <span>Faktura məbləği: <strong>{money(total, po.currency)}</strong></span>
+          <span>Ödənilib: <strong>{money(paid, po.currency)}</strong></span>
+          <span>Qalıq: <strong>{money(due, po.currency)}</strong></span>
+        </div>
+      </div>
+
+      {payments.length > 0 ? (
+        <table style={{ ...styles.table, background: "#fff", borderRadius: "8px", overflow: "hidden" }}>
+          <thead>
+            <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+              <th style={{ padding: "8px 10px" }}>Tarix</th>
+              <th style={{ padding: "8px 10px" }}>Məbləğ</th>
+              <th style={{ padding: "8px 10px" }}>Üsul</th>
+              <th style={{ padding: "8px 10px" }}>Referans</th>
+              <th style={{ padding: "8px 10px" }}>Qeyd</th>
+              <th style={{ padding: "8px 10px", textAlign: "right" }}>Əməl</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map((payment) => (
+              <tr key={payment.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                <td style={{ padding: "8px 10px" }}>{payment.payment_date}</td>
+                <td style={{ padding: "8px 10px", fontWeight: 700 }}>{money(payment.amount, po.currency)}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.payment_method || "bank"}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.reference_no || "—"}</td>
+                <td style={{ padding: "8px 10px" }}>{payment.notes || "—"}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>
+                  <div style={styles.rowActions}>
+                    <IconButton icon={Pencil} label="Edit" onClick={() => onPaymentEdit(payment)} />
+                    <IconButton icon={Trash2} label="Sil" onClick={() => onPaymentDelete(payment)} tone="danger" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p style={styles.helperText}>Bu PO üzrə hələ ödəniş qeyd edilməyib.</p>
+      )}
+
+      {isOpen && (
+        <form onSubmit={onPaymentSubmit} style={{ ...styles.form, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "12px", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <Field label="Məbləğ" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })} required />
+          <Field label="Tarix" type="date" value={paymentForm.payment_date} onChange={(value) => setPaymentForm({ ...paymentForm, payment_date: value })} required />
+          <label style={styles.field}>
+            <span>Üsul</span>
+            <select value={paymentForm.payment_method} onChange={(event) => setPaymentForm({ ...paymentForm, payment_method: event.target.value })}>
+              <option value="bank">Bank köçürməsi</option>
+              <option value="cash">Nağd</option>
+              <option value="card">Kart</option>
+              <option value="other">Digər</option>
+            </select>
+          </label>
+          <Field label="Referans №" value={paymentForm.reference_no} onChange={(value) => setPaymentForm({ ...paymentForm, reference_no: value })} />
+          <Field label="Qeyd" value={paymentForm.notes} onChange={(value) => setPaymentForm({ ...paymentForm, notes: value })} wide />
+          <div style={styles.formActions}>
+            <IconButton icon={Save} label={editingPaymentId ? "Yenilə" : "Ödəniş qeyd et"} tone="primary" disabled={saving} submit />
+            {editingPaymentId && (
+              <IconButton icon={X} label="Ləğv et" onClick={() => {
+                setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
+                onPaymentEdit({ id: null, po_id: po.id });
+              }} />
+            )}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function ReceiptsTab({
   form,
   setForm,
