@@ -40,6 +40,13 @@ export default function SalesInvoicesPage() {
   const [msg, setMsg] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [exportColumns, setExportColumns] = useState(DEFAULT_INVOICE_EXPORT_COLUMNS);
+  const toggleExportColumn = (key) =>
+    setExportColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key];
+      return INVOICE_EXPORT_COLUMNS.map((column) => column.key).filter((columnKey) => next.includes(columnKey));
+    });
 
   const filteredInvoices = useMemo(() => {
     const q = search.trim().toLowerCase();
