@@ -1,7 +1,6 @@
 node_modules/
 .vitest-cache/
 dist/
-.env
 .env.*
 !.env.example
 data/*.sqlite
