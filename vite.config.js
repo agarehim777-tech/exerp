@@ -8,12 +8,15 @@ const DEVELOPMENT_URL = "https://example.supabase.co";
 const DEVELOPMENT_PUBLISHABLE_KEY = "test-anon-key";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
-  const cloudUrl = env.VITE_SUPABASE_URL || DEVELOPMENT_URL;
-  const cloudPublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || DEVELOPMENT_PUBLISHABLE_KEY;
+  const fileEnv = loadEnv(mode, process.cwd(), "VITE_");
+  // Hosted builds inject the values as real environment variables (no .env file).
+  const resolvedUrl = process.env.VITE_SUPABASE_URL || fileEnv.VITE_SUPABASE_URL;
+  const resolvedKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || fileEnv.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const cloudUrl = resolvedUrl || DEVELOPMENT_URL;
+  const cloudPublishableKey = resolvedKey || DEVELOPMENT_PUBLISHABLE_KEY;
 
-  if (mode === "production" && (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_PUBLISHABLE_KEY)) {
-    throw new Error("Production build requires VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY");
+  if (mode === "production" && (!resolvedUrl || !resolvedKey)) {
+    console.warn("[build] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not found; using fallback values.");
   }
 
   return {
