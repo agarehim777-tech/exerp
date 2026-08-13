@@ -232,7 +232,7 @@ export default function ProcurementPage() {
     if (!tenantId) return;
     setLoading(true);
     setError("");
-    const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes] = await Promise.all([
+    const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
       supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }),
       supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
@@ -241,9 +241,10 @@ export default function ProcurementPage() {
       supabase.from("goods_receipt_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
       supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("vendor_invoice_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
+      supabase.from("po_payments").select("*").eq("tenant_id", tenantId).order("payment_date", { ascending: false }),
     ]);
 
-    const firstError = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes].find((result) => result.error)?.error;
+    const firstError = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes].find((result) => result.error)?.error;
     if (firstError) setError(getError(firstError));
 
     setVendors(vendorRes.data || []);
@@ -254,8 +255,10 @@ export default function ProcurementPage() {
     setReceiptLines(grnLineRes.data || []);
     setInvoices(invoiceRes.data || []);
     setInvoiceLines(invoiceLineRes.data || []);
+    setPoPayments(paymentRes.data || []);
     setLoading(false);
   }, [tenantId]);
+
 
   useEffect(() => {
     load();
