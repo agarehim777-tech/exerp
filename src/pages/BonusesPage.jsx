@@ -3,48 +3,69 @@ import { ArrowLeft, Award, CalendarIcon, Percent, Users, Wallet } from "lucide-r
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";
 
-
-function monthKey(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 7);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function monthLabel(key) {
-  if (!key) return "—";
-  const [year, month] = key.split("-");
-  const date = new Date(Number(year), Number(month) - 1, 1);
-  if (Number.isNaN(date.getTime())) return key;
-  return new Intl.DateTimeFormat("az-AZ", { month: "long", year: "numeric" }).format(date);
+function startOfMonthIso(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function startOfYearIso(date = new Date()) {
+  return `${date.getFullYear()}-01-01`;
+}
+
+function daysAgoIso(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateRange(start, end) {
+  if (!start || !end) return "—";
+  const fmt = new Intl.DateTimeFormat("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return `${fmt.format(new Date(`${start}T00:00:00`))} – ${fmt.format(new Date(`${end}T00:00:00`))}`;
+}
+
+function inRange(date, start, end) {
+  const d = String(date || "").slice(0, 10);
+  if (!d) return false;
+  return (!start || d >= start) && (!end || d <= end);
 }
 
 export default function BonusesPage({ salesBonuses = [] }) {
-  const months = useMemo(() => {
-    const set = new Set(salesBonuses.map((row) => monthKey(row.date)).filter(Boolean));
-    set.add(monthKey(new Date().toISOString()));
-    return [...set].sort((a, b) => b.localeCompare(a));
-  }, [salesBonuses]);
-
-  const [month, setMonth] = useState(() => monthKey(new Date().toISOString()));
-  const [pickerDate, setPickerDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() => startOfMonthIso());
+  const [endDate, setEndDate] = useState(() => todayIso());
   const [seller, setSeller] = useState(null);
 
-  function handleDateChange(value) {
-    setPickerDate(value);
-    if (value) setMonth(monthKey(value));
+  function setRange(start, end) {
+    setStartDate(start);
+    setEndDate(end);
   }
 
   function resetToCurrentMonth() {
-    const today = new Date().toISOString().slice(0, 10);
-    setPickerDate(today);
-    setMonth(monthKey(today));
+    setRange(startOfMonthIso(), todayIso());
   }
 
+  function resetToLast7Days() {
+    setRange(daysAgoIso(6), todayIso());
+  }
+
+  function resetToLast30Days() {
+    setRange(daysAgoIso(29), todayIso());
+  }
+
+  function resetToCurrentYear() {
+    setRange(startOfYearIso(), todayIso());
+  }
+
+  function resetToAll() {
+    setRange("", "");
+  }
 
   const periodRows = useMemo(
-    () => (month === "all" ? salesBonuses : salesBonuses.filter((row) => monthKey(row.date) === month)),
-    [salesBonuses, month],
+    () => salesBonuses.filter((row) => inRange(row.date, startDate, endDate)),
+    [salesBonuses, startDate, endDate],
   );
 
   const sellerRows = useMemo(() => {
@@ -112,11 +133,13 @@ export default function BonusesPage({ salesBonuses = [] }) {
   const totalPaid = sellerRows.reduce((sum, row) => sum + row.paid, 0);
   const detailBonus = detailRows.reduce((sum, row) => sum + Number(row.bonusAmount || 0), 0);
 
+  const dateRangeLabel = formatDateRange(startDate, endDate);
+
   if (seller) {
     return (
       <div className="stack">
         <section className="metric-grid four">
-          <MetricCard label="Satıcı" value={seller} trend={monthLabel(month)} icon={Users} tone="primary" />
+          <MetricCard label="Satıcı" value={seller} trend={dateRangeLabel} icon={Users} tone="primary" />
           <MetricCard label="Bonus (dövr üzrə)" value={money(detailBonus)} trend={`${detailRows.length} bonus sətri`} icon={Award} tone="success" />
           <MetricCard label="Bonus bazası" value={money(detailRows.reduce((s, r) => s + Number(r.paid || 0), 0))} trend="Ödənilmiş məbləğ" icon={Wallet} tone="warning" />
           <MetricCard label="Müştəri sayı" value={detailByCustomer.length} trend="Bonus gətirən müştərilər" icon={Percent} tone="info" />
@@ -196,7 +219,7 @@ export default function BonusesPage({ salesBonuses = [] }) {
   return (
     <div className="stack">
       <section className="metric-grid four">
-        <MetricCard label="Dövr" value={month === "all" ? "Bütün dövrlər" : monthLabel(month)} trend={`${periodRows.length} bonus sətri`} icon={Percent} tone="primary" />
+        <MetricCard label="Dövr" value={startDate || endDate ? dateRangeLabel : "Bütün dövrlər"} trend={`${periodRows.length} bonus sətri`} icon={Percent} tone="primary" />
         <MetricCard label="Ümumi bonus" value={money(totalBonus)} trend={`${sellerRows.length} satıcı`} icon={Award} tone="success" />
         <MetricCard label="Bonus bazası" value={money(totalPaid)} trend="Ödənilmiş məbləğ" icon={Wallet} tone="warning" />
         <MetricCard label="Orta bonus" value={money(sellerRows.length ? totalBonus / sellerRows.length : 0)} trend="Satıcı başına" icon={Users} tone="info" />
@@ -205,17 +228,30 @@ export default function BonusesPage({ salesBonuses = [] }) {
       <Panel>
         <PanelHeader title="Satıcılar üzrə bonus" subtitle="Satıcının adına klik edərək detalları açın" icon={Award} />
         <div className="kpi-bonus-toolbar">
-          <label className="bonus-period-picker">
+          <div className="bonus-period-picker">
             <CalendarIcon size={16} />
-            <span>Dövr</span>
+            <span>Başlanğıc</span>
             <input
               type="date"
-              value={pickerDate}
-              onChange={(event) => handleDateChange(event.target.value)}
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
               className="bonus-period-date-input"
             />
-            <button className="secondary-btn compact" onClick={resetToCurrentMonth} type="button">Bu ay</button>
-          </label>
+            <span>Bitmə</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="bonus-period-date-input"
+            />
+            <div className="bonus-period-quick-actions">
+              <button className="secondary-btn compact" onClick={resetToCurrentMonth} type="button">Bu ay</button>
+              <button className="secondary-btn compact" onClick={resetToLast7Days} type="button">Son 7 gün</button>
+              <button className="secondary-btn compact" onClick={resetToLast30Days} type="button">Son 30 gün</button>
+              <button className="secondary-btn compact" onClick={resetToCurrentYear} type="button">Bu il</button>
+              <button className="secondary-btn compact" onClick={resetToAll} type="button">Hamısı</button>
+            </div>
+          </div>
           <div className="kpi-bonus-total"><span>Cəmi bonus</span><strong>{money(totalBonus)}</strong></div>
         </div>
 
@@ -233,7 +269,7 @@ export default function BonusesPage({ salesBonuses = [] }) {
             ])}
           />
         ) : (
-          <EmptyState title="Seçilmiş dövrdə bonus hesablanmayıb" />
+          <EmptyState title="Seçilmiş tarix aralığında bonus hesablanmayıb" />
         )}
       </Panel>
     </div>
