@@ -24,6 +24,7 @@ export const moduleRoutes = {
   procurement: "/satinalma",
   hr: "/hr/emekdaslar",
   kpi: "/kpi",
+  bonuses: "/bonuslar",
   contracts: "/muqavile",
   reports: "/hesabat",
   "financial-statements": "/hesabat/maliyye",
@@ -49,7 +50,6 @@ export const pathToModule = Object.fromEntries(
 export const legacyModuleAliases = {
   finance: "accounting",
   invoices: "sales",
-  "sales-quotes": "sales",
   "sales-shipments": "sales",
   warehouse: "stock",
 };
@@ -61,7 +61,7 @@ export const historicalRoutes = {
   accounting: ["/maliyye/muhasibat"],
   invoices: ["/fakturalar", "/satis/faktura"],
   "ar-invoices": ["/satis-fakturalari"],
-  sales: ["/sifarisler", "/satis", "/satis/kotirovka", "/satis/catdirilma"],
+  sales: ["/sifarisler", "/satis", "/satis/catdirilma"],
   crm: ["/musteriler"],
   stock: ["/anbar", "/qaliqlar"],
   hr: ["/hr", "/emekdaslar"],

@@ -165,6 +165,7 @@ const DeliveriesPage = lazy(() => import("./pages/DeliveriesPage.jsx"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage.jsx"));
 const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
 const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
+const BonusesPage = lazy(() => import("./pages/BonusesPage.jsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage.jsx"));
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
@@ -6544,6 +6545,7 @@ function App() {
               onRunPeriodAction={runKpiPeriodAction}
             />
           )}
+          {active === "bonuses" && <BonusesPage salesBonuses={salesBonusRows} />}
           {active === "contracts" && (
             <ContractsPage
               contracts={filtered.contracts}
