@@ -61,6 +61,26 @@ export default function BonusesPage({ salesBonuses = [] }) {
     [periodRows, seller],
   );
 
+  const detailLineItems = useMemo(() => {
+    const rows = [];
+    detailRows.forEach((row) => {
+      (row.productLines || []).forEach((line) => {
+        const qty = Number(line.qty || 0);
+        const price = Number(line.price || 0);
+        rows.push({
+          orderId: row.orderId,
+          customer: row.customer,
+          seller: row.seller,
+          product: line.product,
+          qty,
+          price,
+          amount: qty * price,
+        });
+      });
+    });
+    return rows.sort((a, b) => b.amount - a.amount);
+  }, [detailRows]);
+
   const detailByCustomer = useMemo(() => {
     const map = new Map();
     detailRows.forEach((row) => {
