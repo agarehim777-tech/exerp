@@ -155,6 +155,26 @@ export default function BonusesPage({ salesBonuses = [] }) {
             <EmptyState title="Sifariş tapılmadı" />
           )}
         </Panel>
+
+        <Panel>
+          <PanelHeader title="Sifariş sıraları" subtitle="Hər sıra üzrə məbləğ və satıcı payı" icon={Award} />
+          {detailLineItems.length ? (
+            <DataTable
+              columns={["Sifariş", "Müştəri", "Satıcı", "Məhsul", "Miqdar", "Qiymət", "Məbləğ"]}
+              rows={detailLineItems.map((row) => [
+                <strong>{row.orderId}</strong>,
+                row.customer || "—",
+                row.seller || "—",
+                row.product,
+                row.qty,
+                money(row.price),
+                <strong>{money(row.amount)}</strong>,
+              ])}
+            />
+          ) : (
+            <EmptyState title="Sifariş sırası tapılmadı" />
+          )}
+        </Panel>
       </div>
     );
   }
