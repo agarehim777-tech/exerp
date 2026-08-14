@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Award, Percent, Users, Wallet } from "lucide-react";
+import { ArrowLeft, Award, CalendarIcon, Percent, Users, Wallet } from "lucide-react";
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";
+
 
 function monthKey(value) {
   if (!value) return "";
@@ -26,7 +27,20 @@ export default function BonusesPage({ salesBonuses = [] }) {
   }, [salesBonuses]);
 
   const [month, setMonth] = useState(() => monthKey(new Date().toISOString()));
+  const [pickerDate, setPickerDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [seller, setSeller] = useState(null);
+
+  function handleDateChange(value) {
+    setPickerDate(value);
+    if (value) setMonth(monthKey(value));
+  }
+
+  function resetToCurrentMonth() {
+    const today = new Date().toISOString().slice(0, 10);
+    setPickerDate(today);
+    setMonth(monthKey(today));
+  }
+
 
   const periodRows = useMemo(
     () => (month === "all" ? salesBonuses : salesBonuses.filter((row) => monthKey(row.date) === month)),
@@ -191,17 +205,20 @@ export default function BonusesPage({ salesBonuses = [] }) {
       <Panel>
         <PanelHeader title="Satıcılar üzrə bonus" subtitle="Satıcının adına klik edərək detalları açın" icon={Award} />
         <div className="kpi-bonus-toolbar">
-          <label>
-            <span>Dövr</span>{" "}
-            <select value={month} onChange={(event) => setMonth(event.target.value)}>
-              {months.map((key) => (
-                <option key={key} value={key}>{monthLabel(key)}</option>
-              ))}
-              <option value="all">Bütün dövrlər</option>
-            </select>
+          <label className="bonus-period-picker">
+            <CalendarIcon size={16} />
+            <span>Dövr</span>
+            <input
+              type="date"
+              value={pickerDate}
+              onChange={(event) => handleDateChange(event.target.value)}
+              className="bonus-period-date-input"
+            />
+            <button className="secondary-btn compact" onClick={resetToCurrentMonth} type="button">Bu ay</button>
           </label>
           <div className="kpi-bonus-total"><span>Cəmi bonus</span><strong>{money(totalBonus)}</strong></div>
         </div>
+
         {sellerRows.length ? (
           <DataTable
             columns={["Satıcı", "Sifariş", "Müştəri", "Ödəniş bazası", "Orta %", "Bonus", ""]}
