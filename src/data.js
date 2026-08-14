@@ -44,6 +44,7 @@ export const navItems = [
   { id: "reports", label: "Hesabatlar", group: "analytics" },
   { id: "financial-statements", label: "Maliyyə hesabatları", group: "analytics" },
   { id: "kpi", label: "KPI", group: "analytics" },
+  { id: "bonuses", label: "Satıcı bonusları", group: "analytics" },
 
   // Sistem
   { id: "platform", label: "Şirkətlər", group: "system" },

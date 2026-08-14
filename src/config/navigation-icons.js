@@ -1,7 +1,7 @@
 import {
   BarChart3, Bell, Boxes, Building2, CalendarClock, CreditCard, FileText,
   LayoutDashboard, MessageSquare, Package, Settings, ShieldCheck, ShoppingCart,
-  Brain, Sparkles, TrendingUp, Truck, UserCog, Users, Wallet, Warehouse,
+  Award, Brain, Sparkles, TrendingUp, Truck, UserCog, Users, Wallet, Warehouse,
 } from "lucide-react";
 
 export const navIcons = {
@@ -15,7 +15,6 @@ export const navIcons = {
   "crm-tasks": ShieldCheck,
   sales: ShoppingCart,
   "sales-dashboard": BarChart3,
-  "sales-quotes": FileText,
   "sales-shipments": Truck,
   warehouse: Warehouse,
   stock: Boxes,
@@ -34,6 +33,7 @@ export const navIcons = {
   production: Package,
   hr: UserCog,
   kpi: TrendingUp,
+  bonuses: Award,
   contracts: FileText,
   reports: BarChart3,
   support: MessageSquare,
