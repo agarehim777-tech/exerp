@@ -27,7 +27,20 @@ export default function BonusesPage({ salesBonuses = [] }) {
   }, [salesBonuses]);
 
   const [month, setMonth] = useState(() => monthKey(new Date().toISOString()));
+  const [pickerDate, setPickerDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [seller, setSeller] = useState(null);
+
+  function handleDateChange(value) {
+    setPickerDate(value);
+    if (value) setMonth(monthKey(value));
+  }
+
+  function resetToCurrentMonth() {
+    const today = new Date().toISOString().slice(0, 10);
+    setPickerDate(today);
+    setMonth(monthKey(today));
+  }
+
 
   const periodRows = useMemo(
     () => (month === "all" ? salesBonuses : salesBonuses.filter((row) => monthKey(row.date) === month)),
