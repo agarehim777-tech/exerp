@@ -205,17 +205,20 @@ export default function BonusesPage({ salesBonuses = [] }) {
       <Panel>
         <PanelHeader title="Satıcılar üzrə bonus" subtitle="Satıcının adına klik edərək detalları açın" icon={Award} />
         <div className="kpi-bonus-toolbar">
-          <label>
-            <span>Dövr</span>{" "}
-            <select value={month} onChange={(event) => setMonth(event.target.value)}>
-              {months.map((key) => (
-                <option key={key} value={key}>{monthLabel(key)}</option>
-              ))}
-              <option value="all">Bütün dövrlər</option>
-            </select>
+          <label className="bonus-period-picker">
+            <CalendarIcon size={16} />
+            <span>Dövr</span>
+            <input
+              type="date"
+              value={pickerDate}
+              onChange={(event) => handleDateChange(event.target.value)}
+              className="bonus-period-date-input"
+            />
+            <button className="secondary-btn compact" onClick={resetToCurrentMonth} type="button">Bu ay</button>
           </label>
           <div className="kpi-bonus-total"><span>Cəmi bonus</span><strong>{money(totalBonus)}</strong></div>
         </div>
+
         {sellerRows.length ? (
           <DataTable
             columns={["Satıcı", "Sifariş", "Müştəri", "Ödəniş bazası", "Orta %", "Bonus", ""]}
