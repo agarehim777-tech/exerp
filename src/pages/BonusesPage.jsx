@@ -61,6 +61,26 @@ export default function BonusesPage({ salesBonuses = [] }) {
     [periodRows, seller],
   );
 
+  const detailLineItems = useMemo(() => {
+    const rows = [];
+    detailRows.forEach((row) => {
+      (row.productLines || []).forEach((line) => {
+        const qty = Number(line.qty || 0);
+        const price = Number(line.price || 0);
+        rows.push({
+          orderId: row.orderId,
+          customer: row.customer,
+          seller: row.seller,
+          product: line.product,
+          qty,
+          price,
+          amount: qty * price,
+        });
+      });
+    });
+    return rows.sort((a, b) => b.amount - a.amount);
+  }, [detailRows]);
+
   const detailByCustomer = useMemo(() => {
     const map = new Map();
     detailRows.forEach((row) => {
@@ -133,6 +153,26 @@ export default function BonusesPage({ salesBonuses = [] }) {
             />
           ) : (
             <EmptyState title="Sifariş tapılmadı" />
+          )}
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="Sifariş sıraları" subtitle="Hər sıra üzrə məbləğ və satıcı payı" icon={Award} />
+          {detailLineItems.length ? (
+            <DataTable
+              columns={["Sifariş", "Müştəri", "Satıcı", "Məhsul", "Miqdar", "Qiymət", "Məbləğ"]}
+              rows={detailLineItems.map((row) => [
+                <strong>{row.orderId}</strong>,
+                row.customer || "—",
+                row.seller || "—",
+                row.product,
+                row.qty,
+                money(row.price),
+                <strong>{money(row.amount)}</strong>,
+              ])}
+            />
+          ) : (
+            <EmptyState title="Sifariş sırası tapılmadı" />
           )}
         </Panel>
       </div>

@@ -1823,6 +1823,7 @@ export function getPreferredVendorName(product, vendors) {
 export function buildSalesBonusRows(orders) {
   return orders.flatMap((order) => {
     const paid = Number(order.paid || 0);
+    const lines = normalizeOrderProductLines(order.productLines || []);
     return getOrderSellerBonuses(order).map((sellerBonus) => {
       const rate = Number(sellerBonus.bonus || 0);
       return {
@@ -1831,6 +1832,7 @@ export function buildSalesBonusRows(orders) {
         date: order.date,
         customer: order.customer,
         product: summarizeOrderProducts(order),
+        productLines: lines,
         paymentMethod: order.paymentMethod || "Nağd",
         seller: sellerBonus.seller,
         rate,
