@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getDeliveryStockCheck,
+  userHasEffectivePermission,
 } from "../shared/lib/appDomain.jsx";
 import {
   applyCreditPrincipalPayment,
@@ -8,6 +9,8 @@ import {
   getAvailableQuantity,
   getReceivableClosureAmount,
   isCreditClosed,
+  isCreditStarted,
+  matchesCreditManagementFilter,
 } from "../shared/lib/appDomain.jsx";
 
 describe("credit business rules", () => {
@@ -86,6 +89,40 @@ describe("inventory business rules", () => {
     expect(full.plan.deliverableTotal).toBe(2);
   });
 
+});
+
+describe("individual permission overrides", () => {
+  const roles = [{ name: "Operator", permissions: ["credits.view"] }];
+
+  it("allows a module explicitly granted outside the assigned role", () => {
+    const user = {
+      role: "Operator",
+      moduleAccess: ["credits"],
+      permissionOverrides: { "credits.manage": true },
+    };
+
+    expect(userHasEffectivePermission(user, roles, "credits.manage")).toBe(true);
+  });
+
+  it("keeps a draft credit outside payment calculations until it is started", () => {
+    const draft = { status: "Başlanmamış", startedAt: null, balance: 1100, months: 12 };
+    const item = { credit: draft, plan: { balance: 1100, months: 12 }, paymentState: {} };
+
+    expect(isCreditStarted(draft)).toBe(false);
+    expect(matchesCreditManagementFilter(item, "Başlanmamış")).toBe(true);
+    expect(matchesCreditManagementFilter(item, "Aktiv")).toBe(false);
+    expect(isCreditStarted({ ...draft, status: "Aktiv", startedAt: "2026-08-13T10:00:00Z", startDate: "2026-08-13" })).toBe(true);
+  });
+
+  it("denies a role permission explicitly disabled for the user", () => {
+    const user = {
+      role: "Operator",
+      moduleAccess: ["credits"],
+      permissionOverrides: { "credits.view": false },
+    };
+
+    expect(userHasEffectivePermission(user, roles, "credits.view")).toBe(false);
+  });
 });
 
 describe("receivable business rules", () => {

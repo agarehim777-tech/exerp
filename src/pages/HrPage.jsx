@@ -1,3 +1,4 @@
+import HrOperationsPanel from "../modules/hr/HrOperationsPanel.jsx";
 import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge } from "../components/ui.jsx";
 import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wallet } from "lucide-react";
 import { money, normalize, percent } from "../services/format.js";
@@ -132,6 +133,8 @@ export default function HrPage({
         {hrView === "Payroll" && <HrPayrollPlatform rows={payrollRows} totalNet={payrollTotal} onMarkPaid={onMarkPayrollPaid} />}
         {hrView === "Recruitment" && <HrRecruitmentPlatform rows={recruitmentRows} onCreate={onCreateVacancy} />}
       </Panel>
+
+      <HrOperationsPanel />
 
       <Panel className="hr-planning-panel">
         <PanelHeader

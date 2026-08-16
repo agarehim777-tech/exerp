@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /$
+Allow: /login
+Disallow: /platform/
+Disallow: /crm/
+Disallow: /satis/
+Disallow: /anbar/
+Disallow: /maliyye/
+Disallow: /hesabat/
+Disallow: /sistem/
+Disallow: /hr/
+Disallow: /accept-invite
+Disallow: /reset-password
+Disallow: /.lovable/
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+Sitemap: https://exerp.lovable.app/sitemap.xml

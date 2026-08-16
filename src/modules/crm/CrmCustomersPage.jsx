@@ -4,6 +4,7 @@ import { useCustomers } from '../../shared/hooks/useCustomers.js';
 import Avatar from './Avatar.jsx';
 import CustomerDrawer from './CustomerDrawer.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
+import LoadMoreBar from '../../components/LoadMoreBar.jsx';
 
 function timeAgo(iso) {
   if (!iso) return '—';
@@ -34,7 +35,7 @@ function getNextBirthday(value) {
 
 export default function CrmCustomersPage({ onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
-  const { customers, levels, create, update, remove, saveLevels } = useCustomers(activeTenantId);
+  const { customers, levels, create, update, remove, saveLevels, hasMore, loadMore, loading: customersLoading } = useCustomers(activeTenantId);
   const [q, setQ] = useState('');
   const [seg, setSeg] = useState('all');
   const [openId, setOpenId] = useState(null);
@@ -169,6 +170,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
               })}
             </tbody>
           </table>
+          <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={customersLoading} />
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { useProducts } from '../../shared/hooks/useProducts.js';
 import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
+import LoadMoreBar from '../../components/LoadMoreBar.jsx';
 
 const KANBAN_STATUSES = ['draft', 'confirmed', 'processing', 'delivered', 'cancelled'];
 const STATUS_LABELS = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
@@ -13,7 +14,7 @@ const canonicalStatus = status => status === 'pending' ? 'draft' : status === 's
 
 export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
-  const { orders, update, updateStatus, updateHeader, registerPayment, remove } = useOrders(activeTenantId);
+  const { orders, update, updateStatus, updateHeader, registerPayment, remove, hasMore, loadMore, loading: ordersLoading } = useOrders(activeTenantId);
   const { accounts: cashAccounts } = useCashbook(activeTenantId);
   const { customers } = useCustomers(activeTenantId);
   const { products } = useProducts(activeTenantId);
@@ -80,6 +81,7 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
               {filtered.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Sifariş yoxdur</td></tr>}
             </tbody>
           </table>
+          <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={ordersLoading} />
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>

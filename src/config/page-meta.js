@@ -125,6 +125,10 @@ export const pageMeta = {
     subtitle: "Əməkdaş məlumat bazası, maaş fondu və performans.",
     action: "Yeni əməkdaş",
   },
+  bonuses: {
+    title: "Satıcı bonusları",
+    subtitle: "Satıcılar üzrə aylıq bonuslar və bonusun mənbəyi (müştəri/sifariş).",
+  },
   kpi: {
     title: "KPI & Performans",
     subtitle: "Şöbələr və əməkdaşlar üzrə açar performans göstəriciləri.",

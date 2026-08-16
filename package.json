@@ -18,6 +18,8 @@
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "verify:security": "node scripts/verify-security-posture.mjs",
     "verify:core-backend": "node scripts/verify-core-backend.mjs",
+    "verify:hardening": "node scripts/verify-transaction-hardening.mjs",
+    "verify:recovery": "node scripts/verify-recovery.mjs",
     "audit:interactions": "node scripts/interactive-audit.mjs",
     "audit:flows": "node scripts/business-flow-audit.mjs",
     "test": "vitest run",
@@ -29,7 +31,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@lovable.dev/mcp-js": "^0.23.0",
     "@sentry/react": "^10.67.0",
     "@supabase/supabase-js": "^2.110.7",
     "ai": "^7.0.34",
@@ -41,6 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@lovable.dev/mcp-js": "^0.23.0",
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -51,7 +53,6 @@
     "jsdom": "^29.1.1",
     "playwright": "^1.60.0",
     "vite": "^8.0.16",
-    "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.10"
   }
 }

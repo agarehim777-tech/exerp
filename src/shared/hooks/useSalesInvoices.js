@@ -33,10 +33,14 @@ function computeTotals(lines) {
   };
 }
 
+const INVOICES_PAGE_SIZE = 200;
+
 export function useSalesInvoices(tenantId) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(INVOICES_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
@@ -45,13 +49,18 @@ export function useSalesInvoices(tenantId) {
       .from('sales_invoices')
       .select('*, customer:customers(id,name), lines:sales_invoice_lines(*), payments:invoice_payments(*)')
       .eq('tenant_id', tenantId)
-      .order('invoice_date', { ascending: false });
+      .order('invoice_date', { ascending: false })
+      .limit(limit + 1);
     setError(err || null);
-    setInvoices(data || []);
+    const rows = data || [];
+    setHasMore(rows.length > limit);
+    setInvoices(rows.slice(0, limit));
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, limit]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const loadMore = useCallback(() => setLimit((value) => value + INVOICES_PAGE_SIZE), []);
 
   const degraded = useRealtimeResync(
     tenantId,
@@ -187,7 +196,7 @@ export function useSalesInvoices(tenantId) {
   };
 
   return {
-    invoices, loading, error, degraded, refresh: fetchAll,
+    invoices, loading, error, degraded, hasMore, loadMore, refresh: fetchAll,
     create, createFromOrder, createFromProject, nextInvoiceNo,
     postToLedger, addPayment, cancel,
   };

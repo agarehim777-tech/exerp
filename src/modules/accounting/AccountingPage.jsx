@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../shared/hooks/useAccounting.js";
 import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
+import { AccountingPeriodPanel } from "../finance/components/AccountingPeriodPanel.jsx";
 
 const TYPE_LABEL = { asset: "Aktiv", liability: "Öhdəlik", equity: "Kapital", revenue: "Gəlir", expense: "Xərc" };
 
@@ -19,12 +20,14 @@ export default function AccountingPage() {
         {[["coa","Hesablar planı"],["journal","Jurnal"],["tb","Trial Balance"]].map(([k,l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
-        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaЕџdД±rmasД±</button>
+        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaşdırması</button>
+        <button onClick={() => setTab("periods")} style={tabBtn(tab === "periods")}>Period bağlanışı</button>
       </div>
       {tab === "coa" && <ChartOfAccountsPanel isAdmin={isAdmin} />}
       {tab === "journal" && <JournalPanel isAdmin={isAdmin} />}
       {tab === "tb" && <TrialBalancePanel tenantId={tenantId} />}
       {tab === "reconciliation" && <ReconciliationPanel />}
+      {tab === "periods" && <AccountingPeriodPanel tenantId={tenantId} canManage={isAdmin} />}
     </div>
   );
 }

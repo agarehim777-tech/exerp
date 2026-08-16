@@ -67,7 +67,11 @@ export function AuthProvider({ children }) {
   );
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      logger.error("signOut failed", { error: error.message });
+      throw error;
+    }
     setProfile(null);
     setMemberships([]);
     setIsPlatformAdmin(false);

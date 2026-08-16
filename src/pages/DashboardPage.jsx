@@ -24,8 +24,8 @@ import {
   currentBusinessDate,
 } from "../shared/lib/appDomain.jsx";
 import {
-  navIcons,
 } from "../shared/lib/appDomain.jsx";
+import { navIcons } from "../config/navigation-icons.js";
 
 export default function DashboardPage({
   stats,

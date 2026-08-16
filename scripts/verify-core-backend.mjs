@@ -36,6 +36,8 @@ const tables = [
   "cash_accounts",
   "cash_transactions",
   "expenses",
+  "operation_requests",
+  "accounting_period_locks",
 ];
 
 const checks = await Promise.all(

@@ -6,6 +6,12 @@ export const currentBusinessDate = formatDateInput(new Date());
 export const baseCreditDate = currentBusinessDate;
 export const dayInMs = 24 * 60 * 60 * 1000;
 
+export function isCreditStarted(credit) {
+  const status = normalize(credit?.status);
+  if (status.includes("başlanmam") || status.includes("baslanmam") || status === "draft") return false;
+  return credit?.startedAt !== null && credit?.startDate !== null;
+}
+
 export function shiftPaymentDate(value, months) {
   const date = parsePaymentDate(value);
   if (!date) return baseCreditDate;
@@ -133,6 +139,16 @@ export function isCreditClosed(credit, plan = getCreditDisplayPlan(credit)) {
 }
 
 export function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit)) {
+  if (!isCreditStarted(credit)) {
+    return {
+      nextInstallment: null,
+      dueDate: null,
+      daysOverdue: 0,
+      isDueToday: false,
+      isOverdue: false,
+    };
+  }
+
   if (isCreditClosed(credit, plan)) {
     return {
       nextInstallment: null,
@@ -185,6 +201,7 @@ export function getCreditDebtFormula(item) {
 }
 
 export function getCreditRiskLabel(item) {
+  if (!isCreditStarted(item.credit)) return "Başlanma gözləyir";
   if (item.paymentState.isOverdue) return `${item.paymentState.daysOverdue} gün gecikib`;
   if (item.paymentState.isDueToday) return "Bu gün yığım";
   if (isCreditClosed(item.credit, item.plan)) return "Tamamlanıb";
@@ -225,7 +242,8 @@ export function getCreditRowDate(item) {
 }
 
 export function matchesCreditManagementFilter(item, filter) {
-  if (filter === "Aktiv") return normalize(item.credit.status).includes("aktiv") && !isCreditClosed(item.credit, item.plan);
+  if (filter === "Başlanmamış") return !isCreditStarted(item.credit) && !isCreditClosed(item.credit, item.plan);
+  if (filter === "Aktiv") return isCreditStarted(item.credit) && !isCreditClosed(item.credit, item.plan);
   if (filter === "Gözləyən") {
     return (
       !item.paymentState.isOverdue &&
@@ -272,6 +290,7 @@ export function getCreditInitials(name = "") {
 
 export function getCreditManagementStatus(item) {
   if (isCreditClosed(item.credit, item.plan)) return "Bağlanmış";
+  if (!isCreditStarted(item.credit)) return "Başlanmamış";
   if (item.paymentState.isOverdue) return `${item.paymentState.daysOverdue} gün gecikib`;
   if (item.paymentState.isDueToday) return "Bugünkü ödəniş";
   return item.credit.status || "Aktiv";

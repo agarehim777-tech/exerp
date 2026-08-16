@@ -1,16 +1,24 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
-import { VitePWA } from "vite-plugin-pwa";
 
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
-const CLOUD_URL = "https://rojwxgndtunssjdwngrh.supabase.co";
-const CLOUD_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU";
+// Public Lovable Cloud values (safe in the browser bundle; RLS protects the data).
+const DEVELOPMENT_URL = "https://rojwxgndtunssjdwngrh.supabase.co";
+const DEVELOPMENT_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
-  const cloudUrl = env.VITE_SUPABASE_URL || CLOUD_URL;
-  const cloudPublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || CLOUD_PUBLISHABLE_KEY;
+  const fileEnv = loadEnv(mode, process.cwd(), "VITE_");
+  // Hosted builds inject the values as real environment variables (no .env file).
+  const resolvedUrl = process.env.VITE_SUPABASE_URL || fileEnv.VITE_SUPABASE_URL;
+  const resolvedKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || fileEnv.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const cloudUrl = resolvedUrl || DEVELOPMENT_URL;
+  const cloudPublishableKey = resolvedKey || DEVELOPMENT_PUBLISHABLE_KEY;
+
+  if (mode === "production" && (!resolvedUrl || !resolvedKey)) {
+    console.warn("[build] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not found; using fallback values.");
+  }
 
   return {
   base: process.env.VITE_BASE_PATH || "/",
@@ -22,64 +30,6 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     mcpPlugin(),
-    VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: null,
-      filename: "sw.js",
-      devOptions: { enabled: false },
-      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
-      manifest: {
-        name: "Expert ERP",
-        short_name: "ExERP",
-        description: "Expert ERP вЂ” Г§oxЕџirkЙ™tli idarЙ™etmЙ™ platformasД±",
-        theme_color: "#0F2A2E",
-        background_color: "#0F2A2E",
-        display: "standalone",
-        start_url: "./",
-        scope: "./",
-        lang: "az",
-        icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        ],
-      },
-      workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        navigateFallback: "index.html",
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/, /^\/functions\//],
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "html-nav",
-              networkTimeoutSeconds: 2,
-              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 5 },
-            },
-          },
-          {
-            urlPattern: ({ url }) => url.origin === self.location.origin && /\.(?:js|css|woff2)$/.test(url.pathname),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "static-assets",
-              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-          {
-            urlPattern: ({ url }) => url.origin === "https://fonts.gstatic.com",
-            handler: "CacheFirst",
-            options: {
-              cacheName: "gfonts",
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
-      },
-    }),
   ],
   build: {
     sourcemap: false,
@@ -92,10 +42,17 @@ export default defineConfig(({ mode }) => {
           if (normalizedId.includes("/src/config/")) return "app-config";
           if (normalizedId.includes("/src/services/")) return "app-services";
           if (normalizedId.includes("/src/components/")) return "app-ui";
-          // Note: /src/modules/ intentionally NOT bundled together вЂ” each lazy() import
+          // Note: /src/modules/ intentionally NOT bundled together — each lazy() import
           // becomes its own route-based chunk for optimal code splitting.
-          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
+          if (id.includes("node_modules/react-router")) return "router-vendor";
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom") || id.includes("node_modules/scheduler")) return "react-vendor";
           if (id.includes("node_modules/lucide-react")) return "icons";
+          if (id.includes("node_modules/@supabase")) return "supabase-vendor";
+          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-") || id.includes("node_modules/victory")) return "charts-vendor";
+          if (id.includes("node_modules/@sentry")) return "sentry-vendor";
+          if (id.includes("node_modules/@ai-sdk") || id.includes("node_modules/ai/")) return "ai-vendor";
+          if (id.includes("node_modules/@dnd-kit")) return "dnd-vendor";
+          if (id.includes("node_modules/zod")) return "zod-vendor";
           if (id.includes("node_modules")) return "vendor";
         },
       },

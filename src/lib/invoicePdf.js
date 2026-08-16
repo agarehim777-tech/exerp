@@ -160,3 +160,128 @@ export function downloadEInvoice(invoice, company = {}) {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+// ---- Siyahı (registr) ixracı: filtrə uyğun fakturalar ----
+
+const STATUS_TEXT = {
+  draft: 'Qaralama', issued: 'Göndərilib', partial: 'Qismən ödənilib',
+  paid: 'Ödənilib', overdue: 'Gecikib', cancelled: 'Ləğv',
+};
+
+function registerRows(invoices) {
+  return invoices.map((invoice) => {
+    const total = Number(invoice.total) || 0;
+    const paid = Number(invoice.paid_amount) || 0;
+    return {
+      invoice_no: invoice.invoice_no || '',
+      invoice_date: invoice.invoice_date || '',
+      due_date: invoice.due_date || '',
+      customer: invoice.customer?.name || '',
+      subtotal: Number(invoice.subtotal) || 0,
+      vat: Number(invoice.vat_total) || 0,
+      total,
+      paid,
+      outstanding: total - paid,
+      status: STATUS_TEXT[invoice.status] || invoice.status || '',
+      posted: invoice.posted ? 'Bəli' : 'Xeyr',
+    };
+  });
+}
+
+// İxrac sütunları — istifadəçi seçiminə açıqdır.
+export const INVOICE_EXPORT_COLUMNS = [
+  { key: 'invoice_no', label: 'Faktura №', type: 'text' },
+  { key: 'invoice_date', label: 'Tarix', type: 'date' },
+  { key: 'due_date', label: 'Son ödəniş', type: 'date' },
+  { key: 'customer', label: 'Müştəri', type: 'text' },
+  { key: 'subtotal', label: 'Net', type: 'money' },
+  { key: 'vat', label: 'ƏDV', type: 'money' },
+  { key: 'total', label: 'Cəmi', type: 'money' },
+  { key: 'paid', label: 'Ödənilib', type: 'money' },
+  { key: 'outstanding', label: 'Qalıq', type: 'money' },
+  { key: 'status', label: 'Status', type: 'text' },
+  { key: 'posted', label: 'Jurnal', type: 'text' },
+];
+
+export const DEFAULT_INVOICE_EXPORT_COLUMNS = [
+  'invoice_no', 'invoice_date', 'customer', 'total', 'paid', 'outstanding', 'status',
+];
+
+function resolveColumns(columns) {
+  const keys = Array.isArray(columns) && columns.length ? columns : DEFAULT_INVOICE_EXPORT_COLUMNS;
+  const picked = INVOICE_EXPORT_COLUMNS.filter((column) => keys.includes(column.key));
+  return picked.length ? picked : INVOICE_EXPORT_COLUMNS.filter((c) => DEFAULT_INVOICE_EXPORT_COLUMNS.includes(c.key));
+}
+
+export function exportInvoicesCsv(invoices, { fileName, columns } = {}) {
+  const rows = registerRows(invoices);
+  const cols = resolveColumns(columns);
+  const esc = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const cell = (row, column) => (column.type === 'money' ? (Number(row[column.key]) || 0).toFixed(2) : row[column.key]);
+  const header = cols.map((column) => esc(column.label)).join(',');
+  const body = rows.map((row) => cols.map((column) => esc(cell(row, column))).join(','));
+  const csv = `\uFEFF${[header, ...body].join('\n')}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName || `satis-fakturalari-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  return rows.length;
+}
+
+export function buildInvoiceRegisterHtml(invoices, { company = {}, filterLabel = 'Hamısı', search = '', columns } = {}) {
+  const rows = registerRows(invoices);
+  const cols = resolveColumns(columns);
+  const sum = (key) => rows.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
+  const render = (row, column) => {
+    if (column.type === 'money') return money(row[column.key]);
+    if (column.type === 'date') return date(row[column.key]);
+    return escapeHtml(row[column.key] || '—');
+  };
+  const head = cols.map((column) => `<th${column.type === 'money' ? ' class="num"' : ''}>${escapeHtml(column.label)}</th>`).join('');
+  const body = rows.map((row) => `<tr>${cols
+    .map((column) => `<td${column.type === 'money' ? ' class="num"' : ''}>${render(row, column)}</td>`)
+    .join('')}</tr>`).join('');
+  let labelSpent = false;
+  const foot = cols.map((column) => {
+    if (column.type === 'money') return `<td class="num">${money(sum(column.key))}</td>`;
+    if (!labelSpent) { labelSpent = true; return '<td>Yekun</td>'; }
+    return '<td></td>';
+  }).join('');
+  return `<!doctype html>
+<html lang="az"><head><meta charset="utf-8" />
+<title>Satış fakturaları registri</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1c2432; font-size: 11px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #64748b; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #0f3d33; color: #fff; text-align: left; padding: 6px 8px; font-size: 10px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #e7ecf2; }
+  .num { text-align: right; }
+  tfoot td { font-weight: 700; border-top: 2px solid #0f3d33; }
+</style></head>
+<body>
+  <h1>${escapeHtml(company.name || 'ExERP')} — Satış fakturaları</h1>
+  <div class="muted">Filtr: ${escapeHtml(filterLabel)}${search ? ` · Axtarış: “${escapeHtml(search)}”` : ''} · ${rows.length} sənəd · ${date(new Date())}</div>
+  <table>
+    <thead><tr>${head}</tr></thead>
+    <tbody>${body || `<tr><td colspan="${cols.length}">Faktura tapılmadı.</td></tr>`}</tbody>
+    <tfoot><tr>${foot}</tr></tfoot>
+  </table>
+</body></html>`;
+}
+
+
+export function printInvoiceRegister(invoices, options = {}) {
+  const html = buildInvoiceRegisterHtml(invoices, options);
+  const win = window.open('', '_blank', 'width=1100,height=900');
+  if (!win) throw new Error('Pop-up bloklandı. Brauzer parametrlərini yoxlayın.');
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 350);
+}

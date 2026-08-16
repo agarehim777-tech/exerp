@@ -2,6 +2,7 @@
 export const moduleRoutes = {
   dashboard: "/",
   assistant: "/ai-komekci",
+  insights: "/ai-tovsiyeler",
   platform: "/platform/sirketler",
   crm: "/crm/musteriler",
   "crm-deals": "/crm/sovdelesmeler",
@@ -14,6 +15,7 @@ export const moduleRoutes = {
   deliveries: "/tehvil",
   finance: "/maliyye/jurnal",
   cashbook: "/maliyye/kassa",
+  "ar-invoices": "/maliyye/satis-fakturalari",
   invoices: "/faktura",
   accounting: "/muhasibat",
   credits: "/kredit",
@@ -22,6 +24,7 @@ export const moduleRoutes = {
   procurement: "/satinalma",
   hr: "/hr/emekdaslar",
   kpi: "/kpi",
+  bonuses: "/bonuslar",
   contracts: "/muqavile",
   reports: "/hesabat",
   "financial-statements": "/hesabat/maliyye",
@@ -47,9 +50,7 @@ export const pathToModule = Object.fromEntries(
 export const legacyModuleAliases = {
   finance: "accounting",
   invoices: "sales",
-  "sales-quotes": "sales",
   "sales-shipments": "sales",
-  "ar-invoices": "sales",
   warehouse: "stock",
 };
 
@@ -59,7 +60,8 @@ export const historicalRoutes = {
   finance: ["/maliyye", "/jurnal"],
   accounting: ["/maliyye/muhasibat"],
   invoices: ["/fakturalar", "/satis/faktura"],
-  sales: ["/sifarisler", "/satis", "/satis/kotirovka", "/satis/catdirilma", "/maliyye/satis-fakturalari", "/satis-fakturalari"],
+  "ar-invoices": ["/satis-fakturalari"],
+  sales: ["/sifarisler", "/satis", "/satis/catdirilma"],
   crm: ["/musteriler"],
   stock: ["/anbar", "/qaliqlar"],
   hr: ["/hr", "/emekdaslar"],

@@ -1,12 +1,14 @@
 node_modules/
 .vitest-cache/
 dist/
-.env
 .env.*
 !.env.example
 data/*.sqlite
 data/*.sqlite-*
 work/
 *.log
+.npm-cache/
+.cli-home/
+.tmp-period-*.json
 .env.local
 .env.production

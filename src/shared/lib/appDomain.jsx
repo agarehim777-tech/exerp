@@ -4,10 +4,10 @@ import { lazy, useEffect, useMemo, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue } from "../../services/date.js";
-import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, roundMoney } from "./credit.js";
+import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, isCreditStarted, roundMoney } from "./credit.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
 import { initialState, navItems, stages } from "../../data.js";
-export { applyCreditPrincipalPayment, buildCreditPlan, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRowDate, getCreditSourceLabel, getReceivableClosureAmount, isCreditClosed, matchesCreditManagementFilter, matchesCreditSearch, matchesCreditSourceFilter, monthNamesAz } from "./credit.js";
+export { applyCreditPrincipalPayment, buildCreditPlan, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRowDate, getCreditSourceLabel, getReceivableClosureAmount, isCreditClosed, isCreditStarted, matchesCreditManagementFilter, matchesCreditSearch, matchesCreditSourceFilter, monthNamesAz } from "./credit.js";
 export function buildAccountingCloseChecklist(accounting, closeRun) {
   const { balance, pl, cashFlow, journalRows, chartRows } = accounting;
   const cashAccount = chartRows.find((row) => row.code === "1010");
@@ -1823,6 +1823,7 @@ export function getPreferredVendorName(product, vendors) {
 export function buildSalesBonusRows(orders) {
   return orders.flatMap((order) => {
     const paid = Number(order.paid || 0);
+    const lines = normalizeOrderProductLines(order.productLines || []);
     return getOrderSellerBonuses(order).map((sellerBonus) => {
       const rate = Number(sellerBonus.bonus || 0);
       return {
@@ -1831,6 +1832,7 @@ export function buildSalesBonusRows(orders) {
         date: order.date,
         customer: order.customer,
         product: summarizeOrderProducts(order),
+        productLines: lines,
         paymentMethod: order.paymentMethod || "Nağd",
         seller: sellerBonus.seller,
         rate,
@@ -3362,53 +3364,6 @@ export function hasExpenseCashImpact(expense = {}) {
 
 export const modulePermissionCatalog = buildModulePermissionCatalog(navItems);
 
-export const navIcons = {
-  dashboard: LayoutDashboard,
-  assistant: Sparkles,
-  platform: Building2,
-  crm: Users,
-  "crm-deals": TrendingUp,
-  "crm-activities": MessageSquare,
-  "crm-tasks": ShieldCheck,
-  sales: ShoppingCart,
-  "sales-dashboard": BarChart3,
-  "sales-quotes": FileText,
-  "sales-shipments": Truck,
-  warehouse: Warehouse,
-  stock: Boxes,
-  deliveries: Truck,
-  finance: Wallet,
-  cashbook: Wallet,
-  "ar-invoices": FileText,
-  invoices: FileText,
-  accounting: BarChart3,
-  tax: CalendarClock,
-  credits: CreditCard,
-  receivables: Wallet,
-  vendors: Building2,
-  procurement: ShoppingCart,
-  projects: BarChart3,
-  production: Package,
-  hr: UserCog,
-  kpi: TrendingUp,
-  contracts: FileText,
-  reports: BarChart3,
-  support: MessageSquare,
-  help: FileText,
-  onboarding: ShieldCheck,
-  messages: MessageSquare,
-  notifications: Bell,
-  api: ShieldCheck,
-  settings: Settings,
-  roles: ShieldCheck,
-  "access-check": ShieldCheck,
-  audit: ShieldCheck,
-  periods: FileText,
-  currencies: FileText,
-  "financial-statements": FileText,
-
-};
-
 export function normalizeUserModuleAccess(user, roles) {
   return normalizeUserModuleAccessFromCatalog(user, roles, navItems);
 }
@@ -3427,6 +3382,8 @@ export function userHasEffectivePermission(user, roles, permission) {
   const roleAllows = Array.isArray(role?.permissions) && role.permissions.includes(permission);
   const moduleId = getModuleForPermission(permission);
   const moduleAllows = !moduleId || normalizeUserModuleAccess(user, roles).includes(moduleId);
+  const explicitOverride = user?.permissionOverrides?.[permission];
+  if (typeof explicitOverride === "boolean") return explicitOverride && moduleAllows;
   return roleAllows && moduleAllows;
 }
 
@@ -3883,6 +3840,7 @@ export function getShortageQuantity(item) {
 export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onReceivePayment, onOpenSalesOrder }) {
   const { credit, plan, paymentState, progress } = item;
   const debt = getCreditDebtFormula(item);
+  const started = isCreditStarted(credit);
 
   return (
     <div className="credit-detail">
@@ -3896,6 +3854,15 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
             <StatusBadge status={paymentState.isOverdue ? `${paymentState.daysOverdue} gün gecikib` : credit.status} />
           </div>
           <CreditContext credit={credit} onOpenSalesOrder={onOpenSalesOrder} />
+          {!started ? (
+            <div className="credit-payment-alert">
+              <CalendarClock size={16} />
+              <div>
+                <strong>Kredit başlanmayıb</strong>
+                <span>Dəqiq başlanma tarixi seçildikdən sonra ödəniş cədvəli aktiv olacaq.</span>
+              </div>
+            </div>
+          ) : null}
           <CreditContractSnapshot item={item} />
           <CreditDebtFormula item={item} />
           <div className="credit-detail-values">
@@ -3917,7 +3884,7 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
           </div>
           <div className="credit-detail-records">
             <CreditPaymentHistory payments={credit.payments || []} />
-            <div className="credit-schedule-edit-block">
+            {started ? <div className="credit-schedule-edit-block">
               <div className="credit-schedule-head">
                 <div>
                   <h3>Ödəniş tarixləri</h3>
@@ -3928,25 +3895,25 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
                 installments={plan.installments}
                 onUpdatePaymentDate={(month, due) => onUpdatePaymentDate(credit.id, month, due)}
               />
-            </div>
+            </div> : null}
           </div>
         </section>
 
         <aside className="credit-detail-aside">
-          <CreditPaymentAlert paymentState={paymentState} />
-          <CreditPaymentForm
+          {started ? <CreditPaymentAlert paymentState={paymentState} /> : null}
+          {started ? <CreditPaymentForm
             key={credit.id}
             credit={credit}
             paymentState={paymentState}
             onReceivePayment={onReceivePayment}
-          />
+          /> : null}
           <CreditHealthSummary item={item} />
-          <div className="credit-detail-actions">
+          {started ? <div className="credit-detail-actions">
             <span>Növbəti: {paymentState.nextInstallment?.due || credit.next}</span>
             <button className="secondary-btn" onClick={() => sendCreditSms(credit.id)}>
               SMS xatırlatma
             </button>
-          </div>
+          </div> : null}
         </aside>
       </div>
     </div>

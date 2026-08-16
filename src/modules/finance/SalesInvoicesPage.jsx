@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { downloadEInvoice, printInvoice } from "../../lib/invoicePdf.js";
+import {
+  DEFAULT_INVOICE_EXPORT_COLUMNS, INVOICE_EXPORT_COLUMNS,
+  downloadEInvoice, exportInvoicesCsv, printInvoice, printInvoiceRegister,
+} from "../../lib/invoicePdf.js";
 import { useSalesInvoices } from "../../shared/hooks/useSalesInvoices.js";
 import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
@@ -9,6 +12,7 @@ import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
 import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
+import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
@@ -34,6 +38,30 @@ export default function SalesInvoicesPage() {
   const { accounts } = useCashbook(tenantId);
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [exportColumns, setExportColumns] = useState(DEFAULT_INVOICE_EXPORT_COLUMNS);
+  const toggleExportColumn = (key) =>
+    setExportColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key];
+      return INVOICE_EXPORT_COLUMNS.map((column) => column.key).filter((columnKey) => next.includes(columnKey));
+    });
+
+  const filteredInvoices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return ar.invoices.filter((invoice) => {
+      if (statusFilter !== "all" && invoice.status !== statusFilter) return false;
+      if (!q) return true;
+      return `${invoice.invoice_no || ""} ${invoice.customer?.name || ""}`.toLowerCase().includes(q);
+    });
+  }, [ar.invoices, statusFilter, search]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: ar.invoices.length };
+    for (const invoice of ar.invoices) counts[invoice.status] = (counts[invoice.status] || 0) + 1;
+    return counts;
+  }, [ar.invoices]);
 
   const totals = useMemo(() => {
     const active = ar.invoices.filter((i) => i.status !== "cancelled");
@@ -79,7 +107,7 @@ export default function SalesInvoicesPage() {
 
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Satış fakturaları ({ar.invoices.length})</h3>
+          <h3 style={{ margin: 0 }}>Satış fakturaları ({filteredInvoices.length}/{ar.invoices.length})</h3>
           <button style={primaryBtn} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Bağla" : "+ Yeni faktura"}
           </button>
@@ -100,6 +128,106 @@ export default function SalesInvoicesPage() {
         )}
 
 
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+          {[["all", "Hamısı"], ...Object.entries(STATUS_LABEL)].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              data-testid={`invoice-filter-${value}`}
+              style={statusFilter === value ? primaryBtn : secondaryBtn}
+              onClick={() => setStatusFilter(value)}
+            >
+              {label} ({statusCounts[value] || 0})
+            </button>
+          ))}
+          <input
+            style={{ ...input, minWidth: 220, marginLeft: "auto" }}
+            placeholder="Faktura № və ya müştəri axtar…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            data-testid="invoice-search"
+          />
+          <button
+            type="button"
+            style={secondaryBtn}
+            data-testid="invoice-export-columns-toggle"
+            onClick={() => setShowColumnPicker((v) => !v)}
+          >
+            Sütunlar ({exportColumns.length})
+          </button>
+          <button
+            type="button"
+            style={secondaryBtn}
+            data-testid="invoice-export-csv"
+            disabled={!filteredInvoices.length || !exportColumns.length}
+            onClick={() => run(async () => {
+              const count = exportInvoicesCsv(filteredInvoices, { columns: exportColumns });
+              setMsg(`${count} faktura CSV formatında ixrac edildi.`);
+            })}
+          >
+            CSV ixrac
+          </button>
+          <button
+            type="button"
+            style={secondaryBtn}
+            data-testid="invoice-export-pdf"
+            disabled={!filteredInvoices.length || !exportColumns.length}
+            onClick={() => run(async () => {
+              printInvoiceRegister(filteredInvoices, {
+                company,
+                filterLabel: statusFilter === "all" ? "Hamısı" : STATUS_LABEL[statusFilter],
+                search,
+                columns: exportColumns,
+              });
+            })}
+          >
+            PDF ixrac
+          </button>
+        </div>
+
+        {showColumnPicker && (
+          <div
+            style={{ ...card, padding: 12, marginBottom: 12, display: "grid", gap: 8 }}
+            data-testid="invoice-export-columns"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <strong style={{ fontSize: 13 }}>İxrac sütunları</strong>
+              <span style={{ fontSize: 12, color: "#64748b" }}>CSV və PDF üçün seçilmiş sütunlar</span>
+              <button
+                type="button"
+                style={{ ...secondaryBtn, marginLeft: "auto" }}
+                onClick={() => setExportColumns(INVOICE_EXPORT_COLUMNS.map((c) => c.key))}
+              >
+                Hamısı
+              </button>
+              <button
+                type="button"
+                style={secondaryBtn}
+                onClick={() => setExportColumns(DEFAULT_INVOICE_EXPORT_COLUMNS)}
+              >
+                Standart
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {INVOICE_EXPORT_COLUMNS.map((column) => (
+                <label key={column.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={exportColumns.includes(column.key)}
+                    data-testid={`invoice-export-col-${column.key}`}
+                    onChange={() => toggleExportColumn(column.key)}
+                  />
+                  {column.label}
+                </label>
+              ))}
+            </div>
+            {!exportColumns.length && (
+              <div style={{ fontSize: 12, color: "#b23a3a" }}>Ən azı bir sütun seçin.</div>
+            )}
+          </div>
+        )}
+
+
         <table style={table}>
           <thead>
             <tr>
@@ -109,7 +237,7 @@ export default function SalesInvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {ar.invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <InvoiceRow
                 key={invoice.id}
                 invoice={invoice}
@@ -120,11 +248,12 @@ export default function SalesInvoicesPage() {
                 company={company}
               />
             ))}
-            {!ar.invoices.length && !ar.loading && (
-              <tr><td style={td} colSpan={8}>Faktura yoxdur.</td></tr>
+            {!filteredInvoices.length && !ar.loading && (
+              <tr><td style={td} colSpan={8}>Faktura tapılmadı.</td></tr>
             )}
           </tbody>
         </table>
+        <LoadMoreBar hasMore={ar.hasMore} onLoadMore={ar.loadMore} loading={ar.loading} />
       </div>
     </div>
   );

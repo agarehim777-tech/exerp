@@ -22,8 +22,6 @@ export default function SalesDashboardPage() {
         <Kpi label="Sifariş sayı" value={data.orders_count} accent="#3b82f6" />
         <Kpi label="Açıq sifariş" value={data.open_orders} accent="#f59e0b" />
         <Kpi label="Orta çek" value={money(data.avg_ticket)} accent="#8b5cf6" />
-        <Kpi label="Açıq kotirovka" value={data.quotes_open} accent="#06b6d4" />
-        <Kpi label="Qazanılan kotirovka" value={money(data.quotes_won_amount)} accent="#059669" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>

@@ -42,12 +42,21 @@ npx playwright install chromium
 
 ## Backup and recovery
 
-- Enable daily Supabase database backups and point-in-time recovery where the
-  selected plan supports it.
-- Keep an encrypted offsite logical backup.
-- Test restore into a separate project at least monthly.
+- `.github/workflows/backup-supabase.yml` creates role, schema and data dumps
+  every day at 02:17 UTC, records SHA-256 checksums and retains the compressed
+  GitHub artifact for 30 days.
+- Configure `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in the GitHub
+  `production` environment. GitHub encrypts workflow artifacts at rest.
+- Configure `RESTORE_DATABASE_URL` only in the protected `disaster-recovery`
+  environment. It must point to a disposable Supabase project and must never
+  contain the production project reference.
+- Run `Supabase restore drill` at least monthly, enter `RESTORE`, and retain the
+  successful workflow result as recovery evidence.
+- Target **RPO: 24 hours** for scheduled logical backup and **RTO: 4 hours** for
+  a verified restore. Enable Supabase PITR to reduce production RPO further.
 - Take a verified backup before destructive migrations.
-- Record RPO, RTO and the person authorized to approve a restore.
+- A production restore requires approval by the platform owner and finance/data
+  owner. The drill workflow restores only into the disposable recovery project.
 
 ## Hosting
 
@@ -74,3 +83,26 @@ include the exact Supabase and Sentry origins used by the production build.
 - Roll back the frontend to the previous artifact when needed.
 - Never roll back a database migration without a tested reverse migration or
   forward-fix plan.
+# Transaction and security hardening
+
+Migration `20260812090000_transaction_security_hardening.sql` adds the production safety layer for critical operations:
+
+- `create_sales_order_atomic` creates the order, stock reservations and optional credit contract in one database transaction;
+- `operation_requests` supplies tenant-scoped idempotency and prevents duplicate submissions;
+- cross-tenant references are rejected by database triggers;
+- locked accounting periods reject later finance mutations;
+- critical ledger rows are not directly deletable by authenticated clients;
+- portfolio, due-date, cash, expense and stock lookups have production indexes.
+
+Before deployment, run:
+
+```bash
+npm ci
+npm test
+npm run verify:security
+npm run verify:hardening
+npm run verify:recovery
+npm run build
+```
+
+GitHub Actions additionally runs `supabase db lint --linked --level error`, a post-deploy page health check and the scheduled production monitor. Configure `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VITE_SUPABASE_PUBLISHABLE_KEY` and the disaster-recovery database secret in the corresponding protected GitHub environments.

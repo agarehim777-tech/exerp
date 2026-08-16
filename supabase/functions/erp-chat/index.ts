@@ -29,10 +29,17 @@ Deno.serve(async (req) => {
       },
     );
 
-    const { data: userRes } = await supabase.auth.getUser();
-    if (!userRes?.user) return json({ error: "Invalid session" }, 401);
+    const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userRes?.user) {
+      return json({ error: "Sessiya bitib. Yenidən daxil olun." }, 401);
+    }
 
     const { messages, tenantId }: { messages: UIMessage[]; tenantId?: string } = await req.json();
+
+    // Strip PostgREST filter metacharacters so AI-supplied text cannot alter
+    // the filter expression (only literal search text remains).
+    const sanitizeSearch = (value: string) =>
+      value.replace(/[,()."'\\*%:]/g, " ").trim().slice(0, 80);
 
     const gateway = createLovableAiGatewayProvider(key);
 
@@ -48,7 +55,7 @@ Deno.serve(async (req) => {
             .select("id,name,email,phone,segment,tax_id,last_activity_at")
             .order("created_at", { ascending: false })
             .limit(limit);
-          if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          if (search) q = q.or(`name.ilike.%${sanitizeSearch(search)}%,email.ilike.%${sanitizeSearch(search)}%`);
           const { data, error } = await q;
           if (error) return { error: error.message };
           return { customers: data ?? [] };
@@ -64,7 +71,7 @@ Deno.serve(async (req) => {
           let q = supabase.from("products")
             .select("id,name,sku,price,currency,unit,vat_rate,is_active")
             .limit(limit);
-          if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+          if (search) q = q.or(`name.ilike.%${sanitizeSearch(search)}%,sku.ilike.%${sanitizeSearch(search)}%`);
           q = q.order("name", { ascending: true });
           const { data, error } = await q;
           if (error) return { error: error.message };

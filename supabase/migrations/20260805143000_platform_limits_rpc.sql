@@ -46,7 +46,7 @@ BEGIN
     auth.uid(),
     'platform',
     'tenant_limits_updated',
-    'Tenant limitlЙ™ri vЙ™ modul lisenziyalarД± yenilЙ™ndi',
+    'Tenant limitləri və modul lisenziyaları yeniləndi',
     jsonb_build_object(
       'max_users', result.max_users,
       'max_warehouses', result.max_warehouses,

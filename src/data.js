@@ -10,6 +10,7 @@ export const stages = [
 export const navItems = [
   { id: "dashboard", label: "Panel" },
   { id: "assistant", label: "AI Köməkçi" },
+  { id: "insights", label: "AI Tövsiyələr" },
 
   // CRM
   { id: "crm", label: "Müştərilər", group: "crm" },
@@ -29,6 +30,7 @@ export const navItems = [
 
   // Maliyyə
   { id: "cashbook", label: "Kassa & Xərclər", group: "finance" },
+  { id: "ar-invoices", label: "Satış fakturaları", group: "finance" },
   { id: "accounting", label: "Mühasibat jurnalı", group: "finance" },
   { id: "receivables", label: "Borclar", group: "finance" },
   { id: "credits", label: "Kreditlər", group: "finance" },
@@ -42,6 +44,7 @@ export const navItems = [
   { id: "reports", label: "Hesabatlar", group: "analytics" },
   { id: "financial-statements", label: "Maliyyə hesabatları", group: "analytics" },
   { id: "kpi", label: "KPI", group: "analytics" },
+  { id: "bonuses", label: "Satıcı bonusları", group: "analytics" },
 
   // Sistem
   { id: "platform", label: "Şirkətlər", group: "system" },
