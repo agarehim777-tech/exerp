@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Award, CalendarIcon, Percent, Users, Wallet } from "lucide-react";
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";
+import BonusAssignmentsPanel from "./BonusAssignmentsPanel.jsx";
+import { useAuth } from "../auth/AuthProvider.jsx";
+import { useSalesBonusLedger } from "../shared/hooks/useSalesBonusLedger.js";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -34,6 +37,9 @@ function inRange(date, start, end) {
 }
 
 export default function BonusesPage({ salesBonuses = [] }) {
+  const { activeMembership } = useAuth();
+  const bonusLedger = useSalesBonusLedger(activeMembership?.tenant_id);
+  const effectiveBonusRows = bonusLedger.rows.length ? bonusLedger.rows : salesBonuses;
   const [startDate, setStartDate] = useState(() => startOfMonthIso());
   const [endDate, setEndDate] = useState(() => todayIso());
   const [seller, setSeller] = useState(null);
@@ -64,8 +70,8 @@ export default function BonusesPage({ salesBonuses = [] }) {
   }
 
   const periodRows = useMemo(
-    () => salesBonuses.filter((row) => inRange(row.date, startDate, endDate)),
-    [salesBonuses, startDate, endDate],
+    () => effectiveBonusRows.filter((row) => inRange(row.date, startDate, endDate)),
+    [effectiveBonusRows, startDate, endDate],
   );
 
   const sellerRows = useMemo(() => {
@@ -130,7 +136,18 @@ export default function BonusesPage({ salesBonuses = [] }) {
   }, [detailRows]);
 
   const totalBonus = sellerRows.reduce((sum, row) => sum + row.bonus, 0);
-  const totalPaid = sellerRows.reduce((sum, row) => sum + row.paid, 0);
+  const totalPaid = useMemo(() => {
+    const seenPayments = new Set();
+    return periodRows.reduce((sum, row, index) => {
+      // One cash receipt creates one bonus row per assigned seller. The
+      // company bonus base must count that receipt once, not once per seller.
+      const paymentKey = row.paymentId
+        || `${row.orderId || "order"}:${row.date || "date"}:${Number(row.paid || 0)}:${row.sourceId || index}`;
+      if (seenPayments.has(paymentKey)) return sum;
+      seenPayments.add(paymentKey);
+      return sum + Number(row.paid || 0);
+    }, 0);
+  }, [periodRows]);
   const detailBonus = detailRows.reduce((sum, row) => sum + Number(row.bonusAmount || 0), 0);
 
   const dateRangeLabel = formatDateRange(startDate, endDate);
@@ -218,6 +235,7 @@ export default function BonusesPage({ salesBonuses = [] }) {
 
   return (
     <div className="stack">
+      <BonusAssignmentsPanel />
       <section className="metric-grid four">
         <MetricCard label="Dövr" value={startDate || endDate ? dateRangeLabel : "Bütün dövrlər"} trend={`${periodRows.length} bonus sətri`} icon={Percent} tone="primary" />
         <MetricCard label="Ümumi bonus" value={money(totalBonus)} trend={`${sellerRows.length} satıcı`} icon={Award} tone="success" />

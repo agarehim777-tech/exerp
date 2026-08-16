@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { lazy, useMemo, useRef, useState } from "react";
 import { resolveModalKind } from "../config/modal-registry.js";
 import {
   Check, Download, FileText, GitBranch, MessageSquare, Plus, Send, Trash2, Upload, Users, X,
@@ -13,6 +13,35 @@ import {
 } from "../shared/lib/appDomain.jsx";
 import { addDays, creditTermOptions, getCreditSourceLabel } from "../shared/lib/credit.js";
 import { normalizeMessageThread, nextContractNumber } from "../shared/lib/appHelpers.jsx";
+
+const ExpenseOperationModal = lazy(() => import("./modals/OperationModals.jsx").then((module) => ({ default: module.ExpenseOperationModal })));
+const OperationDeleteModal = lazy(() => import("./modals/OperationModals.jsx").then((module) => ({ default: module.OperationDeleteModal })));
+const ProductFormModal = lazy(() => import("../modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.ProductFormModal })));
+const WarehouseFormModal = lazy(() => import("../modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.WarehouseFormModal })));
+const HrDepartmentModal = lazy(() => import("../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrDepartmentModal })));
+const HrEmployeeDeleteModal = lazy(() => import("../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeDeleteModal })));
+const HrEmployeeModal = lazy(() => import("../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeModal })));
+const HrLeaveRequestModal = lazy(() => import("../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrLeaveRequestModal })));
+const HrVacancyModal = lazy(() => import("../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrVacancyModal })));
+const FinanceAccountModal = lazy(() => import("../modules/finance/components/FinanceAccountModal.jsx").then((module) => ({ default: module.FinanceAccountModal })));
+const StockIntakeModal = lazy(() => import("../modules/warehouse/components/StockIntakeModal.jsx").then((module) => ({ default: module.StockIntakeModal })));
+const FactoryPurchaseOrderModal = lazy(() => import("../modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.FactoryPurchaseOrderModal })));
+const VendorFormModal = lazy(() => import("../modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.VendorFormModal })));
+const SalesOperationModal = lazy(() => import("../modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOperationModal })));
+const SalesOrderModal = lazy(() => import("../modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOrderModal })));
+
+const warehouseImportHeaderAliases = {
+  product: ["məhsul", "məhsul adı", "product", "name"],
+  sku: ["sku", "kod", "code"],
+  warehouse: ["anbar", "warehouse"],
+  qty: ["miqdar", "qalıq", "qty", "quantity"],
+  salePrice: ["satış qiyməti", "satış", "sale price", "sale_price", "price"],
+  costPrice: ["alış qiyməti", "maya", "cost price", "cost_price"],
+  category: ["kateqoriya", "category"],
+  reorderLevel: ["minimum stok", "minimum", "reorder level", "reorder_level"],
+  unit: ["ölçü vahidi", "vahid", "unit"],
+  serialTracked: ["serial izləmə", "serial", "imei", "serial tracked"],
+};
 
 function parseDelimitedCsv(text) {
   const cleanText = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -1169,4 +1198,5 @@ export {
   CreateModal,
   GenericCreateModal,
   ToastStack,
+  createConfig,
 };

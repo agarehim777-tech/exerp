@@ -192,7 +192,7 @@ function SettingsPage({
         </div>
       </Panel>
 
-      <Panel className="settings-security-panel">
+      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
         <PanelHeader
           title="İstifadəçilər, Rollar və İcazələr"
           subtitle="İstifadəçi, rol, fərdi permission və dəvətləri vahid mərkəzdən idarə edin"
@@ -204,8 +204,12 @@ function SettingsPage({
         </button>
       </Panel>
 
-      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
-        <PanelHeader title="İstifadəçilər & Login" subtitle="İstifadəçi yaradın, rol bağlayın və real permission görünüşünü yoxlayın" icon={UserCog} />
+      <Panel className="settings-security-panel" id="user-management" style={{ display: "none" }} aria-hidden="true">
+        <PanelHeader
+          title="Yeni istifadəçi yarat"
+          subtitle="Anbardar, satıcı, satınalma və maliyyə əməkdaşlarını yaradın, rol və modul icazələrini təyin edin"
+          icon={UserCog}
+        />
         <form className="user-create-form" onSubmit={submitUser}>
           <label>
             <span>Ad Soyad</span>

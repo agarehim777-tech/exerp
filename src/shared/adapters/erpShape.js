@@ -3,10 +3,18 @@
 
 export function dbCustomerToLegacy(c) {
   if (!c) return null;
+  let customerMeta = {};
+  try {
+    const prefix = '__crm_meta__:';
+    if (String(c.notes || '').startsWith(prefix)) customerMeta = JSON.parse(String(c.notes).slice(prefix.length));
+  } catch { customerMeta = {}; }
   return {
     id: c.id,
     name: c.name,
-    fin: c.tax_id || "",
+    fin: customerMeta.fin_code || c.fin_code || c.tax_id || c.id,
+    fin_code: customerMeta.fin_code || c.fin_code || (c.tax_id && !/^\d{10}$/.test(c.tax_id) ? c.tax_id : ""),
+    identity_card_no: customerMeta.identity_card_no || "",
+    tax_id: c.tax_id || "",
     phone: c.phone || "",
     email: c.email || "",
     address: c.address || "",
@@ -30,7 +38,8 @@ export function dbProductToLegacy(p) {
     vatRate: Number(p.vat_rate) || 0,
     unit: p.unit || "pcs",
     category: p.description || "Digər",
-    reorderLevel: 0,
+    reorderLevel: Number(p.minimum_stock) || 0,
+    recommendedOrderQty: Number(p.recommended_order_qty) || 0,
     serialTracked: false,
     status: p.is_active ? "Aktiv" : "Passiv",
     description: p.description || "",
@@ -40,9 +49,11 @@ export function dbProductToLegacy(p) {
 }
 
 const STATUS_MAP = {
-  draft: "Yeni",
+  draft: "Təsdiqlənib",
+  pending: "Təsdiqlənib",
   confirmed: "Təsdiqlənib",
-  shipped: "Yolda",
+  processing: "Təsdiqlənib",
+  shipped: "Təsdiqlənib",
   delivered: "Təhvil verilib",
   cancelled: "Ləğv edilib",
 };
@@ -59,6 +70,14 @@ export function dbOrderToLegacy(o) {
     total: Number(it.line_total) || 0,
   }));
   const amount = Number(o.total) || 0;
+  const paid = Math.max(0, Number(o.paid_amount || 0));
+  const credit = Array.isArray(o.credit) ? o.credit[0] : o.credit;
+  const sellerBonuses = [...(o.bonus_assignments || [])]
+    .sort((a, b) => Number(a.position || 1) - Number(b.position || 1))
+    .map((row) => ({
+    seller: row.seller_name,
+    bonus: Number(row.rate || 0),
+  }));
   return {
     id: o.id,
     orderNo: o.order_no,
@@ -66,14 +85,27 @@ export function dbOrderToLegacy(o) {
     customerId: o.customer_id,
     fin: "",
     amount,
-    paid: 0,
-    outstanding: amount,
+    paid,
+    paid_amount: paid,
+    outstanding: Math.max(0, amount - paid),
     currency: o.currency || "AZN",
     date: o.order_date,
     deliveryDate: o.order_date,
     status: STATUS_MAP[o.status] || "Yeni",
+    paymentMethod: credit ? "Kredit" : "Nağd",
+    paymentStatus: o.payment_status || (paid >= amount && amount > 0 ? "Ödənilib" : paid > 0 ? "Qismən ödənilib" : "Ödənilməyib"),
+    payment_status: o.payment_status || (paid >= amount && amount > 0 ? "paid" : paid > 0 ? "partial" : "unpaid"),
+    creditId: credit?.id || null,
+    contractId: credit?.contract_no || null,
+    creditMonths: Number(credit?.term_months || 0) || null,
+    initialPayment: Number(credit?.initial_payment || 0),
+    creditBalance: credit ? Math.max(0, Number(credit.principal || amount) - Number(credit.initial_payment || 0)) : 0,
+    creditStatus: credit?.status || null,
+    creditStartDate: credit?.start_date || null,
     products: productLines.map((l) => l.product).filter(Boolean).join(", ") || "—",
     productLines,
+    sellerBonuses,
+    seller: sellerBonuses.map((row) => `${row.seller} ${row.bonus}%`).join(', ') || 'Təyin edilməyib',
     notes: o.notes || "",
     _source: "db",
   };

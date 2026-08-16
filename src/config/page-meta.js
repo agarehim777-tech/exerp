@@ -32,8 +32,8 @@ export const pageMeta = {
     action: "Yeni tapşırıq",
   },
   roles: {
-    title: "Rollar və İcazələr",
-    subtitle: "Şirkət üzvləri, dəvətlər və modul-səviyyəli icazə matrisi.",
+    title: "İstifadəçilər və rollar",
+    subtitle: "Sistem istifadəçilərini yaradın, redaktə edin və rol-modul icazələrini idarə edin.",
   },
   sales: {
     title: "Satışlar",
@@ -184,7 +184,7 @@ export const pageMeta = {
   },
   settings: {
     title: "Tənzimləmələr",
-    subtitle: "Şirkət məlumatları, inteqrasiyalar, rollar və icazələr.",
+    subtitle: "Şirkət məlumatları, bildirişlər, inteqrasiyalar və sistem parametrləri.",
     action: "Yadda saxla",
   },
 };

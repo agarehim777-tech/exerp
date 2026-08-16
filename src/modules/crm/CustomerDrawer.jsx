@@ -133,7 +133,9 @@ function OverviewTab({ c, tags, onUpdate }) {
     name: 'Ad və soyad / şirkət adı',
     phone: 'Telefon',
     email: 'E-poçt',
-    tax_id: 'VÖEN / FİN',
+    tax_id: 'VÖEN',
+    fin_code: 'FİN kod',
+    identity_card_no: 'Şəxsiyyət vəsiqəsi',
     address: 'Ünvan',
   };
   React.useEffect(() => setForm(c), [c]);
@@ -142,10 +144,13 @@ function OverviewTab({ c, tags, onUpdate }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Row label="Telefon" value={c.phone} />
       <Row label="E-poçt" value={c.email} />
-      <Row label="VÖEN" value={c.tax_id} />
+      {c.segment === 'business' ? <Row label="VÖEN" value={c.tax_id} /> : <>
+        <Row label="FİN kod" value={c.fin_code} />
+        <Row label="Şəxsiyyət vəsiqəsinin seriya və nömrəsi" value={c.identity_card_no} />
+      </>}
       <Row label="Ünvan" value={c.address} />
       <Row label="Doğum tarixi" value={c.birth_date ? new Date(`${c.birth_date}T00:00:00`).toLocaleDateString('az-AZ') : null} />
-      <Row label="Seqment" value={c.segment} />
+      <Row label="Müştəri tipi" value={c.segment === 'business' ? 'Hüquqi şəxs' : 'Fiziki şəxs'} />
       <Row label="Müştəri səviyyəsi" value={c.customer_level_override ? `${c.customer_level_override} (manual)` : (c.customer_level || 'standard')} />
       <div>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Teqlər</div>
@@ -161,17 +166,24 @@ function OverviewTab({ c, tags, onUpdate }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {['name', 'phone', 'email', 'tax_id', 'address'].map(k => (
+      {['name', 'phone', 'email', 'address'].map(k => (
         <label key={k}>{fieldLabels[k]}<input value={form[k] || ''} onChange={e => setForm({ ...form, [k]: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
       ))}
-      <label>Doğum tarixi (məcburi deyil)<BirthDateInput value={form.birth_date || ''} onChange={value => setForm({ ...form, birth_date: value })} /></label>
       <label>Müştəri tipi
         <select value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
           <option value="individual">Fiziki şəxs</option><option value="business">Hüquqi şəxs</option>
         </select>
       </label>
+      {form.segment === 'business' ? <label>VÖEN<input value={form.tax_id || ''} onChange={e => setForm({ ...form, tax_id: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+        inputMode="numeric" placeholder="10 rəqəm" style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label> : <>
+        <label>FİN kod<input value={form.fin_code || ''} maxLength={7} onChange={e => setForm({ ...form, fin_code: e.target.value.toUpperCase() })}
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
+        <label>Şəxsiyyət vəsiqəsinin seriya və nömrəsi<input value={form.identity_card_no || ''} onChange={e => setForm({ ...form, identity_card_no: e.target.value.toUpperCase() })}
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
+        <label>Doğum tarixi (məcburi deyil)<BirthDateInput value={form.birth_date || ''} onChange={value => setForm({ ...form, birth_date: value })} /></label>
+      </>}
       <label>Müştəri səviyyəsi
         <select value={form.customer_level_override || ''} onChange={e => setForm({ ...form, customer_level_override: e.target.value || null })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }}>
@@ -180,7 +192,7 @@ function OverviewTab({ c, tags, onUpdate }) {
       </label>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={() => setEdit(false)} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', background: '#fff' }}>Ləğv</button>
-        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.tax_id, address: form.address, birth_date: form.birth_date || null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
+        <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.segment === 'business' ? form.tax_id : (form.fin_code || ''), fin_code: form.segment === 'individual' ? form.fin_code : '', identity_card_no: form.segment === 'individual' ? form.identity_card_no : '', address: form.address, birth_date: form.segment === 'individual' ? (form.birth_date || null) : null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
           style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yadda saxla</button>
       </div>
     </div>

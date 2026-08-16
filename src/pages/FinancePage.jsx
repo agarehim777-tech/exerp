@@ -24,6 +24,7 @@ import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import { ReconciliationPanel } from "../modules/finance/ReconciliationPanel.jsx";
 import { AccountingPeriodPanel } from "../modules/finance/components/AccountingPeriodPanel.jsx";
+import { matchesFinanceDateRange, matchesFinanceFilter, matchesFinanceSearch } from "../shared/lib/appHelpers.jsx";
 import {
   baseFinanceDate,
 } from "../shared/lib/appDomain.jsx";

@@ -3,11 +3,11 @@ import StatusBadge from './StatusBadge.jsx';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
 
 const SALES_STATUS = {
-  draft: { label: 'Yeni', next: 'confirmed', nextLabel: 'Satışı təsdiqlə' },
-  pending: { label: 'Yeni', next: 'confirmed', nextLabel: 'Satışı təsdiqlə' },
-  confirmed: { label: 'Təsdiqləndi', next: 'processing', nextLabel: 'Hazırlamağa başla' },
-  processing: { label: 'Hazırlanır', next: 'delivered', nextLabel: 'Satışı tamamla' },
-  shipped: { label: 'Hazırlanır', next: 'delivered', nextLabel: 'Satışı tamamla' },
+  draft: { label: 'Təsdiqləndi' },
+  pending: { label: 'Təsdiqləndi' },
+  confirmed: { label: 'Təsdiqləndi' },
+  processing: { label: 'Təsdiqləndi' },
+  shipped: { label: 'Təsdiqləndi' },
   delivered: { label: 'Təhvil verildi' },
   cancelled: { label: 'Ləğv edildi' },
 };
@@ -60,6 +60,17 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
       setPaidInput('');
     } catch (error) { alert(error.message || 'Ödənişi qəbul etmək mümkün olmadı.'); }
     finally { setBusy(false); }
+  };
+
+  const changeStatus = async (status) => {
+    setBusy(true);
+    try {
+      await onStatus(order.id, status);
+    } catch (error) {
+      alert(error?.message || 'Satış statusunu dəyişmək mümkün olmadı.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -140,9 +151,9 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                 <StatusBadge status={salesStatus.label} size="md" />
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {salesStatus.next && <button type="button" onClick={() => onStatus(order.id, salesStatus.next)} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: 0, background: '#0b7a5c', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>{salesStatus.nextLabel}</button>}
-                {!['delivered', 'cancelled'].includes(order.status) && <button type="button" onClick={() => { if (confirm('Bu satışı ləğv etmək istəyirsiniz?')) onStatus(order.id, 'cancelled'); }} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}>Ləğv et</button>}
-                {!salesStatus.next && <span style={{ color: '#64748b', fontSize: 12 }}>{order.status === 'delivered' ? 'Sifariş müştəriyə təhvil verilib.' : 'Satış ləğv edilib.'}</span>}
+                {salesStatus.next && <button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: 0, background: '#0b7a5c', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>{busy ? 'Yenilənir…' : salesStatus.nextLabel}</button>}
+                {!['delivered', 'cancelled'].includes(order.status) && <button type="button" onClick={() => { if (confirm('Bu satışı ləğv etmək istəyirsiniz?')) changeStatus('cancelled'); }} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}>Ləğv et</button>}
+                {!salesStatus.next && <span style={{ color: '#64748b', fontSize: 12 }}>{order.status === 'delivered' ? 'Sifariş müştəriyə təhvil verilib.' : order.status === 'cancelled' ? 'Satış ləğv edilib.' : 'Sifariş təsdiqlənib və anbar təhvili gözləyir.'}</span>}
               </div>
             </div>
           </Section>}
