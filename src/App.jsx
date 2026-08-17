@@ -127,6 +127,7 @@ import {
 import { total } from "./shared/utils/aggregate.js";
 import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
+import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
 const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
