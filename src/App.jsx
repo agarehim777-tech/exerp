@@ -4373,7 +4373,7 @@ function App() {
       const { error } = await supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id });
       if (error) {
         console.error("[delivery] stock fulfillment failed:", error);
-        notify(`Təhvil tamamlanmadı: ${error.message || error}`, "warning");
+        notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
     }
