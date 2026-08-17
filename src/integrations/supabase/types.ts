@@ -5201,6 +5201,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["invoice_status"]
       }
+      backfill_sales_bonus_for_order: {
+        Args: { _order_id: string }
+        Returns: number
+      }
       cancel_sales_invoice: {
         Args: { _invoice_id: string }
         Returns: undefined
