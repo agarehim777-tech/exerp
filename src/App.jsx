@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
 import { resolveModalKind } from "./config/modal-registry.js";
@@ -62,11 +62,7 @@ import {
 import { pageMeta } from "./config/page-meta.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
-const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
-const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
-const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
-const DataReconciliationPage = lazy(() => import("./modules/admin/DataReconciliationPage.jsx"));
+import { AccessCheckPage, AccountingPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancePage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
   createRemoteCompany,
   createRemoteUser,
@@ -129,51 +125,10 @@ import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
-const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
-const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
-const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.jsx"));
-const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
-const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
-const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
-const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
 
-const CrmActivitiesPage = lazy(() => import("./modules/crm/CrmActivitiesPage.jsx"));
-const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
-const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
-const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx"));
-const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
-const InsightsPage = lazy(() => import("./modules/assistant/InsightsPage.jsx"));
-const CustomerMessengerPanel = lazy(() => import("./modules/notifications/CustomerMessengerPanel.jsx"));
-import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
-const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
-const DeliveriesPage = lazy(() => import("./pages/DeliveriesPage.jsx"));
-const InvoicesPage = lazy(() => import("./pages/InvoicesPage.jsx"));
-const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
-const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
-const BonusesPage = lazy(() => import("./pages/BonusesPage.jsx"));
-const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
-const AccountingPage = lazy(() => import("./pages/AccountingPage.jsx"));
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
-const CrmPage = lazy(() => import("./pages/CrmPage.jsx"));
-const SalesPage = lazy(() => import("./pages/SalesPage.jsx"));
-const VendorsPage = lazy(() => import("./pages/VendorsPage.jsx"));
-const HrPage = lazy(() => import("./pages/HrPage.jsx"));
-const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage.jsx"));
-const ApiPage = lazy(() => import("./pages/ApiPage.jsx"));
-const PlatformAdminPage = lazy(() => import("./pages/PlatformAdminPage.jsx"));
 import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
-const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
-const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
-const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
-const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
-const ProductsPage = lazy(() => import("./modules/warehouse/ProductBalancesPage.jsx"));
-const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
-const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
-const VendorManagementPage = lazy(() => import("./pages/VendorManagementPage.jsx"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
-const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
 
 import {
   addDays,
@@ -6948,7 +6903,9 @@ function App() {
         </main>
       </div>
 
-      <FloatingAssistant />
+      <Suspense fallback={null}>
+        <FloatingAssistant />
+      </Suspense>
 
       {modal && (
         <Suspense fallback={<div className="modal-shell" role="status"><div className="modal-card">Forma yüklənir…</div></div>}>

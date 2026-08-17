@@ -9,14 +9,24 @@ const STOCK_ERROR_MESSAGES = {
   reservation_not_found: "Rezervasiya tapılmadı və ya artıq bağlanıb.",
 };
 
+// Postgres/PostgREST xəta kodunu message, details, hint və code sahələrinin
+// hər birində saxlaya bilər — hamısını birlikdə yoxlayırıq.
+function collectErrorText(error) {
+  if (!error) return "";
+  if (typeof error === "string") return error;
+  return [error.message, error.details, error.hint, error.code, error.error_description]
+    .filter(Boolean)
+    .join(" | ");
+}
+
 export function isStockShortageError(error) {
-  const raw = String(error?.message || error || "").toLowerCase();
+  const raw = collectErrorText(error).toLowerCase();
   return raw.includes("insufficient_available_stock") || raw.includes("insufficient_stock");
 }
 
 export function describeStockError(error, fallbackPrefix = "Əməliyyat tamamlanmadı") {
-  const raw = String(error?.message || error || "");
+  const raw = collectErrorText(error);
   const match = Object.keys(STOCK_ERROR_MESSAGES).find((key) => raw.includes(key));
   if (match) return STOCK_ERROR_MESSAGES[match];
-  return `${fallbackPrefix}: ${raw || "naməlum xəta"}`;
+  return `${fallbackPrefix}: ${error?.message || raw || "naməlum xəta"}`;
 }
