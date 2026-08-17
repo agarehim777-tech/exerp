@@ -105,8 +105,12 @@ export function getCreditDisplayPlan(credit) {
 }
 
 export function daysBetween(from, to) {
-  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const end = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  // Həm Date obyektini, həm də "YYYY-MM-DD"/"dd.MM.yyyy" mətnini qəbul edir.
+  const startRaw = from instanceof Date ? from : parsePaymentDate(from);
+  const endRaw = to instanceof Date ? to : parsePaymentDate(to);
+  if (!startRaw || !endRaw || Number.isNaN(startRaw.getTime()) || Number.isNaN(endRaw.getTime())) return 0;
+  const start = new Date(startRaw.getFullYear(), startRaw.getMonth(), startRaw.getDate());
+  const end = new Date(endRaw.getFullYear(), endRaw.getMonth(), endRaw.getDate());
   return Math.round((end.getTime() - start.getTime()) / dayInMs);
 }
 
