@@ -3311,6 +3311,25 @@ function App() {
       }
 
       if (shortageLines.length > 0) {
+        // Rezervasiya mümkün deyil — istifadəçidən açıq təsdiq alınmadan sifariş yaradılmır.
+        const confirmed = window.confirm(
+          `Qalıq çatışmazlığı: ${shortageLines.join(", ")}.\n\n` +
+            "Bu sətirlər rezerv edilə bilməyəcək və sifariş backorder (mənfi mövcud) kimi qeyd olunacaq.\n\n" +
+            "Davam edilsin?",
+        );
+        if (!confirmed) {
+          notify(
+            `Sifariş bloklandı — rezervasiya üçün qalıq çatışmır: ${shortageLines.join(", ")}.`,
+            "warning",
+          );
+          auditOperation({
+            module: "Satış/Anbar",
+            action: "Rezervasiya bloklandı",
+            detail: `${values.customer || "—"} · ${shortageLines.join(", ")}`,
+            status: "Bloklandı",
+          });
+          return;
+        }
         notify(
           `Qalıq çatışmır — sifariş backorder kimi yaradıldı: ${shortageLines.join(", ")}. Təchizatdan gətirilib təhvil verilməlidir.`,
           "warning",
