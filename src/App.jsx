@@ -6948,7 +6948,9 @@ function App() {
         </main>
       </div>
 
-      <FloatingAssistant />
+      <Suspense fallback={null}>
+        <FloatingAssistant />
+      </Suspense>
 
       {modal && (
         <Suspense fallback={<div className="modal-shell" role="status"><div className="modal-card">Forma yüklənir…</div></div>}>
