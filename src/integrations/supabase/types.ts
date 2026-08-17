@@ -3372,8 +3372,10 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          minimum_stock: number
           name: string
           price: number
+          recommended_order_qty: number
           sku: string
           tenant_id: string
           unit: string
@@ -3387,8 +3389,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          minimum_stock?: number
           name: string
           price?: number
+          recommended_order_qty?: number
           sku: string
           tenant_id: string
           unit?: string
@@ -3402,8 +3406,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          minimum_stock?: number
           name?: string
           price?: number
+          recommended_order_qty?: number
           sku?: string
           tenant_id?: string
           unit?: string
@@ -4328,9 +4334,10 @@ export type Database = {
         Row: {
           avg_cost: number
           id: string
+          minimum_level: number
+          on_hand: number
           product_id: string | null
-          qty: number
-          reorder_point: number
+          reserved: number
           sku: string | null
           tenant_id: string
           updated_at: string
@@ -4339,9 +4346,10 @@ export type Database = {
         Insert: {
           avg_cost?: number
           id?: string
+          minimum_level?: number
+          on_hand?: number
           product_id?: string | null
-          qty?: number
-          reorder_point?: number
+          reserved?: number
           sku?: string | null
           tenant_id: string
           updated_at?: string
@@ -4350,9 +4358,10 @@ export type Database = {
         Update: {
           avg_cost?: number
           id?: string
+          minimum_level?: number
+          on_hand?: number
           product_id?: string | null
-          qty?: number
-          reorder_point?: number
+          reserved?: number
           sku?: string | null
           tenant_id?: string
           updated_at?: string
@@ -4390,10 +4399,14 @@ export type Database = {
           id: string
           move_type: Database["public"]["Enums"]["stock_move_type"]
           moved_at: string
+          movement_type: string | null
           note: string | null
           product_id: string | null
           qty: number
+          quantity: number | null
           reference: string | null
+          reference_id: string | null
+          reference_type: string | null
           sku: string | null
           tenant_id: string
           unit_cost: number
@@ -4407,10 +4420,14 @@ export type Database = {
           id?: string
           move_type: Database["public"]["Enums"]["stock_move_type"]
           moved_at?: string
+          movement_type?: string | null
           note?: string | null
           product_id?: string | null
           qty: number
+          quantity?: number | null
           reference?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           sku?: string | null
           tenant_id: string
           unit_cost?: number
@@ -4424,10 +4441,14 @@ export type Database = {
           id?: string
           move_type?: Database["public"]["Enums"]["stock_move_type"]
           moved_at?: string
+          movement_type?: string | null
           note?: string | null
           product_id?: string | null
           qty?: number
+          quantity?: number | null
           reference?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           sku?: string | null
           tenant_id?: string
           unit_cost?: number
