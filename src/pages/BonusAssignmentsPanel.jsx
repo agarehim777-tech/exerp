@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { History, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, History, Plus, Save, Trash2 } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { Panel, PanelHeader, StatusBadge } from "../components/ui.jsx";
 import { useOrders } from "../shared/hooks/useOrders.js";
