@@ -10,7 +10,7 @@ import { readFileSync, statSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const DIST = "dist";
-const BUDGET_KB = Number(process.env.BUNDLE_BUDGET_KB || 900);
+const BUDGET_KB = Number(process.env.BUNDLE_BUDGET_KB || 500);
 
 let html;
 try {
