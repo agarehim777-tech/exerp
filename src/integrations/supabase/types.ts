@@ -2516,6 +2516,7 @@ export type Database = {
           effective_to: string | null
           id: string
           order_id: string
+          position: number
           rate: number
           reason: string | null
           seller_name: string
@@ -2528,6 +2529,7 @@ export type Database = {
           effective_to?: string | null
           id?: string
           order_id: string
+          position?: number
           rate: number
           reason?: string | null
           seller_name: string
@@ -2540,6 +2542,7 @@ export type Database = {
           effective_to?: string | null
           id?: string
           order_id?: string
+          position?: number
           rate?: number
           reason?: string | null
           seller_name?: string
