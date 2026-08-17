@@ -4418,12 +4418,12 @@ export type Database = {
           created_by?: string | null
           doc_no?: string | null
           id?: string
-          move_type: Database["public"]["Enums"]["stock_move_type"]
+          move_type?: Database["public"]["Enums"]["stock_move_type"]
           moved_at?: string
           movement_type?: string | null
           note?: string | null
           product_id?: string | null
-          qty: number
+          qty?: number
           quantity?: number | null
           reference?: string | null
           reference_id?: string | null
