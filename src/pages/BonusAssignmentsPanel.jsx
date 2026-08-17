@@ -17,6 +17,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
   const [reason, setReason] = useState("");
   const [lines, setLines] = useState([{ seller_name: "", rate: "" }]);
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
 
   const history = useMemo(
     () => ledger.assignments.filter((row) => row.order_id === orderId),
