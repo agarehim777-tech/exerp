@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateOrderFinancials, calculateOrderLineTotal } from "../modules/sales/services/orderCalculations.js";
 import { getProductProcurementSnapshot } from "../modules/procurement/services/procurementCalculations.js";
+import { getRecommendedOrderPlan } from "../shared/lib/appDomain.jsx";
 
 describe("sales order calculations", () => {
   it("calculates line totals and VAT without UI state", () => {
@@ -24,5 +25,31 @@ describe("procurement coverage calculations", () => {
     expect(snapshot.available).toBe(3);
     expect(snapshot.suggestedQty).toBe(7);
     expect(snapshot.orderGap).toBe(3);
+  });
+});
+
+describe("recommended order quantity", () => {
+  it("adds the stock deficit to the configured base order quantity", () => {
+    expect(getRecommendedOrderPlan({ available: 0, minimum: 2, baseQty: 2, orderedQty: 0 })).toMatchObject({
+      recommendedQty: 4,
+      additionalQty: 4,
+      deficit: 2,
+    });
+  });
+
+  it("deducts open PO coverage only from the additional quantity", () => {
+    expect(getRecommendedOrderPlan({ available: 0, minimum: 2, baseQty: 2, orderedQty: 2 })).toMatchObject({
+      recommendedQty: 4,
+      orderedQty: 2,
+      additionalQty: 2,
+    });
+  });
+
+  it("does not recommend an order while stock is above the minimum", () => {
+    expect(getRecommendedOrderPlan({ available: 3, minimum: 2, baseQty: 2 })).toMatchObject({
+      thresholdReached: false,
+      recommendedQty: 0,
+      additionalQty: 0,
+    });
   });
 });

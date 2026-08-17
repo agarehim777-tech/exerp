@@ -3,6 +3,10 @@ import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
 import { createClientId } from '../utils/id.js';
 
+const mainAccountCode = tenantId => `MAIN-${String(tenantId || '').slice(0, 8).toUpperCase()}`;
+const newAccountCode = type => `${type === 'bank' ? 'BNK' : type === 'card' ? 'KRT' : 'KAS'}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+const newTransactionNo = (prefix = 'KAS') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
 export function useCashbook(tenantId) {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -24,7 +28,7 @@ export function useCashbook(tenantId) {
         .limit(300),
       supabase
         .from('expenses')
-        .select('*, vendor:vendors(id,name), account:cash_accounts(id,name)')
+        .select('*, account:cash_accounts(id,name)')
         .eq('tenant_id', tenantId)
         .order('expense_date', { ascending: false })
         .limit(300),
@@ -56,13 +60,19 @@ export function useCashbook(tenantId) {
 
 
   const createAccount = async (payload) => {
-    if (String(payload.name || '').trim().toLocaleLowerCase('az') === 'əsas kassa') {
+    const cleanName = String(payload.name || '').trim();
+    if (cleanName.toLocaleLowerCase('az') === 'əsas kassa') {
       throw new Error('“Əsas kassa” sistem tərəfindən idarə olunur. Başqa hesab adı daxil edin.');
     }
+    if (!cleanName) throw new Error('Kassa adını daxil edin.');
     const { error: err } = await supabase.from('cash_accounts').insert({
       ...payload,
+      code: payload.code || newAccountCode(payload.type),
+      name: cleanName,
+      currency: String(payload.currency || 'AZN').trim().toUpperCase(),
       opening_balance: Number(payload.opening_balance) || 0,
       tenant_id: tenantId,
+      is_active: true,
     });
     if (err) throw err;
     await fetchAll();
@@ -71,6 +81,7 @@ export function useCashbook(tenantId) {
   const addTransaction = async (payload) => {
     const { error: err } = await supabase.from('cash_transactions').insert({
       ...payload,
+      transaction_no: payload.transaction_no || newTransactionNo(),
       amount: Number(payload.amount) || 0,
       tenant_id: tenantId,
     });
@@ -94,6 +105,7 @@ export function useCashbook(tenantId) {
     if (err) throw err;
     const { error: cashError } = await supabase.from('cash_transactions').insert({
       tenant_id: tenantId, account_id: account.id, direction: 'out', amount,
+      transaction_no: newTransactionNo('XRC'),
       currency: expense.currency || account.currency || 'AZN', category: 'expense',
       reference: `EXPENSE:${expense.id}`, description: expense.description || expense.category || 'Xərc',
       occurred_at: expense.expense_date || new Date().toISOString().slice(0, 10),
@@ -168,6 +180,7 @@ export function useCashbook(tenantId) {
     if (!existing) {
       const { error: cashError } = await supabase.from('cash_transactions').insert({
         tenant_id: tenantId, account_id: account.id, direction: 'in', amount: Number(expense.amount || 0),
+        transaction_no: newTransactionNo('QYT'),
         currency: expense.currency || account.currency || 'AZN', category: 'expense_reversal', reference,
         description: `${expense.description || expense.category || 'Xərc'} — ləğv məbləğinin qaytarılması`,
         occurred_at: new Date().toISOString().slice(0, 10),
@@ -198,7 +211,7 @@ export function useCashbook(tenantId) {
       const { error: transactionError } = await supabase.from('cash_transactions').update(transactionPatch).eq('id', oldTransaction.id).eq('tenant_id', tenantId);
       if (transactionError) throw transactionError;
     } else {
-      const { error: transactionError } = await supabase.from('cash_transactions').insert({ tenant_id: tenantId, direction: 'out', category: 'expense', reference, ...transactionPatch });
+      const { error: transactionError } = await supabase.from('cash_transactions').insert({ tenant_id: tenantId, transaction_no: newTransactionNo('XRC'), direction: 'out', category: 'expense', reference, ...transactionPatch });
       if (transactionError) throw transactionError;
     }
     const { error: expenseError } = await supabase.from('expenses').update({
@@ -236,6 +249,7 @@ export function useCashbook(tenantId) {
       const account = accounts.find(item => item.id === expense.account_id) || defaultAccount;
       const { error: cashError } = await supabase.from('cash_transactions').insert({
         tenant_id: tenantId, account_id: account.id, direction: 'out', amount: Number(expense.amount || 0),
+        transaction_no: newTransactionNo('XRC'),
         currency: expense.currency || account.currency || 'AZN', category: 'expense', reference: `EXPENSE:${expense.id}`,
         description: expense.description || expense.category || 'Xərc', occurred_at: expense.expense_date || new Date().toISOString().slice(0, 10),
       });
@@ -266,24 +280,56 @@ export function useCashbook(tenantId) {
       targetAccounts = targetAccounts.filter(account => !duplicateIds.includes(account.id)).map(account => account.id === primary.id ? { ...account, opening_balance: combinedOpening } : account);
     }
     if (!targetAccounts.length) {
-      const { data: created, error: createError } = await supabase.from('cash_accounts').insert({
-        tenant_id: tenantId,
-        name: 'Əsas kassa',
-        type: 'cash',
-        currency: 'AZN',
-        opening_balance: 0,
-        is_active: true,
-      }).select('*').single();
-      if (createError) throw createError;
-      targetAccounts = [created];
+      const code = mainAccountCode(tenantId);
+      let { data: existingMain, error: existingMainError } = await supabase.from('cash_accounts')
+        .select('*').eq('tenant_id', tenantId).eq('code', code).limit(1).maybeSingle();
+      if (existingMainError) throw existingMainError;
+      if (!existingMain) {
+        const byName = await supabase.from('cash_accounts')
+          .select('*').eq('tenant_id', tenantId).ilike('name', 'Əsas kassa')
+          .order('created_at', { ascending: true }).limit(1).maybeSingle();
+        if (byName.error) throw byName.error;
+        existingMain = byName.data;
+      }
+      if (existingMain) {
+        const { data: reactivated, error: reactivateError } = await supabase.from('cash_accounts')
+          .update({ is_active: true, name: 'Əsas kassa', code: existingMain.code || code, type: 'cash', currency: 'AZN' })
+          .eq('id', existingMain.id).eq('tenant_id', tenantId).select('*').single();
+        if (reactivateError) throw reactivateError;
+        targetAccounts = [reactivated];
+      } else {
+        const { data: created, error: createError } = await supabase.from('cash_accounts').insert({
+          tenant_id: tenantId,
+          code,
+          name: 'Əsas kassa',
+          type: 'cash',
+          currency: 'AZN',
+          opening_balance: 0,
+          is_active: true,
+        }).select('*').single();
+        if (createError) throw createError;
+        targetAccounts = [created];
+      }
     }
 
     const [{ data: orders, error: ordersError }, { data: existing, error: existingError }] = await Promise.all([
       supabase.from('orders').select('id,order_no,order_date,created_at,total,paid_amount,currency,customer_id,created_by,customer:customers(name)').eq('tenant_id', tenantId),
-      supabase.from('cash_transactions').select('id,reference,amount,category,customer_id').eq('tenant_id', tenantId).eq('direction', 'in'),
+      supabase.from('cash_transactions').select('id,account_id,reference,amount,currency,category,customer_id').eq('tenant_id', tenantId).eq('direction', 'in'),
     ]);
     if (ordersError) throw ordersError;
     if (existingError) throw existingError;
+    const activeAccountIds = new Set(targetAccounts.map(account => account.id));
+    for (const transaction of existing || []) {
+      if (activeAccountIds.has(transaction.account_id)) continue;
+      if (!['sales_payment', 'credit_payment', 'receivable_payment'].includes(transaction.category)) continue;
+      const targetAccount = targetAccounts.find(account => account.currency === (transaction.currency || 'AZN')) || targetAccounts[0];
+      if (!targetAccount) continue;
+      const { error: relinkError } = await supabase.from('cash_transactions')
+        .update({ account_id: targetAccount.id })
+        .eq('id', transaction.id).eq('tenant_id', tenantId);
+      if (relinkError) throw relinkError;
+      transaction.account_id = targetAccount.id;
+    }
     const knownReferences = new Set((existing || []).map(row => row.reference).filter(Boolean));
     const normalize = value => String(value || '').trim().toLocaleLowerCase('az');
     const legacyByOrder = new Map();
@@ -334,16 +380,26 @@ export function useCashbook(tenantId) {
         if (linkedSalesTransactions.length === 1 && linkedSalesTransactions[0].reference !== order.order_no) {
           const { error: referenceError } = await supabase.from('cash_transactions').update({ reference: order.order_no }).eq('id', linkedSalesTransactions[0].id).eq('tenant_id', tenantId);
           if (referenceError) throw referenceError;
+          linkedSalesTransactions[0].reference = order.order_no;
         }
       }
     }
-    const orderRows = (orders || []).filter(order => Number(order.paid_amount || 0) > 0 && !knownReferences.has(order.order_no)).map(order => {
+    const cashPaidByOrder = new Map();
+    (existing || []).filter(transaction => ['sales_payment', 'credit_payment', 'receivable_payment'].includes(transaction.category) && transaction.reference).forEach(transaction => {
+      cashPaidByOrder.set(transaction.reference, Number(cashPaidByOrder.get(transaction.reference) || 0) + Number(transaction.amount || 0));
+    });
+    const orderRows = (orders || []).map(order => {
+      const paid = Number(order.paid_amount || 0);
+      const recordedCash = Number(cashPaidByOrder.get(order.order_no) || 0);
+      const missingCash = Number(Math.max(0, paid - recordedCash).toFixed(2));
+      if (missingCash <= 0) return null;
       const account = targetAccounts.find(item => item.currency === (order.currency || 'AZN')) || targetAccounts[0];
       return {
         tenant_id: tenantId,
+        transaction_no: newTransactionNo('SAT'),
         account_id: account.id,
         direction: 'in',
-        amount: Number(order.paid_amount),
+        amount: missingCash,
         currency: order.currency || account.currency || 'AZN',
         category: 'sales_payment',
         counterparty: order.customer?.name || null,
@@ -353,7 +409,7 @@ export function useCashbook(tenantId) {
         occurred_at: order.order_date || order.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
         created_by: order.created_by || null,
       };
-    });
+    }).filter(Boolean);
     const defaultAccount = targetAccounts.find(item => item.currency === 'AZN') || targetAccounts[0];
     const legacyRows = (legacyCashEntries || [])
       .filter(entry => Number(entry.amount || 0) > 0)
@@ -361,6 +417,7 @@ export function useCashbook(tenantId) {
       .filter(entry => !knownReferences.has(`LEGACY:${entry.id}`))
       .map(entry => ({
         tenant_id: tenantId,
+        transaction_no: newTransactionNo(entry.source === 'Kredit ödənişi' ? 'KRD' : 'MDX'),
         account_id: defaultAccount.id,
         direction: 'in',
         amount: Number(entry.amount),
@@ -399,8 +456,8 @@ export function useCashbook(tenantId) {
     const reference = `TRANSFER:${createClientId()}`;
     const common = { tenant_id: tenantId, amount: value, currency: from.currency, category: 'internal_transfer', reference, occurred_at: occurredAt || new Date().toISOString().slice(0, 10), description: description || `${from.name} → ${to.name}` };
     const { error: err } = await supabase.from('cash_transactions').insert([
-      { ...common, account_id: from.id, direction: 'out', counterparty: to.name },
-      { ...common, account_id: to.id, direction: 'in', counterparty: from.name },
+      { ...common, transaction_no: newTransactionNo('TRF-CIX'), account_id: from.id, direction: 'out', counterparty: to.name },
+      { ...common, transaction_no: newTransactionNo('TRF-GIR'), account_id: to.id, direction: 'in', counterparty: from.name },
     ]);
     if (err) throw err;
     await fetchAll();

@@ -360,7 +360,9 @@ export type Database = {
           id: string
           occurred_at: string
           reference: string | null
+          reference_id: string | null
           tenant_id: string
+          transaction_no: string | null
           updated_at: string
           vendor_id: string | null
         }
@@ -378,7 +380,9 @@ export type Database = {
           id?: string
           occurred_at?: string
           reference?: string | null
+          reference_id?: string | null
           tenant_id: string
+          transaction_no?: string | null
           updated_at?: string
           vendor_id?: string | null
         }
@@ -396,7 +400,9 @@ export type Database = {
           id?: string
           occurred_at?: string
           reference?: string | null
+          reference_id?: string | null
           tenant_id?: string
+          transaction_no?: string | null
           updated_at?: string
           vendor_id?: string | null
         }
@@ -2502,6 +2508,63 @@ export type Database = {
           },
         ]
       }
+      order_bonus_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          order_id: string
+          position: number
+          rate: number
+          reason: string | null
+          seller_name: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          order_id: string
+          position?: number
+          rate: number
+          reason?: string | null
+          seller_name: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          order_id?: string
+          position?: number
+          rate?: number
+          reason?: string | null
+          seller_name?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_bonus_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_bonus_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -3309,8 +3372,10 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          minimum_stock: number
           name: string
           price: number
+          recommended_order_qty: number
           sku: string
           tenant_id: string
           unit: string
@@ -3324,8 +3389,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          minimum_stock?: number
           name: string
           price?: number
+          recommended_order_qty?: number
           sku: string
           tenant_id: string
           unit?: string
@@ -3339,8 +3406,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          minimum_stock?: number
           name?: string
           price?: number
+          recommended_order_qty?: number
           sku?: string
           tenant_id?: string
           unit?: string
@@ -3819,6 +3888,86 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_bonus_entries: {
+        Row: {
+          accrued_on: string
+          assignment_id: string | null
+          bonus_amount: number
+          cash_transaction_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string
+          payment_amount: number
+          rate: number
+          reversed_at: string | null
+          seller_name: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          accrued_on: string
+          assignment_id?: string | null
+          bonus_amount: number
+          cash_transaction_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id: string
+          payment_amount: number
+          rate: number
+          reversed_at?: string | null
+          seller_name: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          accrued_on?: string
+          assignment_id?: string | null
+          bonus_amount?: number
+          cash_transaction_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string
+          payment_amount?: number
+          rate?: number
+          reversed_at?: string | null
+          seller_name?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_bonus_entries_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "order_bonus_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_bonus_entries_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "cash_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_bonus_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_bonus_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_cost_allocations: {
         Row: {
           cost_layer_id: string | null
@@ -4185,9 +4334,10 @@ export type Database = {
         Row: {
           avg_cost: number
           id: string
+          minimum_level: number
+          on_hand: number
           product_id: string | null
-          qty: number
-          reorder_point: number
+          reserved: number
           sku: string | null
           tenant_id: string
           updated_at: string
@@ -4196,9 +4346,10 @@ export type Database = {
         Insert: {
           avg_cost?: number
           id?: string
+          minimum_level?: number
+          on_hand?: number
           product_id?: string | null
-          qty?: number
-          reorder_point?: number
+          reserved?: number
           sku?: string | null
           tenant_id: string
           updated_at?: string
@@ -4207,9 +4358,10 @@ export type Database = {
         Update: {
           avg_cost?: number
           id?: string
+          minimum_level?: number
+          on_hand?: number
           product_id?: string | null
-          qty?: number
-          reorder_point?: number
+          reserved?: number
           sku?: string | null
           tenant_id?: string
           updated_at?: string
@@ -4247,10 +4399,14 @@ export type Database = {
           id: string
           move_type: Database["public"]["Enums"]["stock_move_type"]
           moved_at: string
+          movement_type: string | null
           note: string | null
           product_id: string | null
           qty: number
+          quantity: number | null
           reference: string | null
+          reference_id: string | null
+          reference_type: string | null
           sku: string | null
           tenant_id: string
           unit_cost: number
@@ -4264,10 +4420,14 @@ export type Database = {
           id?: string
           move_type: Database["public"]["Enums"]["stock_move_type"]
           moved_at?: string
+          movement_type?: string | null
           note?: string | null
           product_id?: string | null
           qty: number
+          quantity?: number | null
           reference?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           sku?: string | null
           tenant_id: string
           unit_cost?: number
@@ -4281,10 +4441,14 @@ export type Database = {
           id?: string
           move_type?: Database["public"]["Enums"]["stock_move_type"]
           moved_at?: string
+          movement_type?: string | null
           note?: string | null
           product_id?: string | null
           qty?: number
+          quantity?: number | null
           reference?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           sku?: string | null
           tenant_id?: string
           unit_cost?: number
@@ -4308,6 +4472,74 @@ export type Database = {
           },
           {
             foreignKeyName: "stock_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reservations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          status: string
+          tenant_id: string
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id: string
+          product_id: string
+          quantity: number
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
@@ -4996,6 +5228,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["invoice_status"]
       }
+      backfill_sales_bonus_for_order: {
+        Args: { _order_id: string }
+        Returns: number
+      }
       cancel_sales_invoice: {
         Args: { _invoice_id: string }
         Returns: undefined
@@ -5057,6 +5293,10 @@ export type Database = {
       customer_360_snapshot: {
         Args: { _customer_id: string; _tenant_id: string }
         Returns: Json
+      }
+      delete_sales_order_safe: {
+        Args: { _order_id: string }
+        Returns: undefined
       }
       ensure_inventory_accounts: {
         Args: { _tenant: string }
@@ -5258,6 +5498,15 @@ export type Database = {
       }
       seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       seed_default_crm_pipeline: { Args: { _tenant: string }; Returns: string }
+      set_order_bonus_assignments: {
+        Args: {
+          _allocations: Json
+          _effective_from: string
+          _order_id: string
+          _reason?: string
+        }
+        Returns: undefined
+      }
       start_credit_contract: {
         Args: { _credit_id: string; _start_date: string; _tenant_id: string }
         Returns: string

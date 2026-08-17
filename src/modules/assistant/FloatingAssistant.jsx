@@ -46,7 +46,7 @@ export default function FloatingAssistant() {
 
   const submit = (text) => {
     const t = (text ?? input).trim();
-    if (!t || busy || !token) return;
+    if (!t || busy || !activeTenantId || !session?.access_token) return;
     setInput("");
     sendMessage({ text: t });
   };
@@ -110,7 +110,7 @@ export default function FloatingAssistant() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={activeTenantId ? "Sual yazın..." : "Şirkət seçin"}
-              disabled={!activeTenantId || !token}
+              disabled={!activeTenantId || !session?.access_token}
               className="floating-assistant-input"
             />
             {busy ? (

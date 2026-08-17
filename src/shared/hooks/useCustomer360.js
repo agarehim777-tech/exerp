@@ -3,7 +3,16 @@ import { supabase } from '../../integrations/supabase/client';
 
 const withCustomerMeta = (customer) => {
   if (!customer || !String(customer.notes || '').startsWith('__crm_meta__:')) return customer;
-  try { const meta = JSON.parse(String(customer.notes).slice('__crm_meta__:'.length)); return { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null }; } catch { return customer; }
+  try {
+    const meta = JSON.parse(String(customer.notes).slice('__crm_meta__:'.length));
+    return {
+      ...customer,
+      birth_date: customer.birth_date || meta.birth_date || null,
+      customer_level_override: customer.customer_level_override || meta.customer_level_override || null,
+      fin_code: customer.fin_code || meta.fin_code || (customer.segment !== 'business' && customer.tax_id && !/^\d{10}$/.test(customer.tax_id) ? customer.tax_id : null),
+      identity_card_no: customer.identity_card_no || meta.identity_card_no || null,
+    };
+  } catch { return customer; }
 };
 
 export function useCustomer360(customerId) {

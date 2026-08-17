@@ -62,21 +62,6 @@ import {
 import { pageMeta } from "./config/page-meta.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-const ExpenseOperationModal = lazy(() => import("./components/modals/OperationModals.jsx").then((module) => ({ default: module.ExpenseOperationModal })));
-const OperationDeleteModal = lazy(() => import("./components/modals/OperationModals.jsx").then((module) => ({ default: module.OperationDeleteModal })));
-const ProductFormModal = lazy(() => import("./modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.ProductFormModal })));
-const WarehouseFormModal = lazy(() => import("./modules/warehouse/components/WarehouseProductModals.jsx").then((module) => ({ default: module.WarehouseFormModal })));
-const HrDepartmentModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrDepartmentModal })));
-const HrEmployeeDeleteModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeDeleteModal })));
-const HrEmployeeModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeModal })));
-const HrLeaveRequestModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrLeaveRequestModal })));
-const HrVacancyModal = lazy(() => import("./modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrVacancyModal })));
-const FinanceAccountModal = lazy(() => import("./modules/finance/components/FinanceAccountModal.jsx").then((module) => ({ default: module.FinanceAccountModal })));
-const StockIntakeModal = lazy(() => import("./modules/warehouse/components/StockIntakeModal.jsx").then((module) => ({ default: module.StockIntakeModal })));
-const FactoryPurchaseOrderModal = lazy(() => import("./modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.FactoryPurchaseOrderModal })));
-const VendorFormModal = lazy(() => import("./modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.VendorFormModal })));
-const SalesOperationModal = lazy(() => import("./modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOperationModal })));
-const SalesOrderModal = lazy(() => import("./modules/sales/components/SalesOrderModals.jsx").then((module) => ({ default: module.SalesOrderModal })));
 const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
 const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
 const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
@@ -111,7 +96,7 @@ import {
 } from "./components/ui.jsx";
 import { money, normalize, percent } from "./services/format.js";
 import { queueNotification, saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
-import { createIdempotencyKey } from "./services/coreOperations.js";
+import { createIdempotencyKey, postCreditPayment } from "./services/coreOperations.js";
 import {
   addMonths,
   formatDateInput,
@@ -365,8 +350,9 @@ function App() {
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
-  const { orders: dbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
+  const { orders: dbOrders, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
+  const legacyBonusMigrationRef = useRef("");
 
   useEffect(() => {
     if (!activeTenantId || !dbOrders.length) return;
@@ -435,6 +421,59 @@ function App() {
     return () => { cancelled = true; };
   }, [activeTenantId]);
 
+  // Older sales stored seller percentages only inside the tenant snapshot.
+  // Recover those assignments before the DB read-bridge replaces legacy rows.
+  useEffect(() => {
+    if (!activeTenantId || !tenantStateReady || !dbOrders.length) return;
+    const migrationKey = `${activeTenantId}:${dbOrders.map((row) => `${row.id}:${row.bonus_assignments?.length || 0}`).join("|")}`;
+    if (legacyBonusMigrationRef.current === migrationKey) return;
+    legacyBonusMigrationRef.current = migrationKey;
+
+    const legacyOrders = (state.orders || []).filter((order) =>
+      getOrderSellerBonuses(order).some((row) => row?.seller && Number(row.bonus || 0) > 0),
+    );
+    const pending = dbOrders
+      .filter((order) => !(order.bonus_assignments || []).length)
+      .map((dbOrder) => {
+        const exact = legacyOrders.find((order) =>
+          normalize(order.id) === normalize(dbOrder.id)
+          || normalize(order.id) === normalize(dbOrder.order_no)
+          || normalize(order.orderNo) === normalize(dbOrder.order_no),
+        );
+        const candidates = exact ? [exact] : legacyOrders.filter((order) =>
+          normalize(order.customer) === normalize(dbOrder.customer?.name)
+          && String(order.date || "").slice(0, 10) === String(dbOrder.order_date || "").slice(0, 10)
+          && Math.abs(Number(order.amount || 0) - Number(dbOrder.total || 0)) < 0.01,
+        );
+        if (candidates.length !== 1) return null;
+        const allocations = getOrderSellerBonuses(candidates[0])
+          .map((row) => ({ seller_name: String(row.seller || "").trim(), rate: Number(row.bonus || 0) }))
+          .filter((row) => row.seller_name && row.rate > 0);
+        return allocations.length ? { dbOrder, allocations } : null;
+      })
+      .filter(Boolean);
+    if (!pending.length) return;
+
+    let active = true;
+    (async () => {
+      for (const { dbOrder, allocations } of pending) {
+        const { error } = await supabase.rpc("set_order_bonus_assignments", {
+          _order_id: dbOrder.id,
+          _effective_from: dbOrder.order_date || new Date().toISOString().slice(0, 10),
+          _allocations: allocations,
+          _reason: "Əvvəlki satış məlumatından avtomatik bərpa",
+        });
+        if (error) throw error;
+      }
+      if (active) await refreshDbOrders();
+    })().catch((error) => {
+      if (!active) return;
+      legacyBonusMigrationRef.current = "";
+      console.error("[sales-bonus] Köhnə satıcı bölgüsü bərpa edilmədi:", error);
+    });
+    return () => { active = false; };
+  }, [activeTenantId, tenantStateReady, dbOrders, refreshDbOrders, state.orders]);
+
   // Read-bridge: overlay DB data onto legacy state when present.
   useEffect(() => {
     if (!activeTenantId || !tenantStateReady) return;
@@ -458,6 +497,7 @@ function App() {
         total: Number(balance.qty ?? balance.on_hand ?? 0),
         reserved: Number(balance.reserved || 0),
         reorderLevel: Number(balance.reorder_point ?? balance.minimum_level ?? 0),
+        costPrice: Number(balance.avg_cost || 0),
         price: Number(balance.product?.price ?? balance.avg_cost ?? 0),
       });
       byWarehouse[warehouseId] = rows;
@@ -580,6 +620,30 @@ function App() {
   }, [state.kpiPeriods, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
   const currentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
+  const salesUsers = useMemo(() => {
+    const byName = new Map();
+    (state.employees || [])
+      .filter((employee) => normalize(employee.department) === normalize("Satış"))
+      .forEach((employee) => byName.set(normalize(employee.name), employee));
+    (state.settings?.users || [])
+      .filter((user) => {
+        const role = normalize(user.role);
+        return user.status !== "Bloklanıb" && (role.includes("satış") || role.includes("satıcı") || role.includes("sales"));
+      })
+      .forEach((user) => {
+        const key = normalize(user.name);
+        if (!key || byName.has(key)) return;
+        byName.set(key, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          department: "Satış",
+          position: user.role,
+          source: "Sistem istifadəçisi",
+        });
+      });
+    return [...byName.values()];
+  }, [state.employees, state.settings?.users]);
   const { can: dbCan, role: dbRole } = usePermissions();
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
@@ -589,6 +653,9 @@ function App() {
       const legacyOk = canAccessNavItem(state.settings, item.id);
       const dbModule = item.id === "products" ? "warehouse" : item.id;
       const dbOk = dbRole ? dbCan(dbModule, "view") : true;
+      // Supabase owner/admin is authoritative. Legacy local settings must not
+      // hide modules from a database administrator.
+      if (isPlatformAdmin || dbRole === "owner" || dbRole === "admin") return dbOk;
       return legacyOk && dbOk;
     }),
     [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
@@ -1241,12 +1308,14 @@ function App() {
   }
 
   function choosePage(id) {
-    if (!canAccessNavItem(state.settings, id)) {
+    const isVisible = visibleNavItems.some((item) => item.id === id);
+    if (!isVisible) {
       notify("Bu modul aktiv istifadəçi üçün gizlədilib.", "warning");
-      return;
+      return false;
     }
     setActive(id);
     setMobileNav(false);
+    return true;
   }
 
   function loginUser(userId) {
@@ -1438,6 +1507,76 @@ function App() {
         },
       );
     });
+  }
+
+  function updateUserProfile(userId, values) {
+    if (!requirePermission("settings.manage", "istifadəçini redaktə etmək")) return;
+    const name = String(values.name || "").trim();
+    const email = String(values.email || "").trim().toLowerCase();
+    if (!name || !email) {
+      notify("İstifadəçi adı və e-poçt daxil edilməlidir.", "warning");
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        users: (current.settings.users || []).map((user) => {
+          if (user.id !== userId) return user;
+          const nextRole = values.role || user.role;
+          return {
+            ...user,
+            name,
+            email,
+            role: nextRole,
+            status: values.status || user.status,
+            moduleAccess: nextRole === user.role
+              ? user.moduleAccess
+              : getDefaultModuleAccessForRole(nextRole, current.settings.roles || defaultRoles),
+          };
+        }),
+      },
+      auditLog: [
+        {
+          id: `AUD-${Date.now()}`,
+          date: new Date().toISOString(),
+          module: "Ayarlar/Auth",
+          action: "İstifadəçi redaktə edildi",
+          detail: `${name} · ${values.role || ""}`,
+          role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
+        },
+        ...(current.auditLog || []),
+      ],
+    }));
+    notify(`${name} istifadəçisi yeniləndi.`);
+  }
+
+  function applyDefaultUserPermissions() {
+    if (!requirePermission("settings.manage", "başlanğıc istifadəçi icazələrini qurmaq")) return;
+    setState((current) => {
+      const roles = current.settings.roles || defaultRoles;
+      const users = (current.settings.users || []).map((user) => ({
+        ...user,
+        moduleAccess: getDefaultModuleAccessForRole(user.role, roles),
+        permissionOverrides: {},
+      }));
+      return {
+        ...current,
+        settings: { ...current.settings, roles, users },
+        auditLog: [
+          {
+            id: `AUD-${Date.now()}`,
+            date: new Date().toISOString(),
+            module: "Ayarlar/Auth",
+            action: "Başlanğıc rol icazələri quruldu",
+            detail: `${users.length} istifadəçiyə rol üzrə standart modul icazələri tətbiq edildi`,
+            role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
+          },
+          ...(current.auditLog || []),
+        ],
+      };
+    });
+    notify("Satıcı, maliyyəçi, anbardar və digər rolların başlanğıc icazələri tətbiq edildi.");
   }
 
   function toggleUserModuleAccess(userId, moduleId) {
@@ -3218,9 +3357,15 @@ function App() {
           order_no: orderNo,
           customer_id: customerRow?.id || null,
           order_date: values.date || new Date().toISOString().slice(0, 10),
-          status: "draft",
+          // Satış ayrıca təsdiq mərhələsi gözləmir. Yaradılan kimi anbarın
+          // təhvil növbəsinə düşən təsdiqli sifariş kimi saxlanılır.
+          status: "confirmed",
           currency: "AZN",
           notes: serializeOrderNotes(values.note, values.internalNotes),
+          bonus_allocations: buildSellerBonusRows(values.sellers).map((row) => ({
+            seller_name: row.seller,
+            rate: Number(row.bonus || 0),
+          })),
           items,
           credit: values.paymentMethod === "Kredit"
             ? {
@@ -3294,6 +3439,7 @@ function App() {
         salePrice: Math.max(0, Number(values.salePrice || 0)),
         costPrice: Math.max(0, Number(values.costPrice || 0)),
         reorderLevel: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
+        recommendedOrderQty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
         serialTracked: values.serialTracked === "Bəli",
         status: "Aktiv",
       };
@@ -3305,6 +3451,8 @@ function App() {
           description: values.category || null,
           unit: values.unit || "ədəd",
           price: Math.max(0, Number(values.salePrice || 0)),
+          minimum_stock: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
+          recommended_order_qty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
           currency: "AZN",
           vat_rate: 18,
           is_active: true,
@@ -3897,6 +4045,7 @@ function App() {
       salePrice: Math.max(0, Number(values.salePrice || 0)),
       costPrice: Math.max(0, Number(values.costPrice || 0)),
       reorderLevel: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
+      recommendedOrderQty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
       serialTracked: values.serialTracked === "Bəli",
     };
     setState((current) => {
@@ -3946,6 +4095,8 @@ function App() {
           description: nextProduct.category || null,
           unit: nextProduct.unit,
           price: nextProduct.salePrice,
+          minimum_stock: nextProduct.reorderLevel,
+          recommended_order_qty: nextProduct.recommendedOrderQty,
         }).catch((err) => {
           console.error("[products] DB update failed:", err);
           notify(`Məhsul DB-də yenilənmədi: ${err.message || err}`, "warning");
@@ -4146,7 +4297,7 @@ function App() {
     });
   }
 
-  function completeWarehouseDelivery(orderId) {
+  async function completeWarehouseDelivery(orderId) {
     if (!requirePermission("delivery.complete", "təhvili tamamlamaq")) return;
 
     const targetOrder = state.orders.find((order) => order.id === orderId);
@@ -4179,6 +4330,25 @@ function App() {
     const deliveryWillComplete = initialCheck.plan?.lines?.every(
       (line) => Number(line.delivered || 0) + Number(line.deliverable || 0) >= Number(line.ordered || 0),
     );
+
+    // Server is authoritative for a completed delivery: physical stock and
+    // the linked reservation must be committed atomically before the UI is
+    // allowed to show the order as delivered.
+    if (deliveryWillComplete && activeTenantId) {
+      const dbOrder = dbOrders.find((order) =>
+        String(order.id) === String(orderId) || String(order.order_no) === String(targetOrder.orderNo || orderId),
+      );
+      if (!dbOrder?.id) {
+        notify("Təhvil ediləcək satış bazada tapılmadı.", "warning");
+        return;
+      }
+      const { error } = await supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id });
+      if (error) {
+        console.error("[delivery] stock fulfillment failed:", error);
+        notify(`Təhvil tamamlanmadı: ${error.message || error}`, "warning");
+        return;
+      }
+    }
 
     setState((current) => {
       const order = current.orders.find((item) => item.id === orderId);
@@ -4265,16 +4435,7 @@ function App() {
     });
 
     if (deliveryWillComplete && activeTenantId) {
-      const dbOrder = dbOrders.find((order) =>
-        String(order.id) === String(orderId) || String(order.order_no) === String(targetOrder.orderNo || orderId),
-      );
-      if (dbOrder?.id) {
-        supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id }).then(({ error }) => {
-          if (!error) return;
-          console.error("[delivery] order status sync failed:", error);
-          notify(`Təhvil tamamlandı, lakin satış statusu yenilənmədi: ${error.message || error}`, "warning");
-        });
-      }
+      await Promise.all([refreshDbOrders(), dbInventory.refresh()]);
     }
 
     const resultPlan = initialCheck.plan;
@@ -4670,7 +4831,7 @@ function App() {
     notify(`${orderId} satış əməliyyatı yeniləndi.`);
   }
 
-  function deleteSalesOrder(orderId) {
+  async function deleteSalesOrder(orderId) {
     if (!requirePermission("sales.create", "satış əməliyyatını silmək")) return;
     const targetOrder = state.orders.find((order) => order.id === orderId);
     if (!targetOrder) {
@@ -4681,9 +4842,12 @@ function App() {
     // DB delete for UUID ids (order_items cascade)
     const isUuid = typeof orderId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
     if (isUuid && deleteDbOrder) {
-      Promise.resolve(deleteDbOrder(orderId)).catch((e) => {
+      try {
+        await deleteDbOrder(orderId);
+      } catch (e) {
         notify(`Silmə DB xətası: ${e?.message || e}`, "warning");
-      });
+        return;
+      }
     }
 
     setState((current) => {
@@ -5359,7 +5523,7 @@ function App() {
     });
   }
 
-  function receiveCreditPayment(creditId, values) {
+  async function receiveCreditPayment(creditId, values) {
     if (!requirePermission("credits.manage", "kredit ödənişi qəbul etmək")) return;
 
     const principalAmount = Math.max(0, Math.round(Number(values.principalAmount || 0)));
@@ -5378,6 +5542,50 @@ function App() {
 
     const paymentResult = applyCreditPrincipalPayment(targetCredit, principalAmount);
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
+    try {
+      if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
+        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
+        let { data: cashAccount, error: accountError } = await supabase
+          .from("cash_accounts")
+          .select("id")
+          .eq("tenant_id", activeTenantId)
+          .eq("code", mainCode)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (accountError) throw accountError;
+        if (!cashAccount) {
+          const byName = await supabase
+            .from("cash_accounts")
+            .select("id")
+            .eq("tenant_id", activeTenantId)
+            .ilike("name", "Əsas kassa")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (byName.error) throw byName.error;
+          cashAccount = byName.data;
+        }
+        if (!cashAccount) throw new Error("Əsas kassa tapılmadı.");
+
+        await postCreditPayment({
+          tenantId: activeTenantId,
+          creditId: targetCredit.id,
+          receiptNo: `KRD-${Date.now()}`,
+          amount: cashAmount,
+          penaltyAmount,
+          cashAccountId: cashAccount.id,
+          paymentMethod: "cash",
+          note: values.note || null,
+        });
+        await refreshDbOrders();
+      }
+    } catch (error) {
+      notify(`Kredit ödənişi qeydə alınmadı: ${error.message}`, "error");
+      return;
+    }
+
     const cashEntry = {
       id: `KS-${Date.now()}`,
       source: "Kredit ödənişi",
@@ -6355,9 +6563,15 @@ function App() {
               appUsers={state.settings.users || []}
               appRoles={state.settings.roles || defaultRoles}
               modulePermissionCatalog={modulePermissionCatalog}
+              onCreateAppUser={createUser}
+              onUpdateAppUser={updateUserProfile}
+              onUpdateAppUserStatus={updateUserStatus}
+              onApplyDefaultPermissions={applyDefaultUserPermissions}
               onChangeAppUserRole={updateUserRole}
               onToggleAppUserModule={toggleUserModuleAccess}
               canOverrideUserPermissions={["Super Admin", "Platform Super Admin"].includes(currentUser?.role)}
+              requiresPassword={remoteApiEnabled}
+              canManageUsers={can("settings.manage")}
             />
           )}
           {active === "access-check" && <AccessCheckPage />}
@@ -6374,13 +6588,11 @@ function App() {
             <DashboardPage
               stats={dashboardStats}
               orders={filtered.orders}
-              stock={state.stock}
-              expenses={state.expenses}
-              notifications={state.notifications}
-              actions={todayActionRows}
-              moduleReadiness={moduleReadiness}
-              advanceOrder={advanceOrder}
-              setActive={choosePage}
+              onOpenPendingExpenses={() => {
+                if (choosePage("cashbook")) {
+                  navigate(`${pathForModule("cashbook")}?tab=expenses&status=pending`);
+                }
+              }}
             />
           )}
           {active === "crm" && <CrmCustomersPageV2 onOpenSalesOrder={openLinkedSalesOrder} />}
@@ -6405,7 +6617,16 @@ function App() {
               onOpenImport={() => setModal({ type: "warehouseImport" })}
               onCreateProduct={() => setModal({ type: "product", mode: "create" })}
               onEditProduct={(productId) => setModal({ type: "product", mode: "edit", productId })}
-              onOpenWarehouse={() => choosePage("stock")}
+              onOpenWarehouse={(warehouseId) => {
+                setSelectedWarehouseId(warehouseId || "all");
+                choosePage("warehouse");
+              }}
+              onOpenSalesOrder={openLinkedSalesOrder}
+              onOpenProcurementDocument={(document) => {
+                setModal(null);
+                setQuery(document?.receipt_no || document?.shipment_no || "");
+                choosePage("procurement");
+              }}
               onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
             />
           )}
@@ -6758,7 +6979,7 @@ function App() {
             warehouses: state.warehouses,
             warehouseStock: state.warehouseStock,
             purchaseOrders: state.purchaseOrders || [],
-            sellers: state.employees.filter((employee) => employee.department === "Satış"),
+            sellers: salesUsers,
           }}
           salesDefaults={{
             paymentMethod: modal.presetPaymentMethod,
@@ -6793,19 +7014,6 @@ function App() {
 }
 
 
-const warehouseImportHeaderAliases = {
-  product: ["məhsul", "məhsul adı", "product", "name"],
-  sku: ["sku", "kod", "code"],
-  warehouse: ["anbar", "warehouse"],
-  qty: ["miqdar", "qalıq", "qty", "quantity"],
-  salePrice: ["satış qiyməti", "satış", "sale price", "sale_price", "price"],
-  costPrice: ["alış qiyməti", "maya", "cost price", "cost_price"],
-  category: ["kateqoriya", "category"],
-  reorderLevel: ["minimum stok", "minimum", "reorder level", "reorder_level"],
-  unit: ["ölçü vahidi", "vahid", "unit"],
-  serialTracked: ["serial izləmə", "serial", "imei", "serial tracked"],
-};
-
 import {
   parseDelimitedCsv,
   parseWarehouseImportNumber,
@@ -6821,6 +7029,7 @@ import {
   CreateModal,
   GenericCreateModal,
   ToastStack,
+  createConfig,
 } from "./components/AppWidgets.jsx";
 
 
