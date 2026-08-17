@@ -360,7 +360,9 @@ export type Database = {
           id: string
           occurred_at: string
           reference: string | null
+          reference_id: string | null
           tenant_id: string
+          transaction_no: string | null
           updated_at: string
           vendor_id: string | null
         }
@@ -378,7 +380,9 @@ export type Database = {
           id?: string
           occurred_at?: string
           reference?: string | null
+          reference_id?: string | null
           tenant_id: string
+          transaction_no?: string | null
           updated_at?: string
           vendor_id?: string | null
         }
@@ -396,7 +400,9 @@ export type Database = {
           id?: string
           occurred_at?: string
           reference?: string | null
+          reference_id?: string | null
           tenant_id?: string
+          transaction_no?: string | null
           updated_at?: string
           vendor_id?: string | null
         }
