@@ -89,6 +89,13 @@ function buildAllCreditRecords(orders, storedCredits) {
   const manualRecords = storedCredits.filter((credit) => {
     if (salesRecordIds.has(credit.id)) return false;
     if (credit.orderId && salesOrderIds.has(credit.orderId)) return false;
+    // Satışdan yaranmış kreditin bağlı sifarişi artıq mövcud deyilsə, onu
+    // manual kredit kimi göstərmək olmaz. Bu, silinmiş sifarişlərin kredit
+    // modulunda təkrar/orphan qeyd kimi qalmasının qarşısını alır.
+    if (credit.orderId) return false;
+    if (credit.salesSource) return false;
+    const source = normalize(credit.createdFrom || "");
+    if (source.includes("satış") || source.includes("satis")) return false;
     return true;
   });
 

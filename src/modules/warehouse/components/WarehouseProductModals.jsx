@@ -95,6 +95,7 @@ export function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
     costPrice: product?.costPrice || 0,
     salePrice: product?.salePrice || 0,
     reorderLevel: product?.reorderLevel || 0,
+    recommendedOrderQty: product?.recommendedOrderQty || 0,
     serialTracked: product?.serialTracked ? "Bəli" : "Xeyr",
   });
 
@@ -151,6 +152,11 @@ export function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
           <label>
             <span>Minimum stok</span>
             <input type="number" min="0" value={values.reorderLevel} onChange={(event) => updateValue("reorderLevel", event.target.value)} />
+          </label>
+          <label>
+            <span>Baza tövsiyə sifariş sayı</span>
+            <input type="number" min="0" value={values.recommendedOrderQty} onChange={(event) => updateValue("recommendedOrderQty", event.target.value)} />
+            <small>Qalıq minimuma çatanda bu say və yaranmış çatışmazlıq birlikdə hesablanır.</small>
           </label>
           <label>
             <span>Alış qiyməti</span>

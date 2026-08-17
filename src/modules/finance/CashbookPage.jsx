@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import {
@@ -10,11 +11,13 @@ const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
 
 export default function CashbookPage({ legacyCashEntries = [] }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeMembership, isPlatformAdmin } = useAuth();
   const tenantId = activeMembership?.tenant_id;
   const canApproveExpenses = Boolean(isPlatformAdmin || ["owner", "admin", "audit", "auditor"].includes(activeMembership?.role));
   const book = useCashbook(tenantId);
-  const [tab, setTab] = useState("accounts");
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "accounts");
+  const [syncError, setSyncError] = useState("");
   const syncedSignature = useRef("");
   const legacyPaymentSignature = useMemo(
     () => legacyCashEntries.map((entry) => `${entry.id}:${entry.amount}`).sort().join("|"),
@@ -26,10 +29,18 @@ export default function CashbookPage({ legacyCashEntries = [] }) {
     const signature = `${tenantId}:${legacyPaymentSignature}`;
     if (syncedSignature.current === signature) return;
     syncedSignature.current = signature;
-    book.syncOrderPayments(legacyCashEntries).then(() => book.syncExpenseCashImpact()).catch((error) => {
-      syncedSignature.current = "";
-      console.error("Kassa sinxronizasiyası alınmadı:", error);
-    });
+    setSyncError("");
+    (async () => {
+      try {
+        await book.syncOrderPayments(legacyCashEntries);
+        await book.syncExpenseCashImpact();
+        setSyncError("");
+      } catch (error) {
+        syncedSignature.current = "";
+        setSyncError(error?.message || "Kassa sinxronizasiyası alınmadı.");
+        console.error("Kassa sinxronizasiyası alınmadı:", error);
+      }
+    })();
   }, [tenantId, legacyPaymentSignature, book.loading]);
 
   const totals = useMemo(() => {
@@ -61,9 +72,17 @@ export default function CashbookPage({ legacyCashEntries = [] }) {
       </div>
 
       {book.error && <div style={msgBox}>Xəta: {book.error.message}</div>}
+      {syncError && <div style={msgBox}>Sinxronizasiya xətası: {syncError}</div>}
       {tab === "accounts" && <AccountsPanel book={book} />}
       {tab === "transactions" && <TransactionsPanel book={book} />}
-      {tab === "expenses" && <ExpensesPanel book={book} canApprove={canApproveExpenses} />}
+      {tab === "expenses" && (
+        <ExpensesPanel
+          book={book}
+          canApprove={canApproveExpenses}
+          initialStatus={searchParams.get("status") || ""}
+          onFilterApplied={() => setSearchParams({}, { replace: true })}
+        />
+      )}
     </div>
   );
 }
@@ -190,7 +209,7 @@ function TransactionsPanel({ book }) {
   );
 }
 
-function ExpensesPanel({ book, canApprove }) {
+function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }) {
   const [form, setForm] = useState({ account_id: "", category: "digər", description: "", amount: "", vat_amount: "", expense_date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(null);
@@ -198,7 +217,12 @@ function ExpensesPanel({ book, canApprove }) {
   const [openCategories, setOpenCategories] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
-  const [filters, setFilters] = useState({ search: "", category: "", status: "", dateFrom: "", dateTo: "" });
+  const [filters, setFilters] = useState({ search: "", category: "", status: initialStatus, dateFrom: "", dateTo: "" });
+  useEffect(() => {
+    if (!initialStatus) return;
+    setFilters(current => ({ ...current, status: initialStatus }));
+    onFilterApplied?.();
+  }, [initialStatus]);
   const categoryNames = book.expenseCategories.map(item => item.name);
   const visibleExpenses = book.expenses.filter(expense => {
     const search = filters.search.trim().toLocaleLowerCase("az");

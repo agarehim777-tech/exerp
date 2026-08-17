@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, History, Package, ShoppingCart, Warehouse, X } from "lucide-react";
-import { WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
+import { ArrowDownToLine, ExternalLink, History, Package, ShoppingCart, Users, X } from "lucide-react";
+import { getRecommendedOrderPlan, WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
 const dateTime = (value) => value ? new Date(value).toLocaleString("az-AZ") : "—";
+const movementType = (item) => item?.movement_type || item?.move_type || "";
+
+function DocumentButton({ children, onClick, title }) {
+  if (!onClick) return children || "—";
+  return <button type="button" className="product-history-link" onClick={onClick} title={title}>
+    <span>{children}</span><ExternalLink size={13} />
+  </button>;
+}
 
 function productLineMatches(line, product) {
   return String(line?.productId || line?.product_id || "") === String(product?.id || "")
     || String(line?.product || line?.name || "").trim().toLocaleLowerCase("az") === String(product?.name || "").trim().toLocaleLowerCase("az");
 }
 
-function Product360Modal({ product, warehouses, warehouseStock, orders, movements, loadingMovements, onClose, onEdit }) {
+function Product360Modal({ product, warehouses, warehouseStock, purchaseOrders, orders, movements, loadingMovements, reservations, receiptLinks, loadingLinks, onClose, onEdit, onOpenOrder, onOpenProcurement }) {
   const [tab, setTab] = useState("overview");
   const balances = useMemo(() => warehouses.map((warehouse) => {
     const row = (warehouseStock?.[warehouse.id] || []).find((item) => productLineMatches(item, product));
@@ -30,17 +38,26 @@ function Product360Modal({ product, warehouses, warehouseStock, orders, movement
   const productMovements = useMemo(() => movements.filter((item) =>
     String(item.product_id || item.product?.id || "") === String(product.id)
     || String(item.sku || item.product?.sku || "") === String(product.sku || "")), [movements, product]);
-  const incoming = productMovements.filter((item) => ["in", "receipt", "transfer_in"].includes(item.move_type || item.movement_type));
+  const incoming = productMovements.filter((item) => ["in", "receipt", "transfer_in"].includes(movementType(item)));
+  const activeReservations = reservations.filter((item) => item.status === "active");
   const total = balances.reduce((sum, item) => sum + item.total, 0);
   const reserved = balances.reduce((sum, item) => sum + item.reserved, 0);
   const soldQty = sales.reduce((sum, item) => sum + item.qty, 0);
   const soldValue = sales.reduce((sum, item) => sum + item.total, 0);
   const receivedQty = incoming.reduce((sum, item) => sum + Math.abs(Number(item.qty ?? item.quantity ?? 0)), 0);
+  const available = Math.max(0, total - reserved);
+  const minimumStock = Math.max(0, Number(product.reorderLevel || 0));
+  const baseOrderQty = Math.max(0, Number(product.recommendedOrderQty || 0));
+  const orderedQty = (purchaseOrders || []).reduce((sum, po) => {
+    const matches = String(po.product || "").trim().toLocaleLowerCase("az") === String(product.name || "").trim().toLocaleLowerCase("az");
+    return matches ? sum + Math.max(0, Number(po.qty || 0)) : sum;
+  }, 0);
+  const recommendation = getRecommendedOrderPlan({ available, minimum: minimumStock, baseQty: baseOrderQty, orderedQty });
 
   return (
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="product-360-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="modal-card product-360-card" style={{ width: "min(1120px, calc(100vw - 32px))", maxHeight: "calc(100vh - 32px)", overflow: "auto" }}>
-        <div className="modal-head" style={{ position: "sticky", top: 0, zIndex: 2, background: "#fff" }}>
+      <div className="modal-card product-360-card">
+        <div className="modal-head product-360-head">
           <div>
             <span style={{ color: "#0b7a5c", fontWeight: 700, fontSize: 13 }}>MƏHSUL 360</span>
             <h2 id="product-360-title" style={{ margin: "4px 0" }}>{product.name}</h2>
@@ -51,25 +68,34 @@ function Product360Modal({ product, warehouses, warehouseStock, orders, movement
             <button type="button" className="secondary-btn" onClick={onClose} aria-label="Bağla"><X size={18} /></button>
           </div>
         </div>
-        <div style={{ padding: 22 }}>
-          <div className="warehouse-control-grid" style={{ marginBottom: 20 }}>
-            <div className="warehouse-control-tile"><span>Qalıq say</span><strong>{number(total)}</strong><small>{balances.length} anbarda</small></div>
-            <div className="warehouse-control-tile"><span>Rezerv olunmuş</span><strong>{number(reserved)}</strong><small>aktiv rezerv</small></div>
-            <div className="warehouse-control-tile"><span>Satışa uyğun</span><strong>{number(total - reserved)}</strong><small>{money((total - reserved) * Number(product.salePrice || product.price || 0))}</small></div>
-            <div className="warehouse-control-tile"><span>Ümumi satış</span><strong>{number(soldQty)}</strong><small>{money(soldValue)}</small></div>
-            <div className="warehouse-control-tile"><span>Daxilolma</span><strong>{number(receivedQty)}</strong><small>{incoming.length} əməliyyat</small></div>
+        <div className="product-360-body">
+          <div className="product-360-metrics">
+            <div className="product-360-metric"><span>Cari qalıq</span><strong>{number(total)}</strong><small>{balances.length} anbarda</small></div>
+            <div className="product-360-metric success"><span>Satışa uyğun</span><strong>{number(available)}</strong><small>{money(available * Number(product.salePrice || product.price || 0))}</small></div>
+            <button type="button" className="product-360-metric product-360-summary-button" onClick={() => setTab("reservations")}><span>Rezerv</span><strong>{number(reserved)}</strong><small>{activeReservations.length} aktiv rezerv · bax</small></button>
+            <div className="product-360-metric"><span>Minimum stok</span><strong>{number(minimumStock)}</strong><small>təyin edilmiş hədd</small></div>
+            <div className="product-360-metric"><span>Açıq PO-da</span><strong>{number(orderedQty)}</strong><small>yolda olan məhsul</small></div>
+            <div className={`product-360-metric recommendation ${recommendation.additionalQty > 0 ? "attention" : ""}`}><span>Tövsiyə sifariş</span><strong>{number(recommendation.recommendedQty)}</strong><small>{recommendation.additionalQty > 0 ? `əlavə ${number(recommendation.additionalQty)} alınmalı` : recommendation.recommendedQty > 0 ? "açıq PO qarşılayır" : "hazırda tələb yoxdur"}</small></div>
+          </div>
+
+          <div className="product-360-flow-strip">
+            <div><span>Baza sifariş</span><strong>{number(baseOrderQty)}</strong></div>
+            <div><span>Minimum çatışmazlığı</span><strong>+{number(recommendation.deficit)}</strong></div>
+            <div><span>Ümumi satış</span><strong>{number(soldQty)} · {money(soldValue)}</strong></div>
+            <div><span>Daxilolma</span><strong>{number(receivedQty)} · {incoming.length} əməliyyat</strong></div>
           </div>
 
           <div className="warehouse-balance-tabs" role="tablist" style={{ marginBottom: 16 }}>
-            {[["overview", "Ümumi baxış", Package], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Bütün tarixçə (${productMovements.length})`, History]].map(([key, label, Icon]) => (
+            {[["overview", "Ümumi baxış", Package], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Bütün tarixçə (${productMovements.length})`, History]].map(([key, label, Icon]) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>
             ))}
           </div>
 
           {tab === "overview" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Qalıq", "Rezerv", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, available }) => [warehouse.name, number(qty), number(hold), number(available)])} />}
-          {tab === "sales" && <HistoryTable title="Satış tarixçəsi" empty="Bu məhsul üzrə satış tapılmadı." headers={["Tarix", "Sifariş", "Müştəri", "Miqdar", "Məbləğ", "Status"]} rows={sales.map(({ order, qty, total: amount }) => [dateTime(order.date || order.created_at), order.id || order.order_no || "—", order.customer || order.customerName || "—", number(qty), money(amount), order.status || "—"])} />}
-          {tab === "receipts" && <HistoryTable loading={loadingMovements} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Maya", "Sənəd", "Qeyd"]} rows={incoming.map((item) => [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), item.doc_no || item.reference_type || item.reference || "—", item.note || "—"])} />}
-          {tab === "history" && <HistoryTable loading={loadingMovements} title="Məhsulun bütün hərəkətləri" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Növ", "Anbar", "Miqdar", "Maya", "Sənəd / qeyd"]} rows={productMovements.map((item) => { const type=item.move_type||item.movement_type; return [dateTime(item.moved_at||item.created_at), ["in","receipt","transfer_in"].includes(type) ? "Daxilolma" : ["out","delivery","transfer_out","write_off"].includes(type) ? "Çıxış" : type || "Hərəkət", item.warehouse?.name || "—", number(item.qty??item.quantity), money(item.unit_cost), item.doc_no || item.reference_type || item.reference || item.note || "—"]; })} />}
+          {tab === "reservations" && <HistoryTable loading={loadingLinks} title="Aktiv rezervlər" empty="Bu məhsul üzrə aktiv rezerv yoxdur." headers={["Tarix", "Sifariş", "Müştəri", "Anbar", "Miqdar", "Rezerv edən", "Status"]} rows={activeReservations.map((item) => [dateTime(item.created_at), <DocumentButton onClick={() => onOpenOrder?.(item.order_id)} title="Sifarişi aç">{item.order?.order_no || item.order_id}</DocumentButton>, item.order?.customer?.name || "—", item.warehouse?.name || "—", number(item.quantity), item.creatorName || "Sistem istifadəçisi", "Aktiv"])} />}
+          {tab === "sales" && <HistoryTable title="Satış tarixçəsi" empty="Bu məhsul üzrə satış tapılmadı." headers={["Tarix", "Sifariş", "Müştəri", "Miqdar", "Məbləğ", "Status"]} rows={sales.map(({ order, qty, total: amount }) => [dateTime(order.date || order.created_at), <DocumentButton onClick={() => onOpenOrder?.(order.id || order.order_id || order.orderNo || order.order_no)} title="Sifarişi aç">{order.orderNo || order.order_no || order.id || "—"}</DocumentButton>, order.customer?.name || order.customer || order.customerName || "—", number(qty), money(amount), order.status || "—"])} />}
+          {tab === "receipts" && <HistoryTable loading={loadingMovements || loadingLinks} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Vahid maya", "Qəbul sənədi", "Göndəriş", "Qeyd"]} rows={incoming.map((item) => { const link = receiptLinks[item.id] || receiptLinks[item.reference_id]; return [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), <DocumentButton onClick={link ? () => onOpenProcurement?.(link) : null} title="Qəbul sənədini aç">{link?.receipt_no || item.doc_no || item.reference || "—"}</DocumentButton>, link?.shipment_no || "—", item.note || "—"]; })} />}
+          {tab === "history" && <HistoryTable loading={loadingMovements || loadingLinks} title="Məhsulun bütün hərəkətləri" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Əməliyyat", "Anbar", "Miqdar", "Maya", "Bağlı sənəd", "Qeyd"]} rows={productMovements.map((item) => { const type=movementType(item); const reservation = reservations.find((row) => String(row.id) === String(item.reference_id)); const receipt = receiptLinks[item.id] || receiptLinks[item.reference_id]; const isReceipt=["in","receipt","transfer_in"].includes(type); const isOut=["out","delivery","transfer_out","write_off"].includes(type); const label=type === "reservation" ? "Rezerv edildi" : type === "release" ? "Rezerv ləğv edildi" : isReceipt ? "Daxilolma" : isOut ? "Çıxış / satış" : type || "Hərəkət"; const document = reservation ? <DocumentButton onClick={() => onOpenOrder?.(reservation.order_id)}>{reservation.order?.order_no || reservation.order_id}</DocumentButton> : receipt ? <DocumentButton onClick={() => onOpenProcurement?.(receipt)}>{receipt.receipt_no || receipt.shipment_no}</DocumentButton> : item.doc_no || item.reference || item.reference_type || "—"; return [dateTime(item.moved_at||item.created_at), label, item.warehouse?.name || "—", number(item.qty??item.quantity), money(item.unit_cost), document, item.note || "—"]; })} />}
         </div>
       </div>
     </div>
@@ -87,13 +113,16 @@ function HistoryTable({ title, headers, rows, empty, loading }) {
   </section>;
 }
 
-export default function ProductBalancesPage({ warehouses = [], warehouseStock = {}, products = [], purchaseOrders = [], orders = [], stockMovements = [], fetchAllMovements, onReceiveStock, onOpenImport, onCreateProduct, onEditProduct, onOpenWarehouse, onTrackAction }) {
+export default function ProductBalancesPage({ warehouses = [], warehouseStock = {}, products = [], purchaseOrders = [], orders = [], stockMovements = [], fetchAllMovements, onReceiveStock, onOpenImport, onCreateProduct, onEditProduct, onOpenWarehouse, onOpenSalesOrder, onOpenProcurementDocument, onTrackAction }) {
   const { activeTenantId } = useAuth();
   const [query, setQuery] = useState("");
   const [livePurchaseOrders, setLivePurchaseOrders] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [movements, setMovements] = useState(stockMovements);
   const [loadingMovements, setLoadingMovements] = useState(false);
+  const [reservations, setReservations] = useState([]);
+  const [receiptLinks, setReceiptLinks] = useState({});
+  const [loadingLinks, setLoadingLinks] = useState(false);
   const selectedProduct = products.find((product) => String(product.id) === String(selectedId));
 
   useEffect(() => {
@@ -135,8 +164,45 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
 
   useEffect(() => { if (!selectedId || !fetchAllMovements) return; let active = true; setLoadingMovements(true); fetchAllMovements().then((rows) => active && setMovements(rows || [])).finally(() => active && setLoadingMovements(false)); return () => { active = false; }; }, [selectedId, fetchAllMovements]);
 
+  useEffect(() => {
+    if (!selectedId || !activeTenantId) return;
+    let active = true;
+    setLoadingLinks(true);
+    (async () => {
+      const [reservationResult, receiptLineResult] = await Promise.all([
+        supabase.from("stock_reservations").select("id,order_id,warehouse_id,quantity,status,created_by,created_at,order:orders(id,order_no,status,customer:customers(id,name)),warehouse:warehouses(id,name)").eq("tenant_id", activeTenantId).eq("product_id", selectedId).order("created_at", { ascending: false }),
+        supabase.from("procurement_receipt_lines").select("id,receipt_id,stock_movement_id,received_qty,unit_landed_cost").eq("product_id", selectedId),
+      ]);
+      if (reservationResult.error) throw reservationResult.error;
+      if (receiptLineResult.error) throw receiptLineResult.error;
+      const creatorIds = [...new Set((reservationResult.data || []).map((row) => row.created_by).filter(Boolean))];
+      const receiptIds = [...new Set((receiptLineResult.data || []).map((row) => row.receipt_id).filter(Boolean))];
+      const [employeeResult, receiptResult] = await Promise.all([
+        creatorIds.length ? supabase.from("employees").select("user_id,full_name").eq("tenant_id", activeTenantId).in("user_id", creatorIds) : Promise.resolve({ data: [], error: null }),
+        receiptIds.length ? supabase.from("procurement_receipts").select("id,receipt_no,shipment_id,receipt_date,shipment:procurement_shipments(id,shipment_no,status)").in("id", receiptIds) : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (employeeResult.error) throw employeeResult.error;
+      if (receiptResult.error) throw receiptResult.error;
+      const employeeByUser = new Map((employeeResult.data || []).map((row) => [row.user_id, row.full_name]));
+      const receiptById = new Map((receiptResult.data || []).map((row) => [row.id, row]));
+      const links = {};
+      (receiptLineResult.data || []).forEach((line) => {
+        const receipt = receiptById.get(line.receipt_id);
+        if (!receipt) return;
+        const value = { ...receipt, shipment_no: receipt.shipment?.shipment_no || "—" };
+        links[line.stock_movement_id || line.id] = value;
+        links[line.receipt_id] = value;
+      });
+      if (active) {
+        setReservations((reservationResult.data || []).map((row) => ({ ...row, creatorName: employeeByUser.get(row.created_by) || null })));
+        setReceiptLinks(links);
+      }
+    })().catch(() => { if (active) { setReservations([]); setReceiptLinks({}); } }).finally(() => active && setLoadingLinks(false));
+    return () => { active = false; };
+  }, [selectedId, activeTenantId]);
+
   return <div className="stack warehouse-module product-balances-page">
-    <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={livePurchaseOrders??purchaseOrders} query={query} onQueryChange={setQuery} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onSelectWarehouse={() => {}} onOpenOperations={onOpenWarehouse} onTrackAction={onTrackAction} />
-    {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} orders={orders} movements={movements} loadingMovements={loadingMovements} onClose={() => setSelectedId(null)} onEdit={onEditProduct} />}
+    <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={livePurchaseOrders??purchaseOrders} query={query} onQueryChange={setQuery} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onOpenOperations={() => onOpenWarehouse?.("all")} onTrackAction={onTrackAction} />
+    {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} purchaseOrders={livePurchaseOrders ?? purchaseOrders} orders={orders} movements={movements} loadingMovements={loadingMovements} reservations={reservations} receiptLinks={receiptLinks} loadingLinks={loadingLinks} onClose={() => setSelectedId(null)} onEdit={onEditProduct} onOpenOrder={onOpenSalesOrder} onOpenProcurement={onOpenProcurementDocument} />}
   </div>;
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CreditCard, Plus, Trash2, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, CircleAlert, CreditCard, Plus, Search, Trash2, Users, X } from "lucide-react";
 import { stages } from "../../../data.js";
 import { money } from "../../../services/format.js";
 import { buildCreditPlan, creditTermOptions } from "../../../shared/lib/credit.js";
@@ -15,11 +15,130 @@ import { createClientId } from "../../../shared/utils/id.js";
 import { serializeOrderNotes } from "../../../shared/utils/orderNotes.js";
 import { calculateOrderFinancials, calculateOrderLineTotal } from "../services/orderCalculations.js";
 
+const MAX_TOTAL_BONUS_RATE = 3;
+
+const maxBonusForRow = (rows, rowId) => Math.max(
+  0,
+  MAX_TOTAL_BONUS_RATE - rows.reduce(
+    (sum, row) => row.id === rowId ? sum : sum + Number(row.bonus || 0),
+    0,
+  ),
+);
+
+const updateSellerRowWithLimit = (rows, rowId, field, value) => {
+  if (field !== "bonus") {
+    return rows.map((row) => row.id === rowId ? { ...row, [field]: value } : row);
+  }
+  const maximum = maxBonusForRow(rows, rowId);
+  const nextValue = value === ""
+    ? ""
+    : Math.min(maximum, Math.max(0, Number(value) || 0));
+  return rows.map((row) => row.id === rowId ? { ...row, bonus: nextValue } : row);
+};
+
 function getAvailableSerialsForProduct(warehouseStock = {}, warehouseId, product) {
   const item = (warehouseStock?.[warehouseId] || []).find((row) => row.product === product);
   if (!item || !isSerialTrackedProduct(item)) return [];
   return (item.serials || []).filter((serial) => serial.status === "Anbarda").map((serial) => serial.imei);
 }
+
+function SearchableOrderSelect({ value, options, onChange, placeholder, ariaLabel, disabled = false }) {
+  const selected = options.find((option) => option.value === value);
+  const [query, setQuery] = useState(selected?.label || "");
+  const [open, setOpen] = useState(false);
+  const normalizedQuery = query.trim().toLocaleLowerCase("az");
+  const visibleOptions = (normalizedQuery
+    ? options.filter((option) => `${option.label} ${option.searchText || ""}`.toLocaleLowerCase("az").includes(normalizedQuery))
+    : options).slice(0, 50);
+
+  useEffect(() => {
+    setQuery(selected?.label || "");
+  }, [value, selected?.label]);
+
+  const choose = (option) => {
+    onChange(option.value);
+    setQuery(option.label);
+    setOpen(false);
+  };
+
+  return (
+    <div className={`order-search-select ${disabled ? "disabled" : ""}`}>
+      <Search size={16} aria-hidden="true" />
+      <input
+        role="combobox"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        autoComplete="off"
+        disabled={disabled}
+        value={query}
+        placeholder={placeholder}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && open && visibleOptions[0]) {
+            event.preventDefault();
+            choose(visibleOptions[0]);
+          }
+          if (event.key === "Escape") { setOpen(false); setQuery(selected?.label || ""); }
+        }}
+      />
+      {open && !disabled && <div className="order-search-select-menu" role="listbox">
+        {visibleOptions.length ? visibleOptions.map((option) => (
+          <button type="button" role="option" aria-selected={option.value === value} key={option.value} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}>
+            <span><strong>{option.label}</strong>{option.subtitle && <small>{option.subtitle}</small>}</span>
+            {option.value === value && <Check size={15} />}
+          </button>
+        )) : <div className="order-search-select-empty">Uyğun nəticə tapılmadı</div>}
+        {options.length > 50 && !normalizedQuery && <div className="order-search-select-hint">Nəticələri azaltmaq üçün yazmağa başlayın</div>}
+      </div>}
+    </div>
+  );
+}
+
+const getCustomerIdentity = (customer = {}) => {
+  let meta = {};
+  try {
+    const prefix = "__crm_meta__:";
+    if (String(customer.notes || "").startsWith(prefix)) meta = JSON.parse(String(customer.notes).slice(prefix.length));
+  } catch { meta = {}; }
+  return {
+    value: meta.fin_code || customer.fin_code || customer.fin || customer.tax_id || customer.id || "",
+    fin: meta.fin_code || customer.fin_code || customer.fin || "",
+    identityCard: meta.identity_card_no || customer.identity_card_no || "",
+  };
+};
+
+const customerSearchOptions = (customers) => customers.map((customer) => {
+  const identity = getCustomerIdentity(customer);
+  return ({
+  value: identity.value,
+  label: customer.name,
+  subtitle: [customer.phone, identity.fin || customer.tax_id].filter(Boolean).join(" · ") || "Əlaqə məlumatı yoxdur",
+  searchText: [customer.phone, identity.fin, customer.tax_id, customer.email, identity.identityCard].filter(Boolean).join(" "),
+  });
+});
+
+const productSearchOptions = (items) => items.map((item) => ({
+  value: item.product,
+  label: item.product,
+  subtitle: `${Math.max(0, Number(item.total || 0) - Number(item.reserved || 0))} satış üçün${item.sku ? ` · SKU: ${item.sku}` : ""}`,
+  searchText: [item.sku, item.category].filter(Boolean).join(" "),
+}));
+
+const sellerSearchOptions = (sellers, currentSeller = "") => {
+  const options = sellers.map((seller) => ({
+    value: seller.name,
+    label: seller.name,
+    subtitle: seller.role || seller.email || "Satıcı",
+    searchText: [seller.role, seller.email].filter(Boolean).join(" "),
+  }));
+  if (currentSeller && !options.some((option) => option.value === currentSeller)) {
+    options.push({ value: currentSeller, label: currentSeller, subtitle: "Təyin edilmiş satıcı", searchText: "" });
+  }
+  return options;
+};
+
 export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
   const customers = orderOptions.customers || [];
   const stock = orderOptions.stock || [];
@@ -28,7 +147,6 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   const sellers = orderOptions.sellers || [];
   const delivered = order.status === "Təhvil verilib";
   const firstWarehouseId = order.warehouseId || warehouses[0]?.id || "";
-  const firstSeller = sellers[0] || { name: "" };
 
   const getStockOptions = (targetWarehouseId) => {
     const rows = warehouseStock[targetWarehouseId]?.length ? warehouseStock[targetWarehouseId] : stock;
@@ -49,7 +167,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   const [warehouseId, setWarehouseId] = useState(firstWarehouseId);
   const availableStock = getStockOptions(warehouseId);
   const firstProduct = availableStock[0] || { product: "", price: 0 };
-  const [customerFin, setCustomerFin] = useState(order.fin || customers[0]?.fin || "");
+  const [customerFin, setCustomerFin] = useState(order.fin || getCustomerIdentity(customers[0]).value);
   const [customerName, setCustomerName] = useState(order.customer || customers.find((customer) => customer.fin === order.fin)?.name || "");
   const [paymentMethod, setPaymentMethod] = useState(order.paymentMethod || "Nağd");
   const [creditMonths, setCreditMonths] = useState(order.creditMonths || 12);
@@ -69,20 +187,21 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   });
   const [sellerRows, setSellerRows] = useState(() => {
     const rows = getOrderSellerBonuses(order);
-    return (rows.length > 0 ? rows : [{ seller: firstSeller.name, bonus: 0 }]).map((row) => ({
+    return (rows.length > 0 ? rows : [{ seller: "", bonus: 0 }]).map((row) => ({
       id: createClientId(),
       ...row,
     }));
   });
 
-  const selectedCustomer = customers.find((customer) => customer.fin === customerFin);
+  const selectedCustomer = customers.find((customer) => getCustomerIdentity(customer).value === customerFin);
   const lineTotal = calculateOrderLineTotal(productRows);
   const paymentPreview = paymentMethod === "Kredit" ? Number(initialPayment || 0) : Number(paid || 0);
   const bonusRate = sellerRows.reduce((sum, row) => sum + Number(row.bonus || 0), 0);
-  const canSubmit = Boolean(customerName && warehouseId && productRows.some((row) => row.product) && Number(amount || 0) > 0);
+  const bonusRateValid = bonusRate <= MAX_TOTAL_BONUS_RATE;
+  const canSubmit = Boolean(customerName && warehouseId && productRows.some((row) => row.product) && Number(amount || 0) > 0 && bonusRateValid);
 
   function changeCustomer(fin) {
-    const customer = customers.find((item) => item.fin === fin);
+    const customer = customers.find((item) => getCustomerIdentity(item).value === fin);
     setCustomerFin(fin);
     if (customer) setCustomerName(customer.name);
   }
@@ -135,14 +254,12 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   }
 
   function changeSeller(rowId, field, value) {
-    setSellerRows((rows) => rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)));
+    setSellerRows((rows) => updateSellerRowWithLimit(rows, rowId, field, value));
   }
 
   function addSellerRow() {
     if (sellerRows.length >= 3) return;
-    const used = new Set(sellerRows.map((row) => row.seller));
-    const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
-    setSellerRows((rows) => [...rows, { id: createClientId(), seller: nextSeller.name, bonus: 0 }]);
+    setSellerRows((rows) => [...rows, { id: createClientId(), seller: "", bonus: 0 }]);
   }
 
   function removeSellerRow(rowId) {
@@ -151,6 +268,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
 
   function submit(event) {
     event.preventDefault();
+    if (!bonusRateValid) return;
     if (!canSubmit) return;
     onSubmit({
       customer: customerName,
@@ -187,14 +305,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
           <section className="order-section">
             <label className="order-label">MÜŞTƏRİ VƏ ÖDƏNİŞ</label>
             <div className="order-two-col">
-              <select value={customerFin} onChange={(event) => changeCustomer(event.target.value)}>
-                {customers.map((customer) => (
-                  <option key={customer.fin} value={customer.fin}>
-                    {customer.name} — {customer.fin}
-                  </option>
-                ))}
-                {!customers.some((customer) => customer.fin === customerFin) && <option value={customerFin}>{customerName}</option>}
-              </select>
+              <SearchableOrderSelect value={customerFin} options={customerSearchOptions(customers)} onChange={changeCustomer} placeholder="Müştəri axtarın..." ariaLabel="Müştəri axtar və seç" />
               <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
                 <option>Nağd</option>
                 <option>Kart</option>
@@ -235,13 +346,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
             <div className="order-lines">
               {productRows.map((row) => (
                 <div className="order-line-grid" key={row.id}>
-                  <select value={row.product} onChange={(event) => changeProduct(row.id, "product", event.target.value)} disabled={delivered}>
-                    {availableStock.map((item) => (
-                      <option key={item.product} value={item.product}>
-                        {item.product} — {getAvailableQuantity(item)} satış üçün
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableOrderSelect value={row.product} options={productSearchOptions(availableStock)} onChange={(value) => changeProduct(row.id, "product", value)} placeholder="Məhsul və ya SKU axtarın..." ariaLabel="Məhsul axtar və seç" disabled={delivered} />
                   <input type="number" min="1" value={row.qty} onChange={(event) => changeProduct(row.id, "qty", event.target.value)} disabled={delivered} />
                   <input type="number" min="0" value={row.price} onChange={(event) => changeProduct(row.id, "price", event.target.value)} disabled={delivered} />
                   <button type="button" className="line-delete" onClick={() => removeProductRow(row.id)} disabled={delivered} aria-label="Məhsul sətrini sil">
@@ -303,14 +408,9 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
             <div className="order-lines">
               {sellerRows.map((row) => (
                 <div className="seller-line-grid" key={row.id}>
-                  <select value={row.seller} onChange={(event) => changeSeller(row.id, "seller", event.target.value)}>
-                    {sellers.map((seller) => (
-                      <option key={seller.name} value={seller.name}>{seller.name}</option>
-                    ))}
-                    {row.seller && !sellers.some((seller) => seller.name === row.seller) && <option value={row.seller}>{row.seller}</option>}
-                  </select>
+                  <SearchableOrderSelect value={row.seller} options={sellerSearchOptions(sellers, row.seller)} onChange={(value) => changeSeller(row.id, "seller", value)} placeholder="Satıcı adı ilə axtarın..." ariaLabel="Satıcı axtar və seç" />
                   <label className="bonus-input">
-                    <input type="number" min="0" max="100" value={row.bonus} onChange={(event) => changeSeller(row.id, "bonus", event.target.value)} />
+                    <input type="number" min="0" max={maxBonusForRow(sellerRows, row.id)} step="0.01" value={row.bonus} onChange={(event) => changeSeller(row.id, "bonus", event.target.value)} />
                     <span>% bonus</span>
                   </label>
                   <button type="button" className="line-delete" onClick={() => removeSellerRow(row.id)} aria-label="Satıcı sətrini sil">
@@ -319,6 +419,9 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
                 </div>
               ))}
             </div>
+            <p className={`bonus-note${bonusRateValid ? "" : " bonus-note--error"}`}>
+              Toplam bonus: <strong>{bonusRate}%</strong> / maksimum <strong>{MAX_TOTAL_BONUS_RATE}%</strong>
+            </p>
           </section>
 
           <section className="order-section">
@@ -361,31 +464,29 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   const warehouseStock = orderOptions.warehouseStock || {};
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id || "");
   const availableStock = warehouseStock[warehouseId]?.length ? warehouseStock[warehouseId] : stock;
-  const firstProduct = availableStock[0] || stock[0] || { product: "", price: 0 };
-  const firstSeller = sellers[0] || { name: "" };
-  const [customerFin, setCustomerFin] = useState(customers[0]?.fin || "");
+  const [customerFin, setCustomerFin] = useState("");
   const [paymentMethod, setPaymentMethod] = useState(defaults.paymentMethod || "Nağd");
   const [creditMonths, setCreditMonths] = useState(12);
   const [initialPayment, setInitialPayment] = useState(0);
   const [productRows, setProductRows] = useState([
     {
       id: createClientId(),
-      product: firstProduct.product,
+      product: "",
       qty: 1,
-      price: firstProduct.price,
+      price: 0,
       vatRate: 0,
-      serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
+      serials: [],
     },
   ]);
   const [sellerRows, setSellerRows] = useState([
-    { id: createClientId(), seller: firstSeller.name, bonus: 3 },
+    { id: createClientId(), seller: "", bonus: 0 },
   ]);
   const [note, setNote] = useState("");
   const [internalNotes, setInternalNotes] = useState([
     { id: createClientId(), recipient: "Maliyyə", text: "" },
   ]);
 
-  const selectedCustomer = customers.find((customer) => customer.fin === customerFin) || customers[0];
+  const selectedCustomer = customers.find((customer) => getCustomerIdentity(customer).value === customerFin);
   const { subtotal: orderSubtotal, vat: orderVat, total: orderTotal } = calculateOrderFinancials(productRows);
   const creditPlan = buildCreditPlan({
     total: orderTotal,
@@ -418,12 +519,15 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     .filter(Boolean);
   
 
+  const bonusRateValid = bonusRate <= MAX_TOTAL_BONUS_RATE;
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
       availableStock.length > 0 &&
       orderTotal > 0 &&
-      productRows.some((row) => row.product),
+      productRows.some((row) => row.product) &&
+      sellerRows.some((row) => row.seller) &&
+      bonusRateValid,
   );
 
 
@@ -452,16 +556,16 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     const nextStock = warehouseStock[nextWarehouseId]?.length
       ? warehouseStock[nextWarehouseId]
       : stock;
-    const nextFirstProduct = nextStock[0] || { product: "", price: 0 };
     setWarehouseId(nextWarehouseId);
     setProductRows((rows) =>
       rows.map((row) => {
-        const match = nextStock.find((item) => item.product === row.product) || nextFirstProduct;
+        if (!row.product) return { ...row, product: "", price: 0, serials: [] };
+        const match = nextStock.find((item) => item.product === row.product);
         return {
           ...row,
-          product: match.product,
-          price: match.price,
-          serials: getAvailableSerialsForProduct(warehouseStock, nextWarehouseId, match.product).slice(0, Math.max(1, Number(row.qty || 1))),
+          product: match?.product || "",
+          price: match?.price || 0,
+          serials: match ? getAvailableSerialsForProduct(warehouseStock, nextWarehouseId, match.product).slice(0, Math.max(1, Number(row.qty || 1))) : [],
         };
       }),
     );
@@ -508,11 +612,11 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       ...rows,
       {
         id: createClientId(),
-        product: firstProduct.product,
+        product: "",
         qty: 1,
-        price: firstProduct.price,
+        price: 0,
         vatRate: 0,
-        serials: getAvailableSerialsForProduct(warehouseStock, warehouseId, firstProduct.product).slice(0, 1),
+        serials: [],
       },
     ]);
   }
@@ -522,18 +626,14 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   }
 
   function changeSeller(rowId, field, value) {
-    setSellerRows((rows) =>
-      rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
-    );
+    setSellerRows((rows) => updateSellerRowWithLimit(rows, rowId, field, value));
   }
 
   function addSellerRow() {
     if (sellerRows.length >= 3) return;
-    const used = new Set(sellerRows.map((row) => row.seller));
-    const nextSeller = sellers.find((seller) => !used.has(seller.name)) || firstSeller;
     setSellerRows((rows) => [
       ...rows,
-      { id: createClientId(), seller: nextSeller.name, bonus: 1 },
+      { id: createClientId(), seller: "", bonus: 0 },
     ]);
   }
 
@@ -543,10 +643,10 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
 
   function submit(event) {
     event.preventDefault();
-    if (!canCreateOrder) return;
+    if (!canCreateOrder || !bonusRateValid) return;
     onCreate(type, {
       customer: selectedCustomer?.name || "",
-      fin: selectedCustomer?.fin || "",
+      fin: getCustomerIdentity(selectedCustomer).fin || selectedCustomer?.tax_id || "",
       paymentMethod,
       warehouseId,
       creditMonths,
@@ -581,17 +681,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               MÜŞTƏRİ
             </label>
             <div className="order-two-col">
-              <select
-                id="order-customer"
-                value={customerFin}
-                onChange={(event) => setCustomerFin(event.target.value)}
-              >
-                {customers.map((customer) => (
-                  <option key={customer.fin} value={customer.fin}>
-                    {customer.name} — {customer.fin}
-                  </option>
-                ))}
-              </select>
+              <SearchableOrderSelect value={customerFin} options={customerSearchOptions(customers)} onChange={setCustomerFin} placeholder="Ad, telefon, FİN və ya VÖEN ilə axtarın..." ariaLabel="Müştəri axtar və seç" />
               <select
                 aria-label="Ödəniş tipi"
                 value={paymentMethod}
@@ -656,17 +746,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <div className="order-lines">
               {productRows.map((row) => (
                 <div className="order-line-grid" key={row.id}>
-                  <select
-                    aria-label="Məhsul seç"
-                    value={row.product}
-                    onChange={(event) => changeProduct(row.id, "product", event.target.value)}
-                  >
-                    {availableStock.map((item) => (
-                      <option key={item.product} value={item.product}>
-                        {item.product} — {item.total - item.reserved} satış üçün
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableOrderSelect value={row.product} options={productSearchOptions(availableStock)} onChange={(value) => changeProduct(row.id, "product", value)} placeholder="Məhsul adı və ya SKU..." ariaLabel="Məhsul axtar və seç" />
                   <input
                     aria-label="Miqdar"
                     type="number"
@@ -830,7 +910,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <div className="section-title-row">
               <span className="order-label seller-title">
                 <Users size={16} />
-                SATICILAR (MAX. 3) — HƏR BİRİ ÖZ BONUS %
+                SATICILAR (MAX. 3 NƏFƏR) — TOPLAM BONUS MAX. 3%
               </span>
               <button
                 type="button"
@@ -845,24 +925,14 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <div className="order-lines">
               {sellerRows.map((row) => (
                 <div className="seller-line-grid" key={row.id}>
-                  <select
-                    aria-label="Satıcı seç"
-                    value={row.seller}
-                    onChange={(event) => changeSeller(row.id, "seller", event.target.value)}
-                  >
-                    {sellers.length === 0 && <option value="">Satıcı seçilməyib</option>}
-                    {sellers.map((seller) => (
-                      <option key={seller.name} value={seller.name}>
-                        {seller.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableOrderSelect value={row.seller} options={sellerSearchOptions(sellers)} onChange={(value) => changeSeller(row.id, "seller", value)} placeholder="Satıcı adı ilə axtarın..." ariaLabel="Satıcı axtar və seç" />
                   <label className="bonus-input">
                     <input
                       aria-label="Bonus faizi"
                       type="number"
                       min="0"
-                      max="100"
+                      max={maxBonusForRow(sellerRows, row.id)}
+                      step="0.01"
                       value={row.bonus}
                       onChange={(event) => changeSeller(row.id, "bonus", event.target.value)}
                     />
@@ -883,6 +953,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               Nümunə: müştəri {money(paidAmount || 100)} ödəyərsə, bu sifariş üzrə cəmi{" "}
               <strong>{bonusRate}%</strong> = <strong>{money(bonusTotal || bonusRate)}</strong> bonus paylanacaq.
             </p>
+            {!bonusRateValid && <p className="bonus-note bonus-note--error">Toplam bonus {MAX_TOTAL_BONUS_RATE}%-dən çox ola bilməz.</p>}
           </section>
 
           <section className="order-section">

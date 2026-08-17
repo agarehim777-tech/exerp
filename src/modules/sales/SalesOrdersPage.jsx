@@ -8,9 +8,9 @@ import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
 
-const KANBAN_STATUSES = ['draft', 'confirmed', 'processing', 'delivered', 'cancelled'];
-const STATUS_LABELS = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
-const canonicalStatus = status => status === 'pending' ? 'draft' : status === 'shipped' ? 'processing' : status;
+const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
+const STATUS_LABELS = { draft: 'Təsdiqləndi', pending: 'Təsdiqləndi', confirmed: 'Təsdiqləndi', processing: 'Təsdiqləndi', shipped: 'Təsdiqləndi', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
+const canonicalStatus = status => ['draft', 'pending', 'processing', 'shipped'].includes(status) ? 'confirmed' : status;
 
 export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
@@ -21,6 +21,7 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
   const [view, setView] = useState('table');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const filtered = useMemo(() => orders.filter(o =>
     !q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase())
@@ -35,8 +36,16 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
     }
   }, [selectedOrderId, orders, onSelectedOrderHandled]);
 
+  useEffect(() => {
+    if (!selected?.id) return;
+    const current = orders.find(order => order.id === selected.id);
+    if (!current) setSelected(null);
+    else if (current !== selected) setSelected(current);
+  }, [orders, selected]);
+
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {actionError && <div role="alert" style={{ padding: '10px 14px', border: '1px solid #fecaca', borderRadius: 10, background: '#fff1f2', color: '#b91c1c', fontSize: 13 }}>{actionError}</div>}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
           style={{ flex: 1, minWidth: 200, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8 }} />
@@ -126,7 +135,17 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
             await update(id, values);
             setSelected(null);
           }}
-          onDelete={async (id) => { if (confirm('Silinsin?')) { await remove(id); setSelected(null); } }}
+          onDelete={async (id) => {
+            if (!confirm('Sifariş silinsin?')) return;
+            setActionError('');
+            try {
+              await remove(id);
+              setSelected(null);
+            } catch (error) {
+              const message = error?.message || error?.details || error?.hint || String(error || '');
+              setActionError(message && message !== '[object Object]' ? message : 'Sifariş silinmədi. Əlaqəli əməliyyatları və istifadəçi icazəsini yoxlayın.');
+            }
+          }}
         />
       )}
     </div>

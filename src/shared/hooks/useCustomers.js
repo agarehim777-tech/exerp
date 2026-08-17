@@ -5,9 +5,15 @@ import { useRealtimeResync } from './useRealtimeResync';
 const META_PREFIX = '__crm_meta__:';
 const readMeta = (notes) => { try { return String(notes || '').startsWith(META_PREFIX) ? JSON.parse(String(notes).slice(META_PREFIX.length)) : {}; } catch { return {}; } };
 const customerPayload = (values, previousNotes = null) => {
-  const { birth_date, customer_level_override, paid_total: _paid, customer_level: _level, ...base } = values;
-  const meta = { ...readMeta(previousNotes), birth_date: birth_date || null, customer_level_override: customer_level_override || null };
-  return { ...base, notes: `${META_PREFIX}${JSON.stringify(meta)}` };
+  const { birth_date, customer_level_override, fin_code, identity_card_no, paid_total: _paid, customer_level: _level, ...base } = values;
+  const meta = { ...readMeta(previousNotes), birth_date: birth_date || null, customer_level_override: customer_level_override || null, fin_code: fin_code || null, identity_card_no: identity_card_no || null };
+  return {
+    ...base,
+    // Empty strings participate in the tenant/email unique index. Store an
+    // omitted optional e-mail as NULL so multiple customers can be e-mailless.
+    email: String(base.email || '').trim() || null,
+    notes: `${META_PREFIX}${JSON.stringify(meta)}`,
+  };
 };
 
 const CUSTOMERS_PAGE_SIZE = 500;
@@ -39,7 +45,7 @@ export function useCustomers(tenantId) {
       setHasMore(customerRows.length > limit);
       setCustomers(customerRows.slice(0, limit).map((customer) => {
         const meta = readMeta(customer.notes);
-        customer = { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null };
+        customer = { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null, fin_code: meta.fin_code || (customer.segment !== 'business' && customer.tax_id && !/^\d{10}$/.test(customer.tax_id) ? customer.tax_id : null), identity_card_no: meta.identity_card_no || null };
         const paidTotal = paidByCustomer.get(customer.id) || 0;
         const automaticLevel = paidTotal >= nextLevels.platinum ? 'platinum' : paidTotal >= nextLevels.gold ? 'gold' : paidTotal >= nextLevels.silver ? 'silver' : 'standard';
         return { ...customer, paid_total: paidTotal, customer_level: customer.customer_level_override || automaticLevel };

@@ -1735,6 +1735,23 @@ export function buildPurchaseOrderCoverage(purchaseOrders = []) {
   }, new Map());
 }
 
+export function getRecommendedOrderPlan({ available = 0, minimum = 0, baseQty = 0, orderedQty = 0 } = {}) {
+  const currentAvailable = Math.max(0, Number(available || 0));
+  const minimumStock = Math.max(0, Number(minimum || 0));
+  const baseOrderQty = Math.max(0, Number(baseQty || 0));
+  const openOrderQty = Math.max(0, Number(orderedQty || 0));
+  const thresholdReached = minimumStock > 0 && currentAvailable <= minimumStock;
+  const deficit = thresholdReached ? Math.max(0, minimumStock - currentAvailable) : 0;
+  const recommendedQty = thresholdReached ? baseOrderQty + deficit : 0;
+  return {
+    thresholdReached,
+    deficit,
+    recommendedQty,
+    orderedQty: openOrderQty,
+    additionalQty: Math.max(0, recommendedQty - openOrderQty),
+  };
+}
+
 export const backorderDefaultLeadDays = 14;
 export const backorderGrnDays = 3;
 
@@ -2745,7 +2762,6 @@ export function WarehouseBalancesWorkspace({
   onCreateProduct,
   onEditProduct,
   onOpenProduct,
-  onSelectWarehouse,
   onOpenOperations,
   onTrackAction,
 }) {
@@ -2802,13 +2818,6 @@ export function WarehouseBalancesWorkspace({
     window.addEventListener("afterprint", clearPrintMode, { once: true });
     window.print();
     window.setTimeout(clearPrintMode, 1000);
-  }
-
-  function selectWarehouse(warehouseId) {
-    const next = { ...activeFilters, warehouseId };
-    setDraftFilters(next);
-    setActiveFilters(next);
-    onSelectWarehouse(warehouseId);
   }
 
   return (
@@ -2868,7 +2877,6 @@ export function WarehouseBalancesWorkspace({
         onEditProduct={onEditProduct}
         onOpenProduct={onOpenProduct}
         onCreateProduct={onCreateProduct}
-        onSelectWarehouse={selectWarehouse}
       />
     </section>
   );
@@ -3528,11 +3536,13 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
     costPrice: Number(catalogProduct?.costPrice || 0),
     salePrice: Number(catalogProduct?.salePrice || 0),
     reorderLevel: Number(catalogProduct?.reorderLevel || 0),
+    recommendedOrderQty: Number(catalogProduct?.recommendedOrderQty || 0),
     total: 0,
     reserved: 0,
     orderedQty: 0,
     openPoCount: 0,
     latestPoId: "",
+    stockValue: 0,
     warehouseDistribution: [],
   });
 
@@ -3550,6 +3560,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         const row = rowsByProduct.get(key) || createRow(item.product, catalogProduct);
         row.total += Number(item.total || 0);
         row.reserved += Number(item.reserved || 0);
+        row.stockValue += Number(item.total || 0) * Number(item.costPrice || 0);
         row.salePrice = row.salePrice || Number(item.price || 0);
         row.serialTracked = catalogProduct?.serialTracked ?? isSerialTrackedProduct(item);
         row.reorderLevel = getReorderPoint(item, productsByName);
@@ -3569,8 +3580,11 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         const available = Math.max(0, free);
         const shortage = Math.max(0, -free);
         const coverage = orderCoverage.get(normalize(row.product)) || { orderedQty: 0, count: 0, latest: null };
+        const averageCost = row.total > 0 ? row.stockValue / row.total : row.costPrice;
+        const recommendation = getRecommendedOrderPlan({ available, minimum: row.reorderLevel, baseQty: row.recommendedOrderQty, orderedQty: coverage.orderedQty });
         return {
           ...row,
+          costPrice: averageCost,
           warehouseName: row.warehouseDistribution.length === 0 ? "—" : `${row.warehouseDistribution.length} anbar`,
           warehouseCount: row.warehouseDistribution.length,
           available,
@@ -3579,8 +3593,9 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
           orderedQty: Number(coverage.orderedQty || 0),
           openPoCount: Number(coverage.count || 0),
           latestPoId: coverage.latest?.id || "",
+          ...recommendation,
           status: shortage > 0 ? "Çatışmazlıq" : getWarehouseBalanceStatus(available, row.reorderLevel),
-          stockValue: row.total * row.costPrice,
+          stockValue: row.stockValue,
           salesValue: row.total * row.salePrice,
         };
       })
@@ -3600,8 +3615,9 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         const shortage = getShortageQuantity(item);
         const reorderLevel = getReorderPoint(item, productsByName);
         const coverage = orderCoverage.get(normalize(item.product)) || { orderedQty: 0, count: 0, latest: null };
-        const costPrice = Number(catalogProduct?.costPrice || 0);
+        const costPrice = Number(item.costPrice || catalogProduct?.costPrice || 0);
         const salePrice = Number(catalogProduct?.salePrice || item.price || 0);
+        const recommendation = getRecommendedOrderPlan({ available, minimum: reorderLevel, baseQty: catalogProduct?.recommendedOrderQty, orderedQty: coverage.orderedQty });
         return {
           key: `${sourceWarehouseId}-${catalogProduct?.id || item.product}`,
           warehouseId: sourceWarehouseId,
@@ -3623,6 +3639,8 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
           orderedQty: Number(coverage.orderedQty || 0),
           openPoCount: Number(coverage.count || 0),
           latestPoId: coverage.latest?.id || "",
+          recommendedOrderQty: Number(catalogProduct?.recommendedOrderQty || 0),
+          ...recommendation,
           warehouseDistribution: [],
           status: shortage > 0 ? "Çatışmazlıq" : getWarehouseBalanceStatus(available, reorderLevel),
           stockValue: totalQty * costPrice,
@@ -3658,7 +3676,7 @@ export function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
 }
 
 export function exportWarehouseBalanceCsv(rows, view) {
-  const headers = ["Kateqoriya", "Məhsul", "SKU", "Anbar", "Qalıq", "Minimum", "Rezerv", "Mövcud", "Sifarişdə", "Vahid", "Maya", "Stok dəyəri", "Satış qiyməti", "Status"];
+  const headers = ["Kateqoriya", "Məhsul", "SKU", "Anbar", "Qalıq", "Minimum", "Rezerv", "Mövcud", "Sifarişdə", "Tövsiyə", "Əlavə alınmalı", "Vahid", "Maya", "Stok dəyəri", "Satış qiyməti", "Status"];
   const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const csvRows = rows.map((row) => [
     row.category,
@@ -3670,6 +3688,8 @@ export function exportWarehouseBalanceCsv(rows, view) {
     row.reserved,
     row.available,
     row.orderedQty,
+    row.recommendedQty,
+    row.additionalQty,
     row.unit,
     row.costPrice,
     row.stockValue,
@@ -3749,15 +3769,16 @@ export function WarehouseBalanceFilters({ filters, warehouses, categories, open,
   );
 }
 
-export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct, onCreateProduct, onSelectWarehouse }) {
+export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct, onCreateProduct }) {
   const totals = rows.reduce((summary, row) => ({
     total: summary.total + Number(row.total || 0),
     reserved: summary.reserved + Number(row.reserved || 0),
     available: summary.available + Number(row.available || 0),
     orderedQty: summary.orderedQty + Number(row.orderedQty || 0),
+    recommendedQty: summary.recommendedQty + Number(row.recommendedQty || 0),
     stockValue: summary.stockValue + Number(row.stockValue || 0),
     salesValue: summary.salesValue + Number(row.salesValue || 0),
-  }), { total: 0, reserved: 0, available: 0, orderedQty: 0, stockValue: 0, salesValue: 0 });
+  }), { total: 0, reserved: 0, available: 0, orderedQty: 0, recommendedQty: 0, stockValue: 0, salesValue: 0 });
   const locationHeading = view === "products" ? "Anbarlar" : "Anbar";
 
   return (
@@ -3765,7 +3786,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
       <table className="warehouse-balance-table">
         <thead>
           <tr>
-            <th>Kateqoriya</th><th>Məhsul</th><th>SKU</th><th>{locationHeading}</th><th>Qalıq</th><th>Minimum</th><th>Rezerv</th><th>Mövcud</th><th>Sifarişdə</th><th>Vahid</th><th>Maya</th><th>Stok dəyəri</th><th>Satış</th><th>Status</th><th>Əməliyyat</th>
+            <th>Kateqoriya</th><th>Məhsul</th><th>SKU</th><th>{locationHeading}</th><th>Qalıq</th><th>Minimum</th><th>Rezerv</th><th>Mövcud</th><th>Sifarişdə</th><th>Tövsiyə</th><th>Vahid</th><th>Maya</th><th>Stok dəyəri</th><th>Satış</th><th>Status</th>{view === "products" && <th>Əməliyyat</th>}
           </tr>
         </thead>
         <tbody>
@@ -3789,15 +3810,14 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
                 {row.shortage > 0 && <small style={{ display: "block", opacity: 0.75 }}>sifariş gözləyir</small>}
               </td>
               <td>{row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "—"}</td>
+              <td>{row.recommendedQty > 0 ? <TwoLine title={`${row.recommendedQty} ədəd`} subtitle={row.additionalQty > 0 ? `əlavə ${row.additionalQty} alınmalı` : "açıq PO qarşılayır"} /> : "—"}</td>
               <td>{row.unit}</td>
               <td>{money(row.costPrice)}</td>
               <td>{money(row.stockValue)}</td>
               <td>{money(row.salePrice)}</td>
               <td><StatusBadge status={row.status} /></td>
-              <td>
-                {view === "warehouses" ? (
-                  <button className="text-btn" onClick={() => onSelectWarehouse(row.warehouseId)}>Anbara keç</button>
-                ) : row.productId ? (
+              {view === "products" && <td>
+                {row.productId ? (
                   <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
                     {onOpenProduct && <button className="text-btn" onClick={() => onOpenProduct(row.productId)}>360 baxış</button>}
                     <button className="text-btn" onClick={() => onEditProduct(row.productId)}>Redaktə</button>
@@ -3805,15 +3825,15 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
                 ) : (
                   <button className="text-btn" onClick={onCreateProduct}>Kataloqa əlavə et</button>
                 )}
-              </td>
+              </td>}
             </tr>
           ))}
-          {rows.length === 0 && <tr><td colSpan="15" className="warehouse-balance-empty">Seçilmiş filtrə uyğun qalıq tapılmadı.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={view === "products" ? 16 : 15} className="warehouse-balance-empty">Seçilmiş filtrə uyğun qalıq tapılmadı.</td></tr>}
         </tbody>
         {rows.length > 0 && (
           <tfoot>
             <tr>
-              <td colSpan="4">Cəmi</td><td>{totals.total}</td><td>—</td><td>{totals.reserved}</td><td className="balance-qty good">{totals.available}</td><td>{totals.orderedQty || "—"}</td><td>—</td><td>—</td><td>{money(totals.stockValue)}</td><td>{money(totals.salesValue)}</td><td>—</td><td>—</td>
+              <td colSpan="4">Cəmi</td><td>{totals.total}</td><td>—</td><td>{totals.reserved}</td><td className="balance-qty good">{totals.available}</td><td>{totals.orderedQty || "—"}</td><td>{totals.recommendedQty || "—"}</td><td>—</td><td>—</td><td>{money(totals.stockValue)}</td><td>{money(totals.salesValue)}</td><td>—</td>{view === "products" && <td>—</td>}
             </tr>
           </tfoot>
         )}

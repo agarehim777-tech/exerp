@@ -4,9 +4,21 @@ function normalizeText(value) {
   return String(value ?? "").toLocaleLowerCase("az-AZ");
 }
 
-export function MetricCard({ label, value, trend, icon: Icon, tone = "primary" }) {
+export function MetricCard({ label, value, trend, icon: Icon, tone = "primary", onClick, title }) {
   return (
-    <article className="metric-card">
+    <article
+      className={`metric-card${onClick ? " metric-card-clickable" : ""}`}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      title={title}
+    >
       <div>
         <span>{label}</span>
         <strong>{value}</strong>

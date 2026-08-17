@@ -18,9 +18,15 @@ export default function RolesPermissionsPage({
   appUsers = [],
   appRoles = [],
   modulePermissionCatalog = [],
+  onCreateAppUser,
+  onUpdateAppUser,
+  onUpdateAppUserStatus,
+  onApplyDefaultPermissions,
   onChangeAppUserRole,
   onToggleAppUserModule,
   canOverrideUserPermissions = false,
+  requiresPassword = false,
+  canManageUsers = false,
 }) {
   const { activeMembership } = useAuth();
   const { isAdmin, role: currentRole } = usePermissions();
@@ -34,6 +40,9 @@ export default function RolesPermissionsPage({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userDraft, setUserDraft] = useState({ name: "", email: "", password: "", role: appRoles[0]?.name || "Super Admin" });
+  const [editDraft, setEditDraft] = useState({ name: "", email: "", role: "", status: "Aktiv" });
 
   const reload = async () => {
     setLoading(true);
@@ -111,6 +120,31 @@ export default function RolesPermissionsPage({
     appRoles.find((role) => role.name === roleName)?.name ||
     roleName || "—";
 
+  const submitUser = async (event) => {
+    event.preventDefault();
+    if (!onCreateAppUser) return;
+    await onCreateAppUser(userDraft);
+    setUserDraft({ name: "", email: "", password: "", role: appRoles[0]?.name || "Super Admin" });
+  };
+
+  const openUserEditor = (user) => {
+    setEditingUserId(user.id);
+    setEditDraft({
+      name: user.appUser?.name || user.name || "",
+      email: user.appUser?.email || user.email || "",
+      role: user.appUser?.role || user.role || appRoles[0]?.name || "",
+      status: user.appUser?.status || user.status || "Aktiv",
+    });
+  };
+
+  const saveUserEditor = async (event) => {
+    event.preventDefault();
+    const user = unifiedUsers.find((item) => item.id === editingUserId);
+    if (!user?.appUser || !onUpdateAppUser) return;
+    await onUpdateAppUser(user.appUser.id, editDraft);
+    setEditingUserId(null);
+  };
+
   if (!isAdmin) {
     return (
       <div style={card}>
@@ -187,6 +221,32 @@ export default function RolesPermissionsPage({
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      <div style={card}>
+        <div style={sectionHeader}>
+          <div>
+            <h2 style={{ margin: 0, marginBottom: 4 }}>Yeni istifadəçi yarat</h2>
+            <p style={{ margin: 0, color: "#6b7a72", fontSize: 13 }}>
+              Anbardar, satıcı, satınalma və maliyyə əməkdaşını yaradıb uyğun sistem rolunu seçin.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={!canManageUsers || !onApplyDefaultPermissions}
+            onClick={() => window.confirm("Bütün istifadəçilərin fərdi icazələri rol üzrə başlanğıc vəziyyətə qaytarılacaq. Davam edilsin?") && onApplyDefaultPermissions?.()}
+            style={secondaryButton}
+          >
+            Başlanğıc icazələri qur
+          </button>
+        </div>
+        <form onSubmit={submitUser} style={userForm}>
+          <label style={fieldLabel}><span>Ad Soyad</span><input required value={userDraft.name} onChange={(e) => setUserDraft((v) => ({ ...v, name: e.target.value }))} placeholder="Ad Soyad" style={input} /></label>
+          <label style={fieldLabel}><span>E-poçt</span><input required type="email" value={userDraft.email} onChange={(e) => setUserDraft((v) => ({ ...v, email: e.target.value }))} placeholder="user@sirket.az" style={input} /></label>
+          {requiresPassword && <label style={fieldLabel}><span>İlkin parol</span><input required minLength={8} type="password" value={userDraft.password} onChange={(e) => setUserDraft((v) => ({ ...v, password: e.target.value }))} placeholder="Minimum 8 simvol" style={input} /></label>}
+          <label style={fieldLabel}><span>Rol</span><select value={userDraft.role} onChange={(e) => setUserDraft((v) => ({ ...v, role: e.target.value }))} style={input}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</select></label>
+          <button type="submit" disabled={!canManageUsers || saving} style={primaryButton}>İstifadəçi yarat</button>
+        </form>
+      </div>
+
       <div style={overviewCard}>
         <div style={overviewItem}>
           <span style={overviewLabel}>İstifadəçilər</span>
@@ -281,7 +341,7 @@ export default function RolesPermissionsPage({
               <th style={th}>Rol</th>
               <th style={th}>Mənbə</th>
               <th style={th}>Status</th>
-              <th style={th}>Fərdi icazə</th>
+              <th style={th}>Əməliyyat</th>
             </tr>
           </thead>
           <tbody>
@@ -315,7 +375,8 @@ export default function RolesPermissionsPage({
                 </td>
                 <td style={td}>{user.source}</td>
                 <td style={td}><span style={user.status === "Aktiv" ? activeBadge : pendingBadge}>{user.status}</span></td>
-                <td style={td}>
+                <td style={td}><div style={actionGroup}>
+                  <button type="button" disabled={!user.appUser || !canManageUsers} onClick={() => openUserEditor(user)} style={user.appUser ? editButton : disabledPermissionButton}>Redaktə et</button>
                   <button
                     type="button"
                     disabled={!user.appUser || user.appUser.role === "Super Admin"}
@@ -325,7 +386,7 @@ export default function RolesPermissionsPage({
                   >
                     {selectedUserId === user.id ? "Bağla" : "İdarə et"}
                   </button>
-                </td>
+                </div></td>
               </tr>
             ))}
           </tbody>
@@ -364,6 +425,19 @@ export default function RolesPermissionsPage({
               </p>
             )}
           </div>
+        )}
+
+        {editingUserId && (
+          <form onSubmit={saveUserEditor} style={editPanel}>
+            <div style={editHeader}><strong>İstifadəçini redaktə et</strong><button type="button" onClick={() => setEditingUserId(null)} style={closeButton}>Bağla</button></div>
+            <div style={userForm}>
+              <label style={fieldLabel}><span>Ad Soyad</span><input required value={editDraft.name} onChange={(e) => setEditDraft((v) => ({ ...v, name: e.target.value }))} style={input} /></label>
+              <label style={fieldLabel}><span>E-poçt</span><input required type="email" value={editDraft.email} onChange={(e) => setEditDraft((v) => ({ ...v, email: e.target.value }))} style={input} /></label>
+              <label style={fieldLabel}><span>Rol</span><select value={editDraft.role} onChange={(e) => setEditDraft((v) => ({ ...v, role: e.target.value }))} style={input}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</select></label>
+              <label style={fieldLabel}><span>Status</span><select value={editDraft.status} onChange={(e) => setEditDraft((v) => ({ ...v, status: e.target.value }))} style={input}><option>Aktiv</option><option>Bloklanıb</option></select></label>
+              <button type="submit" style={primaryButton}>Dəyişiklikləri saxla</button>
+            </div>
+          </form>
         )}
       </div>
 
@@ -422,3 +496,14 @@ const permissionGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,
 const permissionOption = { display: "flex", alignItems: "center", gap: 8, minHeight: 36, padding: "7px 10px", border: "1px solid #dbe8e2", borderRadius: 6, background: "#fbfdfc", color: "#28483e", fontSize: 12, cursor: "pointer" };
 const disabledPermissionOption = { ...permissionOption, opacity: 0.48, cursor: "not-allowed" };
 const permissionCount = { whiteSpace: "nowrap", padding: "5px 8px", borderRadius: 6, background: "#edf6f1", color: "#17634d", fontSize: 11, fontWeight: 700 };
+const userForm = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12, alignItems: "end" };
+const fieldLabel = { display: "grid", gap: 6, color: "#526b62", fontSize: 12, fontWeight: 600 };
+const input = { width: "100%", minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid #d4c9a3", background: "#fff", boxSizing: "border-box" };
+const primaryButton = { minHeight: 40, border: 0, borderRadius: 8, padding: "8px 16px", background: "#08785c", color: "#fff", fontWeight: 700, cursor: "pointer" };
+const actionGroup = { display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6 };
+const editButton = { ...permissionButton, background: "#fff" };
+const editPanel = { ...permissionPanel, padding: 16, border: "1px solid #dbe8e2", borderRadius: 10, background: "#f8fbf9" };
+const editHeader = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
+const closeButton = { border: 0, background: "transparent", color: "#6b7a72", cursor: "pointer" };
+const sectionHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 14, flexWrap: "wrap" };
+const secondaryButton = { minHeight: 38, border: "1px solid #08785c", borderRadius: 8, padding: "8px 14px", background: "#fff", color: "#08785c", fontWeight: 700, cursor: "pointer" };
