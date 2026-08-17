@@ -3402,7 +3402,15 @@ function App() {
             : null,
         }).catch((err) => {
           console.error("[orders] DB insert failed:", err);
-          notify(`DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+          notify(describeStockError(err, "DB-yə saxlanılmadı"), "warning");
+          if (isStockShortageError(err)) {
+            auditOperation({
+              module: "Satış/Anbar",
+              action: "Rezervasiya bloklandı",
+              detail: `${values.customer || "—"} · server rezervasiyanı rədd etdi`,
+              status: "Bloklandı",
+            });
+          }
         });
       }
     }
