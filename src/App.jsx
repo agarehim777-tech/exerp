@@ -127,6 +127,7 @@ import {
 import { total } from "./shared/utils/aggregate.js";
 import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
+import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
 const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
@@ -3310,6 +3311,25 @@ function App() {
       }
 
       if (shortageLines.length > 0) {
+        // Rezervasiya mümkün deyil — istifadəçidən açıq təsdiq alınmadan sifariş yaradılmır.
+        const confirmed = window.confirm(
+          `Qalıq çatışmazlığı: ${shortageLines.join(", ")}.\n\n` +
+            "Bu sətirlər rezerv edilə bilməyəcək və sifariş backorder (mənfi mövcud) kimi qeyd olunacaq.\n\n" +
+            "Davam edilsin?",
+        );
+        if (!confirmed) {
+          notify(
+            `Sifariş bloklandı — rezervasiya üçün qalıq çatışmır: ${shortageLines.join(", ")}.`,
+            "warning",
+          );
+          auditOperation({
+            module: "Satış/Anbar",
+            action: "Rezervasiya bloklandı",
+            detail: `${values.customer || "—"} · ${shortageLines.join(", ")}`,
+            status: "Bloklandı",
+          });
+          return;
+        }
         notify(
           `Qalıq çatışmır — sifariş backorder kimi yaradıldı: ${shortageLines.join(", ")}. Təchizatdan gətirilib təhvil verilməlidir.`,
           "warning",
@@ -3382,7 +3402,15 @@ function App() {
             : null,
         }).catch((err) => {
           console.error("[orders] DB insert failed:", err);
-          notify(`DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+          notify(describeStockError(err, "DB-yə saxlanılmadı"), "warning");
+          if (isStockShortageError(err)) {
+            auditOperation({
+              module: "Satış/Anbar",
+              action: "Rezervasiya bloklandı",
+              detail: `${values.customer || "—"} · server rezervasiyanı rədd etdi`,
+              status: "Bloklandı",
+            });
+          }
         });
       }
     }
@@ -4345,7 +4373,7 @@ function App() {
       const { error } = await supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id });
       if (error) {
         console.error("[delivery] stock fulfillment failed:", error);
-        notify(`Təhvil tamamlanmadı: ${error.message || error}`, "warning");
+        notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
     }
