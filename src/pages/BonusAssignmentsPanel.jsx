@@ -77,6 +77,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
       {message ? <div className="bonus-assignment-message">{message}</div> : null}
       {ledger.error ? <div className="bonus-assignment-message error">{ledger.error.message}</div> : null}
       {orderId && history.length ? <div className="bonus-history"><h4>Bölgü tarixçəsi</h4>{history.map((row) => <div className="bonus-history-row" key={row.id}><strong>{row.seller_name}</strong><span>{Number(row.rate)}%</span><span>{row.effective_from} — {row.effective_to || "davam edir"}</span><StatusBadge status={row.effective_to ? "Bağlanıb" : "Aktiv"} /><small>{row.reason || "Səbəb qeyd edilməyib"}</small></div>)}</div> : null}
+      </>) : null}
     </Panel>
   );
 }
