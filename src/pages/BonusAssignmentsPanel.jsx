@@ -46,6 +46,13 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
   return (
     <Panel>
       <PanelHeader title="Sifariş üzrə bonus bölgüsü" subtitle="Yeni bölgü seçilən tarixdən sonrakı kassa daxilolmalarına tətbiq edilir" icon={History} />
+      <div className="bonus-assignment-actions" style={{ marginBottom: open ? 12 : 0 }}>
+        <button type="button" className="secondary-btn compact" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          {open ? "Bölgü formasını bağla" : "Bölgü formasını aç"}
+        </button>
+      </div>
+      {open ? (<>
       <form className="bonus-assignment-form" onSubmit={save}>
         <div className="bonus-assignment-head">
           <label><span>Sifariş</span><select value={orderId} onChange={(event) => setOrderId(event.target.value)}><option value="">Sifariş seçin</option>{orders.map((order) => <option key={order.id} value={order.id}>{order.order_no} · {order.customer?.name || "Müştəri yoxdur"}</option>)}</select></label>
