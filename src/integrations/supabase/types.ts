@@ -5252,6 +5252,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_sales_order: {
+        Args: {
+          _currency: string
+          _customer_id: string
+          _items: Json
+          _notes: string
+          _order_date: string
+          _order_no: string
+          _tenant_id: string
+        }
+        Returns: string
+      }
       create_sales_order_atomic: {
         Args: {
           _credit?: Json
@@ -5488,9 +5500,24 @@ export type Database = {
         Args: { _account_id: string; _amount: number; _order_id: string }
         Returns: string
       }
+      release_stock_reservation: {
+        Args: { _reservation_id: string; _tenant_id: string }
+        Returns: undefined
+      }
       reopen_accounting_period: {
         Args: { _period_lock_id: string; _reason: string; _tenant_id: string }
         Returns: undefined
+      }
+      reserve_stock: {
+        Args: {
+          _order_id: string
+          _order_item_id?: string
+          _product_id: string
+          _quantity?: number
+          _tenant_id: string
+          _warehouse_id: string
+        }
+        Returns: string
       }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
