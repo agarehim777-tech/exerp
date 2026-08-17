@@ -5257,6 +5257,10 @@ export type Database = {
         Args: { _customer_id: string; _tenant_id: string }
         Returns: Json
       }
+      delete_sales_order_safe: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       ensure_inventory_accounts: {
         Args: { _tenant: string }
         Returns: undefined
