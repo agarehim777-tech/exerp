@@ -144,7 +144,7 @@ const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx")
 const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
 const InsightsPage = lazy(() => import("./modules/assistant/InsightsPage.jsx"));
 const CustomerMessengerPanel = lazy(() => import("./modules/notifications/CustomerMessengerPanel.jsx"));
-import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
+const FloatingAssistant = lazy(() => import("./modules/assistant/FloatingAssistant.jsx"));
 const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
 const DeliveriesPage = lazy(() => import("./pages/DeliveriesPage.jsx"));
