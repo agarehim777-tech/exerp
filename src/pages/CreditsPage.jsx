@@ -9,6 +9,7 @@ import {
   currentBusinessYear,
 } from "../shared/lib/appDomain.jsx";
 import {
+  buildCreditPlan,
   CreditDetailModal,
   getCreditDebtFormula,
   getCreditDisplayPlan,
@@ -430,11 +431,17 @@ function CreditsPage({
 
 function StartCreditModal({ item, onStartCredit, onClose }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const firstPaymentDate = useMemo(() => {
-    const date = new Date(`${startDate}T00:00:00`);
-    date.setMonth(date.getMonth() + 1);
-    return Number.isNaN(date.getTime()) ? "—" : formatPaymentDate(date);
-  }, [startDate]);
+  const previewPlan = useMemo(
+    () =>
+      buildCreditPlan({
+        total: item.credit.total,
+        initialPayment: item.credit.initialPayment || 0,
+        months: item.credit.months || item.plan.months,
+        startDate,
+      }),
+    [item, startDate],
+  );
+  const firstPaymentDate = previewPlan.installments[0]?.due || "—";
 
   function submit(event) {
     event.preventDefault();
@@ -460,9 +467,30 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
           </label>
           <div className="credit-payment-preview">
             <span>İlk ödəniş tarixi <strong>{firstPaymentDate}</strong></span>
-            <span>Müddət <strong>{item.plan.months} ay</strong></span>
+            <span>Müddət <strong>{previewPlan.months} ay</strong></span>
+            <span>Aylıq <strong>{money(previewPlan.monthly)}</strong></span>
+            <span>Qalıq <strong>{money(previewPlan.balance)}</strong></span>
           </div>
-          <p className="form-help">Təsdiqdən sonra ödəniş cədvəli yaradılacaq və kredit aktiv portfelə keçəcək.</p>
+          <div className="credit-schedule-preview">
+            <strong>Ödəniş cədvəli önizləməsi</strong>
+            <div className="credit-schedule-preview-scroll">
+              <table className="credit-schedule-preview-table">
+                <thead>
+                  <tr><th>#</th><th>Ödəniş tarixi</th><th>Məbləğ</th></tr>
+                </thead>
+                <tbody>
+                  {previewPlan.installments.map((installment) => (
+                    <tr key={installment.month}>
+                      <td>{installment.month}</td>
+                      <td>{installment.due}</td>
+                      <td>{money(installment.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p className="form-help">Təsdiqdən sonra bu cədvəl yadda saxlanacaq və kredit aktiv portfelə keçəcək.</p>
           <div className="modal-actions">
             <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
             <button type="submit" className="primary-btn"><Play size={15} /> Krediti başlat</button>
