@@ -5659,11 +5659,7 @@ function App() {
       notify("Kredit tapılmadı.", "warning");
       return;
     }
-    if (targetCredit.status === "Başlanmamış" || targetCredit.status === "draft" || targetCredit.startedAt === null) {
-      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
-      return;
-    }
-    if (targetCredit.status !== "Başlanmamış" && targetCredit.status !== "draft") {
+    if (isCreditStarted(targetCredit)) {
       notify("Bu kredit artıq başladılıb.", "warning");
       return;
     }
