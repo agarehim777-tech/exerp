@@ -107,7 +107,6 @@ try {
   check("Müvəqqəti test şirkəti yaradıldı", Boolean(tenantId));
 
   await rpc("seed_default_coa", { _tenant: tenantId });
-  await rpc("ensure_inventory_accounts", { _tenant: tenantId });
 
   const warehouse = await insert("warehouses", { tenant_id: tenantId, code: `E2E-${stamp}`, name: "E2E Anbar" });
   const product = await insert("products", {
