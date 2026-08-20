@@ -149,6 +149,7 @@ import {
   getCreditSourceLabel,
   getReceivableClosureAmount,
   isCreditClosed,
+  isCreditStarted,
   matchesCreditDashboardFilter,
   matchesCreditManagementFilter,
   matchesCreditSearch,
@@ -5523,6 +5524,12 @@ function App() {
       return;
     }
 
+    if (!isCreditStarted(targetCredit)) {
+      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
+      return;
+    }
+
+
     const paymentResult = applyCreditPrincipalPayment(targetCredit, principalAmount);
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
     try {
@@ -5659,11 +5666,7 @@ function App() {
       notify("Kredit tapılmadı.", "warning");
       return;
     }
-    if (targetCredit.status === "Başlanmamış" || targetCredit.status === "draft" || targetCredit.startedAt === null) {
-      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
-      return;
-    }
-    if (targetCredit.status !== "Başlanmamış" && targetCredit.status !== "draft") {
+    if (isCreditStarted(targetCredit)) {
       notify("Bu kredit artıq başladılıb.", "warning");
       return;
     }
