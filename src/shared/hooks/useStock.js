@@ -275,8 +275,9 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     const source = balances.find(
       (row) => row.warehouse_id === fromWarehouseId && row.product_id === productId,
     );
-    if (!source || Number(source.qty || 0) < amount) {
-      throw new Error(`Mənbə anbarda yalnız ${Number(source?.qty || 0).toLocaleString('az-AZ')} ədəd mövcuddur.`);
+    const available = Number(source?.on_hand ?? source?.qty ?? 0) - Number(source?.reserved ?? 0);
+    if (!source || available < amount) {
+      throw new Error(`Mənbə anbarda yalnız ${available.toLocaleString('az-AZ')} ədəd mövcuddur.`);
     }
 
     const reference = `TR-${Date.now()}`;
@@ -303,7 +304,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   const setReorderPoint = async (balanceId, value) => {
     const { error: err } = await supabase
       .from('stock_balances')
-      .update({ reorder_point: Number(value) || 0 })
+      .update({ minimum_level: Number(value) || 0 })
       .eq('id', balanceId);
     if (err) throw err;
   };

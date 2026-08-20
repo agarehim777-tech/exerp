@@ -24,7 +24,8 @@
     "audit:flows": "node scripts/business-flow-audit.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "verify:stock": "node scripts/verify-stock-lifecycle.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.37",
