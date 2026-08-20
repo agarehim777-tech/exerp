@@ -37,9 +37,12 @@ function buildSalesCreditRecord(order, storedCredit) {
   const productSummary = summarizeOrderProducts(order);
   const balance = Number(storedCredit?.balance ?? order.creditBalance ?? basePlan.balance);
   const paidMonths = Number(storedCredit?.paidMonths ?? (balance <= 0 ? months : 0));
+  // Satışdan gələn kredit təhvildən sonra əl ilə başladılır: başlanma tarixi
+  // təyin edilməyibsə, kredit "Başlanmamış" statusunda gözləyir.
+  const isStarted = Boolean(storedCredit?.startedAt || storedCredit?.startDate);
   const status = isCreditClosed({ ...(storedCredit || {}), balance, paidMonths, months }, { ...basePlan, balance })
     ? "Tamamlandı"
-    : storedCredit?.status || "Aktiv";
+    : storedCredit?.status || (isStarted ? "Aktiv" : "Başlanmamış");
 
   return {
     ...(storedCredit || {}),
