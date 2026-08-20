@@ -9,6 +9,7 @@ import {
   currentBusinessYear,
 } from "../shared/lib/appDomain.jsx";
 import {
+  buildCreditPlan,
   CreditDetailModal,
   getCreditDebtFormula,
   getCreditDisplayPlan,
