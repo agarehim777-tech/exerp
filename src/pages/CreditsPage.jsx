@@ -499,10 +499,6 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
 function QuickCollectModal({ item, onReceivePayment, onClose }) {
   const { credit, plan, paymentState } = item;
