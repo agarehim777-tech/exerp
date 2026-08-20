@@ -118,14 +118,17 @@ try {
   });
   const customer = await insert("customers", { tenant_id: tenantId, name: "E2E Test Müştəri" });
 
-  await insert("stock_balances", {
+  // Anbara əl ilə mədaxil (istifadəçi axını ilə eyni yol)
+  await insert("stock_movements", {
     tenant_id: tenantId,
     warehouse_id: warehouse.id,
     product_id: product.id,
     sku: product.sku,
-    on_hand: 10,
-    reserved: 0,
-    avg_cost: 60,
+    move_type: "in",
+    qty: 10,
+    unit_cost: 60,
+    doc_no: `E2E-IN-${stamp}`,
+    note: "E2E başlanğıc mədaxil",
   });
   const [seeded] = await select("stock_balances", `select=on_hand,reserved&product_id=eq.${product.id}`);
   check("Başlanğıc qalıq 10, rezerv 0", Number(seeded.on_hand) === 10 && Number(seeded.reserved) === 0,
