@@ -3311,8 +3311,11 @@ function App() {
             const prod = productsBySku.get(key) || productsByName.get(key) || null;
             const qty = Number(it.qty || 0);
             const unitPrice = Number(it.price || prod?.price || 0);
-            const stockRow = warehouseRows.find((row) => row.product === it.product);
-            const canReserve = stockRow && getFreeQuantity(stockRow) >= qty;
+            // Rezerv həmişə yaradılır: məhsul DB-də tanınırsa və anbar UUID-dirsə,
+            // sətir anbarın təhvil növbəsinə düşür (qalıq çatmasa belə backorder rezervi).
+            const isUuidWarehouse = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+              String(warehouseId || ""),
+            );
             return {
               line_no: idx + 1,
               product_id: prod?.id || null,
@@ -3321,9 +3324,7 @@ function App() {
               unit_price: unitPrice,
               discount_pct: 0,
               vat_rate: Number(it.vatRate ?? 0),
-              warehouse_id: canReserve && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(warehouseId)
-                ? warehouseId
-                : null,
+              warehouse_id: prod?.id && isUuidWarehouse ? warehouseId : null,
             };
           });
         const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
