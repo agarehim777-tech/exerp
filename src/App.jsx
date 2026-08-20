@@ -149,6 +149,7 @@ import {
   getCreditSourceLabel,
   getReceivableClosureAmount,
   isCreditClosed,
+  isCreditStarted,
   matchesCreditDashboardFilter,
   matchesCreditManagementFilter,
   matchesCreditSearch,
