@@ -3602,7 +3602,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
       .sort((a, b) => a.product.localeCompare(b.product, "az"));
   }
 
-  return Object.entries(warehouseStock)
+  const warehouseRows = Object.entries(warehouseStock)
     .flatMap(([sourceWarehouseId, items]) => {
       if (warehouseId !== "all" && sourceWarehouseId !== warehouseId) return [];
       const warehouse = warehouseById.get(sourceWarehouseId);
@@ -3647,9 +3647,51 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
           salesValue: totalQty * salePrice,
         };
       });
-    })
+    });
+
+  // Kataloqda olan, lakin heç bir anbarda qalığı olmayan məhsullar da 0 qalıqla görünməlidir.
+  const coveredProducts = new Set(warehouseRows.map((row) => normalize(row.product)));
+  const emptyWarehouse = warehouseId !== "all" ? warehouseById.get(warehouseId) : null;
+  const zeroRows = products
+    .filter((product) => product.status !== "Passiv" && product.name && !coveredProducts.has(normalize(product.name)))
+    .map((product) => {
+      const reorderLevel = Number(product.reorderLevel || 0);
+      const coverage = orderCoverage.get(normalize(product.name)) || { orderedQty: 0, count: 0, latest: null };
+      const recommendation = getRecommendedOrderPlan({ available: 0, minimum: reorderLevel, baseQty: product.recommendedOrderQty, orderedQty: coverage.orderedQty });
+      return {
+        key: `no-stock-${product.id || normalize(product.name)}`,
+        warehouseId: emptyWarehouse?.id || "",
+        warehouseName: emptyWarehouse?.name || "—",
+        product: product.name,
+        productId: product.id || "",
+        category: product.category || "Kataloqu olmayan",
+        sku: product.sku || "—",
+        unit: product.unit || "ədəd",
+        serialTracked: Boolean(product.serialTracked),
+        costPrice: Number(product.costPrice || 0),
+        salePrice: Number(product.salePrice || 0),
+        reorderLevel,
+        total: 0,
+        reserved: 0,
+        available: 0,
+        free: 0,
+        shortage: 0,
+        orderedQty: Number(coverage.orderedQty || 0),
+        openPoCount: Number(coverage.count || 0),
+        latestPoId: coverage.latest?.id || "",
+        recommendedOrderQty: Number(product.recommendedOrderQty || 0),
+        ...recommendation,
+        warehouseDistribution: [],
+        status: getWarehouseBalanceStatus(0, reorderLevel),
+        stockValue: 0,
+        salesValue: 0,
+      };
+    });
+
+  return [...warehouseRows, ...zeroRows]
     .sort((a, b) => a.warehouseName.localeCompare(b.warehouseName, "az") || a.product.localeCompare(b.product, "az"));
 }
+
 
 export function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
   const search = normalize([filters.productQuery, globalQuery].filter(Boolean).join(" "));
