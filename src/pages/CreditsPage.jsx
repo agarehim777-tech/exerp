@@ -131,8 +131,10 @@ function CreditsPage({
   const visibleCredits = enrichedCredits
     .filter((item) => {
       const date = getCreditRowDate(item);
-      const matchesMonth = monthFilter === "Bütün aylar" || (date && monthNamesAz[date.getMonth()] === monthFilter);
-      const matchesYear = yearFilter === "Bütün illər" || (date && String(date.getFullYear()) === String(yearFilter));
+      // Başlanmamış kreditin növbəti ödəniş tarixi yoxdur — ay/il filtri onları gizlətməməlidir.
+      const undated = !date;
+      const matchesMonth = undated || monthFilter === "Bütün aylar" || monthNamesAz[date.getMonth()] === monthFilter;
+      const matchesYear = undated || yearFilter === "Bütün illər" || String(date.getFullYear()) === String(yearFilter);
       return (
         matchesCreditManagementFilter(item, creditFilter) &&
         matchesCreditSourceFilter(item, sourceFilter) &&
@@ -141,6 +143,7 @@ function CreditsPage({
         matchesYear
       );
     })
+
     .sort((a, b) => {
       if (a.paymentState.isOverdue !== b.paymentState.isOverdue) return a.paymentState.isOverdue ? -1 : 1;
       const dateA = getCreditRowDate(a)?.getTime() || 0;

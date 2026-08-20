@@ -50,7 +50,9 @@ function buildSalesCreditRecord(order, storedCredit) {
     salesSource: true,
     createdFrom: "Satış modulu",
     orderId: order.id,
+    date: storedCredit?.date || order.date || order.deliveryDate || null,
     customer: order.customer,
+
     fin: order.fin,
     contractId: order.contractId || storedCredit?.contractId || `MQ-${order.id}`,
     product: productSummary,
