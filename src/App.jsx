@@ -5524,6 +5524,12 @@ function App() {
       return;
     }
 
+    if (!isCreditStarted(targetCredit)) {
+      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
+      return;
+    }
+
+
     const paymentResult = applyCreditPrincipalPayment(targetCredit, principalAmount);
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
     try {
