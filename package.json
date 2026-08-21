@@ -26,7 +26,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "verify:stock": "node scripts/verify-stock-lifecycle.mjs",
-    "verify:credit": "node scripts/verify-credit-start.mjs"
+    "verify:credit": "node scripts/verify-credit-start.mjs",
+    "verify:credit-payments": "node scripts/verify-credit-payments.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.37",
