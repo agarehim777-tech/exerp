@@ -160,7 +160,7 @@ try {
   const preInstallments = await select("credit_installments", `select=id&credit_id=eq.${creditId}`);
   check("Başlamazdan əvvəl ödəniş cədvəli yaranmır", preInstallments.length === 0, `${preInstallments.length} sətir`);
 
-  const [orderBeforeStart] = await select("orders", `select=paid_amount,total_amount&id=eq.${orderId}`);
+  const [orderBeforeStart] = await select("orders", `select=paid_amount,total&id=eq.${orderId}`);
   check(
     "İlkin ödəniş sifarişin ödənilmiş məbləğinə yazıldı",
     Number(orderBeforeStart.paid_amount) === INITIAL,
@@ -219,7 +219,7 @@ try {
   );
   check("Kredit balansı (qalıq borc) 1000 AZN-dir", Math.round(outstanding) === financed, `qalıq=${outstanding}`);
 
-  const [orderAfterStart] = await select("orders", `select=paid_amount,total_amount&id=eq.${orderId}`);
+  const [orderAfterStart] = await select("orders", `select=paid_amount,total&id=eq.${orderId}`);
   check(
     "Kreditin başladılması ödənilmiş məbləği dəyişmir",
     Number(orderAfterStart.paid_amount) === INITIAL,
