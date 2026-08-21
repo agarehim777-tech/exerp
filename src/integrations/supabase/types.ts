@@ -5474,6 +5474,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      post_credit_payment: {
+        Args: {
+          _amount: number
+          _cash_account_id?: string
+          _credit_id: string
+          _note?: string
+          _payment_method?: string
+          _penalty_amount?: number
+          _receipt_no: string
+          _tenant_id: string
+        }
+        Returns: string
+      }
       post_invoice_to_gl: { Args: { _invoice_id: string }; Returns: string }
       post_payment_to_gl: { Args: { _payment_id: string }; Returns: string }
       process_sales_order_status: {
