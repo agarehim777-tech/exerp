@@ -5540,7 +5540,7 @@ function App() {
           .from("cash_accounts")
           .select("id")
           .eq("tenant_id", activeTenantId)
-          .eq("code", mainCode)
+          .eq("account_no", mainCode)
           .eq("is_active", true)
           .limit(1)
           .maybeSingle();
