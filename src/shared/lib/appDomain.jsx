@@ -1,5 +1,6 @@
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
 import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { CreditInitialPaymentsHistory } from "../../modules/credits/CreditInitialPayments.jsx";
 import { lazy, useEffect, useMemo, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
@@ -2686,6 +2687,7 @@ export function CreditDetailModal({ item, sendCreditSms, onUpdatePaymentDate, on
             onReceivePayment={onReceivePayment}
             onOpenSalesOrder={onOpenSalesOrder}
           />
+          <CreditInitialPaymentsHistory creditId={credit.id} />
         </div>
       </div>
     </div>
