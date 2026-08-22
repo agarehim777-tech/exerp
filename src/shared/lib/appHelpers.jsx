@@ -62,6 +62,8 @@ function buildSalesCreditRecord(order, storedCredit) {
     warehouseName: order.warehouseName,
     total: totalAmount,
     initialPayment,
+    requiredInitial: Number(order.requiredInitial ?? storedCredit?.requiredInitial ?? initialPayment),
+    initialPaid: Number(order.initialPaid ?? storedCredit?.initialPaid ?? order.paid ?? 0),
     balance,
     monthly: storedCredit?.monthly ?? order.creditMonthly ?? basePlan.monthly,
     lastPayment: storedCredit?.lastPayment ?? order.creditLastPayment ?? basePlan.lastPayment,
