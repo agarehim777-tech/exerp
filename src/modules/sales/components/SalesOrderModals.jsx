@@ -655,6 +655,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       warehouseId,
       creditMonths,
       initialPayment,
+      depositPaid: depositNow,
       products: productRows.map((row) => ({
         ...row,
         serials: normalizeRowSerials(row.product, row.qty, row.serials),
