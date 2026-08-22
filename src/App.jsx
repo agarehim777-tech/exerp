@@ -5679,6 +5679,16 @@ function App() {
       notify("Bu kredit artıq başladılıb.", "warning");
       return;
     }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const initialPaid = Number(targetCredit.initialPaid ?? 0);
+    if (requiredInitial > 0 && initialPaid + 0.01 < requiredInitial) {
+      notify(
+        `İlkin ödəniş tamamlanmayıb: ${money(initialPaid)} / ${money(requiredInitial)}. Kredit başladıla bilməz.`,
+        "warning",
+      );
+      return;
+    }
+
 
     const plan = buildCreditPlan({
       total: targetCredit.total,
