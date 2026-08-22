@@ -495,7 +495,9 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     initialPayment,
     months: creditMonths,
   });
-  const paidAmount = paymentMethod === "Kredit" ? creditPlan.initialPayment : orderTotal;
+  const depositNow = Math.min(Math.max(0, Number(depositPaid || 0)), Number(creditPlan.initialPayment || 0));
+  const initialRemaining = Math.max(0, Number(creditPlan.initialPayment || 0) - depositNow);
+  const paidAmount = paymentMethod === "Kredit" ? depositNow : orderTotal;
   const bonusRate = sellerRows.reduce((sum, item) => sum + Number(item.bonus || 0), 0);
   const bonusTotal = (paidAmount * bonusRate) / 100;
   const selectedSerials = productRows.flatMap((row) => row.serials || []);
