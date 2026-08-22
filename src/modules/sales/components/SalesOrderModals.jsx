@@ -468,6 +468,8 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   const [paymentMethod, setPaymentMethod] = useState(defaults.paymentMethod || "Nağd");
   const [creditMonths, setCreditMonths] = useState(12);
   const [initialPayment, setInitialPayment] = useState(0);
+  const [depositPaid, setDepositPaid] = useState(0);
+
   const [productRows, setProductRows] = useState([
     {
       id: createClientId(),
