@@ -455,7 +455,7 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
 
   return (
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="start-credit-title">
-      <div className="modal-card">
+      <div className="modal-card start-credit-modal-card">
         <div className="modal-head">
           <div>
             <h2 id="start-credit-title">Krediti başlat</h2>
