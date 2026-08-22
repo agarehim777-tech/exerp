@@ -5668,6 +5668,109 @@ function App() {
     });
   }
 
+  async function payCreditInitial(creditId, amount) {
+    if (!requirePermission("credits.manage", "ilkin ödəniş qəbul etmək")) return;
+    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    if (!targetCredit) {
+      notify("Kredit tapılmadı.", "warning");
+      return;
+    }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const alreadyPaid = Number(targetCredit.initialPaid ?? 0);
+    const payment = Math.min(Math.max(0, Math.round(Number(amount || 0))), Math.max(0, requiredInitial - alreadyPaid));
+    if (payment <= 0) {
+      notify("Qəbul ediləcək məbləğ düzgün deyil.", "warning");
+      return;
+    }
+
+    try {
+      if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
+        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
+        let { data: cashAccount, error: accountError } = await supabase
+          .from("cash_accounts")
+          .select("id")
+          .eq("tenant_id", activeTenantId)
+          .eq("account_no", mainCode)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (accountError) throw accountError;
+        if (!cashAccount) {
+          const byName = await supabase
+            .from("cash_accounts")
+            .select("id")
+            .eq("tenant_id", activeTenantId)
+            .ilike("name", "Əsas kassa")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (byName.error) throw byName.error;
+          cashAccount = byName.data;
+        }
+        const { error: rpcError } = await supabase.rpc("post_credit_initial_payment", {
+          _tenant_id: activeTenantId,
+          _credit_id: targetCredit.id,
+          _amount: payment,
+          _cash_account_id: cashAccount?.id || null,
+          _note: "İlkin ödəniş (beh) qəbulu",
+        });
+        if (rpcError) throw rpcError;
+        await refreshDbOrders();
+      }
+    } catch (error) {
+      notify(`İlkin ödəniş qeydə alınmadı: ${error.message}`, "error");
+      return;
+    }
+
+    const nextPaid = alreadyPaid + payment;
+    setState((current) => ({
+      ...current,
+      cashEntries: [
+        {
+          id: `KS-${Date.now()}`,
+          source: "Kredit ilkin ödənişi",
+          creditId,
+          orderId: targetCredit.orderId,
+          customer: targetCredit.customer,
+          contractId: targetCredit.contractId,
+          amount: payment,
+          principal: payment,
+          penalty: 0,
+          date: baseCreditDate,
+          note: "İlkin ödəniş (beh)",
+        },
+        ...(current.cashEntries || []),
+      ],
+      orders: current.orders.map((order) => {
+        const isLinkedOrder = targetCredit.orderId
+          ? order.id === targetCredit.orderId
+          : order.creditId === creditId || getCreditIdForOrder(order) === creditId;
+        if (!isLinkedOrder) return order;
+        return {
+          ...order,
+          paid: Math.min(Number(order.amount || 0), Number(order.paid || 0) + payment),
+          initialPaid: nextPaid,
+        };
+      }),
+      credits: (() => {
+        const exists = current.credits.some((credit) => credit.id === creditId);
+        const nextCredits = exists ? current.credits : [targetCredit, ...current.credits];
+        return nextCredits.map((item) =>
+          item.id === creditId ? { ...item, requiredInitial, initialPaid: nextPaid } : item,
+        );
+      })(),
+    }));
+
+    notify(`${money(payment)} ilkin ödəniş qəbul edildi. Yığılıb: ${money(nextPaid)} / ${money(requiredInitial)}.`);
+    auditOperation({
+      module: "Kredit/Maliyyə",
+      action: "İlkin ödəniş qəbul edildi",
+      detail: `${creditId}: ${money(payment)} · toplam ${money(nextPaid)}/${money(requiredInitial)}`,
+    });
+  }
+
+
   function startCredit(creditId, startDate) {
     if (!requirePermission("credits.manage", "krediti başlatmaq")) return;
     const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
