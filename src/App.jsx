@@ -3609,6 +3609,8 @@ function App() {
               contractId,
               creditMonths: creditPlan?.months || null,
               initialPayment: creditPlan?.initialPayment || 0,
+              requiredInitial: creditPlan?.initialPayment || 0,
+              initialPaid: isCreditSale ? depositPaid : 0,
               creditBalance: creditPlan?.balance || 0,
               creditMonthly: creditPlan?.monthly || 0,
               creditLastPayment: creditPlan?.lastPayment || 0,
