@@ -940,6 +940,11 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                   ? ` İlkin ödənişin ${money(initialRemaining)} hissəsi yığılmayınca kredit başladıla bilməz.`
                   : ""}
               </p>
+              {creditValidationError ? (
+                <p className="bonus-note bonus-note--error">{creditValidationError}</p>
+              ) : null}
+
+
 
             </section>
           )}
