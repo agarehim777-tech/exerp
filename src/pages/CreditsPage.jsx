@@ -412,6 +412,7 @@ function CreditsPage({
           <StartCreditModal
             item={startItem}
             onStartCredit={onStartCredit}
+            onPayInitial={onPayCreditInitial}
             onClose={() => setStartCreditId("")}
           />
         ) : null}
