@@ -6707,6 +6707,7 @@ function App() {
               onUpdatePaymentDate={updateCreditPaymentDate}
               onReceivePayment={receiveCreditPayment}
               onStartCredit={startCredit}
+              onPayCreditInitial={payCreditInitial}
               onCreateCredit={() => setModal({ type: "sales", presetPaymentMethod: "Kredit" })}
               onOpenSalesOrder={openLinkedSalesOrder}
               selectedCreditId={selectedCreditId}
