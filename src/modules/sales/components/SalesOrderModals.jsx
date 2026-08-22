@@ -875,9 +875,9 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                   </select>
                 </label>
                 <label className="order-sub-field">
-                  <span>İLKİN ÖDƏNİŞ</span>
+                  <span>İLKİN ÖDƏNİŞ (HƏDƏF)</span>
                   <input
-                    aria-label="İlkin ödəniş"
+                    aria-label="İlkin ödəniş hədəfi"
                     type="number"
                     min="0"
                     max={orderTotal}
@@ -885,11 +885,26 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     onChange={(event) => setInitialPayment(event.target.value)}
                   />
                 </label>
+                <label className="order-sub-field">
+                  <span>BEH (İNDİ ÖDƏNİLƏN)</span>
+                  <input
+                    aria-label="Beh məbləği"
+                    type="number"
+                    min="0"
+                    max={Number(creditPlan.initialPayment || 0)}
+                    value={depositPaid}
+                    onChange={(event) => setDepositPaid(event.target.value)}
+                  />
+                </label>
               </div>
               <div className="credit-plan-summary">
                 <div>
                   <span>Kredit məbləği</span>
                   <strong>{money(creditPlan.total)}</strong>
+                </div>
+                <div>
+                  <span>İlkin ödəniş qalığı</span>
+                  <strong>{money(initialRemaining)}</strong>
                 </div>
                 <div>
                   <span>Qalıq</span>
@@ -907,7 +922,11 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               <p className="credit-plan-example">
                 Bölgü: {creditPlan.months > 1 ? `${creditPlan.months - 1} ay ${money(creditPlan.monthly)}, ` : ""}
                 sonuncu ay {money(creditPlan.lastPayment)}.
+                {initialRemaining > 0
+                  ? ` İlkin ödənişin ${money(initialRemaining)} hissəsi yığılmayınca kredit başladıla bilməz.`
+                  : ""}
               </p>
+
             </section>
           )}
 
