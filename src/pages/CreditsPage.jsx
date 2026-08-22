@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { CreditInitialPaymentsHistory } from "../modules/credits/CreditInitialPayments.jsx";
 import { money } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
@@ -9,6 +10,7 @@ import {
   currentBusinessYear,
 } from "../shared/lib/appDomain.jsx";
 import {
+  buildCreditPlan,
   CreditDetailModal,
   getCreditDebtFormula,
   getCreditDisplayPlan,
@@ -35,6 +37,7 @@ function CreditsPage({
   onReceivePayment,
   onCreateCredit,
   onStartCredit,
+  onPayCreditInitial,
   onOpenSalesOrder,
   selectedCreditId,
   onClearSelectedCredit,
@@ -130,8 +133,10 @@ function CreditsPage({
   const visibleCredits = enrichedCredits
     .filter((item) => {
       const date = getCreditRowDate(item);
-      const matchesMonth = monthFilter === "Bütün aylar" || (date && monthNamesAz[date.getMonth()] === monthFilter);
-      const matchesYear = yearFilter === "Bütün illər" || (date && String(date.getFullYear()) === String(yearFilter));
+      // Başlanmamış kreditin növbəti ödəniş tarixi yoxdur — ay/il filtri onları gizlətməməlidir.
+      const undated = !date;
+      const matchesMonth = undated || monthFilter === "Bütün aylar" || monthNamesAz[date.getMonth()] === monthFilter;
+      const matchesYear = undated || yearFilter === "Bütün illər" || String(date.getFullYear()) === String(yearFilter);
       return (
         matchesCreditManagementFilter(item, creditFilter) &&
         matchesCreditSourceFilter(item, sourceFilter) &&
@@ -140,6 +145,7 @@ function CreditsPage({
         matchesYear
       );
     })
+
     .sort((a, b) => {
       if (a.paymentState.isOverdue !== b.paymentState.isOverdue) return a.paymentState.isOverdue ? -1 : 1;
       const dateA = getCreditRowDate(a)?.getTime() || 0;
@@ -408,6 +414,7 @@ function CreditsPage({
           <StartCreditModal
             item={startItem}
             onStartCredit={onStartCredit}
+            onPayInitial={onPayCreditInitial}
             onClose={() => setStartCreditId("")}
           />
         ) : null}
@@ -428,24 +435,58 @@ function CreditsPage({
   );
 }
 
-function StartCreditModal({ item, onStartCredit, onClose }) {
+function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const firstPaymentDate = useMemo(() => {
-    const date = new Date(`${startDate}T00:00:00`);
-    date.setMonth(date.getMonth() + 1);
-    return Number.isNaN(date.getTime()) ? "—" : formatPaymentDate(date);
-  }, [startDate]);
+  const requiredInitial = Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0);
+  const initialPaid = Number(item.credit.initialPaid ?? 0);
+  const initialRemaining = Math.max(0, requiredInitial - initialPaid);
+  const initialComplete = initialRemaining <= 0.01;
+  const [depositAmount, setDepositAmount] = useState(initialRemaining || 0);
+  const [historyKey, setHistoryKey] = useState(0);
+
+  useEffect(() => {
+    // İlkin ödəniş dəyişdikdə giriş sahəsi və cədvəl avtomatik yenilənir
+    setDepositAmount(initialRemaining || 0);
+    setHistoryKey((key) => key + 1);
+  }, [initialPaid, requiredInitial, initialRemaining]);
+
+  const depositValue = Number(depositAmount || 0);
+  const depositError =
+    depositValue < 0
+      ? "Məbləğ mənfi ola bilməz."
+      : depositValue > initialRemaining + 0.01
+        ? `Hədəfi aşırsınız: qalıq ${money(initialRemaining)}, daxil edilən ${money(depositValue)}.`
+        : "";
+
+  const projectedPaid = Math.min(requiredInitial, initialPaid + Math.max(0, depositError ? 0 : depositValue));
+  const previewPlan = useMemo(
+    () =>
+      buildCreditPlan({
+        total: item.credit.total,
+        initialPayment: requiredInitial,
+        months: item.credit.months || item.plan.months,
+        startDate,
+      }),
+    [item, requiredInitial, startDate],
+  );
+  const firstPaymentDate = previewPlan.installments[0]?.due || "—";
 
   function submit(event) {
     event.preventDefault();
-    if (!startDate) return;
+    if (!startDate || !initialComplete) return;
     onStartCredit?.(item.credit.id, startDate);
     onClose();
   }
 
+  async function collectDeposit() {
+    if (depositError || depositValue <= 0) return;
+    await onPayInitial?.(item.credit.id, depositValue);
+    setHistoryKey((key) => key + 1);
+  }
+
   return (
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="start-credit-title">
-      <div className="modal-card">
+      <div className="modal-card start-credit-modal-card">
         <div className="modal-head">
           <div>
             <h2 id="start-credit-title">Krediti başlat</h2>
@@ -454,24 +495,89 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
         </div>
         <form className="credit-payment-form" onSubmit={submit}>
+          <div className="credit-payment-preview">
+            <span>İlkin ödəniş hədəfi <strong>{money(requiredInitial)}</strong></span>
+            <span>Yığılıb <strong>{money(initialPaid)}</strong></span>
+            <span>Qalıq beh <strong>{money(initialRemaining)}</strong></span>
+            <span>Ödənişdən sonra <strong>{money(projectedPaid)}</strong></span>
+          </div>
+          {!initialComplete ? (
+            <div className="credit-schedule-preview">
+              <strong>İlkin ödənişi tamamla</strong>
+              <label>
+                <span>Qəbul ediləcək məbləğ</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={initialRemaining}
+                  value={depositAmount}
+                  onChange={(event) => setDepositAmount(event.target.value)}
+                />
+              </label>
+              {depositError ? <p className="bonus-note bonus-note--error">{depositError}</p> : null}
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={collectDeposit}
+                disabled={Boolean(depositError) || depositValue <= 0}
+              >
+                Behi kassaya qəbul et
+              </button>
+              <p className="form-help">
+                İlkin ödəniş tam yığılmayınca kredit başladıla bilməz. Hədəf tamamlananda cədvəl avtomatik aktivləşir.
+              </p>
+            </div>
+          ) : null}
+          <CreditInitialPaymentsHistory creditId={item.credit.id} refreshKey={historyKey} />
           <label>
             <span>Kreditin başlanma tarixi</span>
             <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           </label>
           <div className="credit-payment-preview">
             <span>İlk ödəniş tarixi <strong>{firstPaymentDate}</strong></span>
-            <span>Müddət <strong>{item.plan.months} ay</strong></span>
+            <span>Müddət <strong>{previewPlan.months} ay</strong></span>
+            <span>Aylıq <strong>{money(previewPlan.monthly)}</strong></span>
+            <span>Qalıq <strong>{money(previewPlan.balance)}</strong></span>
           </div>
-          <p className="form-help">Təsdiqdən sonra ödəniş cədvəli yaradılacaq və kredit aktiv portfelə keçəcək.</p>
+          <div className="credit-schedule-preview">
+            <strong>Ödəniş cədvəli önizləməsi</strong>
+            {!initialComplete ? (
+              <p className="form-help">
+                Cədvəl {money(requiredInitial)} hədəfinə görə hesablanır. Çatışmayan {money(initialRemaining)} yığılan
+                kimi cədvəl avtomatik yenilənəcək.
+              </p>
+            ) : null}
+            <div className="credit-schedule-preview-scroll">
+              <table className="credit-schedule-preview-table">
+                <thead>
+                  <tr><th>#</th><th>Ödəniş tarixi</th><th>Məbləğ</th></tr>
+                </thead>
+                <tbody>
+                  {previewPlan.installments.map((installment) => (
+                    <tr key={installment.month}>
+                      <td>{installment.month}</td>
+                      <td>{installment.due}</td>
+                      <td>{money(installment.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p className="form-help">Təsdiqdən sonra bu cədvəl yadda saxlanacaq və kredit aktiv portfelə keçəcək.</p>
           <div className="modal-actions">
             <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn"><Play size={15} /> Krediti başlat</button>
+            <button type="submit" className="primary-btn" disabled={!initialComplete}>
+              <Play size={15} /> Krediti başlat
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+
 
 function QuickCollectModal({ item, onReceivePayment, onClose }) {
   const { credit, plan, paymentState } = item;

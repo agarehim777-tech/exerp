@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
 import { resolveModalKind } from "./config/modal-registry.js";
@@ -62,11 +62,7 @@ import {
 import { pageMeta } from "./config/page-meta.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-const HelpCenterPage = lazy(() => import("./modules/help/HelpCenterPage.jsx").then(m => ({ default: m.HelpCenterPage })));
-const OnboardingPage = lazy(() => import("./modules/onboarding/OnboardingPage.jsx").then(m => ({ default: m.OnboardingPage })));
-const ReportsPage = lazy(() => import("./modules/reports/ReportsPage.jsx").then(m => ({ default: m.ReportsPage })));
-const FinancialStatementsPage = lazy(() => import("./modules/reports/FinancialStatementsPage.jsx"));
-const DataReconciliationPage = lazy(() => import("./modules/admin/DataReconciliationPage.jsx"));
+import { AccessCheckPage, AccountingPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancePage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
   createRemoteCompany,
   createRemoteUser,
@@ -127,52 +123,12 @@ import {
 import { total } from "./shared/utils/aggregate.js";
 import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
+import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
-const ContractsPage = lazy(() => import("./modules/contracts/ContractsPage.jsx").then(m => ({ default: m.ContractsPage })));
-const RolesPermissionsPage = lazy(() => import("./modules/settings/RolesPermissionsPage.jsx"));
-const AccessCheckPage = lazy(() => import("./modules/settings/AccessCheckPage.jsx"));
-const AccountingPageV2 = lazy(() => import("./modules/accounting/AccountingPage.jsx"));
-const CrmCustomersPageV2 = lazy(() => import("./modules/crm/CrmCustomersPage.jsx"));
-const AuditLogPage = lazy(() => import("./modules/settings/AuditLogPage.jsx"));
-const CrmDealsPage = lazy(() => import("./modules/crm/CrmDealsPage.jsx"));
 
-const CrmActivitiesPage = lazy(() => import("./modules/crm/CrmActivitiesPage.jsx"));
-const CrmTasksPage = lazy(() => import("./modules/crm/CrmTasksPage.jsx"));
-const SalesDashboardPage = lazy(() => import("./modules/sales/SalesDashboardPage.jsx"));
-const SalesOrdersPage = lazy(() => import("./modules/sales/SalesOrdersPage.jsx"));
-const AssistantPage = lazy(() => import("./modules/assistant/AssistantPage.jsx"));
-const InsightsPage = lazy(() => import("./modules/assistant/InsightsPage.jsx"));
-const CustomerMessengerPanel = lazy(() => import("./modules/notifications/CustomerMessengerPanel.jsx"));
-import FloatingAssistant from "./modules/assistant/FloatingAssistant.jsx";
-const ProcurementPage = lazy(() => import("./modules/procurement/ProcurementPage.jsx"));
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
-const DeliveriesPage = lazy(() => import("./pages/DeliveriesPage.jsx"));
-const InvoicesPage = lazy(() => import("./pages/InvoicesPage.jsx"));
-const ReceivablesPage = lazy(() => import("./pages/ReceivablesPage.jsx"));
-const KpiPage = lazy(() => import("./pages/KpiPage.jsx"));
-const BonusesPage = lazy(() => import("./pages/BonusesPage.jsx"));
-const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
-const AccountingPage = lazy(() => import("./pages/AccountingPage.jsx"));
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
-const CrmPage = lazy(() => import("./pages/CrmPage.jsx"));
-const SalesPage = lazy(() => import("./pages/SalesPage.jsx"));
-const VendorsPage = lazy(() => import("./pages/VendorsPage.jsx"));
-const HrPage = lazy(() => import("./pages/HrPage.jsx"));
-const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage.jsx"));
-const ApiPage = lazy(() => import("./pages/ApiPage.jsx"));
-const PlatformAdminPage = lazy(() => import("./pages/PlatformAdminPage.jsx"));
 import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
-const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
-const WarehousePage = lazy(() => import("./pages/WarehousePage.jsx"));
-const FinancePage = lazy(() => import("./pages/FinancePage.jsx"));
-const StockPage = lazy(() => import("./modules/warehouse/StockPage.jsx"));
-const ProductsPage = lazy(() => import("./modules/warehouse/ProductBalancesPage.jsx"));
-const CashbookPage = lazy(() => import("./modules/finance/CashbookPage.jsx"));
-const SalesInvoicesPage = lazy(() => import("./modules/finance/SalesInvoicesPage.jsx"));
-const VendorManagementPage = lazy(() => import("./pages/VendorManagementPage.jsx"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
-const CreditsPage = lazy(() => import("./pages/CreditsPage.jsx"));
 
 import {
   addDays,
@@ -193,6 +149,7 @@ import {
   getCreditSourceLabel,
   getReceivableClosureAmount,
   isCreditClosed,
+  isCreditStarted,
   matchesCreditDashboardFilter,
   matchesCreditManagementFilter,
   matchesCreditSearch,
@@ -1192,19 +1149,6 @@ function App() {
       messageConversations,
     ],
   );
-
-  const dashboardStats = useMemo(() => {
-    const openOrders = state.orders.filter((order) => order.status !== "Təhvil verilib");
-    const pending = state.expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
-    return {
-      revenue: total(state.orders, "amount"),
-      activeCustomers: state.customers.length,
-      openOrders: openOrders.length,
-      pending: pending.length,
-      reserved: total(state.stock, "reserved"),
-      available: state.stock.reduce((sum, item) => sum + item.total - item.reserved, 0),
-    };
-  }, [state]);
 
   function notify(message, variant = "success") {
     const id = Date.now() + Math.random();
@@ -3310,6 +3254,25 @@ function App() {
       }
 
       if (shortageLines.length > 0) {
+        // Rezervasiya mümkün deyil — istifadəçidən açıq təsdiq alınmadan sifariş yaradılmır.
+        const confirmed = window.confirm(
+          `Qalıq çatışmazlığı: ${shortageLines.join(", ")}.\n\n` +
+            "Bu sətirlər rezerv edilə bilməyəcək və sifariş backorder (mənfi mövcud) kimi qeyd olunacaq.\n\n" +
+            "Davam edilsin?",
+        );
+        if (!confirmed) {
+          notify(
+            `Sifariş bloklandı — rezervasiya üçün qalıq çatışmır: ${shortageLines.join(", ")}.`,
+            "warning",
+          );
+          auditOperation({
+            module: "Satış/Anbar",
+            action: "Rezervasiya bloklandı",
+            detail: `${values.customer || "—"} · ${shortageLines.join(", ")}`,
+            status: "Bloklandı",
+          });
+          return;
+        }
         notify(
           `Qalıq çatışmır — sifariş backorder kimi yaradıldı: ${shortageLines.join(", ")}. Təchizatdan gətirilib təhvil verilməlidir.`,
           "warning",
@@ -3335,8 +3298,11 @@ function App() {
             const prod = productsBySku.get(key) || productsByName.get(key) || null;
             const qty = Number(it.qty || 0);
             const unitPrice = Number(it.price || prod?.price || 0);
-            const stockRow = warehouseRows.find((row) => row.product === it.product);
-            const canReserve = stockRow && getFreeQuantity(stockRow) >= qty;
+            // Rezerv həmişə yaradılır: məhsul DB-də tanınırsa və anbar UUID-dirsə,
+            // sətir anbarın təhvil növbəsinə düşür (qalıq çatmasa belə backorder rezervi).
+            const isUuidWarehouse = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+              String(warehouseId || ""),
+            );
             return {
               line_no: idx + 1,
               product_id: prod?.id || null,
@@ -3345,9 +3311,7 @@ function App() {
               unit_price: unitPrice,
               discount_pct: 0,
               vat_rate: Number(it.vatRate ?? 0),
-              warehouse_id: canReserve && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(warehouseId)
-                ? warehouseId
-                : null,
+              warehouse_id: prod?.id && isUuidWarehouse ? warehouseId : null,
             };
           });
         const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
@@ -3375,14 +3339,23 @@ function App() {
                   credits: creditRecords,
                 }),
                 principal: Number(values.orderTotal || 0),
-                initial_payment: Number(values.initialPayment || 0),
+                initial_payment: Number(values.depositPaid ?? values.initialPayment ?? 0),
+                required_initial: Number(values.initialPayment || 0),
                 term_months: Number(values.creditMonths || 12),
                 start_date: values.date || new Date().toISOString().slice(0, 10),
               }
             : null,
         }).catch((err) => {
           console.error("[orders] DB insert failed:", err);
-          notify(`DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+          notify(describeStockError(err, "DB-yə saxlanılmadı"), "warning");
+          if (isStockShortageError(err)) {
+            auditOperation({
+              module: "Satış/Anbar",
+              action: "Rezervasiya bloklandı",
+              detail: `${values.customer || "—"} · server rezervasiyanı rədd etdi`,
+              status: "Bloklandı",
+            });
+          }
         });
       }
     }
@@ -3517,8 +3490,11 @@ function App() {
               months: values.creditMonths,
             })
           : null;
+        const depositPaid = isCreditSale
+          ? Math.min(Number(values.depositPaid ?? creditPlan.initialPayment ?? 0), creditPlan.initialPayment)
+          : 0;
         const paid = isCreditSale
-          ? creditPlan.initialPayment
+          ? depositPaid
           : ["Nağd", "Kart", "Köçürmə"].includes(paymentMethod)
             ? amount
             : 0;
@@ -3581,14 +3557,16 @@ function App() {
                   device: productSummary,
                   total: amount,
                   initialPayment: creditPlan.initialPayment,
+                  requiredInitial: creditPlan.initialPayment,
+                  initialPaid: depositPaid,
                   balance: creditPlan.balance,
                   monthly: creditPlan.monthly,
                   lastPayment: creditPlan.lastPayment,
                   months: creditPlan.months,
                   paidMonths: 0,
                   rate: 0,
-                  next: creditPlan.installments[0]?.due || "—",
-                  status: "Aktiv",
+                  next: "—",
+                  status: "Başlanmamış",
                   installments: creditPlan.installments,
                   createdFrom: "Satış sifarişi",
                 },
@@ -3618,6 +3596,8 @@ function App() {
               contractId,
               creditMonths: creditPlan?.months || null,
               initialPayment: creditPlan?.initialPayment || 0,
+              requiredInitial: creditPlan?.initialPayment || 0,
+              initialPaid: isCreditSale ? depositPaid : 0,
               creditBalance: creditPlan?.balance || 0,
               creditMonthly: creditPlan?.monthly || 0,
               creditLastPayment: creditPlan?.lastPayment || 0,
@@ -4297,7 +4277,7 @@ function App() {
     });
   }
 
-  async function completeWarehouseDelivery(orderId) {
+  async function completeWarehouseDelivery(orderId, acceptance = {}) {
     if (!requirePermission("delivery.complete", "təhvili tamamlamaq")) return;
 
     const targetOrder = state.orders.find((order) => order.id === orderId);
@@ -4345,9 +4325,19 @@ function App() {
       const { error } = await supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id });
       if (error) {
         console.error("[delivery] stock fulfillment failed:", error);
-        notify(`Təhvil tamamlanmadı: ${error.message || error}`, "warning");
+        notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
+      const { error: acceptanceError } = await supabase.from("deliveries").update({
+        recipient_name: acceptance.recipientName || targetOrder.customer || null,
+        recipient_document: acceptance.documentNo || null,
+        acceptance_name: acceptance.recipientName || targetOrder.customer || null,
+        acceptance_document_no: acceptance.documentNo || null,
+        acceptance_signature: acceptance.signatureConfirmed ? "confirmed" : null,
+        accepted_at: new Date().toISOString(),
+        acceptance_note: acceptance.note || null,
+      }).eq("tenant_id", activeTenantId).eq("order_id", dbOrder.id);
+      if (acceptanceError && !String(acceptanceError.message || "").includes("acceptance_")) console.error("[delivery] acceptance save failed:", acceptanceError);
     }
 
     setState((current) => {
@@ -4419,6 +4409,13 @@ function App() {
                     : `Qismən təhvil (${plan.deliveredTotal + deliveredNow}/${plan.orderedTotal})`,
                   deliveredAt: formatPaymentDate(parsePaymentDate(baseDeliveryDate)),
                   deliveredBy: currentUser?.name || currentUser?.email || "System",
+                  deliveryAcceptance: {
+                    recipientName: acceptance.recipientName || order.customer,
+                    documentNo: acceptance.documentNo || "",
+                    signatureConfirmed: Boolean(acceptance.signatureConfirmed),
+                    note: acceptance.note || "",
+                    acceptedAt: new Date().toISOString(),
+                  },
                 }
               : item,
           ),
@@ -4426,7 +4423,7 @@ function App() {
         {
           module: "Təhvil/Anbar",
           action: fullyDelivered ? "Təhvil tamamlandı" : "Qismən təhvil",
-          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${deliveredNow} ədəd anbardan çıxıldı${
+          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${deliveredNow} ədəd anbardan çıxıldı · Təhvil alan: ${acceptance.recipientName || order.customer}${
             fullyDelivered ? "" : ` · ${remainingAfter} ədəd backorder qalır`
           }`,
           role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
@@ -5540,6 +5537,12 @@ function App() {
       return;
     }
 
+    if (!isCreditStarted(targetCredit)) {
+      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
+      return;
+    }
+
+
     const paymentResult = applyCreditPrincipalPayment(targetCredit, principalAmount);
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
     try {
@@ -5549,7 +5552,7 @@ function App() {
           .from("cash_accounts")
           .select("id")
           .eq("tenant_id", activeTenantId)
-          .eq("code", mainCode)
+          .eq("account_no", mainCode)
           .eq("is_active", true)
           .limit(1)
           .maybeSingle();
@@ -5669,6 +5672,109 @@ function App() {
     });
   }
 
+  async function payCreditInitial(creditId, amount) {
+    if (!requirePermission("credits.manage", "ilkin ödəniş qəbul etmək")) return;
+    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    if (!targetCredit) {
+      notify("Kredit tapılmadı.", "warning");
+      return;
+    }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const alreadyPaid = Number(targetCredit.initialPaid ?? 0);
+    const payment = Math.min(Math.max(0, Math.round(Number(amount || 0))), Math.max(0, requiredInitial - alreadyPaid));
+    if (payment <= 0) {
+      notify("Qəbul ediləcək məbləğ düzgün deyil.", "warning");
+      return;
+    }
+
+    try {
+      if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
+        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
+        let { data: cashAccount, error: accountError } = await supabase
+          .from("cash_accounts")
+          .select("id")
+          .eq("tenant_id", activeTenantId)
+          .eq("account_no", mainCode)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (accountError) throw accountError;
+        if (!cashAccount) {
+          const byName = await supabase
+            .from("cash_accounts")
+            .select("id")
+            .eq("tenant_id", activeTenantId)
+            .ilike("name", "Əsas kassa")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (byName.error) throw byName.error;
+          cashAccount = byName.data;
+        }
+        const { error: rpcError } = await supabase.rpc("post_credit_initial_payment", {
+          _tenant_id: activeTenantId,
+          _credit_id: targetCredit.id,
+          _amount: payment,
+          _cash_account_id: cashAccount?.id || null,
+          _note: "İlkin ödəniş (beh) qəbulu",
+        });
+        if (rpcError) throw rpcError;
+        await refreshDbOrders();
+      }
+    } catch (error) {
+      notify(`İlkin ödəniş qeydə alınmadı: ${error.message}`, "error");
+      return;
+    }
+
+    const nextPaid = alreadyPaid + payment;
+    setState((current) => ({
+      ...current,
+      cashEntries: [
+        {
+          id: `KS-${Date.now()}`,
+          source: "Kredit ilkin ödənişi",
+          creditId,
+          orderId: targetCredit.orderId,
+          customer: targetCredit.customer,
+          contractId: targetCredit.contractId,
+          amount: payment,
+          principal: payment,
+          penalty: 0,
+          date: baseCreditDate,
+          note: "İlkin ödəniş (beh)",
+        },
+        ...(current.cashEntries || []),
+      ],
+      orders: current.orders.map((order) => {
+        const isLinkedOrder = targetCredit.orderId
+          ? order.id === targetCredit.orderId
+          : order.creditId === creditId || getCreditIdForOrder(order) === creditId;
+        if (!isLinkedOrder) return order;
+        return {
+          ...order,
+          paid: Math.min(Number(order.amount || 0), Number(order.paid || 0) + payment),
+          initialPaid: nextPaid,
+        };
+      }),
+      credits: (() => {
+        const exists = current.credits.some((credit) => credit.id === creditId);
+        const nextCredits = exists ? current.credits : [targetCredit, ...current.credits];
+        return nextCredits.map((item) =>
+          item.id === creditId ? { ...item, requiredInitial, initialPaid: nextPaid } : item,
+        );
+      })(),
+    }));
+
+    notify(`${money(payment)} ilkin ödəniş qəbul edildi. Yığılıb: ${money(nextPaid)} / ${money(requiredInitial)}.`);
+    auditOperation({
+      module: "Kredit/Maliyyə",
+      action: "İlkin ödəniş qəbul edildi",
+      detail: `${creditId}: ${money(payment)} · toplam ${money(nextPaid)}/${money(requiredInitial)}`,
+    });
+  }
+
+
   function startCredit(creditId, startDate) {
     if (!requirePermission("credits.manage", "krediti başlatmaq")) return;
     const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
@@ -5676,14 +5782,20 @@ function App() {
       notify("Kredit tapılmadı.", "warning");
       return;
     }
-    if (targetCredit.status === "Başlanmamış" || targetCredit.status === "draft" || targetCredit.startedAt === null) {
-      notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
-      return;
-    }
-    if (targetCredit.status !== "Başlanmamış" && targetCredit.status !== "draft") {
+    if (isCreditStarted(targetCredit)) {
       notify("Bu kredit artıq başladılıb.", "warning");
       return;
     }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const initialPaid = Number(targetCredit.initialPaid ?? 0);
+    if (requiredInitial > 0 && initialPaid + 0.01 < requiredInitial) {
+      notify(
+        `İlkin ödəniş tamamlanmayıb: ${money(initialPaid)} / ${money(requiredInitial)}. Kredit başladıla bilməz.`,
+        "warning",
+      );
+      return;
+    }
+
 
     const plan = buildCreditPlan({
       total: targetCredit.total,
@@ -6542,7 +6654,6 @@ function App() {
           onLogin={loginUser}
           onLogout={logoutUser}
           canSwitchUser={!remoteApiEnabled}
-          gitHubSync={isPlatformAdmin ? gitHubSync : null}
         />
 
         <main className="main">
@@ -6586,8 +6697,8 @@ function App() {
 
           {active === "dashboard" && (
             <DashboardPage
-              stats={dashboardStats}
-              orders={filtered.orders}
+              orders={dbOrders.map(dbOrderToLegacy)}
+              customers={dbCustomers.map(dbCustomerToLegacy)}
               onOpenPendingExpenses={() => {
                 if (choosePage("cashbook")) {
                   navigate(`${pathForModule("cashbook")}?tab=expenses&status=pending`);
@@ -6608,6 +6719,7 @@ function App() {
             <ProductsPage
               warehouses={state.warehouses}
               warehouseStock={state.warehouseStock}
+              inventoryBalances={dbInventory.balances || []}
               products={state.products || []}
               purchaseOrders={state.purchaseOrders || []}
               orders={state.orders || []}
@@ -6702,6 +6814,7 @@ function App() {
               onUpdatePaymentDate={updateCreditPaymentDate}
               onReceivePayment={receiveCreditPayment}
               onStartCredit={startCredit}
+              onPayCreditInitial={payCreditInitial}
               onCreateCredit={() => setModal({ type: "sales", presetPaymentMethod: "Kredit" })}
               onOpenSalesOrder={openLinkedSalesOrder}
               selectedCreditId={selectedCreditId}
@@ -6920,7 +7033,9 @@ function App() {
         </main>
       </div>
 
-      <FloatingAssistant />
+      <Suspense fallback={null}>
+        <FloatingAssistant />
+      </Suspense>
 
       {modal && (
         <Suspense fallback={<div className="modal-shell" role="status"><div className="modal-card">Forma yüklənir…</div></div>}>

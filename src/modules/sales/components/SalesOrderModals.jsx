@@ -468,6 +468,8 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   const [paymentMethod, setPaymentMethod] = useState(defaults.paymentMethod || "Nağd");
   const [creditMonths, setCreditMonths] = useState(12);
   const [initialPayment, setInitialPayment] = useState(0);
+  const [depositPaid, setDepositPaid] = useState(0);
+
   const [productRows, setProductRows] = useState([
     {
       id: createClientId(),
@@ -493,7 +495,9 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     initialPayment,
     months: creditMonths,
   });
-  const paidAmount = paymentMethod === "Kredit" ? creditPlan.initialPayment : orderTotal;
+  const depositNow = Math.min(Math.max(0, Number(depositPaid || 0)), Number(creditPlan.initialPayment || 0));
+  const initialRemaining = Math.max(0, Number(creditPlan.initialPayment || 0) - depositNow);
+  const paidAmount = paymentMethod === "Kredit" ? depositNow : orderTotal;
   const bonusRate = sellerRows.reduce((sum, item) => sum + Number(item.bonus || 0), 0);
   const bonusTotal = (paidAmount * bonusRate) / 100;
   const selectedSerials = productRows.flatMap((row) => row.serials || []);
@@ -520,6 +524,18 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   
 
   const bonusRateValid = bonusRate <= MAX_TOTAL_BONUS_RATE;
+  const initialTargetRaw = Math.max(0, Number(initialPayment || 0));
+  const depositRaw = Math.max(0, Number(depositPaid || 0));
+  const creditValidationError =
+    paymentMethod !== "Kredit"
+      ? ""
+      : initialTargetRaw > orderTotal
+        ? `İlkin ödəniş hədəfi sifariş məbləğini aşır: maksimum ${money(orderTotal)}, daxil edilən ${money(initialTargetRaw)}.`
+        : initialTargetRaw >= orderTotal && orderTotal > 0
+          ? `İlkin ödəniş hədəfi sifariş məbləğindən az olmalıdır (maksimum ${money(Math.max(0, orderTotal - 1))}).`
+          : depositRaw > initialTargetRaw
+            ? `Beh ilkin ödəniş hədəfini aşır: hədəf ${money(initialTargetRaw)}, daxil edilən ${money(depositRaw)}.`
+            : "";
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
@@ -527,8 +543,10 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       orderTotal > 0 &&
       productRows.some((row) => row.product) &&
       sellerRows.some((row) => row.seller) &&
-      bonusRateValid,
+      bonusRateValid &&
+      !creditValidationError,
   );
+
 
 
   function getRowSerialOptions(row) {
@@ -651,6 +669,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       warehouseId,
       creditMonths,
       initialPayment,
+      depositPaid: depositNow,
       products: productRows.map((row) => ({
         ...row,
         serials: normalizeRowSerials(row.product, row.qty, row.serials),
@@ -870,9 +889,9 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                   </select>
                 </label>
                 <label className="order-sub-field">
-                  <span>İLKİN ÖDƏNİŞ</span>
+                  <span>İLKİN ÖDƏNİŞ (HƏDƏF)</span>
                   <input
-                    aria-label="İlkin ödəniş"
+                    aria-label="İlkin ödəniş hədəfi"
                     type="number"
                     min="0"
                     max={orderTotal}
@@ -880,11 +899,26 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     onChange={(event) => setInitialPayment(event.target.value)}
                   />
                 </label>
+                <label className="order-sub-field">
+                  <span>BEH (İNDİ ÖDƏNİLƏN)</span>
+                  <input
+                    aria-label="Beh məbləği"
+                    type="number"
+                    min="0"
+                    max={Number(creditPlan.initialPayment || 0)}
+                    value={depositPaid}
+                    onChange={(event) => setDepositPaid(event.target.value)}
+                  />
+                </label>
               </div>
               <div className="credit-plan-summary">
                 <div>
                   <span>Kredit məbləği</span>
                   <strong>{money(creditPlan.total)}</strong>
+                </div>
+                <div>
+                  <span>İlkin ödəniş qalığı</span>
+                  <strong>{money(initialRemaining)}</strong>
                 </div>
                 <div>
                   <span>Qalıq</span>
@@ -902,7 +936,16 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               <p className="credit-plan-example">
                 Bölgü: {creditPlan.months > 1 ? `${creditPlan.months - 1} ay ${money(creditPlan.monthly)}, ` : ""}
                 sonuncu ay {money(creditPlan.lastPayment)}.
+                {initialRemaining > 0
+                  ? ` İlkin ödənişin ${money(initialRemaining)} hissəsi yığılmayınca kredit başladıla bilməz.`
+                  : ""}
               </p>
+              {creditValidationError ? (
+                <p className="bonus-note bonus-note--error">{creditValidationError}</p>
+              ) : null}
+
+
+
             </section>
           )}
 

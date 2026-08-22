@@ -11,6 +11,7 @@ const TABS = [
   ["pl", "Mənfəət-Zərər"],
   ["bs", "Balans"],
   ["cf", "Pul axını"],
+  ["forecast", "Cash-flow proqnozu"],
   ["ar", "Debitor yaşlanması"],
 ];
 
@@ -23,6 +24,7 @@ export default function FinancialStatementsPage() {
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
   const { profitAndLoss: pl, balanceSheet: bs, cashFlow: cf, aging } = fs;
+  const applyPeriod = mode => { const now=new Date(); let from; if(mode==='month') from=new Date(now.getFullYear(),now.getMonth(),1); else if(mode==='quarter') from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1); else from=new Date(now.getFullYear(),0,1); fs.setRange({from:from.toISOString().slice(0,10),to:now.toISOString().slice(0,10)}); };
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -49,6 +51,7 @@ export default function FinancialStatementsPage() {
           <button type="button" style={primaryBtn} onClick={fs.reload} disabled={fs.loading}>
             {fs.loading ? "Hesablanır…" : "Yenilə"}
           </button>
+          <div style={{display:"flex",gap:6}}><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('month')}>Bu ay</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('quarter')}>Bu rüb</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('year')}>Bu il</button></div>
         </div>
       </div>
 
@@ -176,6 +179,7 @@ export default function FinancialStatementsPage() {
           </table>
         </div>
       )}
+      {tab === "forecast" && <div style={card}><h3 style={{marginTop:0}}>Növbəti 3 ay üzrə cash-flow proqnozu</h3><p style={{color:'#64748b'}}>Mədaxil açıq fakturaların son tarixindən, məxaric isə seçilmiş dövrün aylıq ortalamasından hesablanır.</p><table style={table}><thead><tr><th style={th}>Ay</th><th style={th}>Gözlənilən mədaxil</th><th style={th}>Proqnoz məxaric</th><th style={th}>Xalis dəyişmə</th><th style={th}>Proqnoz qalıq</th></tr></thead><tbody>{fs.cashFlowForecast.rows.map(row=><tr key={row.month}><td style={td}>{row.month}</td><td style={td}>{azn(row.expectedInflow)}</td><td style={td}>{azn(row.expectedOutflow)}</td><td style={{...td,color:row.net<0?'#b23a3a':'#064e3b'}}>{azn(row.net)}</td><td style={{...td,fontWeight:700,color:row.cumulative<0?'#b23a3a':undefined}}>{azn(row.cumulative)}</td></tr>)}</tbody></table></div>}
     </div>
   );
 }

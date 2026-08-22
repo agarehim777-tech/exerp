@@ -4,6 +4,7 @@ import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useStock } from "../../shared/hooks/useStock.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import ValuationPanel from "./ValuationPanel.jsx";
+import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
@@ -29,7 +30,7 @@ export default function StockPage() {
   const totals = useMemo(() => {
     const qty = stock.balances.reduce((sum, b) => sum + Number(b.qty || 0), 0);
     const value = stock.balances.reduce(
-      (sum, b) => sum + Number(b.qty || 0) * Number(b.product?.price || b.avg_cost || 0),
+      (sum, b) => sum + Number(b.qty || 0) * Number(b.avg_cost || 0),
       0,
     );
     const low = stock.balances.filter(
@@ -68,7 +69,7 @@ export default function StockPage() {
       </div>
 
       <div style={tabBar}>
-        {[["warehouses", "Anbarlar"], ["balances", "Anbarlar üzrə qalıqlar"], ["transfer", "Daxili transfer"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"]].map(([k, l]) => (
+        {[["warehouses", "Anbarlar"], ["balances", "Anbarlar üzrə qalıqlar"], ["transfer", "Daxili transfer"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["aging", "Stok yaşlandırması"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
       </div>
@@ -82,6 +83,7 @@ export default function StockPage() {
       {tab === "transfer" && <TransferPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
       {tab === "valuation" && <ValuationPanel loadMovements={stock.fetchAllMovements} products={products} />}
+      {tab === "aging" && <StockAgingPanel tenantId={tenantId} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
     </div>
   );
@@ -107,7 +109,7 @@ function BalancesPanel({ stock }) {
                 <td style={td}>{b.warehouse?.name || "—"}</td>
                 <td style={td}>{b.product?.name || b.sku || "—"}</td>
                 <td style={td}>{b.product?.sku || b.sku || "—"}</td>
-                <td style={{ ...td, fontWeight: 600 }}>{Number(b.qty).toLocaleString("az-AZ")}</td>
+                <td style={{ ...td, fontWeight: 600 }}>{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
                 <td style={td}>
                   <input
                     type="number"

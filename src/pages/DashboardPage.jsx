@@ -12,20 +12,70 @@ import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCashbook } from "../shared/hooks/useCashbook.js";
 import { getOrderSellerBonuses, normalizeOrderProductLines } from "../shared/lib/appDomain.jsx";
 
+const monthLabels = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
+const closedOrderStatuses = new Set(["delivered", "cancelled", "təhvil verilib", "ləğv edilib"]);
+
+function orderDate(order) {
+  const value = order.order_date || order.date || order.created_at;
+  const date = value ? new Date(`${String(value).slice(0, 10)}T00:00:00`) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function orderAmount(order) {
+  return Math.max(0, Number(order.total ?? order.amount ?? 0));
+}
+
+function isCancelled(order) {
+  return String(order.status || "").toLocaleLowerCase("az-AZ").includes("ləğv") || String(order.status || "").toLowerCase() === "cancelled";
+}
+
+function monthStart(date, offset = 0) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+
+export function buildRealtimeDashboard(orders = [], customers = [], now = new Date()) {
+  const currentStart = monthStart(now);
+  const nextStart = monthStart(now, 1);
+  const previousStart = monthStart(now, -1);
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const validOrders = orders.filter((order) => !isCancelled(order));
+  const revenueFor = (from, to) => validOrders.reduce((sum, order) => {
+    const date = orderDate(order);
+    return date && date >= from && date < to ? sum + orderAmount(order) : sum;
+  }, 0);
+  const revenue = revenueFor(currentStart, nextStart);
+  const previousRevenue = revenueFor(previousStart, currentStart);
+  const revenueChange = previousRevenue > 0 ? ((revenue - previousRevenue) / previousRevenue) * 100 : revenue > 0 ? 100 : 0;
+  const newCustomers = customers.filter((customer) => {
+    const value = customer.created_at || customer.createdAt;
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) && date >= currentStart && date < nextStart;
+  }).length;
+  const openOrders = orders.filter((order) => !closedOrderStatuses.has(String(order.status || "").toLocaleLowerCase("az-AZ"))).length;
+  const weeklyOrders = validOrders.filter((order) => {
+    const date = orderDate(order);
+    return date && date >= weekStart && date <= now;
+  }).length;
+  const chart = Array.from({ length: 5 }, (_, index) => {
+    const start = monthStart(now, index - 4);
+    const end = monthStart(now, index - 3);
+    const amount = revenueFor(start, end);
+    return { month: monthLabels[start.getMonth()], amount, value: amount / 1000 };
+  });
+
+  return { revenue, revenueChange, activeCustomers: customers.length, newCustomers, openOrders, weeklyOrders, chart };
+}
+
 export default function DashboardPage({
-  stats,
   orders,
+  customers,
   onOpenPendingExpenses,
 }) {
   const { activeMembership } = useAuth();
   const cashbook = useCashbook(activeMembership?.tenant_id);
-  const chart = [
-    { month: "Yan", value: 145 },
-    { month: "Fev", value: 168 },
-    { month: "Mar", value: 192 },
-    { month: "Apr", value: 178 },
-    { month: "May", value: 249 },
-  ];
+  const dashboard = buildRealtimeDashboard(orders, customers);
+  const chart = dashboard.chart;
+  const chartMax = Math.max(1, ...chart.map((item) => item.value));
   const pending = cashbook.expenses.filter((expense) => ["pending", "draft"].includes(expense.status));
   const sellerPerformance = [...orders.reduce((map, order) => {
     const sellers = getOrderSellerBonuses(order).filter((row) => row.seller);
@@ -64,22 +114,22 @@ export default function DashboardPage({
       <section className="metric-grid">
         <MetricCard
           label="Aylıq gəlir"
-          value={money(stats.revenue)}
-          trend="+18.4% keçən aya"
+          value={money(dashboard.revenue)}
+          trend={`${dashboard.revenueChange >= 0 ? "+" : ""}${dashboard.revenueChange.toFixed(1)}% keçən aya`}
           icon={Wallet}
           tone="success"
         />
         <MetricCard
           label="Aktiv müştəri"
-          value={stats.activeCustomers}
-          trend="+62 bu ay"
+          value={dashboard.activeCustomers}
+          trend={`+${dashboard.newCustomers} bu ay`}
           icon={Users}
           tone="primary"
         />
         <MetricCard
           label="Açıq sifariş"
-          value={stats.openOrders}
-          trend="+12 bu həftə"
+          value={dashboard.openOrders}
+          trend={`+${dashboard.weeklyOrders} bu həftə`}
           icon={ShoppingCart}
           tone="info"
         />
@@ -98,15 +148,15 @@ export default function DashboardPage({
         <Panel style={{ gridColumn: "1 / -1" }}>
           <PanelHeader
             title="Aylıq Satış Dinamikası"
-            subtitle="Son 5 ay üzrə dövriyyə (min ₼)"
+            subtitle="Son 5 ay üzrə canlı dövriyyə (min ₼)"
             icon={TrendingUp}
           />
           <div className="bar-chart" aria-label="Aylıq satış qrafiki">
             {chart.map((item) => {
-              const height = Math.max(9, (item.value / 249) * 100);
+              const height = item.value > 0 ? Math.max(9, (item.value / chartMax) * 100) : 2;
               return (
                 <div className="bar-item" key={item.month}>
-                  <span>{item.value}k</span>
+                  <span>{item.value >= 1 ? `${item.value.toFixed(item.value >= 100 ? 0 : 1)}k` : money(item.amount)}</span>
                   <svg className="bar-visual" viewBox="0 0 58 100" preserveAspectRatio="none" aria-hidden="true">
                     <rect x="0" y={100 - height} width="58" height={height} rx="6" />
                   </svg>

@@ -9,6 +9,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [deliverySearch, setDeliverySearch] = useState("");
   const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
+  const [acceptance, setAcceptance] = useState({ recipientName: "", documentNo: "", signatureConfirmed: false, note: "" });
   const warehouseById = useMemo(() => new Map(warehouses.map((warehouse) => [warehouse.id, warehouse])), [warehouses]);
 
   function decorateDeliveryOrder(order) {
@@ -94,8 +95,10 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
 
   function completeSelected(order) {
     if (!order || !order.stockCheck.ok) return;
-    onCompleteDelivery(order.id);
+    if (!acceptance.recipientName.trim() || !acceptance.signatureConfirmed) return;
+    onCompleteDelivery(order.id, acceptance);
     setSelectedDeliveryId("");
+    setAcceptance({ recipientName: "", documentNo: "", signatureConfirmed: false, note: "" });
   }
 
   function exportVisibleDeliveries() {
@@ -274,9 +277,10 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 </div>
                 <b>{selectedOrder.stockCheck.plan?.remainingTotal ?? selectedOrder.deliveryQty} ədəd</b>
               </div>
+              <div className="delivery-acceptance-form"><strong>Təhvil aktı</strong><label>Təhvil alanın ad-soyadı<input value={acceptance.recipientName} onChange={event=>setAcceptance({...acceptance,recipientName:event.target.value})} placeholder="Ad və soyad" /></label><label>Sənəd nömrəsi<input value={acceptance.documentNo} onChange={event=>setAcceptance({...acceptance,documentNo:event.target.value})} placeholder="Ş/V və ya etibarnamə" /></label><label>Qeyd<textarea value={acceptance.note} onChange={event=>setAcceptance({...acceptance,note:event.target.value})} /></label><label className="delivery-signature-check"><input type="checkbox" checked={acceptance.signatureConfirmed} onChange={event=>setAcceptance({...acceptance,signatureConfirmed:event.target.checked})}/><span>Təhvil alan şəxs elektron imzanı təsdiqlədi</span></label></div>
               <button
                 className="primary-btn full"
-                disabled={!selectedOrder.stockCheck.ok}
+                disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.signatureConfirmed}
                 title={selectedOrder.stockCheck.reason}
                 onClick={() => completeSelected(selectedOrder)}
               >

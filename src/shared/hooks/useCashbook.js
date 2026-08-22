@@ -12,17 +12,19 @@ export function useCashbook(tenantId) {
   const [transactions, setTransactions] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    const [acc, tx, exp, categoryResult] = await Promise.all([
+    const [acc, tx, exp, categoryResult, customerResult, employeeResult] = await Promise.all([
       supabase.from('cash_accounts').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('created_at'),
       supabase
         .from('cash_transactions')
-        .select('*, account:cash_accounts(id,name,currency)')
+        .select('*, account:cash_accounts(id,name,currency), customer:customers(id,name,fin,phone), vendor:vendors(id,name)')
         .eq('tenant_id', tenantId)
         .order('occurred_at', { ascending: false })
         .limit(300),
@@ -33,12 +35,16 @@ export function useCashbook(tenantId) {
         .order('expense_date', { ascending: false })
         .limit(300),
       supabase.from('expense_categories').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
+      supabase.from('customers').select('id,name,fin,phone').eq('tenant_id', tenantId).order('name'),
+      supabase.from('employees').select('id,user_id,full_name,position').eq('tenant_id', tenantId),
     ]);
     const firstError = acc.error || tx.error || exp.error;
     setError(firstError || null);
     setAccounts(acc.data || []);
     setTransactions(tx.data || []);
     setExpenses(exp.data || []);
+    setCustomers(customerResult.data || []);
+    setEmployees(employeeResult.data || []);
     const fallbackKey = `erp.expense_categories.${tenantId}`;
     const fallbackNames = ['icarə', 'kommunal', 'əmək haqqı', 'marketinq', 'nəqliyyat', 'digər'];
     let fallback = [];
@@ -79,8 +85,11 @@ export function useCashbook(tenantId) {
   };
 
   const addTransaction = async (payload) => {
+    const customer = customers.find(item => item.id === payload.customer_id);
     const { error: err } = await supabase.from('cash_transactions').insert({
       ...payload,
+      customer_id: payload.customer_id || null,
+      counterparty: customer?.name || String(payload.counterparty || '').trim() || null,
       transaction_no: payload.transaction_no || newTransactionNo(),
       amount: Number(payload.amount) || 0,
       tenant_id: tenantId,
@@ -472,7 +481,7 @@ export function useCashbook(tenantId) {
   }, [accounts, transactions]);
 
   return {
-    accounts, transactions, expenses, expenseCategories, loading, error, degraded, refresh: fetchAll,
+    accounts, transactions, expenses, expenseCategories, customers, employees, loading, error, degraded, refresh: fetchAll,
     createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, approveExpenseRefund, syncExpenseCashImpact, removeTransaction, syncOrderPayments, removeAccount, transfer, balanceOf,
   };
 }

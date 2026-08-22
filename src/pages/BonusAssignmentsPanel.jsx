@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { History, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, History, Plus, Save, Trash2 } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { Panel, PanelHeader, StatusBadge } from "../components/ui.jsx";
 import { useOrders } from "../shared/hooks/useOrders.js";
@@ -17,6 +17,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
   const [reason, setReason] = useState("");
   const [lines, setLines] = useState([{ seller_name: "", rate: "" }]);
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
 
   const history = useMemo(
     () => ledger.assignments.filter((row) => row.order_id === orderId),
@@ -45,6 +46,13 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
   return (
     <Panel>
       <PanelHeader title="Sifariş üzrə bonus bölgüsü" subtitle="Yeni bölgü seçilən tarixdən sonrakı kassa daxilolmalarına tətbiq edilir" icon={History} />
+      <div className="bonus-assignment-actions" style={{ marginBottom: open ? 12 : 0 }}>
+        <button type="button" className="secondary-btn compact" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          {open ? "Bölgü formasını bağla" : "Bölgü formasını aç"}
+        </button>
+      </div>
+      {open ? (<>
       <form className="bonus-assignment-form" onSubmit={save}>
         <div className="bonus-assignment-head">
           <label><span>Sifariş</span><select value={orderId} onChange={(event) => setOrderId(event.target.value)}><option value="">Sifariş seçin</option>{orders.map((order) => <option key={order.id} value={order.id}>{order.order_no} · {order.customer?.name || "Müştəri yoxdur"}</option>)}</select></label>
@@ -69,6 +77,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
       {message ? <div className="bonus-assignment-message">{message}</div> : null}
       {ledger.error ? <div className="bonus-assignment-message error">{ledger.error.message}</div> : null}
       {orderId && history.length ? <div className="bonus-history"><h4>Bölgü tarixçəsi</h4>{history.map((row) => <div className="bonus-history-row" key={row.id}><strong>{row.seller_name}</strong><span>{Number(row.rate)}%</span><span>{row.effective_from} — {row.effective_to || "davam edir"}</span><StatusBadge status={row.effective_to ? "Bağlanıb" : "Aktiv"} /><small>{row.reason || "Səbəb qeyd edilməyib"}</small></div>)}</div> : null}
+      </>) : null}
     </Panel>
   );
 }

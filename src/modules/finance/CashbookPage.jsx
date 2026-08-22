@@ -157,23 +157,41 @@ function AccountsPanel({ book }) {
 }
 
 function TransactionsPanel({ book }) {
-  const [form, setForm] = useState({ account_id: "", direction: "in", amount: "", category: "", counterparty: "", description: "", occurred_at: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ account_id: "", direction: "in", amount: "", category: "", customer_id: "", counterparty: "", description: "", occurred_at: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState("");
+  const [search, setSearch] = useState("");
 
   const submit = async (event) => {
     event.preventDefault();
     setMsg("");
     try {
       await book.addTransaction(form);
-      setForm({ ...form, amount: "", counterparty: "", description: "" });
+      setForm({ ...form, amount: "", customer_id: "", counterparty: "", description: "" });
     } catch (error) { setMsg(`Xəta: ${error.message}`); }
   };
+
+  const employeeByUser = useMemo(() => new Map(book.employees.map(item => [item.user_id, item])), [book.employees]);
+  const visibleTransactions = useMemo(() => {
+    const needle = search.trim().toLocaleLowerCase("az");
+    if (!needle) return book.transactions;
+    return book.transactions.filter(transaction => [
+      transaction.transaction_no,
+      transaction.customer?.name,
+      transaction.vendor?.name,
+      transaction.counterparty,
+      transaction.reference,
+      transaction.category,
+      transaction.description,
+      transaction.account?.name,
+      employeeByUser.get(transaction.created_by)?.full_name,
+    ].some(value => String(value || "").toLocaleLowerCase("az").includes(needle)));
+  }, [book.transactions, employeeByUser, search]);
 
   return (
     <div style={card}>
       <h3 style={{ marginTop: 0 }}>Kassa əməliyyatları</h3>
       {msg && <div style={msgBox}>{msg}</div>}
-      <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 16 }}>
+      <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, marginBottom: 16 }}>
         <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} style={input}>
           <option value="">Hesab seç…</option>
           {book.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -184,27 +202,44 @@ function TransactionsPanel({ book }) {
         </select>
         <input required type="number" step="0.01" placeholder="Məbləğ" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={input} />
         <input placeholder="Kateqoriya" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input} />
-        <input placeholder="Qarşı tərəf" value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} style={input} />
+        <select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value, counterparty: "" })} style={input}>
+          <option value="">Müştəri seç (istəyə bağlı)</option>
+          {book.customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}{customer.fin ? ` · ${customer.fin}` : ""}</option>)}
+        </select>
+        <input disabled={Boolean(form.customer_id)} placeholder={form.direction === "in" ? "Ödəyən şəxsin ad-soyadı" : "Ödənişi alanın ad-soyadı"} value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} style={input} />
+        <input placeholder="Qeyd / izah" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={input} />
         <input type="date" value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} style={input} />
         <button type="submit" disabled={!book.accounts.length} style={primaryBtn}>+ Qeyd et</button>
       </form>
       {!book.accounts.length && <div style={msgBox}>Əvvəlcə «Hesablar» bölməsindən kassa/bank hesabı yaradın.</div>}
-      <table style={table}>
-        <thead><tr><th style={th}>Tarix</th><th style={th}>Hesab</th><th style={th}>Növ</th><th style={th}>Məbləğ</th><th style={th}>Qarşı tərəf</th><th style={th} /></tr></thead>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+        <b>{visibleTransactions.length} əməliyyat</b>
+        <input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)} style={{ ...input, width: "min(100%, 380px)" }} />
+      </div>
+      <div style={{ overflowX: "auto" }}><table style={{ ...table, minWidth: 1120 }}>
+        <thead><tr><th style={th}>Tarix</th><th style={th}>Əməliyyat №</th><th style={th}>Hesab</th><th style={th}>Növ</th><th style={th}>Məbləğ</th><th style={th}>Ödəyən / qarşı tərəf</th><th style={th}>Bağlı sənəd</th><th style={th}>Kateqoriya</th><th style={th}>Daxil edən</th><th style={th}>Qeyd</th><th style={th} /></tr></thead>
         <tbody>
-          {book.transactions.map((t) => (
+          {visibleTransactions.map((t) => {
+            const employee = employeeByUser.get(t.created_by);
+            const partyName = t.customer?.name || t.vendor?.name || t.counterparty || "—";
+            return (
             <tr key={t.id}>
               <td style={td}>{new Date(t.occurred_at).toLocaleDateString("az-AZ")}</td>
+              <td style={td}><b>{t.transaction_no || "—"}</b></td>
               <td style={td}>{t.account?.name || "—"}</td>
               <td style={td}><span style={badge(t.category === "internal_transfer" ? "gray" : t.direction === "in" ? "green" : "red")}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span></td>
               <td style={{ ...td, fontWeight: 600 }}>{azn(t.amount)}</td>
-              <td style={td}>{t.counterparty || t.description || "—"}</td>
+              <td style={td}><b>{partyName}</b>{t.customer?.fin && <div style={{ color: "#64748b", fontSize: 12 }}>FİN: {t.customer.fin}</div>}</td>
+              <td style={td}>{t.reference || "—"}</td>
+              <td style={td}>{t.category || "—"}</td>
+              <td style={td}>{employee?.full_name || "Sistem"}{employee?.position && <div style={{ color: "#64748b", fontSize: 12 }}>{employee.position}</div>}</td>
+              <td style={{ ...td, maxWidth: 260, whiteSpace: "normal" }}>{t.description || "—"}</td>
               <td style={td}><button style={delBtn} onClick={() => window.confirm("Silinsin?") && book.removeTransaction(t.id)}>Sil</button></td>
             </tr>
-          ))}
-          {!book.transactions.length && <tr><td style={td} colSpan={6}>Əməliyyat yoxdur.</td></tr>}
+          );})}
+          {!visibleTransactions.length && <tr><td style={td} colSpan={11}>{book.transactions.length ? "Axtarışa uyğun əməliyyat yoxdur." : "Əməliyyat yoxdur."}</td></tr>}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }

@@ -38,6 +38,13 @@ export function toDateInputValue(value) {
 
 export function addMonths(dateValue, months) {
   const date = parsePaymentDate(dateValue) || new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return date;
+  const day = date.getDate();
+  // Move to the 1st first so setMonth can never overflow into the next month,
+  // then clamp the day to the last day of the target month (31 Jan + 1 => 28/29 Feb).
+  date.setDate(1);
   date.setMonth(date.getMonth() + months);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(day, lastDay));
   return date;
 }

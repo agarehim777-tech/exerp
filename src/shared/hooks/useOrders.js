@@ -59,7 +59,7 @@ export function useOrders(tenantId) {
       if (orderIds.length) {
         const [creditResult, bonusResult] = await Promise.all([
           supabase.from('credit_contracts')
-            .select('id,order_id,contract_no,principal,initial_payment,term_months,start_date,status,created_at')
+            .select('id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at')
             .eq('tenant_id', tenantId).in('order_id', orderIds),
           supabase.from('order_bonus_assignments')
             .select('id,order_id,seller_name,rate,position,effective_from,effective_to')
@@ -108,7 +108,7 @@ export function useOrders(tenantId) {
 
     const code = mainCashCode(tenantId);
     let { data: account, error: accountError } = await supabase.from('cash_accounts')
-      .select('id').eq('tenant_id', tenantId).eq('code', code).eq('is_active', true)
+      .select('id').eq('tenant_id', tenantId).eq('account_no', code).eq('is_active', true)
       .limit(1).maybeSingle();
     if (accountError) throw accountError;
     if (!account) {
@@ -120,7 +120,7 @@ export function useOrders(tenantId) {
     }
     if (!account) {
       const { data: inactiveAccount, error: inactiveError } = await supabase.from('cash_accounts')
-        .select('id').eq('tenant_id', tenantId).eq('code', code).maybeSingle();
+        .select('id').eq('tenant_id', tenantId).eq('account_no', code).maybeSingle();
       if (inactiveError) throw inactiveError;
       if (inactiveAccount) {
         const { data: reactivated, error: reactivateError } = await supabase.from('cash_accounts')
@@ -130,7 +130,7 @@ export function useOrders(tenantId) {
         account = reactivated;
       } else {
         const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
-          tenant_id: tenantId, code, name: 'Əsas kassa', type: 'cash', currency, opening_balance: 0, is_active: true,
+          tenant_id: tenantId, account_no: code, name: 'Əsas kassa', type: 'cash', currency, opening_balance: 0, is_active: true,
         }).select('id').single();
         if (createAccountError) throw createAccountError;
         account = createdAccount;
@@ -157,6 +157,7 @@ export function useOrders(tenantId) {
       _order_id: orderId,
       _principal: Number(credit.principal || 0),
       _initial_payment: Number(credit.initial_payment || 0),
+      _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
       _term_months: Number(credit.term_months || 12),
       _start_date: credit.start_date || new Date().toISOString().slice(0, 10),
     });
@@ -337,7 +338,7 @@ export function useOrders(tenantId) {
       else {
         const code = mainCashCode(tenantId);
         const { data: inactiveAccount, error: inactiveError } = await supabase.from('cash_accounts')
-          .select('id').eq('tenant_id', tenantId).eq('code', code).limit(1).maybeSingle();
+          .select('id').eq('tenant_id', tenantId).eq('account_no', code).limit(1).maybeSingle();
         if (inactiveError) throw inactiveError;
         if (inactiveAccount) {
           const { data: reactivated, error: reactivateError } = await supabase.from('cash_accounts')
@@ -347,7 +348,7 @@ export function useOrders(tenantId) {
           resolvedAccountId = reactivated.id;
         } else {
           const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
-            tenant_id: tenantId, code, name: 'Əsas kassa', type: 'cash', currency: order.currency || 'AZN', opening_balance: 0, is_active: true,
+            tenant_id: tenantId, account_no: code, name: 'Əsas kassa', type: 'cash', currency: order.currency || 'AZN', opening_balance: 0, is_active: true,
           }).select('id').single();
           if (createAccountError) throw createAccountError;
           resolvedAccountId = createdAccount.id;

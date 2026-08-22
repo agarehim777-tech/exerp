@@ -17,6 +17,12 @@ const customerPayload = (values, previousNotes = null) => {
 };
 
 const CUSTOMERS_PAGE_SIZE = 500;
+const compact = value => String(value || '').toLocaleLowerCase('az').replace(/[^a-z0-9əöüğşıç]/g, '');
+export const findCustomerDuplicates = (candidate, rows, excludedId = null) => rows.filter(row => row.id !== excludedId && [
+  ['FİN/VÖEN', compact(candidate.fin_code || candidate.tax_id), compact(row.fin_code || row.tax_id)],
+  ['telefon', compact(candidate.phone), compact(row.phone)],
+  ['e-poçt', compact(candidate.email), compact(row.email)],
+].some(([, left, right]) => left && right && left === right));
 
 export function useCustomers(tenantId) {
   const [customers, setCustomers] = useState([]);
@@ -61,6 +67,8 @@ export function useCustomers(tenantId) {
   useRealtimeResync(tenantId, ['customers'], fetchAll, { channelPrefix: 'customers' });
 
   const create = async (values) => {
+    const duplicates = findCustomerDuplicates(values, customers);
+    if (duplicates.length) throw new Error(`Dublikat müştəri: ${duplicates.map(item => item.name).join(', ')}. FİN/VÖEN, telefon və e-poçtu yoxlayın.`);
     const { data, error } = await supabase
       .from('customers')
       .insert({ ...customerPayload(values), tenant_id: tenantId })
@@ -80,6 +88,8 @@ export function useCustomers(tenantId) {
 
   const update = async (id, values) => {
     const current = customers.find(customer => customer.id === id);
+    const duplicates = findCustomerDuplicates(values, customers, id);
+    if (duplicates.length) throw new Error(`Bu məlumat başqa müştəriyə aiddir: ${duplicates.map(item => item.name).join(', ')}.`);
     const { data, error } = await supabase
       .from('customers').update(customerPayload(values, current?.notes)).eq('id', id).select().single();
     if (error) throw error;

@@ -66,6 +66,23 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
   );
   const aging = useMemo(() => buildReceivablesAging(invoices, range.to), [invoices, range.to]);
   const cashFlow = useMemo(() => buildCashFlow(transactions), [transactions]);
+  const cashFlowForecast = useMemo(() => {
+    const today = new Date(range.to);
+    const monthlyOutflow = cashFlow.rows.length ? cashFlow.outflow / cashFlow.rows.length : 0;
+    let cumulative = cashFlow.net;
+    const rows = Array.from({ length: 3 }, (_, index) => {
+      const start = new Date(today.getFullYear(), today.getMonth() + index + 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + index + 2, 0);
+      const expectedInflow = invoices.filter(invoice => {
+        const due = new Date(invoice.due_date || invoice.invoice_date || "");
+        return due >= start && due <= end && Number(invoice.total || 0) > Number(invoice.paid_amount || 0);
+      }).reduce((sum, invoice) => sum + Math.max(0, Number(invoice.total || 0) - Number(invoice.paid_amount || 0)), 0);
+      const expectedOutflow = monthlyOutflow;
+      cumulative += expectedInflow - expectedOutflow;
+      return { month: start.toISOString().slice(0, 7), expectedInflow, expectedOutflow, net: expectedInflow - expectedOutflow, cumulative };
+    });
+    return { rows, opening: cashFlow.net, monthlyOutflow };
+  }, [cashFlow, invoices, range.to]);
 
-  return { range, setRange, loading, error, reload: load, trialRows, profitAndLoss, balanceSheet, aging, cashFlow };
+  return { range, setRange, loading, error, reload: load, trialRows, profitAndLoss, balanceSheet, aging, cashFlow, cashFlowForecast };
 }

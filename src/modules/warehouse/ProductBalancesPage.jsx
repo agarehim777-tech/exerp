@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, ExternalLink, History, Package, ShoppingCart, Users, X } from "lucide-react";
+import { ArrowDownToLine, CircleDollarSign, ExternalLink, History, Package, RotateCcw, ShoppingCart, Users, X } from "lucide-react";
 import { getRecommendedOrderPlan, WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { shortProcurementDocumentNo } from "../procurement/documentNumbers.js";
+import ProductReturnsPanel from "./ProductReturnsPanel.jsx";
+import { buildAverageCostHistory, movementKind } from "./inventory360.js";
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
@@ -21,14 +24,36 @@ function productLineMatches(line, product) {
     || String(line?.product || line?.name || "").trim().toLocaleLowerCase("az") === String(product?.name || "").trim().toLocaleLowerCase("az");
 }
 
-function Product360Modal({ product, warehouses, warehouseStock, purchaseOrders, orders, movements, loadingMovements, reservations, receiptLinks, loadingLinks, onClose, onEdit, onOpenOrder, onOpenProcurement }) {
-  const [tab, setTab] = useState("overview");
-  const balances = useMemo(() => warehouses.map((warehouse) => {
+export function buildProductWarehouseBalances(product, warehouses = [], warehouseStock = {}, inventoryBalances = []) {
+  const warehouseById = new Map(warehouses.map((warehouse) => [String(warehouse.id), warehouse]));
+  const liveRows = inventoryBalances
+    .filter((row) => String(row.product_id || row.product?.id || "") === String(product?.id || "") || productLineMatches(row, product))
+    .map((row) => {
+      const warehouseId = String(row.warehouse_id || row.warehouse?.id || "");
+      const total = Number(row.on_hand ?? row.qty ?? row.quantity ?? row.total ?? 0) || 0;
+      const reserved = Number(row.reserved ?? row.reserved_quantity ?? 0) || 0;
+      return {
+        warehouse: warehouseById.get(warehouseId) || row.warehouse || { id: warehouseId, name: "Naməlum anbar" },
+        total,
+        reserved,
+        available: Math.max(0, total - reserved),
+      };
+    });
+  if (liveRows.length) return liveRows.filter((row) => row.total || row.reserved);
+  return warehouses.map((warehouse) => {
     const row = (warehouseStock?.[warehouse.id] || []).find((item) => productLineMatches(item, product));
-    const total = Number(row?.total ?? row?.quantity ?? 0);
-    const reserved = Number(row?.reserved ?? row?.reserved_quantity ?? 0);
-    return { warehouse, total, reserved, available: total - reserved };
-  }).filter((row) => row.total || row.reserved), [product, warehouses, warehouseStock]);
+    const total = Number(row?.on_hand ?? row?.qty ?? row?.total ?? row?.quantity ?? 0) || 0;
+    const reserved = Number(row?.reserved ?? row?.reserved_quantity ?? 0) || 0;
+    return { warehouse, total, reserved, available: Math.max(0, total - reserved) };
+  }).filter((row) => row.total || row.reserved);
+}
+
+function Product360Modal({ product, warehouses, warehouseStock, inventoryBalances, purchaseOrders, orders, movements, loadingMovements, reservations, receiptLinks, loadingLinks, onClose, onEdit, onOpenOrder, onOpenProcurement }) {
+  const [tab, setTab] = useState("stock");
+  const balances = useMemo(
+    () => buildProductWarehouseBalances(product, warehouses, warehouseStock, inventoryBalances),
+    [product, warehouses, warehouseStock, inventoryBalances],
+  );
 
   const sales = useMemo(() => orders.flatMap((order) => (order.productLines || [])
     .filter((line) => productLineMatches(line, product))
@@ -38,6 +63,7 @@ function Product360Modal({ product, warehouses, warehouseStock, purchaseOrders, 
   const productMovements = useMemo(() => movements.filter((item) =>
     String(item.product_id || item.product?.id || "") === String(product.id)
     || String(item.sku || item.product?.sku || "") === String(product.sku || "")), [movements, product]);
+  const costHistory = useMemo(() => buildAverageCostHistory(productMovements, product.salePrice || product.price || 0).reverse(), [productMovements, product.salePrice, product.price]);
   const incoming = productMovements.filter((item) => ["in", "receipt", "transfer_in"].includes(movementType(item)));
   const activeReservations = reservations.filter((item) => item.status === "active");
   const total = balances.reduce((sum, item) => sum + item.total, 0);
@@ -86,16 +112,18 @@ function Product360Modal({ product, warehouses, warehouseStock, purchaseOrders, 
           </div>
 
           <div className="warehouse-balance-tabs" role="tablist" style={{ marginBottom: 16 }}>
-            {[["overview", "Ümumi baxış", Package], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Bütün tarixçə (${productMovements.length})`, History]].map(([key, label, Icon]) => (
+            {[["stock", `Qalıq (${balances.length})`, Package], ["cost", `Maya tarixçəsi (${costHistory.length})`, CircleDollarSign], ["returns", "Qaytarmalar", RotateCcw], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Stok 360 (${productMovements.length})`, History]].map(([key, label, Icon]) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>
             ))}
           </div>
 
-          {tab === "overview" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Qalıq", "Rezerv", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, available }) => [warehouse.name, number(qty), number(hold), number(available)])} />}
+          {tab === "stock" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Qalıq", "Rezerv", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, available }) => [warehouse.name, number(qty), number(hold), number(available)])} />}
+          {tab === "cost" && <HistoryTable title="Orta maya və satış marjası tarixçəsi" empty="Maya hesablayan stok hərəkəti yoxdur." headers={["Tarix", "Əməliyyat", "Miqdar sonrası", "Əvvəlki maya", "Yeni orta maya", "Marja", "Marja %"]} rows={costHistory.map((row) => [dateTime(row.item.moved_at || row.item.created_at), row.type, number(row.quantity), money(row.previousCost), money(row.averageCost), money(row.margin), `${row.marginPct.toFixed(1)}%`])} />}
+          {tab === "returns" && <ProductReturnsPanel product={product} warehouses={warehouses} orders={orders} />}
           {tab === "reservations" && <HistoryTable loading={loadingLinks} title="Aktiv rezervlər" empty="Bu məhsul üzrə aktiv rezerv yoxdur." headers={["Tarix", "Sifariş", "Müştəri", "Anbar", "Miqdar", "Rezerv edən", "Status"]} rows={activeReservations.map((item) => [dateTime(item.created_at), <DocumentButton onClick={() => onOpenOrder?.(item.order_id)} title="Sifarişi aç">{item.order?.order_no || item.order_id}</DocumentButton>, item.order?.customer?.name || "—", item.warehouse?.name || "—", number(item.quantity), item.creatorName || "Sistem istifadəçisi", "Aktiv"])} />}
           {tab === "sales" && <HistoryTable title="Satış tarixçəsi" empty="Bu məhsul üzrə satış tapılmadı." headers={["Tarix", "Sifariş", "Müştəri", "Miqdar", "Məbləğ", "Status"]} rows={sales.map(({ order, qty, total: amount }) => [dateTime(order.date || order.created_at), <DocumentButton onClick={() => onOpenOrder?.(order.id || order.order_id || order.orderNo || order.order_no)} title="Sifarişi aç">{order.orderNo || order.order_no || order.id || "—"}</DocumentButton>, order.customer?.name || order.customer || order.customerName || "—", number(qty), money(amount), order.status || "—"])} />}
-          {tab === "receipts" && <HistoryTable loading={loadingMovements || loadingLinks} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Vahid maya", "Qəbul sənədi", "Göndəriş", "Qeyd"]} rows={incoming.map((item) => { const link = receiptLinks[item.id] || receiptLinks[item.reference_id]; return [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), <DocumentButton onClick={link ? () => onOpenProcurement?.(link) : null} title="Qəbul sənədini aç">{link?.receipt_no || item.doc_no || item.reference || "—"}</DocumentButton>, link?.shipment_no || "—", item.note || "—"]; })} />}
-          {tab === "history" && <HistoryTable loading={loadingMovements || loadingLinks} title="Məhsulun bütün hərəkətləri" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Əməliyyat", "Anbar", "Miqdar", "Maya", "Bağlı sənəd", "Qeyd"]} rows={productMovements.map((item) => { const type=movementType(item); const reservation = reservations.find((row) => String(row.id) === String(item.reference_id)); const receipt = receiptLinks[item.id] || receiptLinks[item.reference_id]; const isReceipt=["in","receipt","transfer_in"].includes(type); const isOut=["out","delivery","transfer_out","write_off"].includes(type); const label=type === "reservation" ? "Rezerv edildi" : type === "release" ? "Rezerv ləğv edildi" : isReceipt ? "Daxilolma" : isOut ? "Çıxış / satış" : type || "Hərəkət"; const document = reservation ? <DocumentButton onClick={() => onOpenOrder?.(reservation.order_id)}>{reservation.order?.order_no || reservation.order_id}</DocumentButton> : receipt ? <DocumentButton onClick={() => onOpenProcurement?.(receipt)}>{receipt.receipt_no || receipt.shipment_no}</DocumentButton> : item.doc_no || item.reference || item.reference_type || "—"; return [dateTime(item.moved_at||item.created_at), label, item.warehouse?.name || "—", number(item.qty??item.quantity), money(item.unit_cost), document, item.note || "—"]; })} />}
+          {tab === "receipts" && <HistoryTable loading={loadingMovements || loadingLinks} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Vahid maya", "Qəbul sənədi", "Göndəriş", "Qeyd"]} rows={incoming.map((item) => { const link = receiptLinks[item.id] || receiptLinks[item.reference_id]; return [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), <DocumentButton onClick={link ? () => onOpenProcurement?.(link) : null} title="Qəbul sənədini aç">{shortProcurementDocumentNo(link?.receipt_no || item.doc_no || item.reference)}</DocumentButton>, shortProcurementDocumentNo(link?.shipment_no), item.note || "—"]; })} />}
+          {tab === "history" && <HistoryTable loading={loadingMovements || loadingLinks} title="Məhsulun vahid stok hərəkəti tarixçəsi" empty="Bu məhsul üzrə stok hərəkəti tapılmadı." headers={["Tarix", "Əməliyyat", "Anbar", "Miqdar", "Maya", "Bağlı sənəd", "Qeyd"]} rows={productMovements.map((item) => { const reservation = reservations.find((row) => String(row.id) === String(item.reference_id)); const receipt = receiptLinks[item.id] || receiptLinks[item.reference_id]; const document = reservation ? <DocumentButton onClick={() => onOpenOrder?.(reservation.order_id)}>{reservation.order?.order_no || reservation.order_id}</DocumentButton> : receipt ? <DocumentButton onClick={() => onOpenProcurement?.(receipt)}>{shortProcurementDocumentNo(receipt.receipt_no || receipt.shipment_no)}</DocumentButton> : item.doc_no || item.reference || item.reference_type || "—"; return [dateTime(item.moved_at||item.created_at), movementKind(item), item.warehouse?.name || "—", number(item.qty??item.quantity), money(item.unit_cost), document, item.note || "—"]; })} />}
         </div>
       </div>
     </div>
@@ -113,7 +141,7 @@ function HistoryTable({ title, headers, rows, empty, loading }) {
   </section>;
 }
 
-export default function ProductBalancesPage({ warehouses = [], warehouseStock = {}, products = [], purchaseOrders = [], orders = [], stockMovements = [], fetchAllMovements, onReceiveStock, onOpenImport, onCreateProduct, onEditProduct, onOpenWarehouse, onOpenSalesOrder, onOpenProcurementDocument, onTrackAction }) {
+export default function ProductBalancesPage({ warehouses = [], warehouseStock = {}, inventoryBalances = [], products = [], purchaseOrders = [], orders = [], stockMovements = [], fetchAllMovements, onReceiveStock, onOpenImport, onCreateProduct, onEditProduct, onOpenWarehouse, onOpenSalesOrder, onOpenProcurementDocument, onTrackAction }) {
   const { activeTenantId } = useAuth();
   const [query, setQuery] = useState("");
   const [livePurchaseOrders, setLivePurchaseOrders] = useState(null);
@@ -203,6 +231,6 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
 
   return <div className="stack warehouse-module product-balances-page">
     <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={livePurchaseOrders??purchaseOrders} query={query} onQueryChange={setQuery} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onOpenOperations={() => onOpenWarehouse?.("all")} onTrackAction={onTrackAction} />
-    {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} purchaseOrders={livePurchaseOrders ?? purchaseOrders} orders={orders} movements={movements} loadingMovements={loadingMovements} reservations={reservations} receiptLinks={receiptLinks} loadingLinks={loadingLinks} onClose={() => setSelectedId(null)} onEdit={onEditProduct} onOpenOrder={onOpenSalesOrder} onOpenProcurement={onOpenProcurementDocument} />}
+    {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} inventoryBalances={inventoryBalances} purchaseOrders={livePurchaseOrders ?? purchaseOrders} orders={orders} movements={movements} loadingMovements={loadingMovements} reservations={reservations} receiptLinks={receiptLinks} loadingLinks={loadingLinks} onClose={() => setSelectedId(null)} onEdit={onEditProduct} onOpenOrder={onOpenSalesOrder} onOpenProcurement={onOpenProcurementDocument} />}
   </div>;
 }

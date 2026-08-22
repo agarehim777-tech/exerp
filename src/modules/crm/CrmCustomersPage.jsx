@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
-import { useCustomers } from '../../shared/hooks/useCustomers.js';
+import { findCustomerDuplicates, useCustomers } from '../../shared/hooks/useCustomers.js';
 import Avatar from './Avatar.jsx';
 import CustomerDrawer from './CustomerDrawer.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
@@ -66,6 +66,10 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
     .filter(item => item.next && item.next.days <= 30).sort((a, b) => a.next.days - b.next.days), [customers]);
   const birthdaysToday = birthdays.filter(item => item.next.days === 0);
   const birthdaysUpcoming = birthdays.filter(item => item.next.days > 0);
+  const duplicateGroups = useMemo(() => customers.flatMap((customer, index) => {
+    const matches = findCustomerDuplicates(customer, customers.slice(index + 1));
+    return matches.map(match => [customer, match]);
+  }), [customers]);
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -89,6 +93,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
           { label: 'Yeni bu ay', value: stats.newMonth, color: '#38bdf8' },
           { label: 'Aktiv (30g)', value: stats.active, color: '#a78bfa' },
           { label: 'Platin', value: stats.platinum, color: '#7c3aed' },
+          { label: 'Dublikat riski', value: duplicateGroups.length, color: duplicateGroups.length ? '#dc2626' : '#10b981' },
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</span>
@@ -96,6 +101,8 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
           </div>
         ))}
       </div>
+
+      {duplicateGroups.length > 0 && <section style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 10, padding: 14 }}><b style={{ color: '#9a3412' }}>Dublikat ola bilən müştərilər</b><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>{duplicateGroups.map(([left, right]) => <button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} style={{ border: '1px solid #fdba74', borderRadius: 7, background: '#fff', padding: '7px 10px', cursor: 'pointer' }}>{left.name} ↔ {right.name}</button>)}</div></section>}
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar: ad, telefon, FİN, VÖEN, vəsiqə..."
