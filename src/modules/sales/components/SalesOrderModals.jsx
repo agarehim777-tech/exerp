@@ -524,6 +524,18 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   
 
   const bonusRateValid = bonusRate <= MAX_TOTAL_BONUS_RATE;
+  const initialTargetRaw = Math.max(0, Number(initialPayment || 0));
+  const depositRaw = Math.max(0, Number(depositPaid || 0));
+  const creditValidationError =
+    paymentMethod !== "Kredit"
+      ? ""
+      : initialTargetRaw > orderTotal
+        ? `İlkin ödəniş hədəfi sifariş məbləğini aşır: maksimum ${money(orderTotal)}, daxil edilən ${money(initialTargetRaw)}.`
+        : initialTargetRaw >= orderTotal && orderTotal > 0
+          ? `İlkin ödəniş hədəfi sifariş məbləğindən az olmalıdır (maksimum ${money(Math.max(0, orderTotal - 1))}).`
+          : depositRaw > initialTargetRaw
+            ? `Beh ilkin ödəniş hədəfini aşır: hədəf ${money(initialTargetRaw)}, daxil edilən ${money(depositRaw)}.`
+            : "";
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
@@ -531,8 +543,10 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       orderTotal > 0 &&
       productRows.some((row) => row.product) &&
       sellerRows.some((row) => row.seller) &&
-      bonusRateValid,
+      bonusRateValid &&
+      !creditValidationError,
   );
+
 
 
   function getRowSerialOptions(row) {
