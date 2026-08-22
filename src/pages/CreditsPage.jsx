@@ -36,6 +36,7 @@ function CreditsPage({
   onReceivePayment,
   onCreateCredit,
   onStartCredit,
+  onPayCreditInitial,
   onOpenSalesOrder,
   selectedCreditId,
   onClearSelectedCredit,
