@@ -3352,7 +3352,8 @@ function App() {
                   credits: creditRecords,
                 }),
                 principal: Number(values.orderTotal || 0),
-                initial_payment: Number(values.initialPayment || 0),
+                initial_payment: Number(values.depositPaid ?? values.initialPayment ?? 0),
+                required_initial: Number(values.initialPayment || 0),
                 term_months: Number(values.creditMonths || 12),
                 start_date: values.date || new Date().toISOString().slice(0, 10),
               }
