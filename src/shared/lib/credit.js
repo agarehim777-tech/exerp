@@ -15,8 +15,7 @@ export function isCreditStarted(credit) {
 export function shiftPaymentDate(value, months) {
   const date = parsePaymentDate(value);
   if (!date) return baseCreditDate;
-  date.setMonth(date.getMonth() + months);
-  return formatDateInput(date);
+  return formatDateInput(addMonths(date, months));
 }
 
 export function getCreditPlanStartDate(credit) {

@@ -71,7 +71,7 @@ var orders_list_default = defineTool3({
   handler: async ({ limit, status }, ctx) => {
     const unauth = requireAuth(ctx);
     if (unauth) return unauth;
-    let q = supabaseForUser(ctx).from("orders").select("id, customer_name, total_amount, status, notes, created_at, updated_at").order("created_at", { ascending: false }).limit(limit);
+    let q = supabaseForUser(ctx).from("orders").select("id, order_no, customer_id, total, status, notes, created_at, updated_at").order("created_at", { ascending: false }).limit(limit);
     if (status) q = q.eq("status", status);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
@@ -94,7 +94,7 @@ var orders_get_default = defineTool4({
   handler: async ({ id }, ctx) => {
     const unauth = requireAuth(ctx);
     if (unauth) return unauth;
-    const { data, error } = await supabaseForUser(ctx).from("orders").select("id, customer_name, total_amount, status, notes, created_at, updated_at").eq("id", id).maybeSingle();
+    const { data, error } = await supabaseForUser(ctx).from("orders").select("id, order_no, customer_id, total, status, notes, created_at, updated_at").eq("id", id).maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     if (!data) return { content: [{ type: "text", text: "Not found" }], isError: true };
     return {

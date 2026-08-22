@@ -13,7 +13,7 @@ export default defineTool({
     if (unauth) return unauth;
     const { data, error } = await supabaseForUser(ctx)
       .from("orders")
-      .select("id, customer_name, total_amount, status, notes, created_at, updated_at")
+      .select("id, order_no, customer_id, total, status, notes, created_at, updated_at")
       .eq("id", id)
       .maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };

@@ -16,7 +16,7 @@ export default defineTool({
     if (unauth) return unauth;
     let q = supabaseForUser(ctx)
       .from("orders")
-      .select("id, customer_name, total_amount, status, notes, created_at, updated_at")
+      .select("id, order_no, customer_id, total, status, notes, created_at, updated_at")
       .order("created_at", { ascending: false })
       .limit(limit);
     if (status) q = q.eq("status", status);

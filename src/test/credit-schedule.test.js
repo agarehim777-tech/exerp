@@ -123,3 +123,19 @@ describe("money rounding", () => {
     expect(roundMoney("42")).toBe(42);
   });
 });
+
+describe("month-end credit schedules", () => {
+  it("clamps due dates to the last day of short months", () => {
+    const plan = buildCreditPlan({ total: 1200, months: 12, startDate: "2026-01-31" });
+    const dues = plan.installments.map((row) => row.due);
+    expect(dues[0]).toBe("28.02.2026");
+    expect(dues[1]).toBe("31.03.2026");
+    expect(dues[2]).toBe("30.04.2026");
+    expect(new Set(dues).size).toBe(12);
+  });
+
+  it("shifts month-end payment dates without skipping a month", () => {
+    expect(shiftPaymentDate("2026-01-31", 1)).toBe("2026-02-28");
+    expect(shiftPaymentDate("2026-03-31", -1)).toBe("2026-02-28");
+  });
+});
