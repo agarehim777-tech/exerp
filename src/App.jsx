@@ -3503,8 +3503,11 @@ function App() {
               months: values.creditMonths,
             })
           : null;
+        const depositPaid = isCreditSale
+          ? Math.min(Number(values.depositPaid ?? creditPlan.initialPayment ?? 0), creditPlan.initialPayment)
+          : 0;
         const paid = isCreditSale
-          ? creditPlan.initialPayment
+          ? depositPaid
           : ["Nağd", "Kart", "Köçürmə"].includes(paymentMethod)
             ? amount
             : 0;
