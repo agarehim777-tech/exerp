@@ -567,6 +567,7 @@ export type Database = {
           last_risk_calculated_at: string | null
           order_id: string | null
           principal: number
+          required_initial: number
           risk_score: number
           start_date: string | null
           status: string
@@ -588,6 +589,7 @@ export type Database = {
           last_risk_calculated_at?: string | null
           order_id?: string | null
           principal: number
+          required_initial?: number
           risk_score?: number
           start_date?: string | null
           status?: string
@@ -609,6 +611,7 @@ export type Database = {
           last_risk_calculated_at?: string | null
           order_id?: string | null
           principal?: number
+          required_initial?: number
           risk_score?: number
           start_date?: string | null
           status?: string
@@ -5246,6 +5249,7 @@ export type Database = {
           _initial_payment: number
           _order_id: string
           _principal: number
+          _required_initial?: number
           _start_date: string
           _tenant_id: string
           _term_months: number
@@ -5473,6 +5477,16 @@ export type Database = {
           _tenant: string
         }
         Returns: undefined
+      }
+      post_credit_initial_payment: {
+        Args: {
+          _amount: number
+          _cash_account_id?: string
+          _credit_id: string
+          _note?: string
+          _tenant_id: string
+        }
+        Returns: number
       }
       post_credit_payment: {
         Args: {

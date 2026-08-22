@@ -36,6 +36,7 @@ function CreditsPage({
   onReceivePayment,
   onCreateCredit,
   onStartCredit,
+  onPayCreditInitial,
   onOpenSalesOrder,
   selectedCreditId,
   onClearSelectedCredit,
@@ -412,6 +413,7 @@ function CreditsPage({
           <StartCreditModal
             item={startItem}
             onStartCredit={onStartCredit}
+            onPayInitial={onPayCreditInitial}
             onClose={() => setStartCreditId("")}
           />
         ) : null}
@@ -432,24 +434,36 @@ function CreditsPage({
   );
 }
 
-function StartCreditModal({ item, onStartCredit, onClose }) {
+function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const requiredInitial = Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0);
+  const initialPaid = Number(item.credit.initialPaid ?? 0);
+  const initialRemaining = Math.max(0, requiredInitial - initialPaid);
+  const initialComplete = initialRemaining <= 0.01;
+  const [depositAmount, setDepositAmount] = useState(initialRemaining || 0);
   const previewPlan = useMemo(
     () =>
       buildCreditPlan({
         total: item.credit.total,
-        initialPayment: item.credit.initialPayment || 0,
+        initialPayment: requiredInitial,
         months: item.credit.months || item.plan.months,
         startDate,
       }),
-    [item, startDate],
+    [item, requiredInitial, startDate],
   );
   const firstPaymentDate = previewPlan.installments[0]?.due || "—";
 
   function submit(event) {
     event.preventDefault();
-    if (!startDate) return;
+    if (!startDate || !initialComplete) return;
     onStartCredit?.(item.credit.id, startDate);
+    onClose();
+  }
+
+  function collectDeposit() {
+    const amount = Math.min(Math.max(0, Number(depositAmount || 0)), initialRemaining);
+    if (amount <= 0) return;
+    onPayInitial?.(item.credit.id, amount);
     onClose();
   }
 
@@ -464,6 +478,32 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
         </div>
         <form className="credit-payment-form" onSubmit={submit}>
+          <div className="credit-payment-preview">
+            <span>İlkin ödəniş hədəfi <strong>{money(requiredInitial)}</strong></span>
+            <span>Yığılıb <strong>{money(initialPaid)}</strong></span>
+            <span>Qalıq beh <strong>{money(initialRemaining)}</strong></span>
+          </div>
+          {!initialComplete ? (
+            <div className="credit-schedule-preview">
+              <strong>İlkin ödənişi tamamla</strong>
+              <label>
+                <span>Qəbul ediləcək məbləğ</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={initialRemaining}
+                  value={depositAmount}
+                  onChange={(event) => setDepositAmount(event.target.value)}
+                />
+              </label>
+              <button type="button" className="secondary-btn" onClick={collectDeposit}>
+                Behi kassaya qəbul et
+              </button>
+              <p className="form-help">
+                İlkin ödəniş tam yığılmayınca kredit başladıla bilməz.
+              </p>
+            </div>
+          ) : null}
           <label>
             <span>Kreditin başlanma tarixi</span>
             <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
@@ -496,13 +536,16 @@ function StartCreditModal({ item, onStartCredit, onClose }) {
           <p className="form-help">Təsdiqdən sonra bu cədvəl yadda saxlanacaq və kredit aktiv portfelə keçəcək.</p>
           <div className="modal-actions">
             <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn"><Play size={15} /> Krediti başlat</button>
+            <button type="submit" className="primary-btn" disabled={!initialComplete}>
+              <Play size={15} /> Krediti başlat
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
 
 function QuickCollectModal({ item, onReceivePayment, onClose }) {
   const { credit, plan, paymentState } = item;

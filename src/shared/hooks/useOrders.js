@@ -59,7 +59,7 @@ export function useOrders(tenantId) {
       if (orderIds.length) {
         const [creditResult, bonusResult] = await Promise.all([
           supabase.from('credit_contracts')
-            .select('id,order_id,contract_no,principal,initial_payment,term_months,start_date,status,created_at')
+            .select('id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at')
             .eq('tenant_id', tenantId).in('order_id', orderIds),
           supabase.from('order_bonus_assignments')
             .select('id,order_id,seller_name,rate,position,effective_from,effective_to')
@@ -157,6 +157,7 @@ export function useOrders(tenantId) {
       _order_id: orderId,
       _principal: Number(credit.principal || 0),
       _initial_payment: Number(credit.initial_payment || 0),
+      _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
       _term_months: Number(credit.term_months || 12),
       _start_date: credit.start_date || new Date().toISOString().slice(0, 10),
     });

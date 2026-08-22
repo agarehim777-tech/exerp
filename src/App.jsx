@@ -3352,7 +3352,8 @@ function App() {
                   credits: creditRecords,
                 }),
                 principal: Number(values.orderTotal || 0),
-                initial_payment: Number(values.initialPayment || 0),
+                initial_payment: Number(values.depositPaid ?? values.initialPayment ?? 0),
+                required_initial: Number(values.initialPayment || 0),
                 term_months: Number(values.creditMonths || 12),
                 start_date: values.date || new Date().toISOString().slice(0, 10),
               }
@@ -3502,8 +3503,11 @@ function App() {
               months: values.creditMonths,
             })
           : null;
+        const depositPaid = isCreditSale
+          ? Math.min(Number(values.depositPaid ?? creditPlan.initialPayment ?? 0), creditPlan.initialPayment)
+          : 0;
         const paid = isCreditSale
-          ? creditPlan.initialPayment
+          ? depositPaid
           : ["Nağd", "Kart", "Köçürmə"].includes(paymentMethod)
             ? amount
             : 0;
@@ -3566,14 +3570,16 @@ function App() {
                   device: productSummary,
                   total: amount,
                   initialPayment: creditPlan.initialPayment,
+                  requiredInitial: creditPlan.initialPayment,
+                  initialPaid: depositPaid,
                   balance: creditPlan.balance,
                   monthly: creditPlan.monthly,
                   lastPayment: creditPlan.lastPayment,
                   months: creditPlan.months,
                   paidMonths: 0,
                   rate: 0,
-                  next: creditPlan.installments[0]?.due || "—",
-                  status: "Aktiv",
+                  next: "—",
+                  status: "Başlanmamış",
                   installments: creditPlan.installments,
                   createdFrom: "Satış sifarişi",
                 },
@@ -3603,6 +3609,8 @@ function App() {
               contractId,
               creditMonths: creditPlan?.months || null,
               initialPayment: creditPlan?.initialPayment || 0,
+              requiredInitial: creditPlan?.initialPayment || 0,
+              initialPaid: isCreditSale ? depositPaid : 0,
               creditBalance: creditPlan?.balance || 0,
               creditMonthly: creditPlan?.monthly || 0,
               creditLastPayment: creditPlan?.lastPayment || 0,
@@ -5660,6 +5668,109 @@ function App() {
     });
   }
 
+  async function payCreditInitial(creditId, amount) {
+    if (!requirePermission("credits.manage", "ilkin ödəniş qəbul etmək")) return;
+    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    if (!targetCredit) {
+      notify("Kredit tapılmadı.", "warning");
+      return;
+    }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const alreadyPaid = Number(targetCredit.initialPaid ?? 0);
+    const payment = Math.min(Math.max(0, Math.round(Number(amount || 0))), Math.max(0, requiredInitial - alreadyPaid));
+    if (payment <= 0) {
+      notify("Qəbul ediləcək məbləğ düzgün deyil.", "warning");
+      return;
+    }
+
+    try {
+      if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
+        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
+        let { data: cashAccount, error: accountError } = await supabase
+          .from("cash_accounts")
+          .select("id")
+          .eq("tenant_id", activeTenantId)
+          .eq("account_no", mainCode)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (accountError) throw accountError;
+        if (!cashAccount) {
+          const byName = await supabase
+            .from("cash_accounts")
+            .select("id")
+            .eq("tenant_id", activeTenantId)
+            .ilike("name", "Əsas kassa")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (byName.error) throw byName.error;
+          cashAccount = byName.data;
+        }
+        const { error: rpcError } = await supabase.rpc("post_credit_initial_payment", {
+          _tenant_id: activeTenantId,
+          _credit_id: targetCredit.id,
+          _amount: payment,
+          _cash_account_id: cashAccount?.id || null,
+          _note: "İlkin ödəniş (beh) qəbulu",
+        });
+        if (rpcError) throw rpcError;
+        await refreshDbOrders();
+      }
+    } catch (error) {
+      notify(`İlkin ödəniş qeydə alınmadı: ${error.message}`, "error");
+      return;
+    }
+
+    const nextPaid = alreadyPaid + payment;
+    setState((current) => ({
+      ...current,
+      cashEntries: [
+        {
+          id: `KS-${Date.now()}`,
+          source: "Kredit ilkin ödənişi",
+          creditId,
+          orderId: targetCredit.orderId,
+          customer: targetCredit.customer,
+          contractId: targetCredit.contractId,
+          amount: payment,
+          principal: payment,
+          penalty: 0,
+          date: baseCreditDate,
+          note: "İlkin ödəniş (beh)",
+        },
+        ...(current.cashEntries || []),
+      ],
+      orders: current.orders.map((order) => {
+        const isLinkedOrder = targetCredit.orderId
+          ? order.id === targetCredit.orderId
+          : order.creditId === creditId || getCreditIdForOrder(order) === creditId;
+        if (!isLinkedOrder) return order;
+        return {
+          ...order,
+          paid: Math.min(Number(order.amount || 0), Number(order.paid || 0) + payment),
+          initialPaid: nextPaid,
+        };
+      }),
+      credits: (() => {
+        const exists = current.credits.some((credit) => credit.id === creditId);
+        const nextCredits = exists ? current.credits : [targetCredit, ...current.credits];
+        return nextCredits.map((item) =>
+          item.id === creditId ? { ...item, requiredInitial, initialPaid: nextPaid } : item,
+        );
+      })(),
+    }));
+
+    notify(`${money(payment)} ilkin ödəniş qəbul edildi. Yığılıb: ${money(nextPaid)} / ${money(requiredInitial)}.`);
+    auditOperation({
+      module: "Kredit/Maliyyə",
+      action: "İlkin ödəniş qəbul edildi",
+      detail: `${creditId}: ${money(payment)} · toplam ${money(nextPaid)}/${money(requiredInitial)}`,
+    });
+  }
+
+
   function startCredit(creditId, startDate) {
     if (!requirePermission("credits.manage", "krediti başlatmaq")) return;
     const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
@@ -5671,6 +5782,16 @@ function App() {
       notify("Bu kredit artıq başladılıb.", "warning");
       return;
     }
+    const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
+    const initialPaid = Number(targetCredit.initialPaid ?? 0);
+    if (requiredInitial > 0 && initialPaid + 0.01 < requiredInitial) {
+      notify(
+        `İlkin ödəniş tamamlanmayıb: ${money(initialPaid)} / ${money(requiredInitial)}. Kredit başladıla bilməz.`,
+        "warning",
+      );
+      return;
+    }
+
 
     const plan = buildCreditPlan({
       total: targetCredit.total,
@@ -6689,6 +6810,7 @@ function App() {
               onUpdatePaymentDate={updateCreditPaymentDate}
               onReceivePayment={receiveCreditPayment}
               onStartCredit={startCredit}
+              onPayCreditInitial={payCreditInitial}
               onCreateCredit={() => setModal({ type: "sales", presetPaymentMethod: "Kredit" })}
               onOpenSalesOrder={openLinkedSalesOrder}
               selectedCreditId={selectedCreditId}
