@@ -2687,6 +2687,7 @@ export function CreditDetailModal({ item, sendCreditSms, onUpdatePaymentDate, on
             onReceivePayment={onReceivePayment}
             onOpenSalesOrder={onOpenSalesOrder}
           />
+          <CreditInitialPaymentsHistory creditId={credit.id} />
         </div>
       </div>
     </div>
