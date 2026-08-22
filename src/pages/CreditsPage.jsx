@@ -441,6 +441,23 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   const initialRemaining = Math.max(0, requiredInitial - initialPaid);
   const initialComplete = initialRemaining <= 0.01;
   const [depositAmount, setDepositAmount] = useState(initialRemaining || 0);
+  const [historyKey, setHistoryKey] = useState(0);
+
+  useEffect(() => {
+    // İlkin ödəniş dəyişdikdə giriş sahəsi və cədvəl avtomatik yenilənir
+    setDepositAmount(initialRemaining || 0);
+    setHistoryKey((key) => key + 1);
+  }, [initialPaid, requiredInitial, initialRemaining]);
+
+  const depositValue = Number(depositAmount || 0);
+  const depositError =
+    depositValue < 0
+      ? "Məbləğ mənfi ola bilməz."
+      : depositValue > initialRemaining + 0.01
+        ? `Hədəfi aşırsınız: qalıq ${money(initialRemaining)}, daxil edilən ${money(depositValue)}.`
+        : "";
+
+  const projectedPaid = Math.min(requiredInitial, initialPaid + Math.max(0, depositError ? 0 : depositValue));
   const previewPlan = useMemo(
     () =>
       buildCreditPlan({
@@ -460,11 +477,10 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
     onClose();
   }
 
-  function collectDeposit() {
-    const amount = Math.min(Math.max(0, Number(depositAmount || 0)), initialRemaining);
-    if (amount <= 0) return;
-    onPayInitial?.(item.credit.id, amount);
-    onClose();
+  async function collectDeposit() {
+    if (depositError || depositValue <= 0) return;
+    await onPayInitial?.(item.credit.id, depositValue);
+    setHistoryKey((key) => key + 1);
   }
 
   return (
@@ -482,6 +498,7 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
             <span>İlkin ödəniş hədəfi <strong>{money(requiredInitial)}</strong></span>
             <span>Yığılıb <strong>{money(initialPaid)}</strong></span>
             <span>Qalıq beh <strong>{money(initialRemaining)}</strong></span>
+            <span>Ödənişdən sonra <strong>{money(projectedPaid)}</strong></span>
           </div>
           {!initialComplete ? (
             <div className="credit-schedule-preview">
@@ -496,14 +513,21 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
                   onChange={(event) => setDepositAmount(event.target.value)}
                 />
               </label>
-              <button type="button" className="secondary-btn" onClick={collectDeposit}>
+              {depositError ? <p className="bonus-note bonus-note--error">{depositError}</p> : null}
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={collectDeposit}
+                disabled={Boolean(depositError) || depositValue <= 0}
+              >
                 Behi kassaya qəbul et
               </button>
               <p className="form-help">
-                İlkin ödəniş tam yığılmayınca kredit başladıla bilməz.
+                İlkin ödəniş tam yığılmayınca kredit başladıla bilməz. Hədəf tamamlananda cədvəl avtomatik aktivləşir.
               </p>
             </div>
           ) : null}
+          <CreditInitialPaymentsHistory creditId={item.credit.id} refreshKey={historyKey} />
           <label>
             <span>Kreditin başlanma tarixi</span>
             <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
@@ -516,6 +540,12 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
           </div>
           <div className="credit-schedule-preview">
             <strong>Ödəniş cədvəli önizləməsi</strong>
+            {!initialComplete ? (
+              <p className="form-help">
+                Cədvəl {money(requiredInitial)} hədəfinə görə hesablanır. Çatışmayan {money(initialRemaining)} yığılan
+                kimi cədvəl avtomatik yenilənəcək.
+              </p>
+            ) : null}
             <div className="credit-schedule-preview-scroll">
               <table className="credit-schedule-preview-table">
                 <thead>
@@ -545,6 +575,7 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
     </div>
   );
 }
+
 
 
 function QuickCollectModal({ item, onReceivePayment, onClose }) {
