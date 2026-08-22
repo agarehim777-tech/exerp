@@ -113,7 +113,34 @@ export async function updateCreditCollection({ tenantId, credit, stage, reason }
     old_value: { collection_stage: credit.collection_stage }, new_value: { collection_stage: stage },
     reason: reason || "Kolleksiya mərhələsi yeniləndi",
   }));
+  unwrap(await supabase.from("credit_collection_events").insert({ tenant_id: tenantId, credit_id: credit.id, stage, outcome: "Mərhələ yeniləndi", note: reason || null }));
   return updated;
+}
+
+export async function listCreditAudit({ tenantId, creditId }) {
+  if (!tenantId || !creditId) throw new Error("Kredit seçilməyib.");
+  const [adjustments, collection, restructures, payments] = await Promise.all([
+    supabase.from("credit_adjustments").select("*").eq("tenant_id",tenantId).eq("credit_id",creditId).order("created_at",{ascending:false}),
+    supabase.from("credit_collection_events").select("*").eq("tenant_id",tenantId).eq("credit_id",creditId).order("created_at",{ascending:false}),
+    supabase.from("credit_restructures").select("*").eq("tenant_id",tenantId).or(`source_credit_id.eq.${creditId},replacement_credit_id.eq.${creditId}`).order("created_at",{ascending:false}),
+    supabase.from("credit_payments").select("*").eq("tenant_id",tenantId).eq("credit_id",creditId).order("paid_at",{ascending:false}),
+  ]);
+  const failure = adjustments.error || collection.error || restructures.error || payments.error;
+  if (failure) throw failure;
+  return { adjustments: adjustments.data || [], collection: collection.data || [], restructures: restructures.data || [], payments: payments.data || [] };
+}
+
+export async function restructureCredit({ tenantId, creditId, term, startDate, reason }) {
+  return unwrap(await supabase.rpc("restructure_credit_contract", { _tenant: tenantId, _credit: creditId, _term: Number(term), _start_date: startDate, _reason: reason }));
+}
+
+export async function requestCreditAdjustment({ tenantId, creditId, type, amount, reason }) {
+  if (!reason?.trim()) throw new Error("Düzəliş səbəbi tələb olunur.");
+  return unwrap(await supabase.from("credit_adjustments").insert({ tenant_id: tenantId, credit_id: creditId, adjustment_type: type, requested_amount: Number(amount || 0), approval_status: "pending", old_value: {}, new_value: { amount: Number(amount || 0) }, reason }).select().single());
+}
+
+export async function decideCreditAdjustment({ tenantId, adjustmentId, decision, note }) {
+  return unwrap(await supabase.rpc("decide_credit_adjustment", { _tenant: tenantId, _adjustment: adjustmentId, _decision: decision, _note: note || null }));
 }
 
 export async function listReconciliations({ tenantId }) {

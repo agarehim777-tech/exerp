@@ -2,8 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
-const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price), warehouse:warehouses(id,name,code)';
+const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
 const DEFAULT_PAGE_SIZE = 50;
+export const normalizeBalance = (row) => ({
+  ...row,
+  qty: Number(row?.on_hand ?? row?.qty ?? row?.quantity ?? 0),
+  on_hand: Number(row?.on_hand ?? row?.qty ?? row?.quantity ?? 0),
+  reserved: Number(row?.reserved ?? 0),
+  reorder_point: Number(row?.minimum_level ?? row?.reorder_point ?? row?.product?.minimum_stock ?? 0),
+  minimum_level: Number(row?.minimum_level ?? row?.reorder_point ?? row?.product?.minimum_stock ?? 0),
+  avg_cost: Number(row?.avg_cost ?? 0),
+});
 const normalizeMovement = (row) => {
   const movementType = row?.movement_type || row?.move_type || '';
   const isOut = ['delivery','transfer_out','write_off'].includes(movementType);
@@ -80,7 +89,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     const firstError = wh.error || bal.error;
     setError(firstError || null);
     setWarehouses(wh.data || []);
-    setBalances(bal.data || []);
+    setBalances((bal.data || []).map(normalizeBalance));
     setLoading(false);
   }, [tenantId]);
 
@@ -126,7 +135,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       const { data, error: err } = await supabase
         .from('stock_balances').select(BALANCE_SELECT).eq('id', id).maybeSingle();
       if (err) throw err;
-      return data || null;
+      return data ? normalizeBalance(data) : null;
     };
 
     const onMovement = async (payload) => {

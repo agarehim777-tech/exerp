@@ -7,7 +7,7 @@ import BirthDateInput from './BirthDateInput.jsx';
 
 export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
-  const { data, loading, error, refresh } = useCustomer360(customerId);
+  const { data, loading, error, refresh, uploadDocument, downloadDocument, removeDocument } = useCustomer360(customerId);
   const { create: createActivity } = useActivities(activeTenantId, { customerId });
   const [tab, setTab] = useState('overview');
   const [activityType, setActivityType] = useState('note');
@@ -57,12 +57,15 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               <Stat label="Qalıq borc" value={`${Number(data.orders_outstanding || 0).toFixed(0)} ₼`} />
               <Stat label="Qazanıldı" value={`${Number(data.won_amount || 0).toFixed(0)} ₼`} />
               <Stat label="Açıq deal" value={data.open_deals?.length || 0} />
+              <Stat label="Müştəri skoru" value={`${data.analytics?.customerScore || 0}/100`} />
+              <Stat label="Risk" value={data.analytics?.riskLabel || '—'} />
             </div>
 
             <nav style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', padding: '0 20px' }}>
               {[
                 ['overview', 'Ümumi'], ['deals', 'Sövdələşmələr'],
-                ['activity', 'Aktivlik'], ['tasks', 'Tapşırıqlar'], ['orders', 'Sifarişlər'],
+                ['timeline', 'Timeline'], ['credits', 'Kreditlər'], ['devices', 'Cihazlar'],
+                ['documents', 'Sənədlər'], ['activity', 'Əlaqə'], ['orders', 'Sifarişlər'],
               ].map(([k, l]) => (
                 <button key={k} onClick={() => setTab(k)}
                   style={{
@@ -76,6 +79,10 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
             <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
               {tab === 'overview' && <OverviewTab c={c} tags={data.tags} onUpdate={onUpdate} />}
               {tab === 'deals' && <DealsTab deals={data.open_deals || []} />}
+              {tab === 'timeline' && <CustomerTimeline items={data.timeline || []} />}
+              {tab === 'credits' && <CreditsTab credits={data.credits || []} />}
+              {tab === 'devices' && <DevicesTab orders={data.orders || []} serviceCases={data.serviceCases || []} />}
+              {tab === 'documents' && <DocumentsTab documents={data.documents || []} onUpload={uploadDocument} onDownload={downloadDocument} onRemove={removeDocument} />}
               {tab === 'activity' && (
                 <div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -107,6 +114,59 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
     </div>
   );
 }
+
+function CustomerTimeline({ items }) {
+  if (!items.length) return <div style={emptyBox}>Timeline məlumatı yoxdur.</div>;
+  return <div style={{ display: 'grid', gap: 0 }}>{items.map(item => <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '86px 12px minmax(0,1fr)', gap: 10, minHeight: 66 }}>
+    <small style={{ color: '#64748b', paddingTop: 2 }}>{item.at ? new Date(item.at).toLocaleDateString('az-AZ') : '—'}</small>
+    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#0b7a5c', marginTop: 3, boxShadow: '0 0 0 4px #dcfce7' }} />
+    <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 12 }}><b style={{ display: 'block' }}>{item.type} · {item.title}</b><span style={{ color: '#64748b', fontSize: 13 }}>{item.detail || '—'}</span></div>
+  </div>)}</div>;
+}
+
+function CreditsTab({ credits }) {
+  if (!credits.length) return <div style={emptyBox}>Kredit müqaviləsi yoxdur.</div>;
+  return <div style={{ display: 'grid', gap: 10 }}>{credits.map(credit => {
+    const paid = (credit.payments || []).reduce((sum, row) => sum + Number(row.principal_amount || 0), 0) + Number(credit.initial_payment || 0);
+    const balance = Math.max(0, Number(credit.principal || 0) - paid);
+    const overdue = (credit.installments || []).filter(row => row.status === 'overdue').length;
+    return <article key={credit.id} style={detailCard}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><b>{credit.contract_no}</b><span style={{ color: overdue ? '#b91c1c' : '#0b7a5c', fontWeight: 700 }}>{overdue ? `${overdue} gecikmə` : credit.status}</span></div>
+      <div style={miniGrid}><Stat label="Məbləğ" value={`${Number(credit.principal || 0).toFixed(2)} ₼`} /><Stat label="Ödənilib" value={`${paid.toFixed(2)} ₼`} /><Stat label="Qalıq" value={`${balance.toFixed(2)} ₼`} /></div>
+      <small style={{ color: '#64748b' }}>Risk {credit.risk_score || 0}/100 · Kolleksiya: {credit.collection_stage || 'current'} · {credit.term_months} ay</small>
+    </article>;
+  })}</div>;
+}
+
+function DevicesTab({ orders, serviceCases }) {
+  const devices = orders.flatMap(order => (order.items || []).map(item => ({ ...item, order })));
+  if (!devices.length) return <div style={emptyBox}>Alınmış cihaz və məhsul yoxdur.</div>;
+  return <div style={{ display: 'grid', gap: 10 }}>{devices.map(item => {
+    const cases = serviceCases.filter(row => row.product_id && row.product_id === item.product_id);
+    return <article key={item.id} style={detailCard}><b>{item.product?.name || item.description || 'Məhsul'}</b><small style={{ display: 'block', color: '#64748b', marginTop: 4 }}>{item.product?.sku || 'SKU yoxdur'} · {item.qty} ədəd · {item.order.order_no}</small><div style={{ marginTop: 8, fontSize: 13, color: cases.length ? '#b45309' : '#0b7a5c' }}>{cases.length ? `${cases.length} servis müraciəti` : 'Servis müraciəti yoxdur'}</div>{cases.map(row => <div key={row.id} style={{ marginTop: 6, padding: 8, background: '#fff7ed', borderRadius: 6, fontSize: 12 }}>{row.case_no} · {row.subject} · {row.status}</div>)}</article>;
+  })}</div>;
+}
+
+function DocumentsTab({ documents, onUpload, onDownload, onRemove }) {
+  const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('Şəxsiyyət sənədi');
+  const [message, setMessage] = useState('');
+  const submit = async event => { event.preventDefault(); setMessage(''); try { await onUpload({ file, title, documentType: type }); setFile(null); setTitle(''); setMessage('Sənəd saxlanıldı.'); event.currentTarget.reset(); } catch (nextError) { setMessage(nextError.message); } };
+  return <div style={{ display: 'grid', gap: 12 }}><form onSubmit={submit} style={{ ...detailCard, display: 'grid', gap: 8 }}>
+    <b>Yeni sənəd</b><input required value={title} onChange={event => setTitle(event.target.value)} placeholder="Sənədin adı" style={drawerInput} />
+    <select value={type} onChange={event => setType(event.target.value)} style={drawerInput}><option>Şəxsiyyət sənədi</option><option>Müqavilə</option><option>Ödəniş sənədi</option><option>Servis sənədi</option><option>Digər</option></select>
+    <input required type="file" onChange={event => setFile(event.target.files?.[0] || null)} style={drawerInput} />
+    <button type="submit" style={actionButton}>Sənədi yüklə</button>{message && <small>{message}</small>}
+  </form>{documents.map(document => <div key={document.id} style={{ ...detailCard, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}><div><b>{document.title}</b><small style={{ display: 'block', color: '#64748b' }}>{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div style={{ display: 'flex', gap: 6 }}><button type="button" onClick={() => onDownload(document)} style={smallButton}>Aç</button><button type="button" onClick={() => window.confirm('Sənəd silinsin?') && onRemove(document)} style={{ ...smallButton, color: '#b91c1c' }}>Sil</button></div></div>)}{!documents.length && <div style={emptyBox}>Sənəd əlavə edilməyib.</div>}</div>;
+}
+
+const emptyBox = { padding: 28, textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', borderRadius: 8 };
+const detailCard = { padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff' };
+const miniGrid = { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, margin: '12px 0' };
+const drawerInput = { width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: 7 };
+const actionButton = { background: '#0b7a5c', color: '#fff', border: 0, borderRadius: 7, padding: '9px 12px', fontWeight: 700, cursor: 'pointer' };
+const smallButton = { background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, padding: '6px 9px', cursor: 'pointer' };
 
 const Stat = ({ label, value }) => (
   <div style={{ textAlign: 'center' }}>

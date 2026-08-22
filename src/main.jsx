@@ -21,7 +21,6 @@ const Login = lazy(() => import("./auth/Login.jsx"));
 const Consent = lazy(() => import("./auth/Consent.jsx"));
 const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
-const TenantSwitcher = lazy(() => import("./auth/TenantSwitcher.jsx"));
 const AcceptInvite = lazy(() => import("./auth/AcceptInvite.jsx"));
 
 const fullPage = {
@@ -50,7 +49,6 @@ function ProtectedApp() {
   }
   return (
     <Suspense fallback={<Loading label="Tətbiq yüklənir…" />}>
-      <Suspense fallback={null}><TenantSwitcher /></Suspense>
       <App />
     </Suspense>
   );

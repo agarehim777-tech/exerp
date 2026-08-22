@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { buildCustomerScore, buildCustomerTimeline } from '../../modules/crm/customer360Analytics.js';
 
 const withCustomerMeta = (customer) => {
   if (!customer || !String(customer.notes || '').startsWith('__crm_meta__:')) return customer;
@@ -72,7 +73,25 @@ export function useCustomer360(customerId) {
           orders_outstanding: detailedOrders.reduce((sum, order) => sum + Math.max(0, Number(order.total || 0) - Number(order.paid_amount || 0)), 0),
         };
       }
-      setData({ ...result, customer: withCustomerMeta(result.customer) });
+      const [creditResult, documentResult, serviceResult] = await Promise.all([
+        supabase.from('credit_contracts').select('*, installments:credit_installments(*), payments:credit_payments(*)').eq('customer_id', customerId).order('created_at', { ascending: false }),
+        supabase.from('customer_documents').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }),
+        supabase.from('customer_service_cases').select('*, product:products(id,name,sku)').eq('customer_id', customerId).order('created_at', { ascending: false }),
+      ]);
+      const orderIds = (result.orders || []).map(order => order.id);
+      const itemResult = orderIds.length
+        ? await supabase.from('order_items').select('*, product:products(id,name,sku)').in('order_id', orderIds)
+        : { data: [], error: null };
+      const itemsByOrder = new Map();
+      (itemResult.data || []).forEach(item => itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) || []), item]));
+      const orders = (result.orders || []).map(order => ({ ...order, items: itemsByOrder.get(order.id) || [] }));
+      const credits = creditResult.error ? [] : (creditResult.data || []);
+      const payments = credits.flatMap(credit => credit.payments || []);
+      const documents = documentResult.error ? [] : (documentResult.data || []);
+      const serviceCases = serviceResult.error ? [] : (serviceResult.data || []);
+      const analytics = buildCustomerScore({ orders, credits, payments });
+      const timeline = buildCustomerTimeline({ orders, credits, payments, activities: result.activities || [], serviceCases, documents });
+      setData({ ...result, customer: withCustomerMeta(result.customer), orders, credits, payments, documents, serviceCases, analytics, timeline });
     } catch (nextError) {
       setData(null);
       setError(nextError);
@@ -83,5 +102,30 @@ export function useCustomer360(customerId) {
 
   useEffect(() => { fetchIt(); }, [fetchIt]);
 
-  return { data, loading, error, refresh: fetchIt };
+  const uploadDocument = useCallback(async ({ file, title, documentType }) => {
+    if (!data?.customer?.tenant_id || !file) throw new Error('Sənəd faylı seçilməyib.');
+    const safeName = String(file.name || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${data.customer.tenant_id}/${customerId}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from('customer-documents').upload(path, file, { upsert: false });
+    if (uploadError) throw uploadError;
+    const { error: insertError } = await supabase.from('customer_documents').insert({ tenant_id: data.customer.tenant_id, customer_id: customerId, title: title || file.name, document_type: documentType || 'Digər', file_path: path, file_name: file.name, mime_type: file.type || null, file_size: file.size || 0 });
+    if (insertError) { await supabase.storage.from('customer-documents').remove([path]); throw insertError; }
+    await fetchIt();
+  }, [customerId, data?.customer?.tenant_id, fetchIt]);
+
+  const downloadDocument = useCallback(async document => {
+    const { data: signed, error: signedError } = await supabase.storage.from('customer-documents').createSignedUrl(document.file_path, 60);
+    if (signedError) throw signedError;
+    window.open(signed.signedUrl, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const removeDocument = useCallback(async document => {
+    const { error: storageError } = await supabase.storage.from('customer-documents').remove([document.file_path]);
+    if (storageError) throw storageError;
+    const { error: rowError } = await supabase.from('customer_documents').delete().eq('id', document.id);
+    if (rowError) throw rowError;
+    await fetchIt();
+  }, [fetchIt]);
+
+  return { data, loading, error, refresh: fetchIt, uploadDocument, downloadDocument, removeDocument };
 }

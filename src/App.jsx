@@ -1150,19 +1150,6 @@ function App() {
     ],
   );
 
-  const dashboardStats = useMemo(() => {
-    const openOrders = state.orders.filter((order) => order.status !== "Təhvil verilib");
-    const pending = state.expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
-    return {
-      revenue: total(state.orders, "amount"),
-      activeCustomers: state.customers.length,
-      openOrders: openOrders.length,
-      pending: pending.length,
-      reserved: total(state.stock, "reserved"),
-      available: state.stock.reduce((sum, item) => sum + item.total - item.reserved, 0),
-    };
-  }, [state]);
-
   function notify(message, variant = "success") {
     const id = Date.now() + Math.random();
     setToasts((items) => [...items, { id, message, variant }]);
@@ -4290,7 +4277,7 @@ function App() {
     });
   }
 
-  async function completeWarehouseDelivery(orderId) {
+  async function completeWarehouseDelivery(orderId, acceptance = {}) {
     if (!requirePermission("delivery.complete", "təhvili tamamlamaq")) return;
 
     const targetOrder = state.orders.find((order) => order.id === orderId);
@@ -4341,6 +4328,16 @@ function App() {
         notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
+      const { error: acceptanceError } = await supabase.from("deliveries").update({
+        recipient_name: acceptance.recipientName || targetOrder.customer || null,
+        recipient_document: acceptance.documentNo || null,
+        acceptance_name: acceptance.recipientName || targetOrder.customer || null,
+        acceptance_document_no: acceptance.documentNo || null,
+        acceptance_signature: acceptance.signatureConfirmed ? "confirmed" : null,
+        accepted_at: new Date().toISOString(),
+        acceptance_note: acceptance.note || null,
+      }).eq("tenant_id", activeTenantId).eq("order_id", dbOrder.id);
+      if (acceptanceError && !String(acceptanceError.message || "").includes("acceptance_")) console.error("[delivery] acceptance save failed:", acceptanceError);
     }
 
     setState((current) => {
@@ -4412,6 +4409,13 @@ function App() {
                     : `Qismən təhvil (${plan.deliveredTotal + deliveredNow}/${plan.orderedTotal})`,
                   deliveredAt: formatPaymentDate(parsePaymentDate(baseDeliveryDate)),
                   deliveredBy: currentUser?.name || currentUser?.email || "System",
+                  deliveryAcceptance: {
+                    recipientName: acceptance.recipientName || order.customer,
+                    documentNo: acceptance.documentNo || "",
+                    signatureConfirmed: Boolean(acceptance.signatureConfirmed),
+                    note: acceptance.note || "",
+                    acceptedAt: new Date().toISOString(),
+                  },
                 }
               : item,
           ),
@@ -4419,7 +4423,7 @@ function App() {
         {
           module: "Təhvil/Anbar",
           action: fullyDelivered ? "Təhvil tamamlandı" : "Qismən təhvil",
-          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${deliveredNow} ədəd anbardan çıxıldı${
+          detail: `${orderId} · ${summarizeOrderProducts(order)} · ${deliveredNow} ədəd anbardan çıxıldı · Təhvil alan: ${acceptance.recipientName || order.customer}${
             fullyDelivered ? "" : ` · ${remainingAfter} ədəd backorder qalır`
           }`,
           role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
@@ -6650,7 +6654,6 @@ function App() {
           onLogin={loginUser}
           onLogout={logoutUser}
           canSwitchUser={!remoteApiEnabled}
-          gitHubSync={isPlatformAdmin ? gitHubSync : null}
         />
 
         <main className="main">
@@ -6694,8 +6697,8 @@ function App() {
 
           {active === "dashboard" && (
             <DashboardPage
-              stats={dashboardStats}
-              orders={filtered.orders}
+              orders={dbOrders.map(dbOrderToLegacy)}
+              customers={dbCustomers.map(dbCustomerToLegacy)}
               onOpenPendingExpenses={() => {
                 if (choosePage("cashbook")) {
                   navigate(`${pathForModule("cashbook")}?tab=expenses&status=pending`);
@@ -6716,6 +6719,7 @@ function App() {
             <ProductsPage
               warehouses={state.warehouses}
               warehouseStock={state.warehouseStock}
+              inventoryBalances={dbInventory.balances || []}
               products={state.products || []}
               purchaseOrders={state.purchaseOrders || []}
               orders={state.orders || []}

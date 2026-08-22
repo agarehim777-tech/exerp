@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listCreditPortfolio, refreshCreditOverdue, updateCreditCollection } from "../../services/enterpriseWorkflows.js";
+import { decideCreditAdjustment, listCreditAudit, listCreditPortfolio, refreshCreditOverdue, requestCreditAdjustment, restructureCredit, updateCreditCollection } from "../../services/enterpriseWorkflows.js";
 
 export function useCreditPortfolio(tenantId) {
   const [contracts, setContracts] = useState([]);
@@ -15,5 +15,9 @@ export function useCreditPortfolio(tenantId) {
   useEffect(() => { refresh(); }, [refresh]);
   const recalculate = async () => { await refreshCreditOverdue({ tenantId }); await refresh(); };
   const setCollection = async (credit, stage) => { await updateCreditCollection({ tenantId, credit, stage }); await refresh(); };
-  return { contracts, loading, error, refresh, recalculate, setCollection };
+  const audit = creditId => listCreditAudit({ tenantId, creditId });
+  const restructure = async values => { const id = await restructureCredit({ tenantId, ...values }); await refresh(); return id; };
+  const requestAdjustment = async values => { const row = await requestCreditAdjustment({ tenantId, ...values }); await refresh(); return row; };
+  const decideAdjustment = async values => { const row = await decideCreditAdjustment({ tenantId, ...values }); await refresh(); return row; };
+  return { contracts, loading, error, refresh, recalculate, setCollection, audit, restructure, requestAdjustment, decideAdjustment };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BarChart3, Bell, Check, ChevronDown, ChevronRight, GitBranch, LogOut, Menu,
+  BarChart3, Bell, Check, ChevronDown, ChevronRight, LogOut, Menu,
   MessageSquare, Package, Plus, Search, Settings, ShoppingCart, UserCog, Users,
   Wallet, Warehouse, X,
 } from "lucide-react";
@@ -117,17 +117,7 @@ export function Sidebar({ active, items = navItems, currentUser, activeRole, mob
   );
 }
 
-function formatTimeAgo(date) {
-  if (!date) return "";
-  const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
-  if (minutes < 1) return "indicə";
-  if (minutes < 60) return `${minutes} dəq əvvəl`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} saat əvvəl`;
-  return `${Math.floor(hours / 24)} gün əvvəl`;
-}
-
-export function Topbar({ query, setQuery, unread, messages, onMenu, onMessages, onNotifications, currentUser, activeRole, users = [], onLogin, onLogout, canSwitchUser = true, gitHubSync }) {
+export function Topbar({ query, setQuery, unread, messages, onMenu, onMessages, onNotifications, currentUser, activeRole, users = [], onLogin, onLogout, canSwitchUser = true }) {
   return (
     <header className="topbar">
       <button className="icon-btn mobile-menu" onClick={onMenu} aria-label="Menyunu aç"><Menu size={20} /></button>
@@ -148,12 +138,6 @@ export function Topbar({ query, setQuery, unread, messages, onMenu, onMessages, 
         <div className="session-pill"><span>{currentUser?.name}</span><strong>{activeRole?.name}</strong></div>
         <button className="icon-btn badge-host" onClick={onMessages} aria-label="Mesajlar"><MessageSquare size={20} /><span className="counter">{messages}</span></button>
         <button className="icon-btn badge-host" onClick={onNotifications} aria-label="Bildirişlər"><Bell size={20} /><span className="counter danger">{unread}</span></button>
-        {gitHubSync && (
-          <div className="sync-pill" title={gitHubSync.isLovableOnly ? "Layihə Lovable Cloud ilə sinxronizasiya olunur" : gitHubSync.lastCommit ? `${gitHubSync.lastCommit.sha} · ${gitHubSync.lastCommit.message} · ${formatTimeAgo(gitHubSync.lastSyncAt)}` : gitHubSync.error || "GitHub sync status"}>
-            <GitBranch size={16} /><span className={`sync-dot ${gitHubSync.status || "idle"}`} />
-            <span className="sync-label">{gitHubSync.isLovableOnly ? "Lovable Cloud" : gitHubSync.status === "error" ? "Sync xətası" : gitHubSync.lastSyncAt ? formatTimeAgo(gitHubSync.lastSyncAt) : "Yoxlanır..."}</span>
-          </div>
-        )}
         <button className="secondary-btn logout-btn" onClick={onLogout}>Çıxış</button>
       </div>
     </header>

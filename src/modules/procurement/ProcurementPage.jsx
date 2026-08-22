@@ -1161,7 +1161,6 @@ export default function ProcurementPage() {
       <nav style={styles.tabs}>
         {[
           ["dashboard", BarChart3, "İcmal"],
-          ["rfq", ClipboardCheck, "Təklif sorğuları"],
           ["vendors", Building2, "Vendorlar"],
           ["po", ShoppingCart, "PO"],
           ["grn", PackageCheck, "Mədaxil"],
@@ -1185,7 +1184,6 @@ export default function ProcurementPage() {
           {tab === "dashboard" && (
             <DashboardTab
               purchaseOrders={purchaseOrders}
-              vendors={vendors}
               poMetrics={poMetrics}
               onCreatePo={() => { resetPoForm(); setTab("po"); }}
               onReceive={choosePoForReceipt}
@@ -1392,29 +1390,12 @@ function Metric({ icon: Icon, label, value, hint, tone }) {
   );
 }
 
-function DashboardTab({ purchaseOrders, vendors, poMetrics, onCreatePo, onReceive }) {
+function DashboardTab({ purchaseOrders, poMetrics, onCreatePo, onReceive }) {
   const latePo = purchaseOrders.filter((po) => po.expected_date && po.expected_date < today() && ["draft", "approved", "partial"].includes(po.status));
   const actionPo = purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status)).slice(0, 6);
 
   return (
     <section style={styles.dashboardGrid} className="procurement-dashboard-grid">
-      <Panel title="Satınalma axını" icon={ClipboardCheck}>
-        <div style={styles.flowRow}>
-          {[
-            ["1", "Vendor", `${vendors.filter((vendor) => vendor.is_active).length} aktiv vendor`],
-            ["2", "PO", "Qaralama → təsdiq"],
-            ["3", "Mədaxil", "GRN ilə anbara qəbul"],
-            ["4", "Maya", "Xərclərin bölgüsü və anbar qəbulu"],
-          ].map(([step, title, text]) => (
-            <div key={step} style={styles.flowItem}>
-              <span>{step}</span>
-              <strong>{title}</strong>
-              <small>{text}</small>
-            </div>
-          ))}
-        </div>
-      </Panel>
-
       <Panel title="Təhvil/mədaxil gözləyən PO-lar" icon={Truck}>
         {actionPo.length === 0 ? (
           <Empty title="Mədaxil gözləyən PO yoxdur." />
