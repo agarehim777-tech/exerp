@@ -98,5 +98,20 @@ describe("aggregasiya", () => {
     expect(signedQty({ move_type: "out", qty: 5 })).toBe(-5);
     expect(signedQty({ move_type: "in", qty: 5 })).toBe(5);
     expect(signedQty({ move_type: "adjust", qty: -2 })).toBe(-2);
+    expect(signedQty({ move_type: "in", qty: 5, valuation_effect: "ignore" })).toBe(0);
+  });
+
+  it("rezerv və daxili transferi dəyərləməyə, silinməni isə COGS-a daxil etmir", () => {
+    const result = valuateFifo([
+      { ...mv("in", 10, 5, "2026-01-01"), valuation_effect: "cogs" },
+      { ...mv("out", 3, 5, "2026-01-02"), valuation_effect: "ignore" },
+      { ...mv("in", 3, 5, "2026-01-02"), valuation_effect: "ignore" },
+      { ...mv("out", 2, 5, "2026-01-03"), valuation_effect: "inventory" },
+      { ...mv("out", 4, 0, "2026-01-04"), valuation_effect: "cogs" },
+    ]);
+
+    expect(result.qtyOnHand).toBe(4);
+    expect(result.inventoryValue).toBe(20);
+    expect(result.cogs).toBe(20);
   });
 });

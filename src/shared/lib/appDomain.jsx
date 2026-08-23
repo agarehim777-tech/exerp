@@ -1661,7 +1661,7 @@ export function buildProcurementRows(vendors, warehouseStock, orders, products =
 
   return [...byProduct.values()]
     .map((item) => {
-      const available = Math.max(0, item.total - item.reserved);
+      const available = getAvailableQuantity(item);
       const sold = soldByProduct.get(item.product) || 0;
       const demand = Math.max(4, sold * 2);
       const reorderPoint = getReorderPoint(item, productsByName);
@@ -1737,11 +1737,11 @@ export function buildPurchaseOrderCoverage(purchaseOrders = []) {
 }
 
 export function getRecommendedOrderPlan({ available = 0, minimum = 0, baseQty = 0, orderedQty = 0 } = {}) {
-  const currentAvailable = Math.max(0, Number(available || 0));
+  const currentAvailable = Number(available || 0);
   const minimumStock = Math.max(0, Number(minimum || 0));
   const baseOrderQty = Math.max(0, Number(baseQty || 0));
   const openOrderQty = Math.max(0, Number(orderedQty || 0));
-  const thresholdReached = minimumStock > 0 && currentAvailable <= minimumStock;
+  const thresholdReached = currentAvailable < 0 || (minimumStock > 0 && currentAvailable <= minimumStock);
   const deficit = thresholdReached ? Math.max(0, minimumStock - currentAvailable) : 0;
   const recommendedQty = thresholdReached ? baseOrderQty + deficit : 0;
   return {
@@ -3303,13 +3303,13 @@ export function filterRows(rows, query) {
 
 export function filterWarehouseItems(items, filter) {
   if (filter === "Satış üçün var") {
-    return items.filter((item) => item.total - item.reserved > 0);
+    return items.filter((item) => getAvailableQuantity(item) > 0);
   }
   if (filter === "Rezervdə") {
     return items.filter((item) => item.reserved > 0);
   }
   if (filter === "Aşağı stok") {
-    return items.filter((item) => item.total - item.reserved <= 3);
+    return items.filter((item) => getAvailableQuantity(item) <= 3);
   }
   return items;
 }
@@ -3324,7 +3324,7 @@ export function getActiveRole(settings = {}) {
 }
 
 export function getAvailableQuantity(item) {
-  return Math.max(0, Number(item.total || 0) - Number(item.reserved || 0));
+  return Number(item.total || 0) - Number(item.reserved || 0) - Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0);
 }
 
 // Satış üçün real sərbəst qalıq — mənfi ola bilər (backorder / sifariş gözləyən miqdar).
@@ -3353,12 +3353,14 @@ export function getWarehouseStockSummary(items, capacity = 0, products = []) {
   const productsByName = buildProductLookup(products);
   const totalQty = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const reservedQty = total(items, "reserved");
-  const availableQty = Math.max(0, totalQty - reservedQty);
-  const value = items.reduce((sum, item) => sum + getAvailableQuantity(item) * Number(item.price || 0), 0);
+  const problemQty = items.reduce((sum, item) => sum + Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0), 0);
+  const availableQty = totalQty - reservedQty - problemQty;
+  const value = items.reduce((sum, item) => sum + Math.max(0, getAvailableQuantity(item)) * Number(item.price || 0), 0);
   return {
     sku: items.length,
     total: totalQty,
     reserved: reservedQty,
+    problem: problemQty,
     available: availableQty,
     value,
     lowStock: items.filter((item) => isLowStockItem(item, productsByName)).length,
@@ -3531,6 +3533,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
     key: catalogProduct?.id || normalize(productName),
     product: productName,
     productId: catalogProduct?.id || "",
+    imageUrl: catalogProduct?.imageUrl || catalogProduct?.image_url || "",
     category: catalogProduct?.category || "Kataloqu olmayan",
     sku: catalogProduct?.sku || "—",
     unit: catalogProduct?.unit || "ədəd",
@@ -3541,6 +3544,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
     recommendedOrderQty: Number(catalogProduct?.recommendedOrderQty || 0),
     total: 0,
     reserved: 0,
+    problem: 0,
     orderedQty: 0,
     openPoCount: 0,
     latestPoId: "",
@@ -3562,6 +3566,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         const row = rowsByProduct.get(key) || createRow(item.product, catalogProduct);
         row.total += Number(item.total || 0);
         row.reserved += Number(item.reserved || 0);
+        row.problem += Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0);
         row.stockValue += Number(item.total || 0) * Number(item.costPrice || 0);
         row.salePrice = row.salePrice || Number(item.price || 0);
         row.serialTracked = catalogProduct?.serialTracked ?? isSerialTrackedProduct(item);
@@ -3570,6 +3575,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
           warehouse: warehouseById.get(sourceWarehouseId)?.name || sourceWarehouseId,
           warehouseId: sourceWarehouseId,
           total: Number(item.total || 0),
+          problem: Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0),
           available: getAvailableQuantity(item),
         });
         rowsByProduct.set(key, row);
@@ -3578,8 +3584,8 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
 
     return [...rowsByProduct.values()]
       .map((row) => {
-        const free = row.total - row.reserved;
-        const available = Math.max(0, free);
+        const free = row.total - row.reserved - row.problem;
+        const available = free;
         const shortage = Math.max(0, -free);
         const coverage = orderCoverage.get(normalize(row.product)) || { orderedQty: 0, count: 0, latest: null };
         const averageCost = row.total > 0 ? row.stockValue / row.total : row.costPrice;
@@ -3612,6 +3618,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         const catalogProduct = productsByName.get(normalize(item.product));
         const totalQty = Number(item.total || 0);
         const reserved = Number(item.reserved || 0);
+        const problem = Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0);
         const available = getAvailableQuantity(item);
         const free = getFreeQuantity(item);
         const shortage = getShortageQuantity(item);
@@ -3635,6 +3642,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
           reorderLevel,
           total: totalQty,
           reserved,
+          problem,
           available,
           free,
           shortage,
@@ -3675,6 +3683,7 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
         reorderLevel,
         total: 0,
         reserved: 0,
+        problem: 0,
         available: 0,
         free: 0,
         shortage: 0,
@@ -3705,7 +3714,8 @@ export function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
       (filters.stockStatus === "below" && (row.status === "Aşağı stok" || row.status === "Kritik stok" || row.status === "Stok tükənib" || row.status === "Çatışmazlıq")) ||
       (filters.stockStatus === "available" && row.available > 0) ||
       (filters.stockStatus === "empty" && row.available <= 0) ||
-      (filters.stockStatus === "shortage" && row.shortage > 0);
+      (filters.stockStatus === "shortage" && row.shortage > 0) ||
+      (filters.stockStatus === "problem" && Number(row.problem || 0) > 0);
     const matchesReserve =
       filters.reserveStatus === "all" ||
       (filters.reserveStatus === "reserved" && row.reserved > 0) ||
@@ -3720,7 +3730,7 @@ export function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
 }
 
 export function exportWarehouseBalanceCsv(rows, view) {
-  const headers = ["Kateqoriya", "Məhsul", "SKU", "Anbar", "Qalıq", "Minimum", "Rezerv", "Mövcud", "Sifarişdə", "Tövsiyə", "Əlavə alınmalı", "Vahid", "Maya", "Stok dəyəri", "Satış qiyməti", "Status"];
+  const headers = ["Kateqoriya", "Məhsul", "SKU", "Anbar", "Qalıq", "Minimum", "Rezerv", "Problemli", "Satışa uyğun", "Sifarişdə", "Tövsiyə", "Əlavə alınmalı", "Vahid", "Maya", "Stok dəyəri", "Satış qiyməti", "Status"];
   const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const csvRows = rows.map((row) => [
     row.category,
@@ -3730,6 +3740,7 @@ export function exportWarehouseBalanceCsv(rows, view) {
     row.total,
     row.reorderLevel,
     row.reserved,
+    row.problem,
     row.available,
     row.orderedQty,
     row.recommendedQty,
@@ -3783,6 +3794,7 @@ export function WarehouseBalanceFilters({ filters, warehouses, categories, open,
           <option value="available">Stokda var</option>
           <option value="empty">Stok tükənib</option>
           <option value="shortage">Çatışmazlıq (backorder)</option>
+          <option value="problem">Problemli stok</option>
         </select>
       </label>
       <label>
@@ -3817,12 +3829,13 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
   const totals = rows.reduce((summary, row) => ({
     total: summary.total + Number(row.total || 0),
     reserved: summary.reserved + Number(row.reserved || 0),
+    problem: summary.problem + Number(row.problem || 0),
     available: summary.available + Number(row.available || 0),
     orderedQty: summary.orderedQty + Number(row.orderedQty || 0),
     recommendedQty: summary.recommendedQty + Number(row.recommendedQty || 0),
     stockValue: summary.stockValue + Number(row.stockValue || 0),
     salesValue: summary.salesValue + Number(row.salesValue || 0),
-  }), { total: 0, reserved: 0, available: 0, orderedQty: 0, recommendedQty: 0, stockValue: 0, salesValue: 0 });
+  }), { total: 0, reserved: 0, problem: 0, available: 0, orderedQty: 0, recommendedQty: 0, stockValue: 0, salesValue: 0 });
   const locationHeading = view === "products" ? "Anbarlar" : "Anbar";
 
   return (
@@ -3830,7 +3843,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
       <table className="warehouse-balance-table">
         <thead>
           <tr>
-            <th>Kateqoriya</th><th>Məhsul</th><th>SKU</th><th>{locationHeading}</th><th>Qalıq</th><th>Minimum</th><th>Rezerv</th><th>Mövcud</th><th>Sifarişdə</th><th>Tövsiyə</th><th>Vahid</th><th>Maya</th><th>Stok dəyəri</th><th>Satış</th><th>Status</th>{view === "products" && <th>Əməliyyat</th>}
+            <th>Kateqoriya</th><th>Məhsul</th><th>SKU</th><th>{locationHeading}</th><th>Qalıq</th><th>Minimum</th><th>Rezerv</th><th>Problemli</th><th>Satışa uyğun</th><th>Sifarişdə</th><th>Tövsiyə</th><th>Vahid</th><th>Maya</th><th>Stok dəyəri</th><th>Satış</th><th>Status</th>{view === "products" && <th>Əməliyyat</th>}
           </tr>
         </thead>
         <tbody>
@@ -3838,17 +3851,21 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
             <tr key={row.key}>
               <td>{row.category}</td>
               <td>
-                {row.productId && onOpenProduct ? (
-                  <button type="button" className="text-btn" onClick={() => onOpenProduct(row.productId)} title="Məhsulun 360 baxışını aç">
-                    <strong>{row.product}</strong>
-                  </button>
-                ) : <strong>{row.product}</strong>}
+                <div className="warehouse-product-cell">
+                  <span className="warehouse-product-thumb">{row.imageUrl ? <img src={row.imageUrl} alt="" /> : <Package size={15} />}</span>
+                  {row.productId && onOpenProduct ? (
+                    <button type="button" className="text-btn" onClick={() => onOpenProduct(row.productId)} title="Məhsulun 360 baxışını aç">
+                      <strong>{row.product}</strong>
+                    </button>
+                  ) : <strong>{row.product}</strong>}
+                </div>
               </td>
               <td className="warehouse-sku">{row.sku}</td>
               <td>{view === "products" ? <WarehouseDistribution distribution={row.warehouseDistribution} /> : row.warehouseName}</td>
               <td>{row.total}</td>
               <td>{row.reorderLevel || "—"}</td>
               <td>{row.reserved}</td>
+              <td className={row.problem > 0 ? "balance-qty risk" : ""}>{row.problem || 0}</td>
               <td className={row.shortage > 0 || row.status !== "Normal" ? "balance-qty risk" : "balance-qty good"}>
                 {row.shortage > 0 ? `-${row.shortage}` : row.available}
                 {row.shortage > 0 && <small style={{ display: "block", opacity: 0.75 }}>sifariş gözləyir</small>}
@@ -3872,12 +3889,12 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
               </td>}
             </tr>
           ))}
-          {rows.length === 0 && <tr><td colSpan={view === "products" ? 16 : 15} className="warehouse-balance-empty">Seçilmiş filtrə uyğun qalıq tapılmadı.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={view === "products" ? 17 : 16} className="warehouse-balance-empty">Seçilmiş filtrə uyğun qalıq tapılmadı.</td></tr>}
         </tbody>
         {rows.length > 0 && (
           <tfoot>
             <tr>
-              <td colSpan="4">Cəmi</td><td>{totals.total}</td><td>—</td><td>{totals.reserved}</td><td className="balance-qty good">{totals.available}</td><td>{totals.orderedQty || "—"}</td><td>{totals.recommendedQty || "—"}</td><td>—</td><td>—</td><td>{money(totals.stockValue)}</td><td>{money(totals.salesValue)}</td><td>—</td>{view === "products" && <td>—</td>}
+              <td colSpan="4">Cəmi</td><td>{totals.total}</td><td>—</td><td>{totals.reserved}</td><td>{totals.problem}</td><td className="balance-qty good">{totals.available}</td><td>{totals.orderedQty || "—"}</td><td>{totals.recommendedQty || "—"}</td><td>—</td><td>—</td><td>{money(totals.stockValue)}</td><td>{money(totals.salesValue)}</td><td>—</td>{view === "products" && <td>—</td>}
             </tr>
           </tfoot>
         )}
@@ -3894,7 +3911,7 @@ export function getWarehouseBalanceStatus(available, reorderPoint) {
 }
 
 export function getFreeQuantity(item) {
-  return Number(item?.total || 0) - Number(item?.reserved || 0);
+  return getAvailableQuantity(item);
 }
 
 export function getShortageQuantity(item) {

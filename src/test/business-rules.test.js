@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getDeliveryStockCheck,
+  getRecommendedOrderPlan,
   userHasEffectivePermission,
 } from "../shared/lib/appDomain.jsx";
 import {
@@ -54,9 +55,27 @@ describe("credit business rules", () => {
 });
 
 describe("inventory business rules", () => {
-  it("keeps reserved stock out of the available quantity", () => {
+  it("shows reservations above physical stock as negative saleable quantity", () => {
     expect(getAvailableQuantity({ total: 12, reserved: 5 })).toBe(7);
-    expect(getAvailableQuantity({ total: 2, reserved: 8 })).toBe(0);
+    expect(getAvailableQuantity({ total: 0, reserved: 1 })).toBe(-1);
+    expect(getAvailableQuantity({ total: 2, reserved: 8 })).toBe(-6);
+  });
+
+  it("adds backorder demand to the procurement recommendation", () => {
+    expect(getRecommendedOrderPlan({ available: -1, minimum: 0, baseQty: 0 })).toMatchObject({
+      deficit: 1,
+      recommendedQty: 1,
+      additionalQty: 1,
+    });
+    expect(getRecommendedOrderPlan({ available: -1, minimum: 2, baseQty: 2 })).toMatchObject({
+      deficit: 3,
+      recommendedQty: 5,
+      additionalQty: 5,
+    });
+    expect(getRecommendedOrderPlan({ available: 1, minimum: 2, baseQty: 2 })).toMatchObject({
+      deficit: 1,
+      recommendedQty: 3,
+    });
   });
 
   it("allows partial delivery from physical stock and keeps the rest as backorder", () => {

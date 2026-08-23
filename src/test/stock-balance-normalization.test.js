@@ -6,12 +6,14 @@ describe("stock balance normalization", () => {
     expect(normalizeBalance({
       on_hand: "12",
       reserved: "2",
+      problem_qty: "3",
       minimum_level: "3",
       avg_cost: "45.50",
     })).toMatchObject({
       qty: 12,
       on_hand: 12,
       reserved: 2,
+      problem_qty: 3,
       reorder_point: 3,
       minimum_level: 3,
       avg_cost: 45.5,

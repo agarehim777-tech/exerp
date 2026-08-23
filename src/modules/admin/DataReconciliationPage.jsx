@@ -89,8 +89,8 @@ export default function DataReconciliationPage() {
             <div style={statValue}>{report.serials.blobCount} / {report.serials.dbCount}</div>
           </div>
           <div style={statTile}>
-            <div style={statLabel}>Rezerv (blob / baza)</div>
-            <div style={statValue}>{report.reservations.totalBlobReserved} / {report.reservations.totalDbReserved}</div>
+            <div style={statLabel}>Rezerv (aktiv / anbar)</div>
+            <div style={statValue}>{report.reservations.totalActiveReserved} / {report.reservations.totalBalanceReserved}</div>
           </div>
         </div>
       )}
@@ -137,19 +137,21 @@ export default function DataReconciliationPage() {
             <thead>
               <tr>
                 <th style={th}>Məhsul</th>
-                <th style={th}>Blob rezerv</th>
-                <th style={th}>Baza rezerv</th>
+                <th style={th}>Aktiv rezerv</th>
+                <th style={th}>Anbar rezervi</th>
+                <th style={th}>Bağlı sifariş</th>
                 <th style={th}>Fərq</th>
                 <th style={th}>Ciddilik</th>
               </tr>
             </thead>
             <tbody>
-              {report.reservations.rows.length === 0 && <EmptyRow colSpan={5} />}
+              {report.reservations.rows.length === 0 && <EmptyRow colSpan={6} />}
               {report.reservations.rows.map((r) => (
-                <tr key={r.product}>
+                <tr key={r.productId}>
                   <td style={td}>{r.product}</td>
-                  <td style={td}>{r.blobReserved}</td>
-                  <td style={td}>{r.dbReserved}</td>
+                  <td style={td}>{r.activeReserved}</td>
+                  <td style={td}>{r.balanceReserved}</td>
+                  <td style={td}>{r.orderNos.length ? r.orderNos.join(', ') : '—'}</td>
                   <td style={{ ...td, color: r.diff ? "#b23a3a" : undefined }}>{r.diff}</td>
                   <td style={td}><SevBadge severity={r.severity} /></td>
                 </tr>

@@ -87,7 +87,7 @@ export default function SalesPage({
     .filter((order) => getOrderBalance(order) > 0 || order.status !== "Təhvil verilib")
     .slice(0, 4);
   const criticalStock = [...stock]
-    .sort((a, b) => a.total - a.reserved - (b.total - b.reserved))
+    .sort((a, b) => (a.total - a.reserved - Number(a.problemQty || 0)) - (b.total - b.reserved - Number(b.problemQty || 0)))
     .slice(0, 5);
   const resetSalesFilters = () => {
     setSalesFilter("Hamısı");
@@ -244,8 +244,8 @@ export default function SalesPage({
             {criticalStock.map((item) => (
               <div className="stock-row stock-signal" key={item.product}>
                 <span>{item.product}</span>
-                <strong>{item.total - item.reserved}</strong>
-                <small>{item.reserved} rezerv</small>
+                <strong>{item.total - item.reserved - Number(item.problemQty || 0)}</strong>
+                <small>{item.reserved} rezerv · {Number(item.problemQty || 0)} problemli</small>
               </div>
             ))}
           </div>

@@ -295,6 +295,7 @@ export type Database = {
           currency: string
           gl_account_id: string | null
           id: string
+          image_path: string | null
           is_active: boolean
           name: string
           opening_balance: number
@@ -308,6 +309,7 @@ export type Database = {
           currency?: string
           gl_account_id?: string | null
           id?: string
+          image_path?: string | null
           is_active?: boolean
           name: string
           opening_balance?: number
@@ -321,6 +323,7 @@ export type Database = {
           currency?: string
           gl_account_id?: string | null
           id?: string
+          image_path?: string | null
           is_active?: boolean
           name?: string
           opening_balance?: number

@@ -7,7 +7,7 @@ import { azn, badge, card, input, statLabel, statTile, statValue, table, td, th 
  * Hesablama saf funksiyalar üzərində aparılır (src/shared/utils/inventoryValuation.ts).
  * Hərəkətlər siyahısı səhifələndiyi üçün burada tam tarixçə ayrıca yüklənir.
  */
-export default function ValuationPanel({ loadMovements, products = [] }) {
+export default function ValuationPanel({ loadMovements, products = [], balances = [] }) {
   const [method, setMethod] = useState("fifo");
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +32,17 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
 
   const rows = useMemo(() => valuateByProduct(movements, method), [movements, method]);
   const totals = useMemo(() => summarizeValuation(rows), [rows]);
+  const balanceQtyByProduct = useMemo(() => {
+    const map = new Map();
+    balances.forEach((balance) => {
+      const productId = String(balance.product_id || "");
+      map.set(productId, (map.get(productId) || 0) + Number(balance.qty ?? balance.on_hand ?? 0));
+    });
+    return map;
+  }, [balances]);
+  const ledgerQty = rows.reduce((sum, row) => sum + Number(row.qtyOnHand || 0), 0);
+  const currentQty = [...balanceQtyByProduct.values()].reduce((sum, qty) => sum + qty, 0);
+  const hasQuantityMismatch = Math.abs(ledgerQty - currentQty) > 0.0001;
 
   return (
     <div style={card}>
@@ -45,7 +56,7 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "14px 0" }}>
         <div style={statTile}>
-          <div style={statLabel}>Qalıq dəyəri</div>
+          <div style={statLabel}>{method === "fifo" ? "FIFO qalıq dəyəri" : "Çəkili orta qalıq dəyəri"}</div>
           <div style={statValue}>{azn(totals.inventoryValue)}</div>
         </div>
         <div style={statTile}>
@@ -64,6 +75,12 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
         </div>
       </div>
 
+      {hasQuantityMismatch && !loading && (
+        <div style={{ color: "#b91c1c", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 8, padding: "9px 12px", marginBottom: 12 }}>
+          Hərəkət tarixçəsi ilə cari stok uyğun deyil: tarixçə {ledgerQty.toLocaleString("az-AZ")}, cari qalıq {currentQty.toLocaleString("az-AZ")}. Dəyər hesabatı yoxlanmalıdır.
+        </div>
+      )}
+
       <table style={table}>
         <thead>
           <tr>
@@ -74,6 +91,8 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
         <tbody>
           {rows.map((row) => {
             const product = nameById.get(row.productId) || {};
+            const currentProductQty = balanceQtyByProduct.get(String(row.productId || "")) || 0;
+            const quantityMismatch = Math.abs(Number(row.qtyOnHand) - currentProductQty) > 0.0001;
             return (
               <tr key={row.productId || "unknown"}>
                 <td style={td}>{product.name || "Naməlum məhsul"}</td>
@@ -85,8 +104,12 @@ export default function ValuationPanel({ loadMovements, products = [] }) {
                 <td style={td}>{azn(row.inventoryValue)}</td>
                 <td style={td}>{azn(row.cogs)}</td>
                 <td style={td}>
-                  <span style={badge(row.shortageQty ? "red" : "green")}>
-                    {row.shortageQty ? `Çatışmazlıq ${row.shortageQty}` : "Normal"}
+                  <span style={badge(row.shortageQty || quantityMismatch ? "red" : "green")}>
+                    {row.shortageQty
+                      ? `Çatışmazlıq ${row.shortageQty}`
+                      : quantityMismatch
+                        ? `Cari qalıq: ${currentProductQty.toLocaleString("az-AZ")}`
+                        : "Normal"}
                   </span>
                 </td>
               </tr>

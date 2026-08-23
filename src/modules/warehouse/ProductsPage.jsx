@@ -25,9 +25,10 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
       const name = row.name || row.product || "";
       const key = String(row.sku || name).trim().toLocaleLowerCase("az-AZ");
       if (!key) return;
-      const current = inventoryByKey.get(key) || { total: 0, reserved: 0, reorderLevel: 0 };
+      const current = inventoryByKey.get(key) || { total: 0, reserved: 0, problemQty: 0, reorderLevel: 0 };
       current.total += Number(row.total ?? row.qty ?? row.on_hand ?? 0);
       current.reserved += Number(row.reserved || 0);
+      current.problemQty += Number(row.problemQty ?? row.problem_qty ?? row.problem ?? 0);
       current.reorderLevel = Math.max(current.reorderLevel, Number(row.reorderLevel ?? row.reorder_point ?? row.minimum_level ?? 0));
       inventoryByKey.set(key, current);
     });
@@ -54,12 +55,13 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
     inventoryRows.forEach((product) => add(product, "inventory"));
     dbProducts.forEach((product) => add(product, "db"));
     return [...byKey.entries()].map(([key, product]) => {
-      const inventory = inventoryByKey.get(key) || { total: 0, reserved: 0, reorderLevel: 0 };
+      const inventory = inventoryByKey.get(key) || { total: 0, reserved: 0, problemQty: 0, reorderLevel: 0 };
       return {
         ...product,
         totalStock: inventory.total,
         reservedStock: inventory.reserved,
-        availableStock: Math.max(0, inventory.total - inventory.reserved),
+        problemStock: Number(inventory.problemQty || inventory.problem_qty || 0),
+        availableStock: inventory.total - inventory.reserved - Number(inventory.problemQty || inventory.problem_qty || 0),
         reorderLevel: inventory.reorderLevel,
       };
     });

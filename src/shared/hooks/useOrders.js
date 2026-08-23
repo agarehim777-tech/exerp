@@ -32,6 +32,35 @@ function lineValues(item, index, tenantId, orderId) {
 
 const ORDERS_PAGE_SIZE = 200;
 
+export function buildMissingCreditDraft(order) {
+  const total = Number(order?.total || 0);
+  const paid = Math.max(0, Number(order?.paid_amount || 0));
+  const orderNumber = String(order?.order_no || '');
+  const numericOrderNumber = orderNumber.match(/(\d+)$/)?.[1];
+  const status = String(order?.status || '').toLowerCase();
+
+  if (
+    !order?.id
+    || !order?.customer_id
+    || order?.credit
+    || !numericOrderNumber
+    || paid <= 0
+    || total <= paid
+    || status === 'cancelled'
+  ) return null;
+
+  return {
+    orderId: order.id,
+    contractNo: `İN-${numericOrderNumber}`,
+    customerId: order.customer_id,
+    principal: total,
+    initialPayment: paid,
+    requiredInitial: paid,
+    termMonths: 12,
+    orderDate: order.order_date || new Date().toISOString().slice(0, 10),
+  };
+}
+
 export function useOrders(tenantId) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +68,7 @@ export function useOrders(tenantId) {
   const [limit, setLimit] = useState(ORDERS_PAGE_SIZE);
   const [hasMore, setHasMore] = useState(false);
   const reconciliationKeyRef = useRef('');
+  const missingCreditRepairKeyRef = useRef('');
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
@@ -56,8 +86,9 @@ export function useOrders(tenantId) {
       const orderIds = visibleRows.map((row) => row.id).filter(Boolean);
       let creditsByOrder = new Map();
       let bonusesByOrder = new Map();
+      let deliveriesByOrder = new Map();
       if (orderIds.length) {
-        const [creditResult, bonusResult] = await Promise.all([
+        const [creditResult, bonusResult, deliveryResult] = await Promise.all([
           supabase.from('credit_contracts')
             .select('id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at')
             .eq('tenant_id', tenantId).in('order_id', orderIds),
@@ -68,6 +99,9 @@ export function useOrders(tenantId) {
             .order('effective_from', { ascending: false })
             .order('position', { ascending: true })
             .order('created_at', { ascending: true }),
+          supabase.from('deliveries')
+            .select('id,order_id,warehouse_id,status,recipient_name,recipient_document,delivered_at,delivered_by,acceptance_name,acceptance_document_no,acceptance_signature,accepted_at,acceptance_note,warehouse_employee_name')
+            .eq('tenant_id', tenantId).in('order_id', orderIds),
         ]);
         const { data: credits, error: creditError } = creditResult;
         if (creditError) setError(creditError);
@@ -80,12 +114,29 @@ export function useOrders(tenantId) {
             bonusesByOrder.set(bonus.order_id, rows);
           }
         }
+        if (!deliveryResult.error) {
+          deliveriesByOrder = new Map((deliveryResult.data || []).map((delivery) => [delivery.order_id, delivery]));
+        } else if (!/warehouse_employee_name/i.test(deliveryResult.error.message || '')) {
+          // Delivery history is supplementary. A role without delivery read
+          // permission must not prevent the sales list from loading.
+          console.warn('[orders] delivery history could not be loaded:', deliveryResult.error);
+        } else {
+          // Keep older databases usable until the delivery audit migration is
+          // applied; employee data is also recoverable from acceptance_note.
+          const legacyDeliveryResult = await supabase.from('deliveries')
+            .select('id,order_id,warehouse_id,status,recipient_name,recipient_document,delivered_at,delivered_by,acceptance_name,acceptance_document_no,acceptance_signature,accepted_at,acceptance_note')
+            .eq('tenant_id', tenantId).in('order_id', orderIds);
+          if (!legacyDeliveryResult.error) {
+            deliveriesByOrder = new Map((legacyDeliveryResult.data || []).map((delivery) => [delivery.order_id, delivery]));
+          }
+        }
       }
       setHasMore(rows.length > limit);
       setOrders(visibleRows.map((row) => ({
         ...row,
         credit: creditsByOrder.get(row.id) || null,
         bonus_assignments: bonusesByOrder.get(row.id) || [],
+        delivery: deliveriesByOrder.get(row.id) || null,
       })));
     }
     setLoading(false);
@@ -144,26 +195,70 @@ export function useOrders(tenantId) {
     if (paymentError) throw paymentError;
   };
 
+  const createCreditContract = useCallback(async (credit) => {
+    const params = {
+      _tenant_id: tenantId,
+      _contract_no: credit.contract_no,
+      _customer_id: credit.customer_id,
+      _order_id: credit.order_id,
+      _principal: Number(credit.principal || 0),
+      _initial_payment: Number(credit.initial_payment || 0),
+      _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
+      _term_months: Number(credit.term_months || 12),
+      _start_date: credit.start_date || new Date().toISOString().slice(0, 10),
+    };
+    let result = await supabase.rpc('create_credit_contract', params);
+    if (result.error && isMissingRpc(result.error)) {
+      const { _required_initial: _ignored, ...legacyParams } = params;
+      result = await supabase.rpc('create_credit_contract', legacyParams);
+    }
+    if (result.error) throw result.error;
+    return result.data;
+  }, [tenantId]);
+
   const createCreditForOrder = async (orderId, credit) => {
     if (!credit || !orderId) return null;
     const { data: existing, error: existingError } = await supabase.from('credit_contracts')
       .select('id').eq('tenant_id', tenantId).eq('order_id', orderId).limit(1).maybeSingle();
     if (existingError) throw existingError;
     if (existing) return existing.id;
-    const { data: creditId, error: creditError } = await supabase.rpc('create_credit_contract', {
-      _tenant_id: tenantId,
-      _contract_no: credit.contract_no,
-      _customer_id: credit.customer_id,
-      _order_id: orderId,
-      _principal: Number(credit.principal || 0),
-      _initial_payment: Number(credit.initial_payment || 0),
-      _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
-      _term_months: Number(credit.term_months || 12),
-      _start_date: credit.start_date || new Date().toISOString().slice(0, 10),
-    });
-    if (creditError) throw creditError;
-    return creditId;
+    return createCreditContract({ ...credit, order_id: orderId });
   };
+
+  useEffect(() => {
+    if (!tenantId || loading || !orders.length) return;
+    const drafts = orders.map(buildMissingCreditDraft).filter(Boolean);
+    if (!drafts.length) {
+      missingCreditRepairKeyRef.current = '';
+      return;
+    }
+
+    const repairKey = drafts.map((draft) => `${draft.orderId}:${draft.initialPayment}`).sort().join('|');
+    if (missingCreditRepairKeyRef.current === repairKey) return;
+    missingCreditRepairKeyRef.current = repairKey;
+    let active = true;
+
+    (async () => {
+      for (const draft of drafts) {
+        await createCreditContract({
+          contract_no: draft.contractNo,
+          customer_id: draft.customerId,
+          order_id: draft.orderId,
+          principal: draft.principal,
+          initial_payment: draft.initialPayment,
+          required_initial: draft.requiredInitial,
+          term_months: draft.termMonths,
+          start_date: draft.orderDate,
+        });
+      }
+      if (active) await fetchAll();
+    })().catch((repairError) => {
+      if (!active) return;
+      setError(new Error(`Kredit bağlantısı bərpa edilmədi: ${repairError.message || repairError}`));
+    });
+
+    return () => { active = false; };
+  }, [tenantId, loading, orders, fetchAll, createCreditContract]);
 
   const saveBonusAssignments = async (orderId, effectiveFrom, allocations = [], reason = null) => {
     const normalized = allocations
@@ -241,11 +336,16 @@ export function useOrders(tenantId) {
       _items: items,
     });
     if (!error) {
-      const creditId = await createCreditForOrder(orderId, credit ? { ...credit, customer_id: header.customer_id } : null);
-      await saveBonusAssignments(orderId, header.order_date, bonusAllocations);
-      await registerInitialPayment(orderId, credit?.initial_payment, header.currency || 'AZN');
-      await fetchAll();
-      return { id: orderId, creditId };
+      try {
+        const creditId = await createCreditForOrder(orderId, credit ? { ...credit, customer_id: header.customer_id } : null);
+        await saveBonusAssignments(orderId, header.order_date, bonusAllocations);
+        await registerInitialPayment(orderId, credit?.initial_payment, header.currency || 'AZN');
+        await fetchAll();
+        return { id: orderId, creditId };
+      } catch (setupError) {
+        await supabase.rpc('delete_sales_order_safe', { _order_id: orderId });
+        throw setupError;
+      }
     }
     if (!isMissingRpc(error)) throw error;
 
@@ -280,11 +380,16 @@ export function useOrders(tenantId) {
       await supabase.from('orders').delete().eq('id', order.id).eq('tenant_id', tenantId);
       throw itemError;
     }
-    const creditId = await createCreditForOrder(order.id, credit ? { ...credit, customer_id: header.customer_id } : null);
-    await saveBonusAssignments(order.id, header.order_date, bonusAllocations);
-    await registerInitialPayment(order.id, credit?.initial_payment, header.currency || 'AZN');
-    await fetchAll();
-    return { ...order, creditId };
+    try {
+      const creditId = await createCreditForOrder(order.id, credit ? { ...credit, customer_id: header.customer_id } : null);
+      await saveBonusAssignments(order.id, header.order_date, bonusAllocations);
+      await registerInitialPayment(order.id, credit?.initial_payment, header.currency || 'AZN');
+      await fetchAll();
+      return { ...order, creditId };
+    } catch (setupError) {
+      await supabase.rpc('delete_sales_order_safe', { _order_id: order.id });
+      throw setupError;
+    }
   };
 
   const updateStatus = async (id, status) => {

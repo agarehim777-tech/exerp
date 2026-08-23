@@ -4,12 +4,17 @@ import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { lazy, useMemo, useState } from "react";
 import { money, normalize } from "../services/format.js";
 import { OrderProductLines, currentBusinessDate, enrichDeliveryOrder, exportDeliveryQueueCsv, getDeliveryDisplayStage, getDeliveryStockCheck, getDeliveryTotalQuantity, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../shared/lib/appDomain.jsx";
+
+function getSalesDocumentNumber(order) {
+  return order?.orderNo || order?.order_no || order?.id || "—";
+}
+
 export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses = [], onCompleteDelivery }) {
   const [deliveryFilter, setDeliveryFilter] = useState("Hamısı");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [deliverySearch, setDeliverySearch] = useState("");
   const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
-  const [acceptance, setAcceptance] = useState({ recipientName: "", documentNo: "", signatureConfirmed: false, note: "" });
+  const [acceptance, setAcceptance] = useState({ recipientName: "", documentNo: "", warehouseEmployeeName: "", signatureConfirmed: false, note: "" });
   const warehouseById = useMemo(() => new Map(warehouses.map((warehouse) => [warehouse.id, warehouse])), [warehouses]);
 
   function decorateDeliveryOrder(order) {
@@ -67,7 +72,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
   const visibleOrders = deliveryOrders.filter((order) => {
     const searchText = normalize(
       [
-        order.id,
+        getSalesDocumentNumber(order),
         order.contractId,
         order.customer,
         order.fin,
@@ -93,16 +98,23 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
     visibleOrders[0] ||
     deliveryOrders[0];
 
-  function completeSelected(order) {
+  async function completeSelected(order) {
     if (!order || !order.stockCheck.ok) return;
-    if (!acceptance.recipientName.trim() || !acceptance.signatureConfirmed) return;
-    onCompleteDelivery(order.id, acceptance);
+    if (!acceptance.recipientName.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed) return;
+    await onCompleteDelivery(order.id, acceptance);
     setSelectedDeliveryId("");
-    setAcceptance({ recipientName: "", documentNo: "", signatureConfirmed: false, note: "" });
+    setAcceptance({ recipientName: "", documentNo: "", warehouseEmployeeName: "", signatureConfirmed: false, note: "" });
   }
 
   function exportVisibleDeliveries() {
     exportDeliveryQueueCsv(visibleOrders);
+  }
+
+  function openDeliveryCard(orderId) {
+    setSelectedDeliveryId(orderId);
+    window.requestAnimationFrame(() => {
+      document.getElementById("delivery-detail-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   return (
@@ -133,98 +145,73 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
               </button>
             ))}
           </div>
-          <label className="delivery-driver-filter">
-            <span>Anbar</span>
-            <select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
-              <option value="all">Bütün anbarlar</option>
-              {warehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="delivery-search">
-            <Search size={16} />
-            <input
-              value={deliverySearch}
-              placeholder="Müştəri, müqavilə, cihaz..."
-              onChange={(event) => setDeliverySearch(event.target.value)}
-            />
-          </label>
-          <button className="secondary-btn delivery-export-btn" type="button" onClick={exportVisibleDeliveries}>
-            <Download size={16} />
-            CSV
-          </button>
-        </div>
-        <div className="delivery-control-grid">
-          <div className="delivery-control-tile">
-            <span>Mərhələ</span>
-            <strong>Anbarda</strong>
-            <small>Son əməliyyat: Təhvil verildi</small>
-          </div>
-          <div className="delivery-control-tile">
-            <span>Kreditli sifariş</span>
-            <strong>{creditOrders.length}</strong>
-            <small>Hər satış ayrıca borc kimi qalır</small>
-          </div>
-          <div className="delivery-control-tile">
-            <span>Rezervdə məhsul</span>
-            <strong>{readyOrders.reduce((sum, order) => sum + Number(order.deliveryQty || 0), 0)}</strong>
-            <small>Təhvilə hazır ədəd</small>
-          </div>
-          <div className="delivery-control-tile">
-            <span>Filter nəticəsi</span>
-            <strong>{visibleOrders.length}</strong>
-            <small>{deliveryFilter} · {warehouseFilter === "all" ? "Bütün anbarlar" : "Seçilmiş anbar"}</small>
+          <div className="delivery-filter-actions">
+            <label className="delivery-driver-filter">
+              <span>Anbar</span>
+              <select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
+                <option value="all">Bütün anbarlar</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="delivery-search">
+              <Search size={16} />
+              <input
+                value={deliverySearch}
+                placeholder="Müştəri, sifariş və ya məhsul axtar..."
+                onChange={(event) => setDeliverySearch(event.target.value)}
+              />
+            </label>
+            <span className="delivery-result-count">{visibleOrders.length} sifariş göstərilir</span>
+            <button className="secondary-btn delivery-export-btn" type="button" onClick={exportVisibleDeliveries}>
+              <Download size={16} />
+              CSV ixrac
+            </button>
           </div>
         </div>
       </Panel>
 
       <section className="delivery-queue-layout">
         <Panel className="delivery-registry-panel delivery-registry-main">
-          <PanelHeader title="Təhvil reyestri" subtitle="Sifarişə daxil olun, cihazları yoxlayın və anbardan çıxarın" />
+          <PanelHeader title="Təhvil reyestri" subtitle="Sifarişi seçin, sonra təhvil kartında məlumatları yoxlayıb aktı tamamlayın" />
           <DataTable
-            columns={["Sifariş / müqavilə", "Müştəri", "Cihazlar", "Anbar", "Ödəniş", "Stok", "Əməliyyat"]}
+            columns={["Sifariş və müştəri", "Məhsullar", "Anbar və stok", "Ödəniş", "Əməliyyat"]}
             rows={visibleOrders.map((order) => [
               <button
                 className={`row-link ${selectedOrder?.id === order.id ? "active" : ""}`}
                 onClick={() => setSelectedDeliveryId(order.id)}
               >
-                <TwoLine title={order.id} subtitle={order.contractId || "Müqavilə yoxdur"} />
+                <TwoLine
+                  title={getSalesDocumentNumber(order)}
+                  subtitle={`${order.customer} · ${order.contractId || "Müqaviləsiz"}`}
+                />
               </button>,
-              <TwoLine title={order.customer} subtitle={order.fin || order.phone || "Müştəri məlumatı"} />,
               <OrderProductLines lines={order.productLines} />,
-              <TwoLine title={order.warehouseName || "Anbar qeyd edilməyib"} subtitle={order.displayStage} />,
+              <TwoLine
+                title={order.warehouseName || "Anbar qeyd edilməyib"}
+                subtitle={<StatusBadge status={order.stockCheck.status} />}
+              />,
               <TwoLine
                 title={order.paymentStatus || getOrderPaymentMethod(order)}
                 subtitle={order.balance > 0 ? `${money(order.balance)} qalıq` : "Qalıq yoxdur"}
               />,
-              <TwoLine
-                title={<StatusBadge status={order.stockCheck.status} />}
-                subtitle={
-                  order.stockCheck.partial
-                    ? `${order.stockCheck.plan.deliverableTotal} ədəd indi · ${order.stockCheck.plan.shortageTotal} backorder`
-                    : order.stockCheck.ok
-                      ? `${order.stockCheck.plan?.remainingTotal ?? order.deliveryQty} ədəd rezervdə`
-                      : order.stockCheck.reason
-                }
-              />,
               <button
                 className="text-btn"
-                disabled={!order.stockCheck.ok}
                 title={order.stockCheck.reason}
-                onClick={() => completeSelected(order)}
+                onClick={() => openDeliveryCard(order.id)}
               >
-                {order.stockCheck.partial ? "Qismən təhvil ver" : "Təhvil verildi"}
+                Kartı aç
               </button>,
 
             ])}
           />
         </Panel>
 
-        <Panel className="delivery-detail-panel">
-          <PanelHeader title="Təhvil kartı" subtitle={selectedOrder?.id || "Sifariş seçilməyib"} />
+        <Panel className="delivery-detail-panel" id="delivery-detail-card">
+          <PanelHeader title="Təhvil kartı" subtitle={selectedOrder ? getSalesDocumentNumber(selectedOrder) : "Sifariş seçilməyib"} />
           {selectedOrder ? (
             <div className="delivery-detail-card">
               <div className="delivery-detail-head">
@@ -238,7 +225,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 <div>
                   <span>Müqavilə</span>
                   <strong>{selectedOrder.contractId || "—"}</strong>
-                  <small>{selectedOrder.id}</small>
+                  <small>Satış sənədi: {getSalesDocumentNumber(selectedOrder)}</small>
                 </div>
                 <div>
                   <span>Anbar</span>
@@ -277,10 +264,32 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 </div>
                 <b>{selectedOrder.stockCheck.plan?.remainingTotal ?? selectedOrder.deliveryQty} ədəd</b>
               </div>
-              <div className="delivery-acceptance-form"><strong>Təhvil aktı</strong><label>Təhvil alanın ad-soyadı<input value={acceptance.recipientName} onChange={event=>setAcceptance({...acceptance,recipientName:event.target.value})} placeholder="Ad və soyad" /></label><label>Sənəd nömrəsi<input value={acceptance.documentNo} onChange={event=>setAcceptance({...acceptance,documentNo:event.target.value})} placeholder="Ş/V və ya etibarnamə" /></label><label>Qeyd<textarea value={acceptance.note} onChange={event=>setAcceptance({...acceptance,note:event.target.value})} /></label><label className="delivery-signature-check"><input type="checkbox" checked={acceptance.signatureConfirmed} onChange={event=>setAcceptance({...acceptance,signatureConfirmed:event.target.checked})}/><span>Təhvil alan şəxs elektron imzanı təsdiqlədi</span></label></div>
+              <div className="delivery-acceptance-form">
+                <strong>Təhvil aktı</strong>
+                <label>
+                  Təhvil alanın ad-soyadı
+                  <input value={acceptance.recipientName} onChange={(event) => setAcceptance({ ...acceptance, recipientName: event.target.value })} placeholder="Müştəri və ya nümayəndə" />
+                </label>
+                <label>
+                  Anbardan götürən əməkdaş
+                  <input value={acceptance.warehouseEmployeeName} onChange={(event) => setAcceptance({ ...acceptance, warehouseEmployeeName: event.target.value })} placeholder="Əməkdaşın adı və soyadı" />
+                </label>
+                <label>
+                  Sənəd nömrəsi
+                  <input value={acceptance.documentNo} onChange={(event) => setAcceptance({ ...acceptance, documentNo: event.target.value })} placeholder="Ş/V və ya etibarnamə" />
+                </label>
+                <label className="delivery-acceptance-note">
+                  Qeyd
+                  <textarea value={acceptance.note} onChange={(event) => setAcceptance({ ...acceptance, note: event.target.value })} />
+                </label>
+                <label className="delivery-signature-check">
+                  <input type="checkbox" checked={acceptance.signatureConfirmed} onChange={(event) => setAcceptance({ ...acceptance, signatureConfirmed: event.target.checked })} />
+                  <span>Təhvil alan şəxs elektron imzanı təsdiqlədi</span>
+                </label>
+              </div>
               <button
                 className="primary-btn full"
-                disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.signatureConfirmed}
+                disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed}
                 title={selectedOrder.stockCheck.reason}
                 onClick={() => completeSelected(selectedOrder)}
               >
@@ -300,13 +309,14 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
       <Panel className="delivery-history-panel">
         <PanelHeader title="Son təhvil tarixçəsi" subtitle="Tamamlanan sifarişlər yalnız izləmə üçün göstərilir" />
         <DataTable
-          columns={["Sifariş", "Müştəri", "Cihaz", "Anbar", "Təhvil tarixi"]}
+          columns={["Sifariş", "Müştəri", "Cihaz", "Anbar", "Təhvil əməkdaşı", "Təhvil tarixi"]}
           rows={completedOrders.map((order) => [
-            <strong>{order.id}</strong>,
+            <strong>{getSalesDocumentNumber(order)}</strong>,
             <TwoLine title={order.customer} subtitle={order.fin} />,
             summarizeOrderProducts(order),
             order.warehouseName || "—",
-            order.deliveredAt || "—",
+            order.deliveryAcceptance?.warehouseEmployeeName || order.deliveredBy || "—",
+            parsePaymentDate(order.deliveredAt) ? formatPaymentDate(parsePaymentDate(order.deliveredAt)) : "—",
           ])}
         />
       </Panel>

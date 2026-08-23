@@ -85,42 +85,56 @@ export function reconcileSerials({ warehouseStock = {}, units = [] } = {}) {
 }
 
 /**
- * Rezerv barışdırması: blob-dakı `reserved` sayı ↔ `inventory_units` içindəki reserved status sayı.
- * Məhsul adı ilə uyğunlaşdırma üçün `productNameById` xəritəsi verilir.
+ * Rezerv barışdırması: aktiv `stock_reservations` cəmi ↔ `stock_balances.reserved`.
+ * Blob və `inventory_units` rezervin uçot mənbəyi deyil; serialsız məhsullarda
+ * onlardan istifadə saxta uyğunsuzluq yaradırdı.
  */
-export function reconcileReservations({ warehouseStock = {}, units = [], productNameById = {} } = {}) {
-  const blobRows = flattenBlobStock(warehouseStock);
-  const blobByProduct = new Map();
-  blobRows.forEach((row) => {
-    const key = norm(row.product);
-    if (!key) return;
-    const cur = blobByProduct.get(key) || { product: row.product, reserved: 0, total: 0 };
-    cur.reserved += num(row.reserved);
-    cur.total += num(row.total);
-    blobByProduct.set(key, cur);
+export function reconcileReservations({ stockReservations = [], stockBalances = [], productNameById = {} } = {}) {
+  const activeByProduct = new Map();
+  (stockReservations || []).filter((row) => row?.status === 'active').forEach((row) => {
+    const productId = String(row.product_id || '');
+    if (!productId) return;
+    const current = activeByProduct.get(productId) || {
+      productId,
+      product: productNameById[productId] || productId,
+      reserved: 0,
+      reservationCount: 0,
+      orderNos: new Set(),
+    };
+    current.reserved += num(row.quantity);
+    current.reservationCount += 1;
+    const orderNo = row.order?.order_no || row.order_no;
+    if (orderNo) current.orderNos.add(orderNo);
+    activeByProduct.set(productId, current);
   });
 
-  const dbByProduct = new Map();
-  (units || []).forEach((u) => {
-    const name = productNameById[u.product_id] || u.product_id;
-    const key = norm(name);
-    const cur = dbByProduct.get(key) || { product: name, reserved: 0, total: 0 };
-    cur.total += num(u.quantity);
-    if (u.status === 'reserved') cur.reserved += num(u.quantity);
-    dbByProduct.set(key, cur);
+  const balanceByProduct = new Map();
+  (stockBalances || []).forEach((row) => {
+    const productId = String(row.product_id || '');
+    if (!productId) return;
+    const current = balanceByProduct.get(productId) || {
+      productId,
+      product: productNameById[productId] || productId,
+      reserved: 0,
+    };
+    current.reserved += num(row.reserved);
+    balanceByProduct.set(productId, current);
   });
 
-  const keys = new Set([...blobByProduct.keys(), ...dbByProduct.keys()]);
+  const keys = new Set([...activeByProduct.keys(), ...balanceByProduct.keys()]);
   const rows = [...keys].map((key) => {
-    const b = blobByProduct.get(key);
-    const d = dbByProduct.get(key);
-    const blobReserved = b ? b.reserved : 0;
-    const dbReserved = d ? d.reserved : 0;
-    const diff = Number((dbReserved - blobReserved).toFixed(3));
+    const active = activeByProduct.get(key);
+    const balance = balanceByProduct.get(key);
+    const activeReserved = active ? active.reserved : 0;
+    const balanceReserved = balance ? balance.reserved : 0;
+    const diff = Number((balanceReserved - activeReserved).toFixed(3));
     return {
-      product: (b && b.product) || (d && d.product) || key,
-      blobReserved,
-      dbReserved,
+      productId: key,
+      product: active?.product || balance?.product || productNameById[key] || key,
+      activeReserved,
+      balanceReserved,
+      reservationCount: active?.reservationCount || 0,
+      orderNos: [...(active?.orderNos || [])],
       diff,
       severity: diff === 0 ? SEVERITY.ok : Math.abs(diff) > 1 ? SEVERITY.error : SEVERITY.warn,
     };
@@ -129,8 +143,8 @@ export function reconcileReservations({ warehouseStock = {}, units = [], product
   return {
     rows,
     mismatchCount: rows.filter((r) => r.diff !== 0).length,
-    totalBlobReserved: rows.reduce((s, r) => s + r.blobReserved, 0),
-    totalDbReserved: rows.reduce((s, r) => s + r.dbReserved, 0),
+    totalActiveReserved: rows.reduce((s, r) => s + r.activeReserved, 0),
+    totalBalanceReserved: rows.reduce((s, r) => s + r.balanceReserved, 0),
   };
 }
 
@@ -267,7 +281,7 @@ export function reconciliationToCsv(report) {
     lines.push([section, key, kind, blob ?? '', db ?? '', severity].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
   report.serials.issues.forEach((i) => push('serial', i.imei, i.kind, i.blobStatus, i.dbStatus, i.severity));
-  report.reservations.rows.filter((r) => r.diff !== 0).forEach((r) => push('rezerv', r.product, 'reserved_diff', r.blobReserved, r.dbReserved, r.severity));
+  report.reservations.rows.filter((r) => r.diff !== 0).forEach((r) => push('rezerv', r.product, 'reserved_diff', r.activeReserved, r.balanceReserved, r.severity));
   report.production.issues.forEach((i) => push('istehsal', i.name, i.kind, i.blobStatus, i.dbStatus, i.severity));
   report.notifications.rows.filter((r) => r.severity !== SEVERITY.ok).forEach((r) => push('bildiris', r.name, 'not_migrated', r.blobSends, r.dbDeliveries, r.severity));
   report.notifications.orphanDeliveries.forEach((o) => push('bildiris', o.templateCode, 'orphan_delivery', '', o.count, o.severity));

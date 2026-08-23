@@ -15,6 +15,8 @@ export interface StockMovementLike {
   unit_cost?: number | string | null;
   moved_at?: string | null;
   created_at?: string | null;
+  /** ignore = rezerv/daxili transfer, inventory = COGS olmayan stok azalması */
+  valuation_effect?: "cogs" | "inventory" | "ignore" | string | null;
 }
 
 export interface CostLayer {
@@ -60,6 +62,7 @@ export function sortMovements(movements: StockMovementLike[]): StockMovementLike
 
 /** Hərəkətin miqdara təsiri: müsbət = giriş, mənfi = çıxış. */
 export function signedQty(movement: StockMovementLike): number {
+  if (movement.valuation_effect === "ignore") return 0;
   const qty = num(movement.qty);
   const type = getMoveType(movement);
   if (type === "in") return Math.abs(qty);
@@ -92,7 +95,7 @@ export function valuateFifo(movements: StockMovementLike[], productId: string | 
     while (remaining > 0 && layers.length > 0) {
       const layer = layers[0];
       const taken = Math.min(layer.qty, remaining);
-      cogs += taken * layer.unitCost;
+      if (movement.valuation_effect !== "inventory") cogs += taken * layer.unitCost;
       layer.qty -= taken;
       remaining -= taken;
       if (layer.qty <= 0) layers.shift();
@@ -100,7 +103,7 @@ export function valuateFifo(movements: StockMovementLike[], productId: string | 
     if (remaining > 0) {
       // qalıq yoxdur — backorder çıxışı, son maya ilə qiymətləndirilir
       const fallbackCost = num(movement.unit_cost) || lastCost;
-      cogs += remaining * fallbackCost;
+      if (movement.valuation_effect !== "inventory") cogs += remaining * fallbackCost;
       shortageQty += remaining;
     }
   }
@@ -138,7 +141,7 @@ export function valuateAverage(movements: StockMovementLike[], productId: string
     }
     const out = Math.abs(delta);
     const unitCost = avgCost || num(movement.unit_cost);
-    cogs += out * unitCost;
+    if (movement.valuation_effect !== "inventory") cogs += out * unitCost;
     if (out > qty) shortageQty += out - Math.max(0, qty);
     qty -= out;
     value = qty > 0 ? qty * unitCost : 0;

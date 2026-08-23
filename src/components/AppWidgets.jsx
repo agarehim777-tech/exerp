@@ -881,10 +881,9 @@ function CreateModal({
         onDelete={mode === "edit" && product ? () => onDeleteProduct(product.id) : null}
         onSubmit={(values) => {
           if (mode === "edit" && product) {
-            onUpdateProduct(product.id, values);
-            return;
+            return onUpdateProduct(product.id, values);
           }
-          onCreate("product", values);
+          return onCreate("product", values);
         }}
       />
     );

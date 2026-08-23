@@ -43,6 +43,8 @@ export function dbProductToLegacy(p) {
     serialTracked: false,
     status: p.is_active ? "Aktiv" : "Passiv",
     description: p.description || "",
+    imagePath: p.image_path || "",
+    imageUrl: p.image_url || "",
     createdAt: p.created_at,
     _source: "db",
   };
@@ -72,6 +74,18 @@ export function dbOrderToLegacy(o) {
   const amount = Number(o.total) || 0;
   const paid = Math.max(0, Number(o.paid_amount || 0));
   const credit = Array.isArray(o.credit) ? o.credit[0] : o.credit;
+  const delivery = Array.isArray(o.delivery) ? o.delivery[0] : o.delivery;
+  let acceptanceNote = delivery?.acceptance_note || "";
+  let acceptanceMeta = {};
+  try {
+    const parsed = JSON.parse(acceptanceNote);
+    if (parsed && typeof parsed === "object") {
+      acceptanceMeta = parsed;
+      acceptanceNote = parsed.note || "";
+    }
+  } catch {
+    acceptanceMeta = {};
+  }
   const sellerBonuses = [...(o.bonus_assignments || [])]
     .sort((a, b) => Number(a.position || 1) - Number(b.position || 1))
     .map((row) => ({
@@ -109,6 +123,20 @@ export function dbOrderToLegacy(o) {
     sellerBonuses,
     seller: sellerBonuses.map((row) => `${row.seller} ${row.bonus}%`).join(', ') || 'Təyin edilməyib',
     notes: o.notes || "",
+    warehouseId: delivery?.warehouse_id || o.warehouse_id || "",
+    deliveredAt:
+      delivery?.delivered_at ||
+      delivery?.accepted_at ||
+      (String(o.status || "").toLowerCase() === "delivered" ? o.updated_at : null),
+    deliveredBy: delivery?.warehouse_employee_name || acceptanceMeta.warehouseEmployeeName || "",
+    deliveryAcceptance: {
+      recipientName: delivery?.acceptance_name || delivery?.recipient_name || "",
+      documentNo: delivery?.acceptance_document_no || delivery?.recipient_document || "",
+      warehouseEmployeeName: delivery?.warehouse_employee_name || acceptanceMeta.warehouseEmployeeName || "",
+      signatureConfirmed: Boolean(delivery?.acceptance_signature),
+      note: acceptanceNote,
+      acceptedAt: delivery?.accepted_at || delivery?.delivered_at || null,
+    },
     _source: "db",
   };
 }

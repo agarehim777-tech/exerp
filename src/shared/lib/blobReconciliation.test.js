@@ -50,25 +50,39 @@ describe('blobReconciliation', () => {
 
   it('compares reserved quantities', () => {
     const res = reconcileReservations({
-      warehouseStock,
-      units: [
-        { product_id: 'p1', quantity: 1, status: 'reserved' },
-        { product_id: 'p1', quantity: 1, status: 'available' },
+      stockReservations: [
+        { product_id: 'p1', quantity: 1, status: 'active', order: { order_no: 'SF-1001' } },
+        { product_id: 'p1', quantity: 4, status: 'fulfilled' },
       ],
+      stockBalances: [{ product_id: 'p1', reserved: 1 }],
       productNameById: { p1: 'iPhone 15' },
     });
     expect(res.mismatchCount).toBe(0);
-    expect(res.totalDbReserved).toBe(1);
+    expect(res.totalActiveReserved).toBe(1);
+    expect(res.totalBalanceReserved).toBe(1);
+    expect(res.rows[0].orderNos).toEqual(['SF-1001']);
   });
 
   it('flags reserved differences', () => {
     const res = reconcileReservations({
-      warehouseStock,
-      units: [],
-      productNameById: {},
+      stockReservations: [{ product_id: 'p1', quantity: 1, status: 'active' }],
+      stockBalances: [{ product_id: 'p1', reserved: 0 }],
+      productNameById: { p1: 'iPhone 15' },
     });
     expect(res.mismatchCount).toBe(1);
     expect(res.rows[0].diff).toBe(-1);
+  });
+
+  it('does not treat legacy blob or inventory units as reservation truth', () => {
+    const res = reconcileReservations({
+      warehouseStock,
+      units: [{ product_id: 'p1', quantity: 3, status: 'reserved' }],
+      stockReservations: [],
+      stockBalances: [],
+      productNameById: { p1: 'iPhone 15' },
+    });
+    expect(res.mismatchCount).toBe(0);
+    expect(res.rows).toEqual([]);
   });
 
   it('reconciles production plans', () => {

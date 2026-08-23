@@ -306,7 +306,7 @@ function App() {
   const tenantSnapshotUnavailable = useRef(false);
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
-  const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct } = useProducts(activeTenantId);
+  const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const { orders: dbOrders, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
@@ -453,6 +453,7 @@ function App() {
         sku: balance.product?.sku || "",
         total: Number(balance.qty ?? balance.on_hand ?? 0),
         reserved: Number(balance.reserved || 0),
+        problemQty: Number(balance.problem_qty || 0),
         reorderLevel: Number(balance.reorder_point ?? balance.minimum_level ?? 0),
         costPrice: Number(balance.avg_cost || 0),
         price: Number(balance.product?.price ?? balance.avg_cost ?? 0),
@@ -465,9 +466,10 @@ function App() {
       .flat()
       .reduce((byProduct, row) => {
         const key = row.productId || row.sku || row.product;
-        const current = byProduct.get(key) || { ...row, total: 0, reserved: 0 };
+        const current = byProduct.get(key) || { ...row, total: 0, reserved: 0, problemQty: 0 };
         current.total += row.total;
         current.reserved += row.reserved;
+        current.problemQty += row.problemQty;
         byProduct.set(key, current);
         return byProduct;
       }, new Map());
@@ -3222,7 +3224,7 @@ function App() {
     if (createConfig[active]) setModal({ type: active });
   }
 
-  function createRecord(type, values) {
+  async function createRecord(type, values) {
     if (!hasCreatePermission(type, values)) return;
 
     if (type === "sales" || type === "dashboard") {
@@ -3403,8 +3405,32 @@ function App() {
         notify("Bu SKU artıq məhsul kataloqunda var.", "warning");
         return;
       }
+      let persistedProduct = null;
+      if (activeTenantId && createDbProduct) {
+        try {
+          persistedProduct = await createDbProduct({
+            sku,
+            name,
+            description: values.category || null,
+            unit: values.unit || "ədəd",
+            price: Math.max(0, Number(values.salePrice || 0)),
+            minimum_stock: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
+            recommended_order_qty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
+            currency: "AZN",
+            vat_rate: 18,
+            is_active: true,
+          });
+          if (values.imageFile && uploadDbProductImage) {
+            persistedProduct = await uploadDbProductImage(persistedProduct.id, values.imageFile);
+          }
+        } catch (err) {
+          console.error("[products] DB insert failed:", err);
+          notify(`Məhsul DB-yə saxlanılmadı: ${err.message || err}`, "warning");
+          return;
+        }
+      }
       const product = {
-        id: `PRD-${Date.now()}`,
+        id: persistedProduct?.id || `PRD-${Date.now()}`,
         name,
         sku,
         category: values.category || "Digər",
@@ -3415,25 +3441,9 @@ function App() {
         recommendedOrderQty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
         serialTracked: values.serialTracked === "Bəli",
         status: "Aktiv",
+        imagePath: persistedProduct?.image_path || "",
+        imageUrl: persistedProduct?.image_url || "",
       };
-      // Persist to DB — Realtime bridge will merge into state.products
-      if (activeTenantId && createDbProduct) {
-        createDbProduct({
-          sku,
-          name,
-          description: values.category || null,
-          unit: values.unit || "ədəd",
-          price: Math.max(0, Number(values.salePrice || 0)),
-          minimum_stock: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
-          recommended_order_qty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
-          currency: "AZN",
-          vat_rate: 18,
-          is_active: true,
-        }).catch((err) => {
-          console.error("[products] DB insert failed:", err);
-          notify(`Məhsul DB-yə saxlanılmadı: ${err.message || err}`, "warning");
-        });
-      }
       setState((current) =>
         auditCurrentState(
           { ...current, products: [product, ...(current.products || [])] },
@@ -4001,7 +4011,7 @@ function App() {
     notify(`${rows.length} stok sətri anbara import edildi.`);
   }
 
-  function updateProduct(productId, values) {
+  async function updateProduct(productId, values) {
     if (!requirePermission("warehouse.manage", "məhsul kataloqunu redaktə etmək")) return;
 
     const currentProduct = state.products.find((product) => product.id === productId);
@@ -4027,7 +4037,37 @@ function App() {
       reorderLevel: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
       recommendedOrderQty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
       serialTracked: values.serialTracked === "Bəli",
+      imageUrl: values.removeImage ? "" : values.imagePreview || currentProduct.imageUrl || "",
+      imagePath: values.removeImage ? "" : currentProduct.imagePath || "",
     };
+
+    const dbRow =
+      (dbProducts || []).find((p) => p.id === productId) ||
+      (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
+    if (activeTenantId && dbRow) {
+      try {
+        let persisted = await updateDbProduct(dbRow.id, {
+          sku: nextProduct.sku,
+          name: nextProduct.name,
+          description: nextProduct.category || null,
+          unit: nextProduct.unit,
+          price: nextProduct.salePrice,
+          minimum_stock: nextProduct.reorderLevel,
+          recommended_order_qty: nextProduct.recommendedOrderQty,
+        });
+        if (values.imageFile && uploadDbProductImage) {
+          persisted = await uploadDbProductImage(dbRow.id, values.imageFile, dbRow.image_path || currentProduct.imagePath || "");
+        } else if (values.removeImage && removeDbProductImage) {
+          persisted = await removeDbProductImage(dbRow.id, dbRow.image_path || currentProduct.imagePath || "");
+        }
+        nextProduct.imagePath = persisted?.image_path || "";
+        nextProduct.imageUrl = persisted?.image_url || "";
+      } catch (err) {
+        console.error("[products] DB update failed:", err);
+        notify(`Məhsul DB-də yenilənmədi: ${err.message || err}`, "warning");
+        return;
+      }
+    }
     setState((current) => {
       const renameStockItem = (item, warehouseId = "") => {
         if (item.product !== currentProduct.name) return item;
@@ -4063,26 +4103,6 @@ function App() {
         },
       );
     });
-    // Persist to DB — Realtime bridge will refresh state
-    if (activeTenantId && updateDbProduct) {
-      const dbRow =
-        (dbProducts || []).find((p) => p.id === productId) ||
-        (dbProducts || []).find((p) => String(p.sku).toLowerCase() === String(currentProduct.sku).toLowerCase());
-      if (dbRow) {
-        updateDbProduct(dbRow.id, {
-          sku: nextProduct.sku,
-          name: nextProduct.name,
-          description: nextProduct.category || null,
-          unit: nextProduct.unit,
-          price: nextProduct.salePrice,
-          minimum_stock: nextProduct.reorderLevel,
-          recommended_order_qty: nextProduct.recommendedOrderQty,
-        }).catch((err) => {
-          console.error("[products] DB update failed:", err);
-          notify(`Məhsul DB-də yenilənmədi: ${err.message || err}`, "warning");
-        });
-      }
-    }
     setModal(null);
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
@@ -4328,16 +4348,39 @@ function App() {
         notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
-      const { error: acceptanceError } = await supabase.from("deliveries").update({
+      const warehouseId = targetOrder.warehouseId || state.warehouses?.[0]?.id;
+      const deliveryPayload = {
+        tenant_id: activeTenantId,
+        delivery_no: `TV-${dbOrder.order_no || dbOrder.id}`,
+        order_id: dbOrder.id,
+        warehouse_id: warehouseId,
+        status: "delivered",
         recipient_name: acceptance.recipientName || targetOrder.customer || null,
         recipient_document: acceptance.documentNo || null,
         acceptance_name: acceptance.recipientName || targetOrder.customer || null,
         acceptance_document_no: acceptance.documentNo || null,
         acceptance_signature: acceptance.signatureConfirmed ? "confirmed" : null,
+        delivered_at: new Date().toISOString(),
         accepted_at: new Date().toISOString(),
-        acceptance_note: acceptance.note || null,
-      }).eq("tenant_id", activeTenantId).eq("order_id", dbOrder.id);
-      if (acceptanceError && !String(acceptanceError.message || "").includes("acceptance_")) console.error("[delivery] acceptance save failed:", acceptanceError);
+        acceptance_note: JSON.stringify({
+          note: acceptance.note || "",
+          warehouseEmployeeName: acceptance.warehouseEmployeeName || "",
+        }),
+        warehouse_employee_name: acceptance.warehouseEmployeeName || null,
+      };
+      let acceptanceResult = await supabase.from("deliveries").upsert(deliveryPayload, {
+        onConflict: "tenant_id,order_id",
+      });
+      if (acceptanceResult.error && /warehouse_employee_name/i.test(acceptanceResult.error.message || "")) {
+        const { warehouse_employee_name: _unsupportedField, ...legacyDeliveryPayload } = deliveryPayload;
+        acceptanceResult = await supabase.from("deliveries").upsert(legacyDeliveryPayload, {
+          onConflict: "tenant_id,order_id",
+        });
+      }
+      if (acceptanceResult.error) {
+        console.error("[delivery] acceptance save failed:", acceptanceResult.error);
+        notify(`Təhvil tamamlandı, lakin təhvil aktı saxlanmadı: ${acceptanceResult.error.message}`, "warning");
+      }
     }
 
     setState((current) => {
@@ -4412,6 +4455,7 @@ function App() {
                   deliveryAcceptance: {
                     recipientName: acceptance.recipientName || order.customer,
                     documentNo: acceptance.documentNo || "",
+                    warehouseEmployeeName: acceptance.warehouseEmployeeName || "",
                     signatureConfirmed: Boolean(acceptance.signatureConfirmed),
                     note: acceptance.note || "",
                     acceptedAt: new Date().toISOString(),

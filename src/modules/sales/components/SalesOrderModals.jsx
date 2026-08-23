@@ -122,9 +122,41 @@ const customerSearchOptions = (customers) => customers.map((customer) => {
 const productSearchOptions = (items) => items.map((item) => ({
   value: item.product,
   label: item.product,
-  subtitle: `${Math.max(0, Number(item.total || 0) - Number(item.reserved || 0))} satış üçün${item.sku ? ` · SKU: ${item.sku}` : ""}`,
+  subtitle: `${Number(item.total || 0) - Number(item.reserved || 0)} satış üçün${item.sku ? ` · SKU: ${item.sku}` : ""}`,
   searchText: [item.sku, item.category].filter(Boolean).join(" "),
 }));
+
+export function buildSalesProductOptions(stockRows = [], catalogProducts = []) {
+  const productKey = (value) => String(value || "").trim().toLocaleLowerCase("az");
+  const byProduct = new Map();
+
+  stockRows.forEach((item) => {
+    if (!item?.product) return;
+    byProduct.set(productKey(item.product), { ...item });
+  });
+
+  catalogProducts
+    .filter((product) => product?.name && product.status !== "Passiv")
+    .forEach((product) => {
+      const key = productKey(product.name);
+      const stockItem = byProduct.get(key);
+      byProduct.set(key, {
+        ...stockItem,
+        product: product.name,
+        productId: stockItem?.productId || product.id,
+        sku: stockItem?.sku || product.sku || "",
+        category: stockItem?.category || product.category || "",
+        total: Number(stockItem?.total || 0),
+        reserved: Number(stockItem?.reserved || 0),
+        price: Number(stockItem?.price || product.salePrice || product.price || 0),
+        serialTracked: stockItem?.serialTracked ?? product.serialTracked ?? false,
+      });
+    });
+
+  return [...byProduct.values()].sort((a, b) =>
+    String(a.product || "").localeCompare(String(b.product || ""), "az"),
+  );
+}
 
 const sellerSearchOptions = (sellers, currentSeller = "") => {
   const options = sellers.map((seller) => ({
@@ -145,12 +177,13 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   const warehouses = orderOptions.warehouses || [];
   const warehouseStock = orderOptions.warehouseStock || {};
   const sellers = orderOptions.sellers || [];
+  const catalogProducts = orderOptions.products || [];
   const delivered = order.status === "Təhvil verilib";
   const firstWarehouseId = order.warehouseId || warehouses[0]?.id || "";
 
   const getStockOptions = (targetWarehouseId) => {
-    const rows = warehouseStock[targetWarehouseId]?.length ? warehouseStock[targetWarehouseId] : stock;
-    const byProduct = new Map(rows.map((item) => [item.product, item]));
+    const rows = Array.isArray(warehouseStock[targetWarehouseId]) ? warehouseStock[targetWarehouseId] : stock;
+    const byProduct = new Map(buildSalesProductOptions(rows, catalogProducts).map((item) => [item.product, item]));
     (order.productLines || []).forEach((line) => {
       if (!byProduct.has(line.product)) {
         byProduct.set(line.product, {
@@ -459,11 +492,13 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
 export function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} }) {
   const customers = orderOptions.customers;
   const stock = orderOptions.stock;
+  const catalogProducts = orderOptions.products || [];
   const sellers = orderOptions.sellers;
   const warehouses = orderOptions.warehouses || [];
   const warehouseStock = orderOptions.warehouseStock || {};
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id || "");
-  const availableStock = warehouseStock[warehouseId]?.length ? warehouseStock[warehouseId] : stock;
+  const warehouseRows = Array.isArray(warehouseStock[warehouseId]) ? warehouseStock[warehouseId] : stock;
+  const availableStock = buildSalesProductOptions(warehouseRows, catalogProducts);
   const [customerFin, setCustomerFin] = useState("");
   const [paymentMethod, setPaymentMethod] = useState(defaults.paymentMethod || "Nağd");
   const [creditMonths, setCreditMonths] = useState(12);
@@ -539,7 +574,6 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   const canCreateOrder = Boolean(
     selectedCustomer &&
       warehouseId &&
-      availableStock.length > 0 &&
       orderTotal > 0 &&
       productRows.some((row) => row.product) &&
       sellerRows.some((row) => row.seller) &&
@@ -571,9 +605,10 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
   }
 
   function changeWarehouse(nextWarehouseId) {
-    const nextStock = warehouseStock[nextWarehouseId]?.length
+    const nextWarehouseRows = Array.isArray(warehouseStock[nextWarehouseId])
       ? warehouseStock[nextWarehouseId]
       : stock;
+    const nextStock = buildSalesProductOptions(nextWarehouseRows, catalogProducts);
     setWarehouseId(nextWarehouseId);
     setProductRows((rows) =>
       rows.map((row) => {

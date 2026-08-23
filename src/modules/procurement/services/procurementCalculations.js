@@ -8,7 +8,7 @@ export function getProductProcurementSnapshot(productName, warehouseStock = {}, 
   const stockRows = Object.values(warehouseStock).flatMap((items) => items || []).filter((item) => item.product === productName);
   const total = stockRows.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const reserved = stockRows.reduce((sum, item) => sum + Number(item.reserved || 0), 0);
-  const available = Math.max(0, total - reserved);
+  const available = total - reserved;
   const reorderPoint = getReorderPoint({
     product: productName,
     total,

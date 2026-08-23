@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -9,22 +10,12 @@ export const normalizeBalance = (row) => ({
   qty: Number(row?.on_hand ?? row?.qty ?? row?.quantity ?? 0),
   on_hand: Number(row?.on_hand ?? row?.qty ?? row?.quantity ?? 0),
   reserved: Number(row?.reserved ?? 0),
+  problem_qty: Number(row?.problem_qty ?? row?.problemQty ?? 0),
   reorder_point: Number(row?.minimum_level ?? row?.reorder_point ?? row?.product?.minimum_stock ?? 0),
   minimum_level: Number(row?.minimum_level ?? row?.reorder_point ?? row?.product?.minimum_stock ?? 0),
   avg_cost: Number(row?.avg_cost ?? 0),
 });
-const normalizeMovement = (row) => {
-  const movementType = row?.movement_type || row?.move_type || '';
-  const isOut = ['delivery','transfer_out','write_off'].includes(movementType);
-  return {
-    ...row,
-    move_type: row?.move_type || (isOut ? 'out' : 'in'),
-    qty: row?.qty ?? row?.quantity ?? 0,
-    moved_at: row?.moved_at || row?.created_at || null,
-    reference: row?.reference || row?.reference_id || null,
-    doc_no: row?.doc_no || row?.reference_type || null,
-  };
-};
+const normalizeMovement = normalizeStockMovement;
 
 export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {}) {
   const [warehouses, setWarehouses] = useState([]);
@@ -310,12 +301,17 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     return reference;
   };
 
-  const setReorderPoint = async (balanceId, value) => {
-    const { error: err } = await supabase
+  const setReorderPoint = async (balance, value) => {
+    let query = supabase
       .from('stock_balances')
       .update({ minimum_level: Number(value) || 0 })
-      .eq('id', balanceId);
+      .eq('tenant_id', tenantId);
+    query = balance?.id
+      ? query.eq('id', balance.id)
+      : query.eq('warehouse_id', balance?.warehouse_id).eq('product_id', balance?.product_id);
+    const { error: err } = await query;
     if (err) throw err;
+    await fetchBase();
   };
 
   return {

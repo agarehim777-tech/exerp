@@ -1,103 +1,179 @@
 import React from 'react';
+import { BarChart3, CircleDollarSign, ReceiptText, ShoppingCart, TrendingUp } from 'lucide-react';
+import {
+  CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useSalesDashboard } from '../../shared/hooks/useSalesDashboard.js';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 
-const money = (v) => `${Number(v || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })} ₼`;
-const STATUS_COLORS = { draft: '#94a3b8', pending: '#f59e0b', confirmed: '#3b82f6', processing: '#8b5cf6', shipped: '#14b8a6', delivered: '#10b981', cancelled: '#ef4444' };
+const money = (value) => `${Number(value || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })} ₼`;
+
+const STATUS_META = {
+  draft: { label: 'Qaralama', color: '#94a3b8' },
+  pending: { label: 'Gözləyir', color: '#f59e0b' },
+  confirmed: { label: 'Təsdiqlənib', color: '#3b82f6' },
+  processing: { label: 'Hazırlanır', color: '#8b5cf6' },
+  shipped: { label: 'Göndərilib', color: '#14b8a6' },
+  delivered: { label: 'Təhvil verilib', color: '#10b981' },
+  cancelled: { label: 'Ləğv edilib', color: '#ef4444' },
+};
 
 export default function SalesDashboardPage() {
   const { activeTenantId } = useAuth();
   const { data, loading } = useSalesDashboard(activeTenantId, 30);
 
-  if (loading && !data) return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Yüklənir...</div>;
-  if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Data yoxdur</div>;
+  if (loading && !data) return <DashboardState text="Satış göstəriciləri yüklənir..." />;
+  if (!data) return <DashboardState text="Göstəriləcək satış məlumatı yoxdur." />;
 
-  const statusData = Object.entries(data.status_breakdown || {}).map(([k, v]) => ({ name: k, value: v, color: STATUS_COLORS[k] || '#94a3b8' }));
+  const statusData = Object.entries(data.status_breakdown || {}).map(([key, value]) => ({
+    name: STATUS_META[key]?.label || key,
+    value: Number(value || 0),
+    color: STATUS_META[key]?.color || '#94a3b8',
+  })).filter((item) => item.value > 0);
+  const statusTotal = statusData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 12 }}>
-        <Kpi label="Dövriyyə (30g)" value={money(data.revenue)} accent="#10b981" />
-        <Kpi label="Sifariş sayı" value={data.orders_count} accent="#3b82f6" />
-        <Kpi label="Açıq sifariş" value={data.open_orders} accent="#f59e0b" />
-        <Kpi label="Orta çek" value={money(data.avg_ticket)} accent="#8b5cf6" />
-      </div>
+    <main className="sales-analytics-page">
+      <header className="sales-analytics-head">
+        <div>
+          <span className="sales-analytics-eyebrow"><BarChart3 size={15} /> Satış hesabatı</span>
+          <h1>Satış analitikası</h1>
+          <p>Satış məbləği, sifariş statusları və lider nəticələr vahid görünüşdə.</p>
+        </div>
+        <span className="sales-analytics-period">Son 30 gün</span>
+      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-        <Card title="Gündəlik satış (son 30 gün)">
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={data.daily || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} tickFormatter={d => d?.slice(5)} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => money(v)} />
-              <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-        <Card title="Status paylanması">
-          {statusData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={80} innerRadius={40} paddingAngle={2}>
-                  {statusData.map((s, i) => <Cell key={i} fill={s.color} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Data yoxdur</div>}
-        </Card>
-      </div>
+      <section className="sales-analytics-kpis" aria-label="Əsas satış göstəriciləri">
+        <Kpi label="Dövriyyə" value={money(data.revenue)} icon={CircleDollarSign} tone="green" />
+        <Kpi label="Sifariş sayı" value={data.orders_count || 0} icon={ShoppingCart} tone="blue" />
+        <Kpi label="Açıq sifariş" value={data.open_orders || 0} icon={ReceiptText} tone="amber" />
+        <Kpi label="Orta satış" value={money(data.avg_ticket)} icon={TrendingUp} tone="violet" />
+      </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <Card title="Top 5 müştəri">
-          <MiniTable rows={data.top_customers || []} cols={[
-            { key: 'name', label: 'Müştəri' },
-            { key: 'orders_count', label: 'Sifariş', align: 'right' },
-            { key: 'amount', label: 'Cəm', align: 'right', format: money },
-          ]} />
+      <section className="sales-analytics-chart-grid">
+        <Card title="Gündəlik satış dinamikası" subtitle="Son 30 gün üzrə satış məbləği">
+          <div className="sales-analytics-chart">
+            {(data.daily || []).length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.daily} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e7ece9" vertical={false} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#70827b' }} tickFormatter={(day) => day?.slice(5)} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#70827b' }} width={58} tickFormatter={(value) => Number(value).toLocaleString('az-AZ')} />
+                  <Tooltip formatter={(value) => [money(value), 'Satış']} labelFormatter={(label) => `Tarix: ${label}`} contentStyle={{ borderRadius: 10, borderColor: '#dbe4df' }} />
+                  <Line type="monotone" dataKey="amount" stroke="#0f9f75" strokeWidth={3} dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : <EmptyBlock text="Bu dövr üzrə satış yoxdur." />}
+          </div>
         </Card>
-        <Card title="Top 5 məhsul">
-          <MiniTable rows={data.top_products || []} cols={[
-            { key: 'name', label: 'Məhsul' },
-            { key: 'qty', label: 'Miq.', align: 'right', format: v => Number(v).toFixed(0) },
-            { key: 'amount', label: 'Cəm', align: 'right', format: money },
-          ]} />
+
+        <Card title="Status paylanması" subtitle="Sifarişlərin cari vəziyyəti">
+          {statusData.length ? (
+            <div className="sales-status-layout">
+              <div className="sales-status-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statusData} dataKey="value" nameKey="name" outerRadius="88%" innerRadius="62%" paddingAngle={2} stroke="none">
+                      {statusData.map((status) => <Cell key={status.name} fill={status.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [value, name]} contentStyle={{ borderRadius: 10, borderColor: '#dbe4df' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="sales-status-total"><strong>{statusTotal}</strong><span>sifariş</span></div>
+              </div>
+              <div className="sales-status-legend">
+                {statusData.map((status) => (
+                  <div key={status.name}>
+                    <span className="sales-status-dot" style={{ background: status.color }} />
+                    <span>{status.name}</span>
+                    <strong>{status.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : <EmptyBlock text="Status məlumatı yoxdur." />}
         </Card>
-      </div>
-    </div>
+      </section>
+
+      <section className="sales-analytics-table-grid">
+        <Card title="Top 5 müştəri" subtitle="Satış məbləğinə görə sıralama">
+          <MiniTable
+            rows={data.top_customers || []}
+            columns={[
+              { key: 'name', label: 'Müştəri' },
+              { key: 'orders_count', label: 'Sifariş', align: 'right' },
+              { key: 'amount', label: 'Məbləğ', align: 'right', format: money },
+            ]}
+          />
+        </Card>
+        <Card title="Top 5 məhsul" subtitle="Ən çox satılan məhsullar">
+          <MiniTable
+            rows={data.top_products || []}
+            columns={[
+              { key: 'name', label: 'Məhsul' },
+              { key: 'qty', label: 'Miqdar', align: 'right', format: (value) => Number(value || 0).toLocaleString('az-AZ') },
+              { key: 'amount', label: 'Məbləğ', align: 'right', format: money },
+            ]}
+          />
+        </Card>
+      </section>
+    </main>
   );
 }
 
-function Kpi({ label, value, accent }) {
+function DashboardState({ text }) {
+  return <div className="sales-analytics-state"><BarChart3 size={24} /><span>{text}</span></div>;
+}
+
+function Kpi({ label, value, icon: Icon, tone }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #e2e8f0', borderLeft: `4px solid ${accent}` }}>
-      <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 21, lineHeight: 1.2, fontWeight: 750, marginTop: 6, color: '#0f172a' }}>{value}</div>
-    </div>
+    <article className={`sales-analytics-kpi tone-${tone}`}>
+      <div><span>{label}</span><strong>{value}</strong></div>
+      <i><Icon size={21} /></i>
+    </article>
   );
 }
-function Card({ title, children }) {
+
+function Card({ title, subtitle, children }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '1px solid #e2e8f0' }}>
-      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 12 }}>{title}</h3>
+    <article className="sales-analytics-card">
+      <header><h2>{title}</h2><p>{subtitle}</p></header>
       {children}
-    </div>
+    </article>
   );
 }
-function MiniTable({ rows, cols }) {
-  if (!rows.length) return <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8', fontSize: 13 }}>Yoxdur</div>;
+
+function EmptyBlock({ text }) {
+  return <div className="sales-analytics-empty"><BarChart3 size={24} /><span>{text}</span></div>;
+}
+
+function MiniTable({ rows, columns }) {
+  if (!rows.length) return <EmptyBlock text="Bu dövr üzrə məlumat yoxdur." />;
+  const maxAmount = Math.max(...rows.map((row) => Number(row.amount || 0)), 1);
+
   return (
-    <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-      <thead><tr>{cols.map(c => <th key={c.key} style={{ textAlign: c.align || 'left', padding: '6px 4px', color: '#64748b', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>{c.label}</th>)}</tr></thead>
-      <tbody>
-        {rows.map((r, i) => <tr key={i}>{cols.map(c => (
-          <td key={c.key} style={{ textAlign: c.align || 'left', padding: '8px 4px', borderBottom: '1px solid #f1f5f9' }}>
-            {c.format ? c.format(r[c.key]) : r[c.key]}
-          </td>
-        ))}</tr>)}
-      </tbody>
-    </table>
+    <div className="sales-ranking-scroll">
+      <table className="sales-ranking-table">
+        <thead><tr><th aria-label="Sıra" />{columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'is-right' : ''}>{column.label}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.name || 'row'}-${index}`}>
+              <td><span className="sales-rank-badge">{index + 1}</span></td>
+              {columns.map((column) => (
+                <td key={column.key} className={column.align === 'right' ? 'is-right' : ''}>
+                  {column.key === 'name' ? (
+                    <div className="sales-ranking-name">
+                      <strong>{row[column.key] || 'Adsız'}</strong>
+                      <span style={{ width: `${Math.max(5, (Number(row.amount || 0) / maxAmount) * 100)}%` }} />
+                    </div>
+                  ) : (column.format ? column.format(row[column.key]) : row[column.key])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

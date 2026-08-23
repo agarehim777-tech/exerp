@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useStock } from "../../shared/hooks/useStock.js";
@@ -34,7 +35,7 @@ export default function StockPage() {
       0,
     );
     const low = stock.balances.filter(
-      (b) => Number(b.reorder_point) > 0 && Number(b.qty) <= Number(b.reorder_point),
+      (b) => Number(b.reorder_point) > 0 && Number(b.qty) - Number(b.reserved || 0) - Number(b.problem_qty || 0) <= Number(b.reorder_point),
     ).length;
     return { qty, value, low };
   }, [stock.balances]);
@@ -59,7 +60,7 @@ export default function StockPage() {
           <div style={statValue}>{totals.qty.toLocaleString("az-AZ")}</div>
         </div>
         <div style={statTile}>
-          <div style={statLabel}>Anbar dəyəri</div>
+          <div style={statLabel}>Anbar dəyəri (orta maya)</div>
           <div style={statValue}>{azn(totals.value)}</div>
         </div>
         <div style={statTile}>
@@ -82,7 +83,7 @@ export default function StockPage() {
       {tab === "balances" && <BalancesPanel stock={stock} />}
       {tab === "transfer" && <TransferPanel stock={stock} />}
       {tab === "movements" && <MovementsPanel stock={stock} products={products} />}
-      {tab === "valuation" && <ValuationPanel loadMovements={stock.fetchAllMovements} products={products} />}
+      {tab === "valuation" && <ValuationPanel loadMovements={stock.fetchAllMovements} products={products} balances={stock.balances} />}
       {tab === "aging" && <StockAgingPanel tenantId={tenantId} />}
       {tab === "warehouses" && <WarehousesPanel stock={stock} isAdmin={isAdmin} />}
     </div>
@@ -90,33 +91,130 @@ export default function StockPage() {
 }
 
 function BalancesPanel({ stock }) {
+  const [filters, setFilters] = useState({ warehouseId: "", query: "", status: "all" });
+  const [editingKey, setEditingKey] = useState("");
+  const [editValue, setEditValue] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState("");
+  const filteredBalances = useMemo(() => {
+    const query = filters.query.trim().toLocaleLowerCase("az-AZ");
+    return stock.balances.filter((balance) => {
+      const saleable = Number(balance.qty) - Number(balance.reserved || 0) - Number(balance.problem_qty || 0);
+      const low = Number(balance.reorder_point) > 0 && saleable <= Number(balance.reorder_point);
+      const matchesWarehouse = !filters.warehouseId || balance.warehouse_id === filters.warehouseId;
+      const matchesStatus = filters.status === "all"
+        || (filters.status === "low" && low)
+        || (filters.status === "normal" && !low);
+      const haystack = `${balance.product?.name || ""} ${balance.product?.sku || balance.sku || ""}`.toLocaleLowerCase("az-AZ");
+      return matchesWarehouse && matchesStatus && (!query || haystack.includes(query));
+    });
+  }, [stock.balances, filters]);
+
+  const resetFilters = () => setFilters({ warehouseId: "", query: "", status: "all" });
+  const balanceKey = (balance) => balance.id || `${balance.warehouse_id}:${balance.product_id}`;
+  const startEditing = (balance) => {
+    setEditingKey(balanceKey(balance));
+    setEditValue(String(Number(balance.reorder_point || 0)));
+    setEditError("");
+  };
+  const cancelEditing = () => {
+    setEditingKey("");
+    setEditValue("");
+    setEditError("");
+  };
+  const saveCriticalLevel = async (balance) => {
+    const value = Number(editValue);
+    if (!Number.isFinite(value) || value < 0) {
+      setEditError("Kritik hədd 0 və ya daha böyük olmalıdır.");
+      return;
+    }
+    setEditBusy(true);
+    setEditError("");
+    try {
+      await stock.setReorderPoint(balance, value);
+      cancelEditing();
+    } catch (error) {
+      setEditError(`Kritik hədd saxlanılmadı: ${error.message}`);
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Anbar qalıqları ({stock.balances.length})</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <h3 style={{ margin: 0 }}>Anbar qalıqları ({filteredBalances.length}/{stock.balances.length})</h3>
+        {(filters.warehouseId || filters.query || filters.status !== "all") && (
+          <button type="button" style={secondaryActionBtn} onClick={resetFilters}>Filtrləri təmizlə</button>
+        )}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, margin: "16px 0" }}>
+        <select value={filters.warehouseId} onChange={(event) => setFilters((current) => ({ ...current, warehouseId: event.target.value }))} style={input}>
+          <option value="">Bütün anbarlar</option>
+          {stock.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}
+        </select>
+        <input
+          type="search"
+          placeholder="Məhsul adı və ya SKU axtar…"
+          value={filters.query}
+          onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
+          style={input}
+        />
+        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} style={input}>
+          <option value="all">Bütün statuslar</option>
+          <option value="low">Sifariş tələb edən</option>
+          <option value="normal">Normal qalıq</option>
+        </select>
+      </div>
+      {editError && <div style={{ ...msgBox, marginBottom: 12 }}>{editError}</div>}
       {stock.loading && <div>Yüklənir…</div>}
       <table style={table}>
         <thead>
           <tr>
             <th style={th}>Anbar</th><th style={th}>Məhsul</th><th style={th}>SKU</th>
-            <th style={th}>Qalıq</th><th style={th}>Kritik həd</th><th style={th}>Status</th>
+            <th style={th}>Fiziki qalıq</th><th style={th}>Rezerv</th><th style={th}>Problemli</th><th style={th}>Satışa uyğun</th><th style={th}>Kritik həd</th><th style={th}>Status</th>
           </tr>
         </thead>
         <tbody>
-          {stock.balances.map((b) => {
-            const low = Number(b.reorder_point) > 0 && Number(b.qty) <= Number(b.reorder_point);
+          {filteredBalances.map((b) => {
+            const saleable = Number(b.qty) - Number(b.reserved || 0) - Number(b.problem_qty || 0);
+            const low = Number(b.reorder_point) > 0 && saleable <= Number(b.reorder_point);
+            const key = balanceKey(b);
+            const isEditing = editingKey === key;
             return (
-              <tr key={b.id}>
+              <tr key={key}>
                 <td style={td}>{b.warehouse?.name || "—"}</td>
                 <td style={td}>{b.product?.name || b.sku || "—"}</td>
                 <td style={td}>{b.product?.sku || b.sku || "—"}</td>
                 <td style={{ ...td, fontWeight: 600 }}>{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
+                <td style={td}>{Number(b.reserved || 0).toLocaleString("az-AZ")}</td>
+                <td style={{ ...td, color: Number(b.problem_qty || 0) > 0 ? "#b23a3a" : undefined, fontWeight: 650 }}>{Number(b.problem_qty || 0).toLocaleString("az-AZ")}</td>
+                <td style={{ ...td, fontWeight: 650 }}>{saleable.toLocaleString("az-AZ")}</td>
                 <td style={td}>
-                  <input
-                    type="number"
-                    defaultValue={b.reorder_point}
-                    onBlur={(e) => stock.setReorderPoint(b.id, e.target.value)}
-                    style={{ ...input, width: 90 }}
-                  />
+                  {isEditing ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        autoFocus
+                        value={editValue}
+                        onChange={(event) => setEditValue(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") saveCriticalLevel(b);
+                          if (event.key === "Escape") cancelEditing();
+                        }}
+                        style={{ ...input, width: 88 }}
+                      />
+                      <button type="button" disabled={editBusy} onClick={() => saveCriticalLevel(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi yadda saxla"><Check size={16} /></button>
+                      <button type="button" disabled={editBusy} onClick={cancelEditing} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Redaktəni ləğv et"><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ minWidth: 28, fontWeight: 650 }}>{Number(b.reorder_point || 0).toLocaleString("az-AZ")}</span>
+                      <button type="button" onClick={() => startEditing(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi redaktə et"><Pencil size={15} /></button>
+                    </div>
+                  )}
                 </td>
                 <td style={td}>
                   <span style={badge(low ? "red" : "green")}>{low ? "Sifariş et" : "Normal"}</span>
@@ -125,7 +223,10 @@ function BalancesPanel({ stock }) {
             );
           })}
           {!stock.balances.length && !stock.loading && (
-            <tr><td style={td} colSpan={6}>Qalıq yoxdur — «Hərəkətlər» bölməsindən mədaxil edin.</td></tr>
+            <tr><td style={td} colSpan={9}>Qalıq yoxdur — «Hərəkətlər» bölməsindən mədaxil edin.</td></tr>
+          )}
+          {!!stock.balances.length && !filteredBalances.length && !stock.loading && (
+            <tr><td style={td} colSpan={9}>Seçilmiş filtrlərə uyğun qalıq tapılmadı.</td></tr>
           )}
         </tbody>
       </table>
@@ -263,6 +364,7 @@ function TransferPanel({ stock }) {
 function WarehousesPanel({ stock, isAdmin }) {
   const emptyForm = { id: "", code: "", name: "", address: "", is_active: true };
   const [form, setForm] = useState(emptyForm);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [msg, setMsg] = useState("");
 
   const submit = async (event) => {
@@ -273,18 +375,27 @@ function WarehousesPanel({ stock, isAdmin }) {
       else await stock.createWarehouse({ code: form.code, name: form.name, address: form.address, is_active: true });
       setMsg(form.id ? "Anbar məlumatları yeniləndi." : "Yeni anbar yaradıldı.");
       setForm(emptyForm);
+      setIsFormOpen(false);
     } catch (error) {
       setMsg(`Xəta: ${error.message}`);
     }
   };
 
-  const edit = (warehouse) => setForm({
-    id: warehouse.id,
-    code: warehouse.code || "",
-    name: warehouse.name || "",
-    address: warehouse.address || "",
-    is_active: warehouse.is_active !== false,
-  });
+  const edit = (warehouse) => {
+    setForm({
+      id: warehouse.id,
+      code: warehouse.code || "",
+      name: warehouse.name || "",
+      address: warehouse.address || "",
+      is_active: warehouse.is_active !== false,
+    });
+    setIsFormOpen(true);
+  };
+
+  const toggleForm = () => {
+    if (isFormOpen) setForm(emptyForm);
+    setIsFormOpen((open) => !open);
+  };
 
   const remove = async (warehouse) => {
     if (!window.confirm(`“${warehouse.name}” anbarı silinsin?`)) return;
@@ -300,16 +411,23 @@ function WarehousesPanel({ stock, isAdmin }) {
 
   return (
     <div style={card}>
-      <h2 style={sectionTitle}>Anbarlar ({stock.warehouses.length})</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <h2 style={sectionTitle}>Anbarlar ({stock.warehouses.length})</h2>
+        {isAdmin && (
+          <button type="button" style={isFormOpen ? secondaryActionBtn : primaryBtn} onClick={toggleForm}>
+            {isFormOpen ? "Formanı bağla ↑" : "+ Yeni anbar"}
+          </button>
+        )}
+      </div>
       <p style={sectionSubtitle}>Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
       {msg && <div style={msgBox}>{msg}</div>}
-      {isAdmin && (
+      {isAdmin && isFormOpen && (
         <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1.4fr auto auto", gap: 10, marginBottom: 18, alignItems: "end" }}>
           <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
           <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
           <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={input} />
           <button type="submit" style={primaryBtn}>{form.id ? "Yadda saxla" : "+ Anbar"}</button>
-          {form.id && <button type="button" style={secondaryActionBtn} onClick={() => setForm(emptyForm)}>Ləğv et</button>}
+          {form.id && <button type="button" style={secondaryActionBtn} onClick={() => { setForm(emptyForm); setIsFormOpen(false); }}>Ləğv et</button>}
         </form>
       )}
       <table style={table}>

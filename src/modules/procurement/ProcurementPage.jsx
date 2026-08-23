@@ -31,6 +31,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
 import "./procurement.css";
 import LandedCostPanel from "./LandedCostPanel.jsx";
+import { isMissingPoPaymentsTable } from "./procurementSchema.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -205,6 +206,7 @@ export default function ProcurementPage() {
   const [invoices, setInvoices] = useState([]);
   const [invoiceLines, setInvoiceLines] = useState([]);
   const [poPayments, setPoPayments] = useState([]);
+  const [poPaymentsAvailable, setPoPaymentsAvailable] = useState(true);
   const [matchRows, setMatchRows] = useState({});
   const [rfqs, setRfqs] = useState([]);
   const [rfqForm, setRfqForm] = useState(emptyRfq);
@@ -244,8 +246,13 @@ export default function ProcurementPage() {
       supabase.from("po_payments").select("*").eq("tenant_id", tenantId).order("payment_date", { ascending: false }),
     ]);
 
-    const firstError = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes].find((result) => result.error)?.error;
+    const coreResults = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes];
+    const firstError = coreResults.find((result) => result.error)?.error
+      || (paymentRes.error && !isMissingPoPaymentsTable(paymentRes.error) ? paymentRes.error : null);
     if (firstError) setError(getError(firstError));
+
+    const paymentTableMissing = isMissingPoPaymentsTable(paymentRes.error);
+    setPoPaymentsAvailable(!paymentTableMissing);
 
     setVendors(vendorRes.data || []);
     setProducts(productRes.data || []);
@@ -255,7 +262,7 @@ export default function ProcurementPage() {
     setReceiptLines(grnLineRes.data || []);
     setInvoices(invoiceRes.data || []);
     setInvoiceLines(invoiceLineRes.data || []);
-    setPoPayments(paymentRes.data || []);
+    setPoPayments(paymentTableMissing ? [] : (paymentRes.data || []));
     setLoading(false);
   }, [tenantId]);
 
@@ -329,18 +336,20 @@ export default function ProcurementPage() {
 
   useEffect(() => {
     if (!tenantId) return undefined;
-    const channel = supabase
+    let channel = supabase
       .channel(`procurement:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "vendors", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders", filter: `tenant_id=eq.${tenantId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "goods_receipts", filter: `tenant_id=eq.${tenantId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vendor_invoices", filter: `tenant_id=eq.${tenantId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "po_payments", filter: `tenant_id=eq.${tenantId}` }, load)
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "vendor_invoices", filter: `tenant_id=eq.${tenantId}` }, load);
+    if (poPaymentsAvailable) {
+      channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "po_payments", filter: `tenant_id=eq.${tenantId}` }, load);
+    }
+    channel.subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tenantId, load]);
+  }, [tenantId, load, poPaymentsAvailable]);
 
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
@@ -767,6 +776,7 @@ export default function ProcurementPage() {
   }
 
   function openPaymentForm(po) {
+    if (!poPaymentsAvailable) return;
     setPaymentPoId(po.id);
     setEditingPaymentId(null);
     setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
@@ -790,6 +800,10 @@ export default function ProcurementPage() {
 
   async function savePoPayment(event) {
     event.preventDefault();
+    if (!poPaymentsAvailable) {
+      setError("PO ödənişləri bazada aktiv deyil. Database migration tətbiq edilməlidir.");
+      return;
+    }
     if (!paymentForm.po_id || toNumber(paymentForm.amount) <= 0) {
       setError("PO və ödəniş məbləği tələb olunur.");
       return;
@@ -819,6 +833,7 @@ export default function ProcurementPage() {
   }
 
   async function deletePayment(payment) {
+    if (!poPaymentsAvailable) return;
     if (!window.confirm("Bu ödənişi silmək istəyirsiniz?")) return;
     setSaving(true);
     const { error: paymentError } = await supabase.from("po_payments").delete().eq("id", payment.id);
@@ -1228,6 +1243,7 @@ export default function ProcurementPage() {
               poMetrics={poMetrics}
               paymentByPo={paymentByPo}
               poPayments={poPayments}
+              poPaymentsAvailable={poPaymentsAvailable}
               acceptedByLine={acceptedByLine}
               invoicedByLine={invoicedByLine}
               expandedPo={expandedPo}
@@ -1501,6 +1517,7 @@ function PurchaseOrdersTab({
   poMetrics,
   paymentByPo,
   poPayments,
+  poPaymentsAvailable,
   acceptedByLine,
   invoicedByLine,
   expandedPo,
@@ -1634,7 +1651,7 @@ function PurchaseOrdersTab({
                 <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
-                <IconButton icon={CreditCard} label="Ödəniş" onClick={() => { setExpandedPo(po.id); onPaymentOpen(po); }} />
+                {poPaymentsAvailable && <IconButton icon={CreditCard} label="Ödəniş" onClick={() => { setExpandedPo(po.id); onPaymentOpen(po); }} />}
                 {po.status === "draft" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(po)} tone="success" />}
                 {["approved", "partial"].includes(po.status) && <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} tone="success" />}
                 {po.status === "received" && <IconButton icon={CheckCircle2} label="Bağla" onClick={() => onClose(po)} />}
@@ -1646,7 +1663,7 @@ function PurchaseOrdersTab({
             expandedPo === po.id && (
               <div style={{ display: "grid", gap: "16px" }}>
                 <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
-                <PoPaymentPanel
+                {poPaymentsAvailable && <PoPaymentPanel
                   po={po}
                   poPayments={poPayments}
                   paymentForm={paymentForm}
@@ -1659,7 +1676,7 @@ function PurchaseOrdersTab({
                   saving={saving}
                   paymentByPo={paymentByPo}
                   poMetrics={poMetrics}
-                />
+                />}
               </div>
             )
           }

@@ -32,11 +32,13 @@ export function buildProductWarehouseBalances(product, warehouses = [], warehous
       const warehouseId = String(row.warehouse_id || row.warehouse?.id || "");
       const total = Number(row.on_hand ?? row.qty ?? row.quantity ?? row.total ?? 0) || 0;
       const reserved = Number(row.reserved ?? row.reserved_quantity ?? 0) || 0;
+      const problem = Number(row.problem_qty ?? row.problemQty ?? row.problem ?? 0) || 0;
       return {
         warehouse: warehouseById.get(warehouseId) || row.warehouse || { id: warehouseId, name: "Naməlum anbar" },
         total,
         reserved,
-        available: Math.max(0, total - reserved),
+        problem,
+        available: total - reserved - problem,
       };
     });
   if (liveRows.length) return liveRows.filter((row) => row.total || row.reserved);
@@ -44,7 +46,8 @@ export function buildProductWarehouseBalances(product, warehouses = [], warehous
     const row = (warehouseStock?.[warehouse.id] || []).find((item) => productLineMatches(item, product));
     const total = Number(row?.on_hand ?? row?.qty ?? row?.total ?? row?.quantity ?? 0) || 0;
     const reserved = Number(row?.reserved ?? row?.reserved_quantity ?? 0) || 0;
-    return { warehouse, total, reserved, available: Math.max(0, total - reserved) };
+    const problem = Number(row?.problem_qty ?? row?.problemQty ?? row?.problem ?? 0) || 0;
+    return { warehouse, total, reserved, problem, available: total - reserved - problem };
   }).filter((row) => row.total || row.reserved);
 }
 
@@ -68,10 +71,11 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
   const activeReservations = reservations.filter((item) => item.status === "active");
   const total = balances.reduce((sum, item) => sum + item.total, 0);
   const reserved = balances.reduce((sum, item) => sum + item.reserved, 0);
+  const problem = balances.reduce((sum, item) => sum + Number(item.problem || 0), 0);
   const soldQty = sales.reduce((sum, item) => sum + item.qty, 0);
   const soldValue = sales.reduce((sum, item) => sum + item.total, 0);
   const receivedQty = incoming.reduce((sum, item) => sum + Math.abs(Number(item.qty ?? item.quantity ?? 0)), 0);
-  const available = Math.max(0, total - reserved);
+  const available = total - reserved - problem;
   const minimumStock = Math.max(0, Number(product.reorderLevel || 0));
   const baseOrderQty = Math.max(0, Number(product.recommendedOrderQty || 0));
   const orderedQty = (purchaseOrders || []).reduce((sum, po) => {
@@ -84,10 +88,15 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="product-360-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal-card product-360-card">
         <div className="modal-head product-360-head">
-          <div>
-            <span style={{ color: "#0b7a5c", fontWeight: 700, fontSize: 13 }}>MƏHSUL 360</span>
-            <h2 id="product-360-title" style={{ margin: "4px 0" }}>{product.name}</h2>
-            <p style={{ margin: 0 }}>{product.sku || "SKU yoxdur"} · {product.category || "Kateqoriyasız"}</p>
+          <div className="product-360-title-wrap">
+            <div className="product-360-photo">
+              {product.imageUrl || product.image_url ? <img src={product.imageUrl || product.image_url} alt={`${product.name} şəkli`} /> : <Package size={25} />}
+            </div>
+            <div>
+              <span style={{ color: "#0b7a5c", fontWeight: 700, fontSize: 13 }}>MƏHSUL 360</span>
+              <h2 id="product-360-title" style={{ margin: "4px 0" }}>{product.name}</h2>
+              <p style={{ margin: 0 }}>{product.sku || "SKU yoxdur"} · {product.category || "Kateqoriyasız"}</p>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="button" className="secondary-btn" onClick={() => onEdit(product.id)}>Redaktə et</button>
@@ -99,6 +108,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
             <div className="product-360-metric"><span>Cari qalıq</span><strong>{number(total)}</strong><small>{balances.length} anbarda</small></div>
             <div className="product-360-metric success"><span>Satışa uyğun</span><strong>{number(available)}</strong><small>{money(available * Number(product.salePrice || product.price || 0))}</small></div>
             <button type="button" className="product-360-metric product-360-summary-button" onClick={() => setTab("reservations")}><span>Rezerv</span><strong>{number(reserved)}</strong><small>{activeReservations.length} aktiv rezerv · bax</small></button>
+            <button type="button" className={`product-360-metric product-360-summary-button ${problem > 0 ? "attention" : ""}`} onClick={() => setTab("returns")}><span>Problemli stok</span><strong>{number(problem)}</strong><small>{problem > 0 ? "idarəetmə tarixçəsinə bax" : "problemli məhsul yoxdur"}</small></button>
             <div className="product-360-metric"><span>Minimum stok</span><strong>{number(minimumStock)}</strong><small>təyin edilmiş hədd</small></div>
             <div className="product-360-metric"><span>Açıq PO-da</span><strong>{number(orderedQty)}</strong><small>yolda olan məhsul</small></div>
             <div className={`product-360-metric recommendation ${recommendation.additionalQty > 0 ? "attention" : ""}`}><span>Tövsiyə sifariş</span><strong>{number(recommendation.recommendedQty)}</strong><small>{recommendation.additionalQty > 0 ? `əlavə ${number(recommendation.additionalQty)} alınmalı` : recommendation.recommendedQty > 0 ? "açıq PO qarşılayır" : "hazırda tələb yoxdur"}</small></div>
@@ -112,14 +122,14 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
           </div>
 
           <div className="warehouse-balance-tabs" role="tablist" style={{ marginBottom: 16 }}>
-            {[["stock", `Qalıq (${balances.length})`, Package], ["cost", `Maya tarixçəsi (${costHistory.length})`, CircleDollarSign], ["returns", "Qaytarmalar", RotateCcw], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Stok 360 (${productMovements.length})`, History]].map(([key, label, Icon]) => (
+            {[["stock", `Qalıq (${balances.length})`, Package], ["cost", `Maya tarixçəsi (${costHistory.length})`, CircleDollarSign], ["returns", "Problemli stok", RotateCcw], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Stok 360 (${productMovements.length})`, History]].map(([key, label, Icon]) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>
             ))}
           </div>
 
-          {tab === "stock" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Qalıq", "Rezerv", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, available }) => [warehouse.name, number(qty), number(hold), number(available)])} />}
+          {tab === "stock" && <HistoryTable title="Anbarlar üzrə qalıq" empty="Bu məhsul üzrə anbar qalığı yoxdur." headers={["Anbar", "Fiziki qalıq", "Rezerv", "Problemli", "Satışa uyğun"]} rows={balances.map(({ warehouse, total: qty, reserved: hold, problem: problemQty, available }) => [warehouse.name, number(qty), number(hold), number(problemQty), number(available)])} />}
           {tab === "cost" && <HistoryTable title="Orta maya və satış marjası tarixçəsi" empty="Maya hesablayan stok hərəkəti yoxdur." headers={["Tarix", "Əməliyyat", "Miqdar sonrası", "Əvvəlki maya", "Yeni orta maya", "Marja", "Marja %"]} rows={costHistory.map((row) => [dateTime(row.item.moved_at || row.item.created_at), row.type, number(row.quantity), money(row.previousCost), money(row.averageCost), money(row.margin), `${row.marginPct.toFixed(1)}%`])} />}
-          {tab === "returns" && <ProductReturnsPanel product={product} warehouses={warehouses} orders={orders} />}
+          {tab === "returns" && <ProductReturnsPanel product={product} warehouses={warehouses} />}
           {tab === "reservations" && <HistoryTable loading={loadingLinks} title="Aktiv rezervlər" empty="Bu məhsul üzrə aktiv rezerv yoxdur." headers={["Tarix", "Sifariş", "Müştəri", "Anbar", "Miqdar", "Rezerv edən", "Status"]} rows={activeReservations.map((item) => [dateTime(item.created_at), <DocumentButton onClick={() => onOpenOrder?.(item.order_id)} title="Sifarişi aç">{item.order?.order_no || item.order_id}</DocumentButton>, item.order?.customer?.name || "—", item.warehouse?.name || "—", number(item.quantity), item.creatorName || "Sistem istifadəçisi", "Aktiv"])} />}
           {tab === "sales" && <HistoryTable title="Satış tarixçəsi" empty="Bu məhsul üzrə satış tapılmadı." headers={["Tarix", "Sifariş", "Müştəri", "Miqdar", "Məbləğ", "Status"]} rows={sales.map(({ order, qty, total: amount }) => [dateTime(order.date || order.created_at), <DocumentButton onClick={() => onOpenOrder?.(order.id || order.order_id || order.orderNo || order.order_no)} title="Sifarişi aç">{order.orderNo || order.order_no || order.id || "—"}</DocumentButton>, order.customer?.name || order.customer || order.customerName || "—", number(qty), money(amount), order.status || "—"])} />}
           {tab === "receipts" && <HistoryTable loading={loadingMovements || loadingLinks} title="Daxilolmalar" empty="Bu məhsul üzrə daxilolma tapılmadı." headers={["Tarix", "Anbar", "Miqdar", "Vahid maya", "Qəbul sənədi", "Göndəriş", "Qeyd"]} rows={incoming.map((item) => { const link = receiptLinks[item.id] || receiptLinks[item.reference_id]; return [dateTime(item.moved_at || item.created_at), item.warehouse?.name || "—", `+${number(Math.abs(item.qty ?? item.quantity ?? 0))}`, money(item.unit_cost), <DocumentButton onClick={link ? () => onOpenProcurement?.(link) : null} title="Qəbul sənədini aç">{shortProcurementDocumentNo(link?.receipt_no || item.doc_no || item.reference)}</DocumentButton>, shortProcurementDocumentNo(link?.shipment_no), item.note || "—"]; })} />}
