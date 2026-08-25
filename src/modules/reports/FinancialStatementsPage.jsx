@@ -53,6 +53,10 @@ export default function FinancialStatementsPage() {
           </button>
           <div style={{display:"flex",gap:6}}><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('month')}>Bu ay</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('quarter')}>Bu rüb</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('year')}>Bu il</button></div>
         </div>
+        <div style={{ marginTop: 10, fontSize: 12, color: "#64748b" }}>
+          Mənbə: {fs.source === "journal" ? "Mühasibat jurnalı" : "Real satış, xərc, kassa, anbar və faktura əməliyyatları"}
+          {fs.degraded ? " · Real-time bağlantı bərpa olunur" : " · Canlı yenilənir"}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
