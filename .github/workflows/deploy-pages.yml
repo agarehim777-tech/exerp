@@ -16,9 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VITE_SUPABASE_URL: https://rojwxgndtunssjdwngrh.supabase.co
-  VITE_SUPABASE_PROJECT_ID: rojwxgndtunssjdwngrh
-  VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvand4Z25kdHVuc3NqZHduZ3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzOTkxNzUsImV4cCI6MjA5OTk3NTE3NX0.E9U85xBUMIuiI6ypj7Zy259pxhyjxkGjh9wSPplmIgU
+  VITE_SUPABASE_URL: https://tcqdhwtnjrwpfdxoijmv.supabase.co
+  VITE_SUPABASE_PROJECT_ID: tcqdhwtnjrwpfdxoijmv
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
 jobs:
   build:
