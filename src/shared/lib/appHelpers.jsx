@@ -829,7 +829,9 @@ function buildReportModuleRows({
   const payrollRows = buildHrEmployeeRecords(employees);
   const payrollCost = payrollRows.reduce((sum, employee) => sum + Number(employee.employerCost || 0), 0);
   const documentGaps = employees.filter((employee) => employee.documentReviewRequired || Number(employee.documentsComplete || 100) < 100);
-  const cashInflow = total(cashEntries, "amount") + orders.reduce((sum, order) => sum + Number(order.paid || 0), 0);
+  const cashInflow = cashEntries
+    .filter((entry) => entry.direction === "in" || normalize(entry.type) === "mədaxil")
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
 
   return [
     {

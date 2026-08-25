@@ -160,9 +160,43 @@ export function useCashbook(tenantId) {
     await fetchAll();
   };
 
-  const removeTransaction = async (id) => {
-    const { error: err } = await supabase.from('cash_transactions').delete().eq('id', id);
-    if (err) throw err;
+  const removeTransaction = async (transaction, reason) => {
+    const id = typeof transaction === 'string' ? transaction : transaction?.id;
+    const { error: err } = await supabase.rpc('reverse_cash_transaction', {
+      _tenant_id: tenantId,
+      _transaction_id: id,
+      _reason: reason,
+    });
+    if (err) {
+      const missingRpc = err.code === 'PGRST202' || String(err.message || '').includes('schema cache');
+      if (!missingRpc || typeof transaction === 'string') throw err;
+      const marker = `REVERSAL_OF:${transaction.id}`;
+      const { data: duplicate, error: duplicateError } = await supabase
+        .from('cash_transactions')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'transaction_reversal')
+        .ilike('description', `%${marker}%`)
+        .maybeSingle();
+      if (duplicateError) throw duplicateError;
+      if (duplicate) throw new Error('Bu əməliyyat artıq ləğv edilib.');
+      const { error: fallbackError } = await supabase.from('cash_transactions').insert({
+        tenant_id: tenantId,
+        account_id: transaction.account_id,
+        transaction_no: newTransactionNo('LƏĞV'),
+        direction: transaction.direction === 'in' ? 'out' : 'in',
+        amount: Number(transaction.amount || 0),
+        currency: transaction.currency || 'AZN',
+        category: 'transaction_reversal',
+        counterparty: transaction.counterparty || null,
+        customer_id: transaction.customer_id || null,
+        vendor_id: transaction.vendor_id || null,
+        reference: transaction.reference || transaction.transaction_no || null,
+        description: `${marker} · Ləğv: ${transaction.transaction_no || transaction.id} · ${String(reason || '').trim()}`,
+        occurred_at: new Date().toISOString().slice(0, 10),
+      });
+      if (fallbackError) throw fallbackError;
+    }
     await fetchAll();
   };
 

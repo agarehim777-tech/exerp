@@ -7,6 +7,7 @@ import {
   Download,
   Factory,
   Filter,
+  RefreshCw,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -22,6 +23,9 @@ import {
 } from "../../components/ui.jsx";
 import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
+import { useAuth } from "../../auth/AuthProvider.jsx";
+import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
+import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
 
 function sumRows(rows, key) {
   return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0);
@@ -82,10 +86,19 @@ export function ReportsPage({
   buildExecutiveInsights,
   buildReportPackage,
 }) {
+  const { activeTenantId } = useAuth();
+  const live = useLiveReportData(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
   const [moduleFilter, setModuleFilter] = useState("Hamısı");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
+  const [exporting, setExporting] = useState("");
+  const [exportError, setExportError] = useState("");
+  const reportExpenses = live.loaded ? live.expenses : expenses;
+  const reportVendors = live.loaded ? live.vendors : vendors;
+  const reportPurchaseOrders = live.loaded ? live.purchaseOrders : purchaseOrders;
+  const reportInvoices = live.loaded ? live.invoices : invoices;
+  const reportCashEntries = live.loaded ? live.cashEntries : cashEntries;
 
   const filteredOrders = useMemo(
     () =>
@@ -97,17 +110,17 @@ export function ReportsPage({
     [orders, period, snapshotDate, warehouseFilter],
   );
   const filteredExpenses = useMemo(
-    () => expenses.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
-    [expenses, period, snapshotDate],
+    () => reportExpenses.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
+    [reportExpenses, period, snapshotDate],
   );
   const filteredPurchaseOrders = useMemo(
     () =>
-      purchaseOrders.filter(
+      reportPurchaseOrders.filter(
         (row) =>
           inSelectedPeriod(row, period, snapshotDate) &&
           (warehouseFilter === "all" || row.warehouseId === warehouseFilter),
       ),
-    [purchaseOrders, period, snapshotDate, warehouseFilter],
+    [reportPurchaseOrders, period, snapshotDate, warehouseFilter],
   );
   const filteredProduction = useMemo(
     () =>
@@ -123,24 +136,24 @@ export function ReportsPage({
     return { [warehouseFilter]: warehouseStock[warehouseFilter] || [] };
   }, [warehouseFilter, warehouseStock]);
   const filteredCashEntries = useMemo(
-    () => cashEntries.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
-    [cashEntries, period, snapshotDate],
+    () => reportCashEntries.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
+    [reportCashEntries, period, snapshotDate],
   );
   const filteredInvoices = useMemo(
-    () => invoices.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
-    [invoices, period, snapshotDate],
+    () => reportInvoices.filter((row) => inSelectedPeriod(row, period, snapshotDate)),
+    [reportInvoices, period, snapshotDate],
   );
 
   const executiveInsights = useMemo(
-    () => buildExecutiveInsights({ orders: filteredOrders, credits, vendors, employees }),
-    [buildExecutiveInsights, filteredOrders, credits, vendors, employees],
+    () => buildExecutiveInsights({ orders: filteredOrders, credits, vendors: reportVendors, employees }),
+    [buildExecutiveInsights, filteredOrders, credits, reportVendors, employees],
   );
   const reportPackage = useMemo(
     () =>
       buildReportPackage({
         orders: filteredOrders,
         credits,
-        vendors,
+        vendors: reportVendors,
         employees,
         expenses: filteredExpenses,
         warehouseStock: filteredWarehouseStock,
@@ -154,7 +167,7 @@ export function ReportsPage({
       buildReportPackage,
       filteredOrders,
       credits,
-      vendors,
+      reportVendors,
       employees,
       filteredExpenses,
       filteredWarehouseStock,
@@ -194,8 +207,8 @@ export function ReportsPage({
   const activeCustomers = new Set(filteredOrders.map((order) => order.fin || order.customer).filter(Boolean)).size;
   const averageOrder = filteredOrders.length ? revenue / filteredOrders.length : 0;
   const trendRows = useMemo(
-    () => buildMonthlyTrend(orders, expenses, snapshotDate),
-    [orders, expenses, snapshotDate],
+    () => buildMonthlyTrend(orders, reportExpenses, snapshotDate),
+    [orders, reportExpenses, snapshotDate],
   );
   const maxTrendValue = Math.max(1, ...trendRows.flatMap((row) => [row.revenue, row.expense]));
 
@@ -251,6 +264,38 @@ export function ReportsPage({
   }, [filteredOrders]);
   const lastExport = exports[0];
 
+  const reportPayload = (title) => {
+    const common = {
+      title,
+      period,
+      summary: [
+        ["Satis geliri", money(revenue)], ["Umumi menfeet", money(grossProfit)],
+        ["Xalis netice", money(netResult)], ["Anbar deyeri", money(stockValue)],
+        ["Aciq borc", money(reportPackage.creditBalance + reportPackage.invoiceBalance)],
+      ],
+    };
+    if (title === "Aylıq satış hesabatı") return { ...common, columns: ["Sifaris", "Musteri", "Tarix", "Mehsul", "Mebleg"], rows: filteredOrders.map((row) => [row.orderNo || row.id, row.customer, row.date, row.products, money(row.amount)]) };
+    if (title === "Maliyyə mənfəət/zərər") return { ...common, columns: ["Tarix", "Kateqoriya", "Tesvir", "Status", "Mebleg"], rows: filteredExpenses.map((row) => [row.date, row.category, row.description, row.status, money(row.amount)]) };
+    if (title === "Anbar hərəkəti") return { ...common, columns: ["Mehsul", "SKU", "Qaliq", "Rezerv", "Maya", "Deyer"], rows: stockRows.map((row) => [row.product, row.sku, row.total, row.reserved, money(row.costPrice || row.price), money(Number(row.total || 0) * Number(row.costPrice || row.price || 0))]) };
+    return { ...common, columns: ["Muqavile", "Musteri", "Status", "Muddet", "Qaliq"], rows: credits.map((row) => [row.contractId || row.id, row.customer, row.status, `${row.months || row.termMonths || "—"} ay`, money(row.balance || row.remaining || row.principal)]) };
+  };
+
+  const runDownload = async (report, format) => {
+    const key = `${report.title}:${format}`;
+    setExporting(key);
+    setExportError("");
+    try {
+      const payload = reportPayload(report.title);
+      if (format === "PDF") await downloadReportPdf(payload);
+      else downloadReportCsv(payload);
+      onExport(report.title, format);
+    } catch (error) {
+      setExportError(`Fayl yaradılmadı: ${error.message || error}`);
+    } finally {
+      setExporting("");
+    }
+  };
+
   return (
     <div className="stack reports-module">
       <section className="reports-filter-bar">
@@ -278,7 +323,13 @@ export function ReportsPage({
         <button className="primary-btn" disabled={!canExport} onClick={() => onExport(`İdarəetmə paketi · ${period}`, "Excel")}>
           <Download size={16} /> Excel
         </button>
+        <button className="secondary-btn" type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
+          <RefreshCw size={16} /> {live.loading ? "Yenilənir" : "Yenilə"}
+        </button>
       </section>
+
+      {(live.error || live.degraded) && <div className="inline-alert warning">Canlı hesabat bağlantısı zəifləyib. Son uğurlu data göstərilir; «Yenilə» ilə təkrar yoxlayın.</div>}
+      {exportError && <div className="inline-alert danger">{exportError}</div>}
 
       <section className="metric-grid four">
         <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${filteredOrders.length} sifariş`} icon={Wallet} tone="success" />
@@ -368,8 +419,8 @@ export function ReportsPage({
                 <div><strong>{report.title}</strong><span>{report.desc}</span><small>{report.cadence} · {reportPackage.rows} data sətri</small></div>
                 <StatusBadge status={report.cadence} />
                 <div className="report-actions">
-                  <button className="secondary-btn compact" onClick={() => onExport(report.title, "PDF")} disabled={!canExport}><Download size={15} /> PDF</button>
-                  <button className="primary-btn compact" onClick={() => onExport(report.title, "Excel")} disabled={!canExport}><Download size={15} /> Excel</button>
+                  <button className="secondary-btn compact" onClick={() => runDownload(report, "PDF")} disabled={!canExport || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</button>
+                  <button className="primary-btn compact" onClick={() => runDownload(report, "Excel")} disabled={!canExport || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</button>
                 </div>
               </article>
             ))}

@@ -2,30 +2,28 @@ import { Building2, Check, CircleAlert, RefreshCw, TrendingUp, Wallet } from "lu
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
-import { useAuth } from "../auth/AuthProvider.jsx";
-import { useOrders } from "../shared/hooks/useOrders.js";
 export default function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt, onOpenSalesOrder }) {
-  const { activeTenantId } = useAuth();
-  const { orders: realOrders } = useOrders(activeTenantId);
   const [typeFilter, setTypeFilter] = useState("Hamısı");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("Hamısı");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [collectionFilter, setCollectionFilter] = useState("Hamısı");
   const [agingFilter, setAgingFilter] = useState("Hamısı");
   const [selectedDebt, setSelectedDebt] = useState(null);
-  const effectiveRows = realOrders.filter(order => order.status !== "cancelled").map(order => {
-    const amount = Math.max(0, Number(order.total || 0) - Number(order.paid_amount || 0));
-    return {
-      id: `DB-ORD-${order.id}`, type: "Debitor", party: order.customer?.name || "Müştəri qeyd edilməyib",
-      source: order.order_no, sourceType: "order", sourceTypeLabel: "Satış sifarişi", amount,
-      orderBalance: amount, creditBalance: 0, customerDebt: 0, overdueDays: 0,
-      owner: "Satış", status: amount > 0 ? "Aktiv" : "Bağlandı", detail: `${order.order_no} · ${order.items?.map(item => item.description).filter(Boolean).join(", ") || "Sifariş"}`,
-      orderIds: [order.id], openOrderIds: [order.id], creditIds: [], contractIds: [], closingMode: "cash-in",
-      agingBucket: "Cari", riskCategory: "Sağlam", collectionStatus: "İzləmədə", nextAction: amount > 0 ? "Ödənişi izlə" : "Bağlanıb",
-    };
-  }).filter(row => row.amount > 0);
+  const effectiveRows = useMemo(
+    () => (rows || []).filter((row) => Number(row.amount || 0) > 0 && row.status !== "Bağlandı"),
+    [rows],
+  );
+  const liveSignature = useMemo(
+    () => effectiveRows.map((row) => `${row.id}:${Number(row.amount || 0)}:${row.overdueDays || 0}:${row.status || ""}`).sort().join("|"),
+    [effectiveRows],
+  );
+  const [lastLiveUpdate, setLastLiveUpdate] = useState(() => syncMeta?.at || new Date().toLocaleString("az-AZ"));
+
+  useEffect(() => {
+    setLastLiveUpdate(new Date().toLocaleString("az-AZ"));
+  }, [liveSignature]);
   const debtorRows = effectiveRows.filter((row) => row.type === "Debitor");
   const creditorRows = effectiveRows.filter((row) => row.type === "Kreditor");
   const overdueRows = effectiveRows.filter((row) => Number(row.overdueDays || 0) > 0);
@@ -67,23 +65,23 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
       </section>
       {syncMeta && (
         <Panel className="module-action-panel">
-          <PanelHeader title="Son balans yenilənməsi" subtitle="Satış, kredit və vendor məlumatlarından son sinxron nəticə" icon={RefreshCw} />
+          <PanelHeader title="Canlı balans" subtitle="Satış, kredit və vendor məlumatlarından real vaxtda hesablanır" icon={RefreshCw} />
           <div className="db-status-grid">
             <div>
               <span>Vaxt</span>
-              <strong>{syncMeta.at}</strong>
+              <strong>{lastLiveUpdate}</strong>
             </div>
             <div>
               <span>Debitor</span>
-              <strong>{money(syncMeta.debtorTotal)}</strong>
+              <strong>{money(totalDebitor)}</strong>
             </div>
             <div>
               <span>Kreditor</span>
-              <strong>{money(syncMeta.creditorTotal)}</strong>
+              <strong>{money(totalCreditor)}</strong>
             </div>
             <div>
               <span>Gecikmə</span>
-              <strong>{syncMeta.overdueCount}</strong>
+              <strong>{overdueRows.length}</strong>
             </div>
           </div>
         </Panel>

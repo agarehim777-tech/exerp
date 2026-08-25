@@ -45,7 +45,16 @@ export default function CashbookPage({ legacyCashEntries = [] }) {
 
   const totals = useMemo(() => {
     const balance = book.accounts.reduce((sum, a) => sum + book.balanceOf(a.id), 0);
-    const externalTransactions = book.transactions.filter((t) => t.category !== "internal_transfer");
+    const reversedTransactionIds = new Set(book.transactions.flatMap(transaction => {
+      if (transaction.category !== "transaction_reversal" && !transaction.reversal_of) return [];
+      const markerId = String(transaction.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
+      return [transaction.reversal_of, markerId].filter(Boolean);
+    }));
+    const externalTransactions = book.transactions.filter(transaction =>
+      transaction.category !== "internal_transfer"
+      && transaction.category !== "transaction_reversal"
+      && !transaction.reversal_of
+      && !reversedTransactionIds.has(transaction.id));
     const inflow = externalTransactions.filter((t) => t.direction === "in").reduce((s, t) => s + Number(t.amount), 0);
     const outflow = externalTransactions.filter((t) => t.direction === "out").reduce((s, t) => s + Number(t.amount), 0);
     const pending = book.expenses.filter((e) => ["pending", "draft"].includes(e.status)).length;
@@ -74,7 +83,7 @@ export default function CashbookPage({ legacyCashEntries = [] }) {
       {book.error && <div style={msgBox}>Xəta: {book.error.message}</div>}
       {syncError && <div style={msgBox}>Sinxronizasiya xətası: {syncError}</div>}
       {tab === "accounts" && <AccountsPanel book={book} />}
-      {tab === "transactions" && <TransactionsPanel book={book} />}
+      {tab === "transactions" && <TransactionsPanel book={book} tenantId={tenantId} />}
       {tab === "expenses" && (
         <ExpensesPanel
           book={book}
@@ -156,10 +165,17 @@ function AccountsPanel({ book }) {
   );
 }
 
-function TransactionsPanel({ book }) {
+function TransactionsPanel({ book, tenantId }) {
   const [form, setForm] = useState({ account_id: "", direction: "in", amount: "", category: "", customer_id: "", counterparty: "", description: "", occurred_at: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState("");
   const [search, setSearch] = useState("");
+  const [hiddenIds, setHiddenIds] = useState(new Set());
+  const [showHidden, setShowHidden] = useState(false);
+
+  useEffect(() => {
+    try { setHiddenIds(new Set(JSON.parse(localStorage.getItem(`erp.cash.hidden.${tenantId}`) || "[]"))); }
+    catch { setHiddenIds(new Set()); }
+  }, [tenantId]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -173,8 +189,9 @@ function TransactionsPanel({ book }) {
   const employeeByUser = useMemo(() => new Map(book.employees.map(item => [item.user_id, item])), [book.employees]);
   const visibleTransactions = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("az");
-    if (!needle) return book.transactions;
-    return book.transactions.filter(transaction => [
+    const rows = showHidden ? book.transactions : book.transactions.filter(transaction => !hiddenIds.has(transaction.id));
+    if (!needle) return rows;
+    return rows.filter(transaction => [
       transaction.transaction_no,
       transaction.customer?.name,
       transaction.vendor?.name,
@@ -185,7 +202,46 @@ function TransactionsPanel({ book }) {
       transaction.account?.name,
       employeeByUser.get(transaction.created_by)?.full_name,
     ].some(value => String(value || "").toLocaleLowerCase("az").includes(needle)));
-  }, [book.transactions, employeeByUser, search]);
+  }, [book.transactions, employeeByUser, hiddenIds, search, showHidden]);
+  const reversedIds = useMemo(() => new Set(book.transactions.flatMap(item => {
+    const markerId = String(item.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
+    return [item.reversal_of, markerId].filter(Boolean);
+  })), [book.transactions]);
+
+  const reverse = async transaction => {
+    const reason = window.prompt(`${transaction.transaction_no || "Əməliyyat"} üçün ləğv səbəbini yazın:`);
+    if (reason === null) return;
+    setMsg("");
+    try {
+      await book.removeTransaction(transaction, reason);
+      setMsg("Əməliyyat silinmədi, maliyyə auditi qorunaraq əks yazılışla ləğv edildi.");
+    } catch (error) {
+      setMsg(`Xəta: ${error.message}`);
+    }
+  };
+
+  const hideCanceled = transaction => {
+    if (!window.confirm("Ləğv edilmiş əməliyyat gündəlik siyahıdan silinsin? Maliyyə auditində saxlanılacaq.")) return;
+    const pairIds = book.transactions.filter(item => {
+      const markerId = String(item.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
+      return item.id === transaction.id || item.reversal_of === transaction.id || markerId === transaction.id;
+    }).map(item => item.id);
+    const next = new Set([...hiddenIds, transaction.id, ...pairIds]);
+    setHiddenIds(next);
+    localStorage.setItem(`erp.cash.hidden.${tenantId}`, JSON.stringify([...next]));
+    setMsg("Ləğv edilmiş əməliyyat cədvəldən silindi. Audit məlumatı qorunur.");
+  };
+
+  const restoreHidden = transaction => {
+    const originalId = transaction.reversal_of || String(transaction.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1] || transaction.id;
+    const pairIds = book.transactions.filter(item => {
+      const markerId = String(item.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
+      return item.id === originalId || item.reversal_of === originalId || markerId === originalId;
+    }).map(item => item.id);
+    const next = new Set([...hiddenIds].filter(id => !pairIds.includes(id)));
+    setHiddenIds(next);
+    localStorage.setItem(`erp.cash.hidden.${tenantId}`, JSON.stringify([...next]));
+  };
 
   return (
     <div style={card}>
@@ -214,7 +270,10 @@ function TransactionsPanel({ book }) {
       {!book.accounts.length && <div style={msgBox}>Əvvəlcə «Hesablar» bölməsindən kassa/bank hesabı yaradın.</div>}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <b>{visibleTransactions.length} əməliyyat</b>
-        <input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)} style={{ ...input, width: "min(100%, 380px)" }} />
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          {hiddenIds.size > 0 && <button type="button" className="secondary-btn" onClick={() => setShowHidden(value => !value)}>{showHidden ? "Aktiv siyahı" : `Silinmişləri göstər (${hiddenIds.size})`}</button>}
+          <input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)} style={{ ...input, width: "min(100%, 380px)" }} />
+        </div>
       </div>
       <div style={{ overflowX: "auto" }}><table style={{ ...table, minWidth: 1120 }}>
         <thead><tr><th style={th}>Tarix</th><th style={th}>Əməliyyat №</th><th style={th}>Hesab</th><th style={th}>Növ</th><th style={th}>Məbləğ</th><th style={th}>Ödəyən / qarşı tərəf</th><th style={th}>Bağlı sənəd</th><th style={th}>Kateqoriya</th><th style={th}>Daxil edən</th><th style={th}>Qeyd</th><th style={th} /></tr></thead>
@@ -234,7 +293,13 @@ function TransactionsPanel({ book }) {
               <td style={td}>{t.category || "—"}</td>
               <td style={td}>{employee?.full_name || "Sistem"}{employee?.position && <div style={{ color: "#64748b", fontSize: 12 }}>{employee.position}</div>}</td>
               <td style={{ ...td, maxWidth: 260, whiteSpace: "normal" }}>{t.description || "—"}</td>
-              <td style={td}><button style={delBtn} onClick={() => window.confirm("Silinsin?") && book.removeTransaction(t.id)}>Sil</button></td>
+              <td style={td}>{showHidden && hiddenIds.has(t.id)
+                ? <button className="secondary-btn" type="button" onClick={() => restoreHidden(t)}>Bərpa et</button>
+                : t.reversal_of
+                ? <span style={badge("gray")}>Reversal</span>
+                : reversedIds.has(t.id)
+                  ? <div style={{display:"grid",gap:5}}><span style={badge("gray")}>Ləğv edilib</span><button style={delBtn} type="button" onClick={() => hideCanceled(t)}>Siyahıdan sil</button></div>
+                  : <button style={delBtn} onClick={() => reverse(t)}>Ləğv et</button>}</td>
             </tr>
           );})}
           {!visibleTransactions.length && <tr><td style={td} colSpan={11}>{book.transactions.length ? "Axtarışa uyğun əməliyyat yoxdur." : "Əməliyyat yoxdur."}</td></tr>}
