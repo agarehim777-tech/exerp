@@ -33,6 +33,14 @@
 </head>
   <body>
     <div id="root"></div>
+    <script>
+      // exerp-cache-reset-v1: clear legacy PWA state once on GitHub Pages.
+      if (location.hostname.endsWith("github.io") && !localStorage.getItem("exerp-cache-reset-v1")) {
+        localStorage.setItem("exerp-cache-reset-v1", "done");
+        navigator.serviceWorker?.getRegistrations().then((items) => items.forEach((item) => item.unregister()));
+        caches?.keys().then((items) => items.forEach((item) => caches.delete(item)));
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -3415,17 +3415,6 @@ function hasPageAction(moduleId) {
   return Boolean(pageMeta[moduleId]?.action) && !pageActionlessModules.has(moduleId);
 }
 
-export const dbBackedCollections = [
-  "customers",
-  "products",
-  "orders",
-  "invoices",
-  "stock",
-  "warehouses",
-  "vendors",
-  "accounting",
-];
-
 export {
   getCreditIdForOrder,
   buildSalesCreditRecord,

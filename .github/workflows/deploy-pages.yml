@@ -19,6 +19,8 @@ env:
   VITE_SUPABASE_URL: https://tcqdhwtnjrwpfdxoijmv.supabase.co
   VITE_SUPABASE_PROJECT_ID: tcqdhwtnjrwpfdxoijmv
   VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+  TEST_USER: ${{ secrets.E2E_TEST_USER }}
+  TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
 jobs:
   build:
@@ -32,8 +34,32 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Unit and business-rule tests
+        run: npm test
+
+      - name: Migration gate
+        run: npm run verify:migrations
+
+      - name: Security gate
+        run: npm run verify:security
+
+      - name: Transaction lifecycle gate
+        run: npm run verify:hardening
+
+      - name: Supabase contract gate
+        run: npm run verify:core-backend
+
+      - name: Require isolated lifecycle credentials
+        run: test -n "$TEST_USER" -a -n "$TEST_PASS" || (echo "E2E_TEST_USER/E2E_TEST_PASS secrets tələb olunur" && exit 1)
+
+      - name: Stock, credit and payment lifecycle gates
+        run: |
+          npm run verify:stock
+          npm run verify:credit
+          npm run verify:credit-payments
 
       - name: Build
         run: npm run build:pages

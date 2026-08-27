@@ -47,14 +47,14 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
   const [accounts, setAccounts] = useState<any[]>([]);
   const [stock, setStock] = useState<any[]>([]);
   const [vendorInvoices, setVendorInvoices] = useState<any[]>([]);
-  const [source, setSource] = useState<'journal' | 'operations'>('operations');
+  const [source] = useState<'journal'>('journal');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    const [tb, ar, cash, orderResult, expenseResult, accountResult, stockResult, payableResult] = await Promise.all([
+    const [tb, ar, cash, accountResult, stockResult, payableResult] = await Promise.all([
       supabase.rpc('trial_balance', { _tenant: tenantId, _from: range.from, _to: range.to }),
       supabase
         .from('sales_invoices')
@@ -65,41 +65,17 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
         .select('id,amount,direction,category,occurred_at,created_at,description,reversal_of')
         .eq('tenant_id', tenantId)
         .order('occurred_at', { ascending: true }),
-      supabase.from('orders').select('id,total,status,order_date,items:order_items(qty,product_id)').eq('tenant_id', tenantId),
-      supabase.from('expenses').select('id,amount,status,expense_date').eq('tenant_id', tenantId),
       supabase.from('cash_accounts').select('id,opening_balance,is_active').eq('tenant_id', tenantId).eq('is_active', true),
       supabase.from('stock_balances').select('product_id,on_hand,avg_cost').eq('tenant_id', tenantId),
       supabase.from('vendor_invoices').select('id,status,invoice_date,due_date,lines:vendor_invoice_lines(qty_invoiced,unit_price,tax_rate)').eq('tenant_id', tenantId),
     ]);
-    const operationalError = ar.error || cash.error || orderResult.error || expenseResult.error || accountResult.error || stockResult.error || payableResult.error || null;
-    setError(operationalError);
+    setError(tb.error || ar.error || cash.error || accountResult.error || stockResult.error || payableResult.error || null);
     const journalRows = (tb.data as TrialBalanceRow[]) || [];
-    const hasJournalProfitAndLoss = journalRows.some((row) => ['revenue', 'expense'].includes(String(row.type)) && Math.abs(amount(row.debit) - amount(row.credit)) > 0.0001);
-    const averageCost = new Map((stockResult.data || []).map((row: any) => [row.product_id, amount(row.avg_cost)]));
-    const periodOrders = (orderResult.data || []).filter((row: any) => row.status !== 'cancelled' && inRange(row.order_date, range));
-    const revenue = periodOrders.reduce((sum: number, row: any) => sum + amount(row.total), 0);
-    const costOfGoods = periodOrders.reduce((sum: number, row: any) => sum + (row.items || []).reduce((lineSum: number, line: any) => lineSum + amount(line.qty) * amount(averageCost.get(line.product_id)), 0), 0);
-    const operatingExpense = (expenseResult.data || []).filter((row: any) => ['approved', 'paid'].includes(row.status) && inRange(row.expense_date, range)).reduce((sum: number, row: any) => sum + amount(row.amount), 0);
     const cleanCash = cleanReversedTransactions(cash.data || []);
-    const cashBalance = (accountResult.data || []).reduce((sum: number, row: any) => sum + amount(row.opening_balance), 0)
-      + cleanCash.reduce((sum: number, row: any) => sum + (row.direction === 'in' ? amount(row.amount) : -amount(row.amount)), 0);
-    const inventoryValue = (stockResult.data || []).reduce((sum: number, row: any) => sum + amount(row.on_hand) * amount(row.avg_cost), 0);
-    const receivables = (ar.data || []).filter((row: any) => !['cancelled', 'draft'].includes(row.status)).reduce((sum: number, row: any) => sum + Math.max(0, amount(row.total) - amount(row.paid_amount)), 0);
-    const payables = (payableResult.data || []).filter((row: any) => !['paid', 'cancelled', 'draft'].includes(row.status)).reduce((sum: number, row: any) => sum + (row.lines || []).reduce((lineSum: number, line: any) => lineSum + amount(line.qty_invoiced) * amount(line.unit_price) * (1 + amount(line.tax_rate) / 100), 0), 0);
-    const netProfit = revenue - costOfGoods - operatingExpense;
-    const assetTotal = cashBalance + inventoryValue + receivables;
-    const fallbackRows: TrialBalanceRow[] = [
-      { code: '1000', name: 'Kassa və bank', type: 'asset', debit: cashBalance, credit: 0 },
-      { code: '1400', name: 'Anbar ehtiyatları', type: 'asset', debit: inventoryValue, credit: 0 },
-      { code: '1200', name: 'Debitor borcları', type: 'asset', debit: receivables, credit: 0 },
-      { code: '3300', name: 'Kreditor borcları', type: 'liability', debit: 0, credit: payables },
-      { code: '5000', name: 'Yığılmış kapital', type: 'equity', debit: 0, credit: assetTotal - payables - netProfit },
-      { code: '6000', name: 'Satış gəliri', type: 'revenue', debit: 0, credit: revenue },
-      { code: '7000', name: 'Satılan malların maya dəyəri', type: 'expense', debit: costOfGoods, credit: 0 },
-      { code: '7100', name: 'Əməliyyat xərcləri', type: 'expense', debit: operatingExpense, credit: 0 },
-    ];
-    setSource(hasJournalProfitAndLoss ? 'journal' : 'operations');
-    setTrialRows(hasJournalProfitAndLoss ? journalRows : fallbackRows);
+    // P&L and balance sheet are authoritative only when posted journal lines
+    // exist. COGS is posted at delivery from sales_cost_allocations, preserving
+    // the historical unit cost instead of recalculating with today's avg_cost.
+    setTrialRows(journalRows);
     setInvoices((ar.data as unknown as InvoiceLike[]) || []);
     setTransactions(cleanCash.filter((row: any) => inRange(row.occurred_at || row.created_at, range)) as CashTransactionLike[]);
     setAccounts(accountResult.data || []);
@@ -112,7 +88,7 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
 
   const degraded = useRealtimeResync(
     tenantId || null,
-    ['orders', 'order_items', 'expenses', 'cash_transactions', 'cash_accounts', 'stock_balances', 'sales_invoices', 'vendor_invoices'],
+    ['journal_entries', 'journal_lines', 'cash_transactions', 'cash_accounts', 'sales_invoices', 'vendor_invoices'],
     load,
     { channelPrefix: 'financial-statements', debounceMs: 700 },
   );

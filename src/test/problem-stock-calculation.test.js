@@ -20,3 +20,35 @@ describe("problem stock calculation", () => {
     expect(row).toMatchObject({ total: 5, reserved: 1, problem: 2, available: 2 });
   });
 });
+
+describe("warehouse balance product images", () => {
+  const product = {
+    id: "product-1",
+    name: "Sonia G5",
+    sku: "1",
+    imageUrl: "https://example.com/sonia-g5.webp",
+    status: "Aktiv",
+  };
+
+  it("keeps the catalog image on warehouse stock rows", () => {
+    const [row] = buildWarehouseBalanceRows({
+      warehouses: [{ id: "warehouse-1", name: "Əsas anbar" }],
+      warehouseStock: { "warehouse-1": [{ product: "Sonia G5", total: 4 }] },
+      products: [product],
+      view: "warehouses",
+    });
+
+    expect(row.imageUrl).toBe(product.imageUrl);
+  });
+
+  it("keeps the catalog image on zero-stock rows", () => {
+    const [row] = buildWarehouseBalanceRows({
+      warehouses: [{ id: "warehouse-1", name: "Əsas anbar" }],
+      warehouseStock: {},
+      products: [product],
+      view: "warehouses",
+    });
+
+    expect(row.imageUrl).toBe(product.imageUrl);
+  });
+});

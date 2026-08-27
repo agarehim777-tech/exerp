@@ -31,8 +31,24 @@ async function recoverFromStaleAssets() {
   window.location.reload();
 }
 
+async function disablePwaOnStaticHosting() {
+  try {
+    const registrations = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistrations() : [];
+    await Promise.allSettled(registrations.map((registration) => registration.unregister()));
+    const names = "caches" in window ? await caches.keys() : [];
+    await Promise.allSettled(names.map((name) => caches.delete(name)));
+  } catch {
+    /* Cache cleanup must never block application startup. */
+  }
+}
+
 export function installChunkErrorRecovery() {
   if (typeof window === "undefined") return;
+  if (window.location.hostname.endsWith("github.io")) {
+    // GitHub Pages releases are immutable static bundles. A stale service
+    // worker can mix chunk versions, so PWA registration is disabled there.
+    disablePwaOnStaticHosting();
+  }
   window.addEventListener("error", (event) => {
     if (looksLikeChunkError(event?.message || event?.error?.message)) recoverFromStaleAssets();
   });

@@ -18,10 +18,14 @@ export function initObservability() {
       environment: ENV,
       integrations: [
         Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+        Sentry.replayIntegration({
+          maskAllText: true,
+          blockAllMedia: true,
+          maskAllInputs: true,
+        }),
         Sentry.breadcrumbsIntegration({
           console: true,
-          dom: true,
+          dom: false,
           fetch: true,
           history: true,
           xhr: true,
@@ -85,7 +89,7 @@ function installConsoleFallback() {
   window.addEventListener("click", (e) => {
     const t = e.target as HTMLElement;
     if (!t) return;
-    push("click", { tag: t.tagName, id: t.id || undefined, text: (t.textContent || "").slice(0, 60) });
+    push("click", { tag: t.tagName, id: t.id || undefined });
   }, true);
   // Expose for debugging
   (window as any).__breadcrumbs = () => breadcrumbs.slice();

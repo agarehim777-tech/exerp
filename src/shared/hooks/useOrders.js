@@ -64,6 +64,7 @@ export function buildMissingCreditDraft(order) {
 export function useOrders(tenantId) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(ORDERS_PAGE_SIZE);
   const [hasMore, setHasMore] = useState(false);
@@ -71,7 +72,11 @@ export function useOrders(tenantId) {
   const missingCreditRepairKeyRef = useRef('');
 
   const fetchAll = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setOrders([]);
+      setLoaded(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from('orders')
@@ -138,9 +143,16 @@ export function useOrders(tenantId) {
         bonus_assignments: bonusesByOrder.get(row.id) || [],
         delivery: deliveriesByOrder.get(row.id) || null,
       })));
+      setLoaded(true);
     }
     setLoading(false);
   }, [tenantId, limit]);
+
+  useEffect(() => {
+    setOrders([]);
+    setLoaded(false);
+    setLimit(ORDERS_PAGE_SIZE);
+  }, [tenantId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -517,52 +529,17 @@ export function useOrders(tenantId) {
     await fetchAll();
   };
 
-  const remove = async (id) => {
-    const { error: rpcError } = await supabase.rpc('delete_sales_order_safe', { _order_id: id });
+  const remove = async (id, reason = 'İstifadəçi tərəfindən satış ləğv edildi') => {
+    const { error: rpcError } = await supabase.rpc('reverse_sales_order', {
+      _order_id: id,
+      _reason: reason,
+    });
     if (rpcError && !isMissingRpc(rpcError)) throw rpcError;
     if (rpcError && isMissingRpc(rpcError)) {
-      // Keçid dövrü: migration tətbiq edilməyən bazalarda yalnız təhlükəsiz,
-      // silinə bilən asılılıqları ardıcıllıqla təmizlə.
-      // order_items və order_bonus_assignments orders FK-si ilə ON DELETE
-      // CASCADE-dır. Onları birbaşa silmək lazım deyil (bonus cədvəli üçün
-      // authenticated rola qəsdən DELETE grant verilmir). Yalnız RESTRICT
-      // əlaqəli, ödənişsiz kredit müqaviləsini əvvəl təmizləyirik.
-      const { data: reservations, error: reservationReadError } = await supabase
-        .from('stock_reservations').select('*').eq('order_id', id).eq('tenant_id', tenantId);
-      if (reservationReadError && !/does not exist|schema cache/i.test(reservationReadError.message || '')) throw reservationReadError;
-      if ((reservations || []).some((row) => row.status === 'fulfilled')) {
-        throw new Error('Anbardan çıxışı tamamlanmış sifariş silinə bilməz.');
-      }
-      for (const reservation of (reservations || []).filter((row) => row.status === 'active')) {
-        const { data: balance, error: balanceReadError } = await supabase.from('stock_balances')
-          .select('reserved').eq('tenant_id', tenantId).eq('warehouse_id', reservation.warehouse_id)
-          .eq('product_id', reservation.product_id).maybeSingle();
-        if (balanceReadError) throw balanceReadError;
-        const nextReserved = Number(balance?.reserved || 0) - Number(reservation.quantity || 0);
-        if (nextReserved < -0.0005) throw new Error('Anbar rezerv qalığı sifariş rezervi ilə uyğun deyil.');
-        const { error: balanceError } = await supabase.from('stock_balances')
-          .update({ reserved: Math.max(0, nextReserved) }).eq('tenant_id', tenantId)
-          .eq('warehouse_id', reservation.warehouse_id).eq('product_id', reservation.product_id);
-        if (balanceError) throw balanceError;
-      }
-      if ((reservations || []).length) {
-        const { error: reservationDeleteError } = await supabase.from('stock_reservations')
-          .delete().eq('order_id', id).eq('tenant_id', tenantId);
-        if (reservationDeleteError) throw reservationDeleteError;
-      }
-
-      const dependentTables = ['credit_contracts'];
-      for (const table of dependentTables) {
-        const { error: dependencyError } = await supabase.from(table).delete().eq('order_id', id).eq('tenant_id', tenantId);
-        if (dependencyError && !/does not exist|schema cache/i.test(dependencyError.message || '')) throw dependencyError;
-      }
-      const { data: deletedRows, error: deleteError } = await supabase
-        .from('orders').delete().eq('id', id).eq('tenant_id', tenantId).select('id');
-      if (deleteError) throw deleteError;
-      if (!deletedRows?.length) throw new Error('Sifariş silinmədi. İcazəni və sifarişin əlaqəli əməliyyatlarını yoxlayın.');
+      throw new Error('Satış ləğvi bazada aktiv deyil. Son Supabase migration-ını tətbiq edin.');
     }
     await fetchAll();
   };
 
-  return { orders, loading, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
+  return { orders, loading, loaded, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
 }

@@ -5317,6 +5317,10 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      reverse_sales_order: {
+        Args: { _order_id: string; _reason: string }
+        Returns: Json
+      }
       ensure_inventory_accounts: {
         Args: { _tenant: string }
         Returns: undefined

@@ -125,6 +125,7 @@ import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
+import { stripDbBackedCollections, writeTenantUiCache } from "./shared/state/tenantPersistence.js";
 
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
@@ -287,17 +288,7 @@ import {
   canAccessNavItem,
   getPageActionPermission,
   hasPageAction,
-  dbBackedCollections,
 } from "./shared/lib/appHelpers.jsx";
-
-
-export function stripDbBackedCollections(state) {
-  const next = { ...state };
-  dbBackedCollections.forEach((key) => {
-    if (key in next) delete next[key];
-  });
-  return next;
-}
 
 function App() {
 
@@ -307,7 +298,7 @@ function App() {
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
-  const { orders: dbOrders, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
+  const { orders: dbOrders, loaded: dbOrdersLoaded, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
 
@@ -478,7 +469,7 @@ function App() {
       ...prev,
       ...(dbCustomers.length ? { customers: dbCustomers.map(dbCustomerToLegacy) } : {}),
       ...(dbProducts.length ? { products: dbProducts.map(dbProductToLegacy) } : {}),
-      ...(dbOrders.length ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
+      ...(dbOrdersLoaded ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
       ...(dbInventory.warehouses.length ? {
         warehouses: dbInventory.warehouses.map((warehouse) => ({
           id: warehouse.id,
@@ -504,6 +495,7 @@ function App() {
     dbCustomers,
     dbProducts,
     dbOrders,
+    dbOrdersLoaded,
     dbInventory.warehouses,
     dbInventory.balances,
   ]);
@@ -547,9 +539,13 @@ function App() {
   const tenantSaveTimer = useRef(null);
   const syncedAuditIds = useRef(new Set());
   const notificationAutoRunRef = useRef("");
+  const creditSourceOrders = useMemo(
+    () => (dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
+    [dbOrders, dbOrdersLoaded, state.orders],
+  );
   const creditRecords = useMemo(
-    () => buildAllCreditRecords(state.orders, state.credits),
-    [state.orders, state.credits],
+    () => buildAllCreditRecords(creditSourceOrders, state.credits),
+    [creditSourceOrders, state.credits],
   );
   const salesBonusRows = useMemo(() => buildSalesBonusRows(state.orders), [state.orders]);
   const kpiEmployeeRows = useMemo(
@@ -980,7 +976,7 @@ function App() {
   useEffect(() => {
     try {
       const cacheKey = activeTenantId ? `${localDbKey}.${activeTenantId}` : localDbKey;
-      window.localStorage.setItem(cacheKey, JSON.stringify(state));
+      writeTenantUiCache(window.localStorage, cacheKey, state);
     } catch {
       notify("Local DB yazılışı mümkün olmadı.", "warning");
     }

@@ -1,0 +1,44 @@
+name: Supabase Restore Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_run_id:
+        description: "Uğurlu Supabase Backup workflow run ID"
+        required: true
+      confirmation:
+        description: "Bərpa sınağını təsdiqləmək üçün RESTORE yazın"
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RESTORE_DATABASE_URL: ${{ secrets.RESTORE_DATABASE_URL }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Safety gate
+        run: |
+          test "${{ inputs.confirmation }}" = "RESTORE" || (echo "confirmation == 'RESTORE' tələb olunur" && exit 1)
+          test -n "$RESTORE_DATABASE_URL" || (echo "RESTORE_DATABASE_URL yoxdur" && exit 1)
+          test "$RESTORE_DATABASE_URL" != "$SUPABASE_DB_URL" || (echo "Refuse production as restore target" && exit 1)
+      - name: Download selected backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ inputs.backup_run_id }}" --name "supabase-backup-${{ inputs.backup_run_id }}" --dir backup
+      - name: Verify checksum
+        run: (cd backup && sha256sum --check SHA256SUMS)
+      - name: Restore into isolated target
+        run: |
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f backup/schema.sql
+          pg_restore --exit-on-error --no-owner --no-privileges --dbname="$RESTORE_DATABASE_URL" backup/data.dump
+      - name: Validate restored database
+        run: |
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "select count(*) from public.tenants;"
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "select 'RESTORE_OK' as status;"
