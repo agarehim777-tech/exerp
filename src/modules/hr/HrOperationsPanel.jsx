@@ -1,22 +1,22 @@
 import React, { useMemo, useState } from "react";
-import { CalendarCheck, CheckCircle2, Clock, Plus, Wallet } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useHrOperations } from "../../shared/hooks/useHrOperations.js";
 import { calcPayroll, periodLabel, workDaysInMonth } from "./payroll.js";
 
 const TABS = [
-  { id: "attendance", label: "Davamiyyət", icon: Clock },
-  { id: "leave", label: "Məzuniyyət", icon: CalendarCheck },
-  { id: "payroll", label: "Əmək haqqı", icon: Wallet },
+  { id: "attendance", label: "Davamiyyət", icon: Clock, description: "Əməkdaşın gündəlik işlədiyi saatı qeyd edin və aylıq davamiyyət faizini izləyin." },
+  { id: "leave", label: "Məzuniyyət", icon: CalendarCheck, description: "Məzuniyyət sorğusu yaradın, müddəti və təsdiq vəziyyətini idarə edin." },
+  { id: "payroll", label: "Əmək haqqı", icon: Wallet, description: "Seçilmiş ay üzrə davamiyyətə əsaslanan əmək haqqını hesablayın və dövrü bağlayın." },
 ];
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const currentPeriod = () => new Date().toISOString().slice(0, 7);
 
-export default function HrOperationsPanel() {
+export default function HrOperationsPanel({ employees = [] }) {
   const { activeTenantId } = useAuth();
-  const ops = useHrOperations(activeTenantId);
+  const ops = useHrOperations(activeTenantId, employees);
   const [tab, setTab] = useState("attendance");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -69,13 +69,17 @@ export default function HrOperationsPanel() {
     tax: acc.tax + row.incomeTax + row.socialEmployee + row.unemploymentEmployee + row.medicalEmployee,
     cost: acc.cost + row.employerCost,
   }), { gross: 0, net: 0, tax: 0, cost: 0 });
+  const activeTab = TABS.find((item) => item.id === tab) || TABS[0];
+  const ActiveTabIcon = activeTab.icon;
+  const attendanceTotals = attendanceSummary.reduce((acc, row) => ({ days: acc.days + row.days, hours: acc.hours + row.hours }), { days: 0, hours: 0 });
+  const periodLeaveRows = ops.byType.leave.filter((row) => (row.start_date || "").slice(0, 7) === period);
 
   return (
     <div style={S.wrap}>
       <div style={S.head}>
         <div>
           <div style={S.title}>HR əməliyyatları</div>
-          <div style={S.sub}>Davamiyyət, məzuniyyət və əmək haqqı — real bazadan (employee_events)</div>
+          <div style={S.sub}>Davamiyyət, məzuniyyət və əmək haqqı əməliyyatlarının vahid idarəetmə sahəsi</div>
         </div>
         <input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} style={S.input} />
       </div>
@@ -88,19 +92,28 @@ export default function HrOperationsPanel() {
         ))}
       </div>
 
+      <div style={S.guide}>
+        <ActiveTabIcon size={19} />
+        <div style={S.guideText}><strong>{activeTab.label}</strong><span>{activeTab.description}</span></div>
+        <div style={S.source}><Info size={13} /> Məlumat mənbəyi: employee_events</div>
+      </div>
+
       {message && <div style={message.tone === "ok" ? S.ok : S.err}>{message.text}</div>}
       {ops.error && <div style={S.err}>{ops.error.message}</div>}
+      {ops.loading && <div style={S.loading}>Əməkdaş reyestri yenilənir...</div>}
 
       {tab === "attendance" && (
         <>
-          <div style={S.form}>
+          <div className="hr-ops-form" style={S.form}>
+            <Field label="Əməkdaş" hint="Davamiyyəti qeydə alınacaq şəxs">
             <select value={attendance.employeeId} onChange={(e) => setAttendance({ ...attendance, employeeId: e.target.value })} style={S.input}>
               <option value="">Əməkdaş seçin</option>
               {ops.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
             </select>
-            <input type="date" value={attendance.date} onChange={(e) => setAttendance({ ...attendance, date: e.target.value })} style={S.input} />
-            <input type="number" min="0" max="24" step="0.5" value={attendance.hours} onChange={(e) => setAttendance({ ...attendance, hours: e.target.value })} style={S.input} placeholder="Saat" />
-            <input value={attendance.note} onChange={(e) => setAttendance({ ...attendance, note: e.target.value })} style={{ ...S.input, flex: 1 }} placeholder="Qeyd" />
+            </Field>
+            <Field label="İş günü" hint="Faktiki iş tarixi"><input type="date" value={attendance.date} onChange={(e) => setAttendance({ ...attendance, date: e.target.value })} style={S.input} /></Field>
+            <Field label="İşlənmiş saat" hint="0–24 saat aralığı"><div style={S.unitInput}><input type="number" min="0" max="24" step="0.5" value={attendance.hours} onChange={(e) => setAttendance({ ...attendance, hours: e.target.value })} style={{ ...S.input, paddingRight: 44 }} /><span style={S.unit}>saat</span></div></Field>
+            <Field label="Qeyd" hint="İstəyə bağlı izah"><input value={attendance.note} onChange={(e) => setAttendance({ ...attendance, note: e.target.value })} style={S.input} placeholder="Məsələn, yarım iş günü" /></Field>
             <button
               disabled={busy || !attendance.employeeId}
               style={S.primary}
@@ -112,8 +125,15 @@ export default function HrOperationsPanel() {
                 amount: Number(attendance.hours || 0),
                 payload: { hours: Number(attendance.hours || 0), note: attendance.note },
               }))}
-            ><Plus size={15} /> Qeyd et</button>
+            ><Plus size={15} /> Davamiyyəti qeyd et</button>
           </div>
+          <div style={S.totals}>
+            <Total label="Hesabat dövrü" value={periodLabel(period)} />
+            <Total label="Əməkdaş sayı" value={`${ops.employees.length} nəfər`} />
+            <Total label="Qeyd olunmuş iş günü" value={`${attendanceTotals.days} gün`} tone="#0f766e" />
+            <Total label="Cəmi iş saatı" value={`${attendanceTotals.hours.toFixed(1)} saat`} tone="#2563a9" />
+          </div>
+          <SectionTitle title="Aylıq davamiyyət cədvəli" subtitle={`${norm} iş günü norması üzrə əməkdaş nəticələri`} />
           <Table
             columns={["Əməkdaş", "Şöbə", "İş günü", `Norma (${norm})`, "Saat", "Faiz"]}
             rows={attendanceSummary.map(({ employee, days, hours, rate }) => [
@@ -126,19 +146,19 @@ export default function HrOperationsPanel() {
 
       {tab === "leave" && (
         <>
-          <div style={S.form}>
-            <select value={leave.employeeId} onChange={(e) => setLeave({ ...leave, employeeId: e.target.value })} style={S.input}>
+          <div className="hr-ops-form" style={S.form}>
+            <Field label="Əməkdaş" hint="Sorğunu yaradan şəxs"><select value={leave.employeeId} onChange={(e) => setLeave({ ...leave, employeeId: e.target.value })} style={S.input}>
               <option value="">Əməkdaş seçin</option>
               {ops.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
-            </select>
-            <select value={leave.kind} onChange={(e) => setLeave({ ...leave, kind: e.target.value })} style={S.input}>
+            </select></Field>
+            <Field label="Məzuniyyət növü" hint="Ödəniş qaydasını müəyyən edir"><select value={leave.kind} onChange={(e) => setLeave({ ...leave, kind: e.target.value })} style={S.input}>
               <option>Əmək məzuniyyəti</option>
               <option>Ödənişsiz</option>
               <option>Xəstəlik</option>
               <option>Təhsil</option>
-            </select>
-            <input type="date" value={leave.startDate} onChange={(e) => setLeave({ ...leave, startDate: e.target.value })} style={S.input} />
-            <input type="date" value={leave.endDate} onChange={(e) => setLeave({ ...leave, endDate: e.target.value })} style={S.input} />
+            </select></Field>
+            <Field label="Başlanğıc tarixi" hint="İlk məzuniyyət günü"><input type="date" value={leave.startDate} onChange={(e) => setLeave({ ...leave, startDate: e.target.value })} style={S.input} /></Field>
+            <Field label="Bitiş tarixi" hint="Son məzuniyyət günü"><input type="date" min={leave.startDate} value={leave.endDate} onChange={(e) => setLeave({ ...leave, endDate: e.target.value })} style={S.input} /></Field>
             <button
               disabled={busy || !leave.employeeId}
               style={S.primary}
@@ -152,9 +172,15 @@ export default function HrOperationsPanel() {
               }))}
             ><Plus size={15} /> Sorğu yarat</button>
           </div>
+          <div style={S.totals}>
+            <Total label="Bu ay sorğu" value={`${periodLeaveRows.length} sorğu`} />
+            <Total label="Təsdiq gözləyir" value={`${periodLeaveRows.filter((row) => row.status === "draft").length} sorğu`} tone="#b45309" />
+            <Total label="Təsdiqlənib" value={`${periodLeaveRows.filter((row) => row.status === "approved").length} sorğu`} tone="#15803d" />
+          </div>
+          <SectionTitle title="Məzuniyyət sorğuları" subtitle={`${periodLabel(period)} dövrünə aid müraciətlər`} />
           <Table
             columns={["Əməkdaş", "Növ", "Başlanğıc", "Bitiş", "Gün", "Status", ""]}
-            rows={ops.byType.leave.map((row) => {
+            rows={periodLeaveRows.map((row) => {
               const employee = ops.employeeMap[row.employee_id];
               const days = row.start_date && row.end_date
                 ? Math.round((new Date(row.end_date) - new Date(row.start_date)) / 86400000) + 1
@@ -180,6 +206,7 @@ export default function HrOperationsPanel() {
 
       {tab === "payroll" && (
         <>
+          <SectionTitle title="Aylıq əmək haqqı hesablaması" subtitle="Davamiyyət günləri, vergi və məcburi ayırmalar avtomatik hesablanır" />
           <div style={S.totals}>
             <Total label={`Dövr: ${periodLabel(period)}`} value={`${payrollRows.length} əməkdaş`} />
             <Total label="Brutto fond" value={money(payrollTotals.gross)} />
@@ -239,6 +266,14 @@ function Total({ label, value, tone }) {
   );
 }
 
+function Field({ label, hint, children }) {
+  return <label style={S.field}><span style={S.fieldLabel}>{label}</span>{children}<small style={S.fieldHint}>{hint}</small></label>;
+}
+
+function SectionTitle({ title, subtitle }) {
+  return <div style={S.sectionTitle}><div><strong>{title}</strong><span>{subtitle}</span></div></div>;
+}
+
 function Table({ columns, rows }) {
   if (!rows.length) return <div style={S.empty}>Qeyd yoxdur</div>;
   return (
@@ -265,16 +300,26 @@ const S = {
   tabs: { display: "flex", gap: 8, flexWrap: "wrap" },
   tab: { display: "inline-flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 },
   tabOn: { background: "#0f172a", color: "#fff", borderColor: "#0f172a" },
-  form: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", background: "#f8fafc", padding: 10, borderRadius: 10 },
-  input: { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" },
-  primary: { display: "inline-flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 8, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 },
+  guide: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", border: "1px solid #d7e5e1", borderRadius: 8, color: "#0f766e", background: "#f5faf8", flexWrap: "wrap" },
+  guideText: { minWidth: 220, display: "grid", flex: 1, gap: 2, color: "#0f172a", fontSize: 13 },
+  source: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 },
+  form: { display: "grid", gridTemplateColumns: "minmax(180px,1.2fr) minmax(150px,.8fr) minmax(140px,.7fr) minmax(220px,1.5fr) auto", gap: 10, alignItems: "end", background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid #e5e7eb" },
+  field: { minWidth: 0, display: "grid", gap: 5 },
+  fieldLabel: { color: "#334155", fontSize: 12, fontWeight: 700 },
+  fieldHint: { minHeight: 14, color: "#94a3b8", fontSize: 10 },
+  input: { width: "100%", minWidth: 0, height: 40, boxSizing: "border-box", padding: "8px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" },
+  unitInput: { position: "relative" },
+  unit: { position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 11, pointerEvents: "none" },
+  primary: { minHeight: 40, display: "inline-flex", gap: 6, alignItems: "center", justifyContent: "center", padding: "8px 14px", borderRadius: 7, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13, whiteSpace: "nowrap", marginBottom: 19 },
   mini: { padding: "5px 10px", borderRadius: 7, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 13 },
   th: { textAlign: "left", padding: "8px 10px", color: "#64748b", fontSize: 12, borderBottom: "1px solid #e2e8f0", whiteSpace: "nowrap" },
   td: { padding: "8px 10px", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" },
   totals: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 },
   total: { border: "1px solid #e2e8f0", borderRadius: 10, padding: 10, display: "grid", gap: 3 },
+  sectionTitle: { display: "flex", justifyContent: "space-between", alignItems: "end", paddingTop: 3 },
   empty: { padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 13 },
   ok: { background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d", padding: 10, borderRadius: 8, fontSize: 13 },
   err: { background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", padding: 10, borderRadius: 8, fontSize: 13 },
+  loading: { background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: 10, borderRadius: 8, fontSize: 13 },
 };

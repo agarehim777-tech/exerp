@@ -907,13 +907,24 @@ export function buildHrRecruitmentRows(planningRows, vacancies = []) {
 export const hrPlatformTabs = ["Komanda", "İş vaxtı", "Məzuniyyət", "Payroll", "Recruitment"];
 
 export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, onDelete, onUpdateDocuments }) {
+  const [profileView, setProfileView] = useState("Ümumi");
   if (!selectedRecord) return <EmptyState title={records.length ? "Əməkdaş seçilməyib" : "Filterə uyğun əməkdaş tapılmadı"} />;
 
   const documentRows = selectedRecord.documentRows || getHrDocumentRows(selectedRecord);
+  const profileViews = [
+    { label: "Ümumi", icon: LayoutDashboard },
+    { label: "İş və məzuniyyət", icon: CalendarClock },
+    { label: "Payroll", icon: Wallet },
+    { label: "Sənədlər", icon: FileText, count: selectedRecord.missingDocumentCount },
+  ];
 
   return (
     <section className="hr-employee-platform">
       <div className="hr-people-list">
+        <div className="hr-people-list-head">
+          <div><strong>Əməkdaşlar</strong><span>{records.length} nəticə</span></div>
+          <Users size={17} />
+        </div>
         {records.map((record) => (
           <button
             key={record.name}
@@ -943,43 +954,55 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
             <button className="icon-btn hr-row-delete hr-profile-delete" title="Əməkdaşı sil" aria-label={`${selectedRecord.name} əməkdaşını sil`} onClick={() => onDelete(selectedRecord)}><Trash2 size={16} /></button>
           </div>
         </div>
-        <div className="hr-profile-grid">
-          <TwoLine title="Rəhbər" subtitle={selectedRecord.managerName || "Birbaşa rəhbərlik"} />
-          <TwoLine title="İş rejimi" subtitle={`${selectedRecord.workMode} · ${selectedRecord.shift}`} />
-          <TwoLine title="İşə qəbul" subtitle={selectedRecord.hireDate} />
-          <TwoLine title="Növbəti review" subtitle={selectedRecord.nextReview} />
-          <TwoLine title="Attendance" subtitle={percent(selectedRecord.attendanceRate)} />
-          <TwoLine title="Məzuniyyət balansı" subtitle={`${selectedRecord.leaveBalance} gün`} />
-          <TwoLine title="Sənəd uyğunluğu" subtitle={percent(selectedRecord.documentsComplete)} />
-          <TwoLine title="Net payroll" subtitle={money(selectedRecord.netSalary)} />
-          <TwoLine title="Payroll statusu" subtitle={selectedRecord.payrollStatus} />
-          <TwoLine title="Payroll periodu" subtitle={selectedRecord.payrollPeriod} />
-          <TwoLine title="Ödənilmə tarixi" subtitle={selectedRecord.payrollPaidAt || "Hələ bağlanmayıb"} />
-          <TwoLine title="Sənəd statusu" subtitle={selectedRecord.documentStatus} />
-        </div>
-        <div className="hr-profile-snapshot">
-          <div>
-            <span>Məzuniyyət</span>
-            <strong>{selectedRecord.leaveBalance} gün qalıq</strong>
-            <small>{selectedRecord.usedLeave} gün istifadə · {selectedRecord.pendingLeaveDays} gün təsdiqdə</small>
-          </div>
-          <div>
-            <span>Payroll</span>
-            <strong>{selectedRecord.payrollStatus}</strong>
-            <small>{money(selectedRecord.netSalary)} net · {money(selectedRecord.employerCost)} işəgötürən xərci</small>
-          </div>
-          <div>
-            <span>Sənədlər</span>
-            <strong>{selectedRecord.documentStatus}</strong>
-            <small>{selectedRecord.missingDocumentCount} açıq sənəd · {percent(selectedRecord.documentsComplete)}</small>
-          </div>
-        </div>
-        <div className="hr-skill-strip">
-          {(selectedRecord.skills.length ? selectedRecord.skills : ["Profil bacarıqları əlavə edilməyib"]).map((skill) => (
-            <span key={skill}>{skill}</span>
+        <nav className="hr-profile-tabs" aria-label="Əməkdaş profil bölmələri">
+          {profileViews.map(({ label, icon: Icon, count }) => (
+            <button key={label} className={profileView === label ? "active" : ""} onClick={() => setProfileView(label)}>
+              <Icon size={15} /><span>{label}</span>{count > 0 && <b>{count}</b>}
+            </button>
           ))}
+        </nav>
+
+        {profileView === "Ümumi" && <div className="hr-profile-view">
+          <div className="hr-profile-grid compact">
+            <TwoLine title="Rəhbər" subtitle={selectedRecord.managerName || "Birbaşa rəhbərlik"} />
+            <TwoLine title="İşə qəbul" subtitle={selectedRecord.hireDate} />
+            <TwoLine title="Növbəti review" subtitle={selectedRecord.nextReview} />
+            <TwoLine title="Sənəd uyğunluğu" subtitle={percent(selectedRecord.documentsComplete)} />
+          </div>
+          <div className="hr-profile-snapshot">
+            <div><span>İştirak</span><strong>{percent(selectedRecord.attendanceRate)}</strong><small>{selectedRecord.workMode} · {selectedRecord.shift}</small></div>
+            <div><span>Məzuniyyət</span><strong>{selectedRecord.leaveBalance} gün qalıq</strong><small>{selectedRecord.usedLeave} gün istifadə · {selectedRecord.pendingLeaveDays} gün təsdiqdə</small></div>
+            <div><span>Payroll</span><strong>{selectedRecord.payrollStatus}</strong><small>{money(selectedRecord.netSalary)} net əmək haqqı</small></div>
+          </div>
+          <div className="hr-skill-strip">
+            {(selectedRecord.skills.length ? selectedRecord.skills : ["Profil bacarıqları əlavə edilməyib"]).map((skill) => <span key={skill}>{skill}</span>)}
+          </div>
         </div>
-        <div className="hr-document-grid">
+        }
+
+        {profileView === "İş və məzuniyyət" && <div className="hr-profile-view">
+          <div className="hr-profile-grid compact">
+            <TwoLine title="İş rejimi" subtitle={`${selectedRecord.workMode} · ${selectedRecord.shift}`} />
+            <TwoLine title="Attendance" subtitle={percent(selectedRecord.attendanceRate)} />
+            <TwoLine title="Məzuniyyət balansı" subtitle={`${selectedRecord.leaveBalance} gün`} />
+            <TwoLine title="Növbəti review" subtitle={selectedRecord.nextReview} />
+          </div>
+          <div className="hr-profile-focus-card"><CalendarClock size={20} /><div><span>Məzuniyyət vəziyyəti</span><strong>{selectedRecord.leaveBalance} gün qalıq</strong><small>{selectedRecord.usedLeave} gün istifadə olunub, {selectedRecord.pendingLeaveDays} gün təsdiq gözləyir</small></div></div>
+        </div>}
+
+        {profileView === "Payroll" && <div className="hr-profile-view">
+          <div className="hr-profile-grid compact">
+            <TwoLine title="Net payroll" subtitle={money(selectedRecord.netSalary)} />
+            <TwoLine title="İşəgötürən xərci" subtitle={money(selectedRecord.employerCost)} />
+            <TwoLine title="Payroll periodu" subtitle={selectedRecord.payrollPeriod} />
+            <TwoLine title="Ödənilmə tarixi" subtitle={selectedRecord.payrollPaidAt || "Hələ bağlanmayıb"} />
+          </div>
+          <div className="hr-profile-focus-card"><Wallet size={20} /><div><span>Ödəniş statusu</span><strong>{selectedRecord.payrollStatus}</strong><small>{selectedRecord.payrollPeriod} dövrü üzrə</small></div></div>
+        </div>}
+
+        {profileView === "Sənədlər" && <div className="hr-profile-view">
+          <div className="hr-document-summary"><div><span>Sənəd uyğunluğu</span><strong>{percent(selectedRecord.documentsComplete)}</strong></div><StatusBadge status={selectedRecord.documentStatus} /></div>
+          <div className="hr-document-grid">
           {documentRows.map((document) => (
             <div key={document.key} className={document.complete ? "complete" : "attention"}>
               <span>
@@ -989,13 +1012,14 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
               <StatusBadge status={document.status} />
             </div>
           ))}
-        </div>
-        {selectedRecord.missingDocumentCount > 0 && onUpdateDocuments && (
+          </div>
+          {selectedRecord.missingDocumentCount > 0 && onUpdateDocuments && (
           <button className="secondary-btn hr-document-complete" data-testid="hr-document-complete" onClick={() => onUpdateDocuments(selectedRecord.employeeKey, 100)}>
             <Check size={16} />
             Sənədləri tamamla
           </button>
-        )}
+          )}
+        </div>}
       </div>
     </section>
   );
@@ -1567,10 +1591,20 @@ export function HrOrganizationNode({ department, depth, index, selectedDepartmen
   );
 }
 
-export function HrEmployeeTreeNode({ employee, onSelectEmployee }) {
+export function HrEmployeeTreeNode({ employee, onSelectEmployee, depth = 0 }) {
+  const hasChildren = employee.children.length > 0;
+  const [expanded, setExpanded] = useState(depth === 0);
+
   return (
     <div className="hr-tree-item">
-      <button className={`hr-employee-node ${employee.isInScope ? "in-scope" : ""}`} onClick={() => onSelectEmployee(employee.name)}>
+      <button
+        className={`hr-employee-node ${employee.isInScope ? "in-scope" : ""}`}
+        aria-expanded={hasChildren ? expanded : undefined}
+        onClick={() => {
+          onSelectEmployee(employee.name);
+          if (hasChildren) setExpanded((current) => !current);
+        }}
+      >
         <span className="small-avatar">{employee.initials}</span>
         <div>
           <strong>{employee.name}</strong>
@@ -1578,11 +1612,14 @@ export function HrEmployeeTreeNode({ employee, onSelectEmployee }) {
           <small>{employee.managerName ? `${employee.managerName}-a tabedir` : "Birbaşa rəhbərlik"}</small>
         </div>
         <StatusBadge status={employee.level} />
+        {hasChildren
+          ? <ChevronRight className={`hr-employee-chevron ${expanded ? "expanded" : ""}`} size={17} />
+          : <span className="hr-employee-chevron-placeholder" aria-hidden="true" />}
       </button>
-      {employee.children.length > 0 && (
+      {hasChildren && expanded && (
         <div className="hr-tree-children">
           {employee.children.map((child) => (
-            <HrEmployeeTreeNode key={child.employeeKey} employee={child} onSelectEmployee={onSelectEmployee} />
+            <HrEmployeeTreeNode key={child.employeeKey} employee={child} onSelectEmployee={onSelectEmployee} depth={depth + 1} />
           ))}
         </div>
       )}

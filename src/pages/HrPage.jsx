@@ -134,7 +134,7 @@ export default function HrPage({
         {hrView === "Recruitment" && <HrRecruitmentPlatform rows={recruitmentRows} onCreate={onCreateVacancy} />}
       </Panel>
 
-      <HrOperationsPanel />
+      <HrOperationsPanel employees={allEmployees} />
 
       <Panel className="hr-planning-panel">
         <PanelHeader
