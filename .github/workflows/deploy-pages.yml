@@ -18,6 +18,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://tcqdhwtnjrwpfdxoijmv.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,7 +53,8 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           test -n "$SUPABASE_DB_URL"
-          npx --yes supabase@2.39.2 db push --db-url "$SUPABASE_DB_URL" --include-all
+          POOLER_URL="$(node -e 'const u = new URL(process.env.SUPABASE_DB_URL); u.username = "postgres.tcqdhwtnjrwpfdxoijmv"; u.hostname = "aws-0-ap-southeast-1.pooler.supabase.com"; u.port = "5432"; process.stdout.write(u.toString())')"
+          npx --yes supabase@2.39.2 db push --db-url "$POOLER_URL" --include-all
 
       - name: Build
         run: npm run build:pages
