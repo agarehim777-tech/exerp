@@ -323,7 +323,9 @@ function App() {
         const matches = dbOrders.filter(order => normalize(order.customer?.name) === normalize(entry.customer));
         if (matches.length === 1) target = matches[0];
       }
-      if (target) paidByOrder.set(target.id, Number(paidByOrder.get(target.id) || 0) + Number(entry.principal ?? entry.amount));
+      if (target && target.status !== 'cancelled') {
+        paidByOrder.set(target.id, Number(paidByOrder.get(target.id) || 0) + Number(entry.principal ?? entry.amount));
+      }
     });
     paidByOrder.forEach((legacyPaid, orderId) => {
       const order = dbOrders.find(item => item.id === orderId);
@@ -7189,3 +7191,4 @@ import {
 
 
 export default App;
+
