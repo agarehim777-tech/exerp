@@ -16,6 +16,13 @@ const withCustomerMeta = (customer) => {
   } catch { return customer; }
 };
 
+const isActiveOrder = (order) => String(order?.status || '').toLowerCase() !== 'cancelled';
+const isActiveCredit = (credit, activeOrderIds) => {
+  const status = String(credit?.status || '').toLowerCase();
+  return !['closed', 'cancelled'].includes(status)
+    && (!credit?.order_id || activeOrderIds.has(credit.order_id));
+};
+
 export function useCustomer360(customerId) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,7 +40,7 @@ export function useCustomer360(customerId) {
 
     if (customerResult.error) throw customerResult.error;
     const deals = dealsResult.data || [];
-    const orders = ordersResult.data || [];
+    const orders = (ordersResult.data || []).filter(isActiveOrder);
     return {
       customer: withCustomerMeta(customerResult.data),
       open_deals: deals.filter((deal) => deal.status === 'open'),
@@ -63,7 +70,7 @@ export function useCustomer360(customerId) {
           .eq('customer_id', customerId)
           .order('order_date', { ascending: false });
         if (ordersError) throw ordersError;
-        const detailedOrders = orders || [];
+        const detailedOrders = (orders || []).filter(isActiveOrder);
         result = {
           ...result,
           orders: detailedOrders,
@@ -85,8 +92,11 @@ export function useCustomer360(customerId) {
       const itemsByOrder = new Map();
       (itemResult.data || []).forEach(item => itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) || []), item]));
       const orders = (result.orders || []).map(order => ({ ...order, items: itemsByOrder.get(order.id) || [] }));
-      const credits = creditResult.error ? [] : (creditResult.data || []);
-      const payments = credits.flatMap(credit => credit.payments || []);
+      const activeOrderIds = new Set(orders.map(order => order.id));
+      const credits = creditResult.error
+        ? []
+        : (creditResult.data || []).filter(credit => isActiveCredit(credit, activeOrderIds));
+      const payments = credits.flatMap(credit => (credit.payments || []).filter(payment => !payment.reversed_at));
       const documents = documentResult.error ? [] : (documentResult.data || []);
       const serviceCases = serviceResult.error ? [] : (serviceResult.data || []);
       const analytics = buildCustomerScore({ orders, credits, payments });
@@ -129,3 +139,4 @@ export function useCustomer360(customerId) {
 
   return { data, loading, error, refresh: fetchIt, uploadDocument, downloadDocument, removeDocument };
 }
+
