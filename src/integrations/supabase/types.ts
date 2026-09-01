@@ -1362,6 +1362,91 @@ export type Database = {
           },
         ]
       }
+      deliveries: {
+        Row: {
+          acceptance_document_no: string | null
+          acceptance_name: string | null
+          acceptance_note: string | null
+          acceptance_signature: string | null
+          accepted_at: string | null
+          created_at: string
+          delivered_at: string | null
+          delivered_by: string | null
+          delivery_no: string | null
+          id: string
+          order_id: string | null
+          recipient_document: string | null
+          recipient_name: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          warehouse_employee_name: string | null
+          warehouse_id: string | null
+        }
+        Insert: {
+          acceptance_document_no?: string | null
+          acceptance_name?: string | null
+          acceptance_note?: string | null
+          acceptance_signature?: string | null
+          accepted_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_by?: string | null
+          delivery_no?: string | null
+          id?: string
+          order_id?: string | null
+          recipient_document?: string | null
+          recipient_name?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          warehouse_employee_name?: string | null
+          warehouse_id?: string | null
+        }
+        Update: {
+          acceptance_document_no?: string | null
+          acceptance_name?: string | null
+          acceptance_note?: string | null
+          acceptance_signature?: string | null
+          accepted_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_by?: string | null
+          delivery_no?: string | null
+          id?: string
+          order_id?: string | null
+          recipient_document?: string | null
+          recipient_name?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          warehouse_employee_name?: string | null
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_events: {
         Row: {
           amount: number
