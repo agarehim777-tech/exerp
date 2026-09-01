@@ -361,6 +361,7 @@ export type Database = {
           occurred_at: string
           reference: string | null
           reference_id: string | null
+          reversal_of: string | null
           tenant_id: string
           transaction_no: string | null
           updated_at: string
@@ -381,6 +382,7 @@ export type Database = {
           occurred_at?: string
           reference?: string | null
           reference_id?: string | null
+          reversal_of?: string | null
           tenant_id: string
           transaction_no?: string | null
           updated_at?: string
@@ -401,6 +403,7 @@ export type Database = {
           occurred_at?: string
           reference?: string | null
           reference_id?: string | null
+          reversal_of?: string | null
           tenant_id?: string
           transaction_no?: string | null
           updated_at?: string
@@ -419,6 +422,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transactions_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "cash_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -5544,6 +5554,10 @@ export type Database = {
           _tenant_id: string
           _warehouse_id: string
         }
+        Returns: string
+      }
+      reverse_cash_transaction: {
+        Args: { _reason: string; _tenant_id: string; _transaction_id: string }
         Returns: string
       }
       sales_dashboard: {
