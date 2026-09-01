@@ -509,10 +509,20 @@ export function useCashbook(tenantId) {
   const balanceOf = useCallback((accountId) => {
     const account = accounts.find((a) => a.id === accountId);
     const opening = Number(account?.opening_balance) || 0;
+    // Ləğv edilmiş əməliyyat və onun əks yazılışı qalığa təsir etməməlidir.
+    const reversedIds = new Set(transactions.flatMap((t) => {
+      if (t.category !== 'transaction_reversal' && !t.reversal_of) return [];
+      const markerId = String(t.description || '').match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
+      return [t.reversal_of, markerId].filter(Boolean);
+    }));
     return transactions
-      .filter((t) => t.account_id === accountId)
+      .filter((t) => t.account_id === accountId
+        && t.category !== 'transaction_reversal'
+        && !t.reversal_of
+        && !reversedIds.has(t.id))
       .reduce((sum, t) => sum + (t.direction === 'in' ? Number(t.amount) : -Number(t.amount)), opening);
   }, [accounts, transactions]);
+
 
   return {
     accounts, transactions, expenses, expenseCategories, customers, employees, loading, error, degraded, refresh: fetchAll,
