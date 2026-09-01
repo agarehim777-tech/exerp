@@ -24,7 +24,8 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
   const [actionError, setActionError] = useState('');
 
   const filtered = useMemo(() => orders.filter(o =>
-    !q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase())
+    o.status !== 'cancelled'
+    && (!q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase()))
   ), [orders, q]);
 
   useEffect(() => {
@@ -153,3 +154,4 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
 }
 const Th = ({ children, align }) => <th style={{ padding: '10px 12px', textAlign: align || 'left', color: '#64748b', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 }}>{children}</th>;
 const Td = ({ children, align }) => <td style={{ padding: '10px 12px', textAlign: align || 'left' }}>{children}</td>;
+
