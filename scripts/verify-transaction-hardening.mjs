@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const migrationPath = "supabase/migrations/20260812090000_transaction_security_hardening.sql";
 const migration = await readFile(resolve(root, migrationPath), "utf8");
+const reversalMigrationPath = "supabase/migrations/20260901153000_complete_sales_reversal_lifecycle.sql";
+const reversalMigration = await readFile(resolve(root, reversalMigrationPath), "utf8");
 const service = await readFile(resolve(root, "src/services/coreOperations.js"), "utf8");
 const failures = [];
 
@@ -27,6 +29,24 @@ for (const signal of requiredMigrationSignals) {
   if (!migration.includes(signal)) failures.push(`${migrationPath}: missing ${signal}`);
 }
 
+const requiredReversalSignals = [
+  "CREATE OR REPLACE FUNCTION public.reverse_sales_order",
+  "payment.reversed_at",
+  "public.credit_installments",
+  "public.stock_reservations",
+  "public.stock_balances",
+  "public.sales_bonus_entries",
+  "public.cash_transactions",
+  "reversal_of",
+  "paid_amount = 0",
+  "payment_status = 'unpaid'",
+  "status = 'cancelled'",
+];
+
+for (const signal of requiredReversalSignals) {
+  if (!reversalMigration.includes(signal)) failures.push(`${reversalMigrationPath}: missing ${signal}`);
+}
+
 for (const signal of ["createSalesOrderAtomic", "createIdempotencyKey", "lockAccountingPeriod", "listAccountingPeriodLocks", "reopenAccountingPeriod"]) {
   if (!service.includes(signal)) failures.push(`src/services/coreOperations.js: missing ${signal}`);
 }
@@ -41,5 +61,5 @@ if (failures.length) {
   console.error(JSON.stringify({ ok: false, failures }, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + 4 }, null, 2));
+  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + requiredReversalSignals.length + 4 }, null, 2));
 }
