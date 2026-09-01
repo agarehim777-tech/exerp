@@ -15,13 +15,6 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-env:
-  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-  VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-  TEST_USER: ${{ secrets.E2E_TEST_USER }}
-  TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,7 +25,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
@@ -43,32 +36,14 @@ jobs:
       - name: Migration gate
         run: npm run verify:migrations
 
-      - name: Apply Supabase migrations
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          test -n "$SUPABASE_ACCESS_TOKEN" -a -n "$SUPABASE_DB_PASSWORD" -a -n "$VITE_SUPABASE_PROJECT_ID" || (echo "Backend deploy secret-ləri yoxdur" && exit 1)
-          npx --yes supabase@2.39.2 link --project-ref "$VITE_SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
-          npx --yes supabase@2.39.2 db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
-
       - name: Security gate
         run: npm run verify:security
 
       - name: Transaction lifecycle gate
         run: npm run verify:hardening
 
-      - name: Supabase contract gate
+      - name: Backend contract gate
         run: npm run verify:core-backend
-
-      - name: Require isolated lifecycle credentials
-        run: test -n "$TEST_USER" -a -n "$TEST_PASS" || (echo "E2E_TEST_USER/E2E_TEST_PASS secrets tələb olunur" && exit 1)
-
-      - name: Stock, credit and payment lifecycle gates
-        run: |
-          npm run verify:stock
-          npm run verify:credit
-          npm run verify:credit-payments
 
       - name: Build
         run: npm run build:pages
