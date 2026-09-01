@@ -5645,6 +5645,10 @@ export type Database = {
         Args: { _reason: string; _tenant_id: string; _transaction_id: string }
         Returns: string
       }
+      reverse_sales_order: {
+        Args: { _order_id: string; _reason?: string }
+        Returns: undefined
+      }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: Json
