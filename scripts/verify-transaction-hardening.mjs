@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const migrationPath = "supabase/migrations/20260812090000_transaction_security_hardening.sql";
 const migration = await readFile(resolve(root, migrationPath), "utf8");
-const reversalMigrationPath = "supabase/migrations/20260901153000_complete_sales_reversal_lifecycle.sql";
+const reversalMigrationPath = "supabase/migrations/20260901170000_make_sales_reversal_schema_compatible.sql";
 const reversalMigration = await readFile(resolve(root, reversalMigrationPath), "utf8");
 const service = await readFile(resolve(root, "src/services/coreOperations.js"), "utf8");
 const failures = [];
@@ -41,6 +41,8 @@ const requiredReversalSignals = [
   "paid_amount = 0",
   "payment_status = 'unpaid'",
   "status = 'cancelled'",
+  "to_regclass('public.order_accounting_events')",
+  "EXECUTE 'SELECT EXISTS",
 ];
 
 for (const signal of requiredReversalSignals) {
