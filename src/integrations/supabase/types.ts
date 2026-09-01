@@ -295,7 +295,6 @@ export type Database = {
           currency: string
           gl_account_id: string | null
           id: string
-          image_path: string | null
           is_active: boolean
           name: string
           opening_balance: number
@@ -309,7 +308,6 @@ export type Database = {
           currency?: string
           gl_account_id?: string | null
           id?: string
-          image_path?: string | null
           is_active?: boolean
           name: string
           opening_balance?: number
@@ -323,7 +321,6 @@ export type Database = {
           currency?: string
           gl_account_id?: string | null
           id?: string
-          image_path?: string | null
           is_active?: boolean
           name?: string
           opening_balance?: number
@@ -5316,10 +5313,6 @@ export type Database = {
       delete_sales_order_safe: {
         Args: { _order_id: string }
         Returns: undefined
-      }
-      reverse_sales_order: {
-        Args: { _order_id: string; _reason: string }
-        Returns: Json
       }
       ensure_inventory_accounts: {
         Args: { _tenant: string }
