@@ -84,6 +84,10 @@ function buildSalesCreditRecords(orders, storedCredits) {
   const storedById = new Map(storedCredits.map((credit) => [credit.id, credit]));
 
   return orders
+    .filter((order) => {
+      const status = normalize(order.status || "");
+      return status !== "cancelled" && !status.includes("ləğv") && !status.includes("legv");
+    })
     .filter((order) => order.paymentMethod === "Kredit" || order.creditId)
     .map((order) => {
       const storedCredit = storedByOrderId.get(order.id) || storedById.get(order.creditId) || storedById.get(getCreditIdForOrder(order));
@@ -3523,3 +3527,4 @@ export {
   getPageActionPermission,
   hasPageAction,
 };
+
