@@ -54,7 +54,13 @@ jobs:
         run: |
           test -n "$SUPABASE_DB_URL"
           POOLER_URL="$(node -e 'const u = new URL(process.env.SUPABASE_DB_URL); u.username = "postgres.tcqdhwtnjrwpfdxoijmv"; u.hostname = "aws-0-ap-southeast-1.pooler.supabase.com"; u.port = "5432"; process.stdout.write(u.toString())')"
-          npx --yes supabase@2.39.2 db push --db-url "$POOLER_URL" --include-all
+          for migration in \
+            supabase/migrations/20260901153000_complete_sales_reversal_lifecycle.sql \
+            supabase/migrations/20260901170000_make_sales_reversal_schema_compatible.sql \
+            supabase/migrations/20260901183000_reconcile_cancelled_sales_orders.sql \
+            supabase/migrations/20260901184500_enforce_cancelled_order_credit_invariants.sql; do
+            psql "$POOLER_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
 
       - name: Build
         run: npm run build:pages
