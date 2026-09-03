@@ -1,11 +1,15 @@
 import {
   Award,
+  BadgeDollarSign,
   CircleAlert,
+  PackageSearch,
+  Plus,
   ShoppingCart,
   TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { MetricCard, Panel, PanelHeader } from "../components/ui.jsx";
 import { money } from "../services/format.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -71,13 +75,15 @@ export default function DashboardPage({
   customers,
   onOpenPendingExpenses,
 }) {
+  const navigate = useNavigate();
   const { activeMembership } = useAuth();
   const cashbook = useCashbook(activeMembership?.tenant_id);
   const dashboard = buildRealtimeDashboard(orders, customers);
   const chart = dashboard.chart;
   const chartMax = Math.max(1, ...chart.map((item) => item.value));
   const pending = cashbook.expenses.filter((expense) => ["pending", "draft"].includes(expense.status));
-  const sellerPerformance = [...orders.reduce((map, order) => {
+  const activeOrders = orders.filter((order) => !isCancelled(order));
+  const sellerPerformance = [...activeOrders.reduce((map, order) => {
     const sellers = getOrderSellerBonuses(order).filter((row) => row.seller);
     const primarySeller = sellers[0];
     if (!primarySeller) return map;
@@ -87,19 +93,19 @@ export default function DashboardPage({
       sales: 0,
     };
     current.orders.add(order.id || `${primarySeller.seller}-primary`);
-    current.sales += Math.max(0, Number(order.amount || 0));
+    current.sales += orderAmount(order);
     map.set(primarySeller.seller, current);
     return map;
   }, new Map()).values()]
     .map((row) => ({ ...row, orderCount: row.orders.size }))
     .sort((a, b) => b.sales - a.sales);
   const maxSellerSales = Math.max(1, ...sellerPerformance.map((row) => row.sales));
-  const productPerformance = [...orders.reduce((map, order) => {
-    const lines = normalizeOrderProductLines(order.productLines || []);
+  const productPerformance = [...activeOrders.reduce((map, order) => {
+    const lines = normalizeOrderProductLines(order.productLines || order.items || []);
     lines.forEach((line) => {
       const current = map.get(line.product) || { name: line.product, quantity: 0, sales: 0, orders: new Set() };
       current.quantity += Number(line.qty || 0);
-      current.sales += Number(line.qty || 0) * Number(line.price || 0);
+      current.sales += Number(line.qty || 0) * Number(line.price ?? line.unit_price ?? 0);
       current.orders.add(order.id);
       map.set(line.product, current);
     });
@@ -111,6 +117,12 @@ export default function DashboardPage({
 
   return (
     <div className="stack">
+      <section className="mobile-operations" aria-label="Sürətli əməliyyatlar">
+        <button type="button" onClick={() => navigate('/satis/sifarisler')}><Plus size={18} /><span>Satış</span></button>
+        <button type="button" onClick={() => navigate('/maliyye/kassa')}><BadgeDollarSign size={18} /><span>Ödəniş</span></button>
+        <button type="button" onClick={() => navigate('/anbar/qaliqlar')}><PackageSearch size={18} /><span>Stok</span></button>
+        <button type="button" onClick={() => navigate('/sistem/barisdirma')}><CircleAlert size={18} /><span>Nəzarət</span></button>
+      </section>
       <section className="metric-grid">
         <MetricCard
           label="Aylıq gəlir"
@@ -197,3 +209,4 @@ export default function DashboardPage({
     </div>
   );
 }
+
