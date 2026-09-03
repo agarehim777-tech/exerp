@@ -59,7 +59,8 @@ jobs:
             supabase/migrations/20260901170000_make_sales_reversal_schema_compatible.sql \
             supabase/migrations/20260901183000_reconcile_cancelled_sales_orders.sql \
             supabase/migrations/20260901184500_enforce_cancelled_order_credit_invariants.sql \
-            supabase/migrations/20260903120000_operational_control_center.sql; do
+            supabase/migrations/20260903120000_operational_control_center.sql \
+            supabase/migrations/20260903143000_enforce_order_module_links.sql; do
             psql "$POOLER_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
 
