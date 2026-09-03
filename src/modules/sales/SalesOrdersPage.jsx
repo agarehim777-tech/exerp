@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { AlertTriangle, CreditCard, PackageCheck, ReceiptText, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useOrders } from '../../shared/hooks/useOrders.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
@@ -14,7 +15,7 @@ const canonicalStatus = status => ['draft', 'pending', 'processing', 'shipped'].
 
 export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
-  const { orders, update, updateStatus, updateHeader, registerPayment, remove, hasMore, loadMore, loading: ordersLoading } = useOrders(activeTenantId);
+  const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading } = useOrders(activeTenantId);
   const { accounts: cashAccounts } = useCashbook(activeTenantId);
   const { customers } = useCustomers(activeTenantId);
   const { products } = useProducts(activeTenantId);
@@ -22,6 +23,9 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [reversal, setReversal] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('Müştərinin müraciəti ilə satış ləğv edildi');
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = useMemo(() => orders.filter(o =>
     o.status !== 'cancelled'
@@ -137,20 +141,62 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
             setSelected(null);
           }}
           onDelete={async (id) => {
-            if (!confirm('Sifariş silinsin?')) return;
             setActionError('');
             try {
-              await remove(id);
-              setSelected(null);
+              setReversal({ loading: true, orderId: id });
+              const preview = await previewRemoval(id);
+              setReversal({ loading: false, orderId: id, preview });
             } catch (error) {
               const message = error?.message || error?.details || error?.hint || String(error || '');
               setActionError(message && message !== '[object Object]' ? message : 'Sifariş silinmədi. Əlaqəli əməliyyatları və istifadəçi icazəsini yoxlayın.');
+              setReversal(null);
             }
           }}
         />
       )}
+      {reversal && <ReversalPreview
+        state={reversal}
+        reason={deleteReason}
+        setReason={setDeleteReason}
+        deleting={deleting}
+        onClose={() => !deleting && setReversal(null)}
+        onConfirm={async () => {
+          if (deleteReason.trim().length < 3) return setActionError('Ləğv səbəbini yazın.');
+          setDeleting(true); setActionError('');
+          try {
+            await remove(reversal.orderId, deleteReason.trim());
+            setSelected(null); setReversal(null);
+          } catch (error) {
+            setActionError(error?.message || 'Satış ləğv edilmədi.');
+          } finally { setDeleting(false); }
+        }}
+      />}
     </div>
   );
+}
+
+function ReversalPreview({ state, reason, setReason, deleting, onClose, onConfirm }) {
+  const p = state.preview || {};
+  return <div className="reversal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <section className="reversal-dialog" role="dialog" aria-modal="true" aria-labelledby="reversal-title">
+      <header><div><span className="reversal-warning"><AlertTriangle size={18} /></span><div><h2 id="reversal-title">Satışın ləğv təsiri</h2><p>{state.loading ? 'Əlaqələr yoxlanılır…' : `${p.order_no} üzrə dəyişəcək qeydlər`}</p></div></div><button type="button" onClick={onClose} aria-label="Bağla"><X size={19} /></button></header>
+      {!state.loading && <>
+        <div className="reversal-impact-grid">
+          <Impact icon={CreditCard} label="Bağlanacaq kredit" value={p.credit_count || 0} />
+          <Impact icon={ReceiptText} label="Geri çevriləcək ödəniş" value={`${Number(p.payment_amount || 0).toFixed(2)} ₼`} />
+          <Impact icon={PackageCheck} label="Buraxılacaq rezerv" value={p.reservation_count || 0} />
+          <Impact icon={PackageCheck} label="Anbara qaytarılacaq" value={p.stock_return_count || 0} />
+        </div>
+        {p.warning && <div className="reversal-note">{p.warning}</div>}
+        <label className="reversal-reason"><span>Ləğv səbəbi</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} /></label>
+        <footer><button type="button" className="secondary-btn" onClick={onClose}>İmtina</button><button type="button" className="danger-btn" onClick={onConfirm} disabled={deleting}>{deleting ? 'Ləğv edilir…' : 'Satışı ləğv et'}</button></footer>
+      </>}
+    </section>
+  </div>;
+}
+
+function Impact({ icon: Icon, label, value }) {
+  return <div><Icon size={18} /><span>{label}</span><strong>{value}</strong></div>;
 }
 const Th = ({ children, align }) => <th style={{ padding: '10px 12px', textAlign: align || 'left', color: '#64748b', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 }}>{children}</th>;
 const Td = ({ children, align }) => <td style={{ padding: '10px 12px', textAlign: align || 'left' }}>{children}</td>;
