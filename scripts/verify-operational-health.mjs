@@ -28,17 +28,18 @@ const get = async (path) => {
   if (!response.ok) throw new Error(`${path}: ${JSON.stringify(body).slice(0, 200)}`);
   return body;
 };
-const [orders, credits, payments, reservations] = await Promise.all([
-  get(`orders?select=id,status&tenant_id=eq.${tenant}`),
+const [orders, credits, payments, reservations, balances, invoices, deliveries, accountingEvents] = await Promise.all([
+  get(`orders?select=id,order_no,status&tenant_id=eq.${tenant}`),
   get(`credit_contracts?select=id,order_id,status&tenant_id=eq.${tenant}`),
-  get(`cash_transactions?select=id,reference_id,reference_type,reversed_at&tenant_id=eq.${tenant}`),
-  get(`stock_reservations?select=id,order_id,status&tenant_id=eq.${tenant}`),
+  get(`cash_transactions?select=id,category,reference_id,reference_type,reference,reversed_at,reversal_of&tenant_id=eq.${tenant}`),
+  get(`stock_reservations?select=id,order_id,warehouse_id,product_id,quantity,status&tenant_id=eq.${tenant}`),
+  get(`stock_balances?select=warehouse_id,product_id,reserved&tenant_id=eq.${tenant}`),
+  get(`sales_invoices?select=id,invoice_no,order_id,status&tenant_id=eq.${tenant}`),
+  get(`deliveries?select=id,delivery_no,order_id,status&tenant_id=eq.${tenant}`),
+  get(`order_accounting_events?select=id,order_id,event_type&tenant_id=eq.${tenant}`),
 ]);
-const byId = new Map(orders.map((row) => [row.id, row]));
-const orphanCredits = credits.filter((row) => !byId.has(row.order_id) || (byId.get(row.order_id)?.status === 'cancelled' && !['closed','cancelled'].includes(row.status)));
-const orphanPayments = payments.filter((row) => ['sales_order','sales_payment'].includes(row.reference_type) && !row.reversed_at && (!byId.has(row.reference_id) || byId.get(row.reference_id)?.status === 'cancelled'));
-const orphanReservations = reservations.filter((row) => row.status === 'active' && (!byId.has(row.order_id) || byId.get(row.order_id)?.status === 'cancelled'));
-console.log(JSON.stringify({ tenant, checked_at: new Date().toISOString(), orphanCredits: orphanCredits.length, orphanPayments: orphanPayments.length, orphanReservations: orphanReservations.length }, null, 2));
-if (orphanCredits.length || orphanPayments.length || orphanReservations.length) process.exit(1);
-
+const { buildOperationalHealth } = await import('../src/shared/lib/operationalHealth.js');
+const report = buildOperationalHealth({ orders, credits, cashTransactions: payments, reservations, balances, invoices, deliveries, accountingEvents });
+console.log(JSON.stringify({ tenant, ...report.summary, issues: report.issues }, null, 2));
+if (!report.summary.healthy) process.exit(1);
 
