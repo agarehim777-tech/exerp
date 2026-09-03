@@ -152,7 +152,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {salesStatus.next && <button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: 0, background: '#0b7a5c', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>{busy ? 'Yenilənir…' : salesStatus.nextLabel}</button>}
-                {!['delivered', 'cancelled'].includes(order.status) && <button type="button" onClick={() => { if (confirm('Bu satışı ləğv etmək istəyirsiniz?')) changeStatus('cancelled'); }} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}>Ləğv et</button>}
+                {!['delivered', 'cancelled'].includes(order.status) && <button type="button" onClick={() => onDelete(order.id)} disabled={busy} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}>Ləğv et</button>}
                 {!salesStatus.next && <span style={{ color: '#64748b', fontSize: 12 }}>{order.status === 'delivered' ? 'Sifariş müştəriyə təhvil verilib.' : order.status === 'cancelled' ? 'Satış ləğv edilib.' : 'Sifariş təsdiqlənib və anbar təhvili gözləyir.'}</span>}
               </div>
             </div>
@@ -216,3 +216,4 @@ function Row({ label, v, bold }) {
     </div>
   );
 }
+
