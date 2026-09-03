@@ -1,7 +1,7 @@
 const text = (value) => String(value ?? '').trim().toLowerCase();
 const number = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
-export function buildOperationalHealth({ orders = [], credits = [], cashTransactions = [], reservations = [], balances = [] } = {}) {
+export function buildOperationalHealth({ orders = [], credits = [], cashTransactions = [], reservations = [], balances = [], invoices = [], deliveries = [], accountingEvents = [] } = {}) {
   const orderById = new Map(orders.map((order) => [String(order.id), order]));
   const issues = [];
 
@@ -15,10 +15,36 @@ export function buildOperationalHealth({ orders = [], credits = [], cashTransact
   }
 
   for (const payment of cashTransactions) {
-    if (!['sales_order', 'sales_payment'].includes(text(payment.reference_type)) || payment.reversed_at) continue;
-    const order = orderById.get(String(payment.reference_id));
+    const isSalesPayment = ['sales_order', 'sales_payment'].includes(text(payment.reference_type)) || text(payment.category) === 'sales_payment';
+    if (!isSalesPayment || payment.reversed_at || payment.reversal_of) continue;
+    const order = orderById.get(String(payment.reference_id))
+      || orders.find((row) => text(row.order_no) === text(payment.reference));
     if (!order || text(order.status) === 'cancelled') {
       issues.push({ id: `cash-orphan-${payment.id}`, domain: 'Maliyyə', severity: 'error', title: 'Satışsız aktiv kassa yazısı', detail: payment.reference || payment.description || payment.id, remedy: 'Kompensasiya əməliyyatı yarat' });
+    }
+  }
+
+  for (const invoice of invoices) {
+    const order = orderById.get(String(invoice.order_id));
+    if (invoice.order_id && (!order || (text(order.status) === 'cancelled' && text(invoice.status) !== 'cancelled'))) {
+      issues.push({ id: `invoice-orphan-${invoice.id}`, domain: 'Faktura', severity: 'error', title: 'Ləğv edilmiş satışda aktiv faktura', detail: invoice.invoice_no || invoice.id, remedy: 'Fakturanı ləğv statusuna keçir və jurnal qarşılığını yoxla' });
+    }
+  }
+
+  for (const delivery of deliveries) {
+    const order = orderById.get(String(delivery.order_id));
+    if (!order || (text(order.status) === 'cancelled' && ['pending', 'ready'].includes(text(delivery.status)))) {
+      issues.push({ id: `delivery-orphan-${delivery.id}`, domain: 'Çatdırılma', severity: 'error', title: 'Satışsız aktiv çatdırılma', detail: delivery.delivery_no || delivery.id, remedy: 'Gözləyən çatdırılmanı ləğv et' });
+    }
+  }
+
+  const eventKey = new Set(accountingEvents.map((row) => `${row.order_id}:${text(row.event_type)}`));
+  for (const order of orders) {
+    if (text(order.status) === 'delivered' && !eventKey.has(`${order.id}:delivery`)) {
+      issues.push({ id: `accounting-delivery-${order.id}`, domain: 'Mühasibat', severity: 'error', title: 'Təhvilin jurnal hadisəsi yoxdur', detail: order.order_no, remedy: 'Təhvil və tarixi COGS jurnalını bərpa et' });
+    }
+    if (text(order.status) === 'cancelled' && eventKey.has(`${order.id}:delivery`) && !eventKey.has(`${order.id}:cancellation`)) {
+      issues.push({ id: `accounting-cancel-${order.id}`, domain: 'Mühasibat', severity: 'error', title: 'Satış ləğvinin jurnal qarşılığı yoxdur', detail: order.order_no, remedy: 'Ləğv jurnalını və COGS qaytarmasını yarat' });
     }
   }
 
@@ -55,5 +81,4 @@ export function buildOperationalHealth({ orders = [], credits = [], cashTransact
     },
   };
 }
-
 
