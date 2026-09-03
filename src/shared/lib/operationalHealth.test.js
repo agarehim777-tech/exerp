@@ -13,6 +13,16 @@ describe('buildOperationalHealth', () => {
     expect(report.summary).toEqual({ total: 4, critical: 3, warnings: 1, healthy: false });
   });
 
+  it('flags active invoices, deliveries and missing accounting reversal for cancelled sales', () => {
+    const report = buildOperationalHealth({
+      orders: [{ id: 'o1', order_no: 'SF-1', status: 'cancelled' }],
+      invoices: [{ id: 'i1', invoice_no: 'INV-1', order_id: 'o1', status: 'issued' }],
+      deliveries: [{ id: 'd1', delivery_no: 'DLV-1', order_id: 'o1', status: 'ready' }],
+      accountingEvents: [{ id: 'a1', order_id: 'o1', event_type: 'delivery' }],
+    });
+    expect(report.issues.map((issue) => issue.domain)).toEqual(expect.arrayContaining(['Faktura', 'Çatdırılma', 'Mühasibat']));
+  });
+
   it('reports a healthy lifecycle', () => {
     const report = buildOperationalHealth({
       orders: [{ id: 'o1', status: 'confirmed' }],
@@ -23,5 +33,4 @@ describe('buildOperationalHealth', () => {
     expect(report.summary.healthy).toBe(true);
   });
 });
-
 
