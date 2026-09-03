@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useBlobReconciliation } from "../../shared/hooks/useBlobReconciliation.js";
+import { useOperationalHealth } from "../../shared/hooks/useOperationalHealth.js";
+import { useRecoveryStatus } from "../../shared/hooks/useRecoveryStatus.js";
 import { reconciliationToCsv } from "../../shared/lib/blobReconciliation.js";
 import {
   badge, card, msgBox, primaryBtn, secondaryBtn,
@@ -8,10 +10,12 @@ import {
 } from "../../shared/ui/tokens.js";
 
 const TABS = [
+  ["operations", "Əməliyyat sağlamlığı"],
   ["serials", "Serial / IMEI"],
   ["reservations", "Rezerv"],
   ["production", "İstehsal"],
   ["notifications", "Bildiriş qaydaları"],
+  ["recovery", "Backup və bərpa"],
 ];
 
 const KIND_LABELS = {
@@ -39,7 +43,9 @@ export default function DataReconciliationPage() {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
   const { report, loading, error, lastRunAt, refresh } = useBlobReconciliation(tenantId);
-  const [tab, setTab] = useState("serials");
+  const operations = useOperationalHealth(tenantId);
+  const recovery = useRecoveryStatus();
+  const [tab, setTab] = useState("operations");
 
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
@@ -60,8 +66,8 @@ export default function DataReconciliationPage() {
     <div style={{ display: "grid", gap: 16 }}>
       <div style={card}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" style={primaryBtn} onClick={refresh} disabled={loading}>
-            {loading ? "Yoxlanılır…" : "Yenidən yoxla"}
+          <button type="button" style={primaryBtn} onClick={() => { refresh(); operations.refresh(); }} disabled={loading || operations.loading}>
+            {loading || operations.loading ? "Yoxlanılır…" : "Sistemi yoxla"}
           </button>
           <button type="button" style={secondaryBtn} onClick={downloadCsv} disabled={!report}>
             CSV ixrac
@@ -73,6 +79,7 @@ export default function DataReconciliationPage() {
       </div>
 
       {error && <div style={msgBox}>Xəta: {error}</div>}
+      {operations.error && <div style={msgBox}>Əməliyyat yoxlaması: {operations.error}</div>}
 
       {report && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -102,6 +109,27 @@ export default function DataReconciliationPage() {
       </div>
 
       {!report && !loading && <div style={card}>Məlumat yoxdur.</div>}
+
+      {tab === "operations" && operations.report && (
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <div style={statTile}><div style={statLabel}>Sistem statusu</div><div style={{ ...statValue, color: operations.report.summary.healthy ? "#047857" : "#b23a3a" }}>{operations.report.summary.healthy ? "Sağlam" : "Diqqət"}</div></div>
+            <div style={statTile}><div style={statLabel}>Kritik</div><div style={statValue}>{operations.report.summary.critical}</div></div>
+            <div style={statTile}><div style={statLabel}>Xəbərdarlıq</div><div style={statValue}>{operations.report.summary.warnings}</div></div>
+            <div style={statTile}><div style={statLabel}>Yoxlama vaxtı</div><div style={{ ...statValue, fontSize: 14 }}>{new Date(operations.report.checkedAt).toLocaleString("az-AZ")}</div></div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>Satış, kredit, maliyyə və anbar əlaqələri</div>
+            <table style={table}>
+              <thead><tr><th style={th}>Modul</th><th style={th}>Problem</th><th style={th}>Detallar</th><th style={th}>Tövsiyə edilən düzəliş</th><th style={th}>Ciddilik</th></tr></thead>
+              <tbody>
+                {!operations.report.issues.length && <EmptyRow colSpan={5} text="Bütün əməliyyat əlaqələri uyğundur." />}
+                {operations.report.issues.map((issue) => <tr key={issue.id}><td style={td}>{issue.domain}</td><td style={td}>{issue.title}</td><td style={td}>{issue.detail}</td><td style={td}>{issue.remedy}</td><td style={td}><SevBadge severity={issue.severity} /></td></tr>)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {report && tab === "serials" && (
         <div style={card}>
@@ -243,6 +271,32 @@ export default function DataReconciliationPage() {
           )}
         </div>
       )}
+
+      {tab === "recovery" && (
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <RecoveryTile title="Avtomatik backup" run={recovery.backup} loading={recovery.loading} />
+            <RecoveryTile title="Restore drill" run={recovery.restore} loading={recovery.loading} />
+            <div style={statTile}><div style={statLabel}>Saxlama müddəti</div><div style={statValue}>30 gün</div></div>
+            <div style={statTile}><div style={statLabel}>Backup qrafiki</div><div style={{ ...statValue, fontSize: 15 }}>Hər gün 05:17</div></div>
+          </div>
+          {recovery.error && <div style={msgBox}>{recovery.error}</div>}
+          <div style={card}>
+            <div style={{ fontWeight: 700 }}>Bərpa hazırlığı</div>
+            <p style={{ opacity: 0.72, marginBottom: 14 }}>Backup checksum ilə yoxlanılır; restore yalnız ayrıca staging bazasına icazə verir.</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/backup-supabase.yml" target="_blank" rel="noreferrer">Backup tarixçəsi</a>
+              <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/restore-drill.yml" target="_blank" rel="noreferrer">Restore drill başladın</a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+function RecoveryTile({ title, run, loading }) {
+  const ok = run?.conclusion === "success";
+  return <div style={statTile}><div style={statLabel}>{title}</div><div style={{ ...statValue, color: ok ? "#047857" : run ? "#b23a3a" : undefined }}>{loading ? "Yüklənir" : run ? (ok ? "Uğurlu" : run.status === "in_progress" ? "İşləyir" : "Uğursuz") : "Hələ yoxdur"}</div>{run?.created_at && <small>{new Date(run.created_at).toLocaleString("az-AZ")}</small>}</div>;
+}
+
