@@ -541,5 +541,21 @@ export function useOrders(tenantId) {
     await fetchAll();
   };
 
-  return { orders, loading, loaded, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove };
+  const previewRemoval = async (id) => {
+    const { data, error: previewError } = await supabase.rpc('preview_sales_order_reversal', { _order_id: id });
+    if (!previewError) return data;
+    if (!isMissingRpc(previewError)) throw previewError;
+    const order = orders.find((row) => row.id === id);
+    return {
+      order_no: order?.order_no || '—',
+      credit_count: order?.credit ? 1 : 0,
+      payment_amount: Number(order?.paid_amount || 0),
+      reservation_count: 0,
+      stock_return_count: order?.status === 'delivered' ? (order?.items || []).length : 0,
+      warning: 'Server önizləməsi mövcud deyil; lokal sifariş məlumatı göstərilir.',
+    };
+  };
+
+  return { orders, loading, loaded, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
 }
+
