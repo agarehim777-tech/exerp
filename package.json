@@ -29,7 +29,8 @@
     "e2e": "playwright test",
     "verify:stock": "node scripts/verify-stock-lifecycle.mjs",
     "verify:credit": "node scripts/verify-credit-start.mjs",
-    "verify:credit-payments": "node scripts/verify-credit-payments.mjs"
+    "verify:credit-payments": "node scripts/verify-credit-payments.mjs",
+    "verify:operations": "node scripts/verify-operational-health.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.37",
@@ -39,6 +40,7 @@
     "@sentry/react": "^10.67.0",
     "@supabase/supabase-js": "^2.110.7",
     "ai": "^7.0.34",
+    "dompurify": "^3.4.14",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
@@ -62,3 +64,4 @@
     "vitest": "^4.1.10"
   }
 }
+
