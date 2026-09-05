@@ -37,7 +37,7 @@ export function useCustomers(tenantId) {
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
       supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit + 1),
-      supabase.from('orders').select('customer_id,paid_amount').eq('tenant_id', tenantId).limit(20000),
+      supabase.rpc('customer_sales_metrics', { _tenant: tenantId }),
       supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
     if (customerResult.error) setError(customerResult.error);
@@ -46,7 +46,7 @@ export function useCustomers(tenantId) {
       const nextLevels = levelResult.data ? { silver: Number(levelResult.data.silver_min), gold: Number(levelResult.data.gold_min), platinum: Number(levelResult.data.platinum_min) } : (storedLevels || { silver: 1000, gold: 5000, platinum: 15000 });
       setLevels(nextLevels);
       const paidByCustomer = new Map();
-      (orderResult.data || []).forEach((order) => paidByCustomer.set(order.customer_id, (paidByCustomer.get(order.customer_id) || 0) + Number(order.paid_amount || 0)));
+      (orderResult.data || []).forEach((row) => paidByCustomer.set(row.customer_id, Number(row.paid_total || 0)));
       const customerRows = customerResult.data || [];
       setHasMore(customerRows.length > limit);
       setCustomers(customerRows.slice(0, limit).map((customer) => {
@@ -103,3 +103,4 @@ export function useCustomers(tenantId) {
 
   return { customers, levels, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
 }
+
