@@ -37,6 +37,13 @@ export function stripOperationalCollections(state = {}) {
   return next;
 }
 
+export function withoutOperationalData(state = {}) {
+  const next = stripOperationalCollections(state);
+  operationalCollections.forEach((key) => { next[key] = key === "warehouseStock" ? {} : []; });
+  return next;
+}
+
 export function writeTenantUiCache(storage, key, state) {
   storage.setItem(key, JSON.stringify(stripOperationalCollections(state)));
 }
+
