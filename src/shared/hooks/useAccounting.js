@@ -68,34 +68,34 @@ export function useJournalEntries() {
   useEffect(() => { reload(); }, [reload]);
 
   const createEntry = async ({ entry_date, reference, description, lines }) => {
-    const { data: e, error } = await supabase.from("journal_entries")
-      .insert({ tenant_id: tenantId, entry_date, reference, description, source_type: "manual" })
-      .select().single();
+    const { data: id, error } = await supabase.rpc("create_manual_journal_entry", {
+      _tenant: tenantId, _entry_date: entry_date, _reference: reference,
+      _description: description, _lines: lines,
+    });
     if (error) throw error;
-    const rows = lines.map((l, i) => ({
-      entry_id: e.id, account_id: l.account_id,
-      debit: Number(l.debit) || 0, credit: Number(l.credit) || 0,
-      memo: l.memo || null, line_no: i + 1,
-    }));
-    const { error: le } = await supabase.from("journal_lines").insert(rows);
-    if (le) throw le;
     await reload();
-    return e;
+    return { id };
   };
 
   const post = async (id) => {
-    const { error } = await supabase.from("journal_entries").update({ posted: true }).eq("id", id);
+    const { error } = await supabase.rpc("post_manual_journal_entry", { _entry: id });
     if (error) throw error;
     await reload();
   };
 
   const remove = async (id) => {
-    const { error } = await supabase.from("journal_entries").delete().eq("id", id);
+    const { error } = await supabase.from("journal_entries").delete().eq("id", id).eq("posted", false);
     if (error) throw error;
     await reload();
   };
 
-  return { entries, loading, reload, createEntry, post, remove };
+  const reverse = async (id, reason) => {
+    const { error } = await supabase.rpc("reverse_journal_entry", { _entry: id, _reason: reason });
+    if (error) throw error;
+    await reload();
+  };
+
+  return { entries, loading, reload, createEntry, post, remove, reverse };
 }
 
 export async function fetchTrialBalance(tenantId, from, to) {
@@ -103,3 +103,4 @@ export async function fetchTrialBalance(tenantId, from, to) {
   if (error) throw error;
   return data || [];
 }
+
