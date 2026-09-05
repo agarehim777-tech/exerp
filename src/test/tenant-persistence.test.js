@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { stripDbBackedCollections, stripOperationalCollections } from '../shared/state/tenantPersistence.js';
+import { stripDbBackedCollections, stripOperationalCollections, withoutOperationalData } from '../shared/state/tenantPersistence.js';
 
 describe('tenant UI persistence boundary', () => {
+  it('never hydrates operational collections from snapshots', () => {
+    const result = withoutOperationalData({ customers: [{ id: 'c1' }], warehouseStock: { w1: [{}] }, theme: 'dark' });
+    expect(result.customers).toEqual([]);
+    expect(result.warehouseStock).toEqual({});
+    expect(result.theme).toBe('dark');
+  });
   it('never persists operational Supabase collections', () => {
     const result = stripOperationalCollections({
       customers: [{ id: 'customer-1' }],
@@ -29,3 +35,4 @@ describe('tenant UI persistence boundary', () => {
     });
   });
 });
+
