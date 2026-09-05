@@ -5,6 +5,7 @@ import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../shared/hooks/useAccounting.js";
 import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
 import { AccountingPeriodPanel } from "../finance/components/AccountingPeriodPanel.jsx";
+import ConfirmActionDialog from "../../shared/components/ConfirmActionDialog.jsx";
 
 const TYPE_LABEL = { asset: "Aktiv", liability: "Öhdəlik", equity: "Kapital", revenue: "Gəlir", expense: "Xərc" };
 
@@ -37,6 +38,7 @@ function ChartOfAccountsPanel({ isAdmin }) {
   const [form, setForm] = useState({ code: "", name: "", type: "asset" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const doSeed = async () => {
     setBusy(true); setMsg("");
@@ -80,18 +82,19 @@ function ChartOfAccountsPanel({ isAdmin }) {
                 <td style={td}><b>{a.code}</b></td>
                 <td style={td}>{a.name}</td>
                 <td style={td}>{TYPE_LABEL[a.type]}</td>
-                {isAdmin && <td style={td}><button onClick={() => confirm("Silinsin?") && remove(a.id)} style={delBtn}>Sil</button></td>}
+                {isAdmin && <td style={td}><button onClick={() => setPendingDelete(a)} style={delBtn}>Sil</button></td>}
               </tr>
             ))}
           </tbody>
         </table>
       )}
+      <ConfirmActionDialog open={Boolean(pendingDelete)} title="Hesab silinsin?" description={`${pendingDelete?.code || ''} ${pendingDelete?.name || ''} hesabı yalnız istifadə edilməyibsə silinəcək.`} confirmLabel="Hesabı sil" destructive onCancel={() => setPendingDelete(null)} onConfirm={async () => { try { await remove(pendingDelete.id); setPendingDelete(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
     </div>
   );
 }
 
 function JournalPanel({ isAdmin }) {
-  const { entries, loading, createEntry, post, remove } = useJournalEntries();
+  const { entries, loading, createEntry, post, remove, reverse } = useJournalEntries();
   const { accounts } = useChartOfAccounts();
   const [showForm, setShowForm] = useState(false);
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
@@ -100,6 +103,8 @@ function JournalPanel({ isAdmin }) {
   const [lines, setLines] = useState([{ account_id: "", debit: 0, credit: 0, memo: "" }, { account_id: "", debit: 0, credit: 0, memo: "" }]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [pendingAction, setPendingAction] = useState(null);
+  const [reason, setReason] = useState("");
 
   const totals = useMemo(() => {
     const d = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
@@ -182,8 +187,9 @@ function JournalPanel({ isAdmin }) {
                   <td style={td}>{e.posted ? <span style={badgeGreen}>Postlanıb</span> : <span style={badgeGray}>Layihə</span>}</td>
                   {isAdmin && (
                     <td style={td}>
-                      {!e.posted && <button onClick={() => post(e.id).catch((er) => alert(er.message))} style={secondaryBtn}>Postla</button>}
-                      {!e.posted && <button onClick={() => confirm("Silinsin?") && remove(e.id)} style={delBtn}>Sil</button>}
+                      {!e.posted && <button onClick={() => setPendingAction({ type: 'post', entry: e })} style={secondaryBtn}>Postla</button>}
+                      {!e.posted && <button onClick={() => setPendingAction({ type: 'delete', entry: e })} style={delBtn}>Sil</button>}
+                      {e.posted && e.source_type !== 'journal_reversal' && <button onClick={() => { setReason(''); setPendingAction({ type: 'reverse', entry: e }); }} style={delBtn}>Əks yazılış</button>}
                     </td>
                   )}
                 </tr>
@@ -192,6 +198,7 @@ function JournalPanel({ isAdmin }) {
           </tbody>
         </table>
       )}
+      <ConfirmActionDialog open={Boolean(pendingAction)} title={pendingAction?.type === 'reverse' ? 'Əks jurnal yaradılsın?' : pendingAction?.type === 'post' ? 'Jurnal postlansın?' : 'Jurnal layihəsi silinsin?'} description={pendingAction?.type === 'reverse' ? 'Orijinal jurnal dəyişməyəcək; debet və kreditləri əks olan yeni jurnal yaradılacaq.' : pendingAction?.type === 'post' ? 'Postlandıqdan sonra jurnal dəyişdirilə və silinə bilməz.' : 'Yalnız post edilməmiş jurnal layihəsi silinəcək.'} confirmLabel={pendingAction?.type === 'reverse' ? 'Əks yazılış yarat' : pendingAction?.type === 'post' ? 'Postla' : 'Layihəni sil'} destructive={pendingAction?.type !== 'post'} reason={reason} onReasonChange={pendingAction?.type === 'reverse' ? setReason : undefined} reasonRequired={pendingAction?.type === 'reverse'} onCancel={() => setPendingAction(null)} onConfirm={async () => { try { if (pendingAction.type === 'post') await post(pendingAction.entry.id); else if (pendingAction.type === 'reverse') await reverse(pendingAction.entry.id, reason); else await remove(pendingAction.entry.id); setPendingAction(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
     </div>
   );
 }
@@ -260,3 +267,4 @@ const msgBox = { background: "#faf5e2", color: "#5a4a1e", padding: 8, borderRadi
 const tabBtn = (active) => ({ background: active ? "#064e3b" : "transparent", color: active ? "#fbe89a" : "#064e3b", border: 0, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 });
 const badgeGreen = { background: "#064e3b", color: "#fbe89a", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
 const badgeGray = { background: "#e6dfc9", color: "#5a4a1e", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
+
