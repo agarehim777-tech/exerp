@@ -6,6 +6,8 @@ const migrationPath = "supabase/migrations/20260812090000_transaction_security_h
 const migration = await readFile(resolve(root, migrationPath), "utf8");
 const reversalMigrationPath = "supabase/migrations/20260901170000_make_sales_reversal_schema_compatible.sql";
 const reversalMigration = await readFile(resolve(root, reversalMigrationPath), "utf8");
+const journalMigrationPath = "supabase/migrations/20260905120000_immutable_journal_and_customer_metrics.sql";
+const journalMigration = await readFile(resolve(root, journalMigrationPath), "utf8");
 const service = await readFile(resolve(root, "src/services/coreOperations.js"), "utf8");
 const failures = [];
 
@@ -49,6 +51,18 @@ for (const signal of requiredReversalSignals) {
   if (!reversalMigration.includes(signal)) failures.push(`${reversalMigrationPath}: missing ${signal}`);
 }
 
+const requiredJournalSignals = [
+  "public.create_manual_journal_entry",
+  "public.post_manual_journal_entry",
+  "public.reverse_journal_entry",
+  "public.protect_posted_journal",
+  "public.protect_posted_journal_lines",
+  "public.customer_sales_metrics",
+];
+for (const signal of requiredJournalSignals) {
+  if (!journalMigration.includes(signal)) failures.push(`${journalMigrationPath}: missing ${signal}`);
+}
+
 for (const signal of ["createSalesOrderAtomic", "createIdempotencyKey", "lockAccountingPeriod", "listAccountingPeriodLocks", "reopenAccountingPeriod"]) {
   if (!service.includes(signal)) failures.push(`src/services/coreOperations.js: missing ${signal}`);
 }
@@ -63,5 +77,6 @@ if (failures.length) {
   console.error(JSON.stringify({ ok: false, failures }, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + requiredReversalSignals.length + 4 }, null, 2));
+  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + requiredReversalSignals.length + requiredJournalSignals.length + 4 }, null, 2));
 }
+
