@@ -14,6 +14,12 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   reporter: [["list"]],
+  webServer: {
+    command: "npm run dev -- --port 8080 --strictPort",
+    url: "http://127.0.0.1:8080",
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:8080",
     headless: true,
@@ -22,3 +28,4 @@ export default defineConfig({
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
 });
+
