@@ -15,7 +15,6 @@ const checks = [
   [backup, "--role-only"],
   [backup, "--data-only"],
   [backup, "SHA256SUMS"],
-  [backup, "retention-days: 30"],
   [restore, "confirmation == 'RESTORE'"],
   [restore, "RESTORE_DATABASE_URL"],
   [restore, "Refuse production as restore target"],
@@ -26,10 +25,13 @@ const checks = [
 ];
 
 const failures = checks.filter(([content, token]) => !content.includes(token)).map(([, token]) => token);
+const retentionDays = Number(backup.match(/retention-days:\s*(\d+)/)?.[1] ?? 0);
+if (retentionDays < 30) failures.push("backup retention of at least 30 days");
 if (failures.length) {
   console.error(JSON.stringify({ ok: false, missing: failures }, null, 2));
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({ ok: true, checks: checks.length }, null, 2));
 }
+
 
