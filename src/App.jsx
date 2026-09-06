@@ -569,7 +569,7 @@ function App() {
       });
     return [...byName.values()];
   }, [state.employees, state.settings?.users]);
-  const { can: dbCan, role: dbRole } = usePermissions();
+  const { can: dbCan, role: dbRole, loading: dbPermissionsLoading } = usePermissions();
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
       // "Şirkətlər" (platform) is only for super-admins
@@ -1040,9 +1040,10 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) return;
+    if (dbPermissionsLoading) return;
     if (visibleNavItems.some((item) => item.id === active)) return;
     setActive(visibleNavItems[0]?.id || "dashboard");
-  }, [active, currentUser, visibleNavItems]);
+  }, [active, currentUser, dbPermissionsLoading, visibleNavItems]);
 
   const filtered = useMemo(
     () => ({

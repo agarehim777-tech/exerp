@@ -37,7 +37,7 @@ test.describe("Kritik ERP axınları", () => {
 
   test("satışdan kredit sifarişi forması açılır", async ({ page }) => {
     await page.goto("/satis/sifarisler", { waitUntil: "domcontentloaded" });
-    const createButton = page.getByRole("button", { name: /Yeni sifariş/i }).first();
+    const createButton = page.getByRole("button", { name: /Yeni (satış|sifariş)/i }).first();
     await expect(createButton).toBeVisible();
     await createButton.click();
     await expect(page.getByRole("dialog")).toBeVisible();
