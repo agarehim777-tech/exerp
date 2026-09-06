@@ -23,6 +23,8 @@ jobs:
     env:
       RESTORE_DATABASE_URL: ${{ secrets.RESTORE_DATABASE_URL }}
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      RESTORE_PROJECT_REF: cvjctwgdyzhijhzhhjqd
+      PRODUCTION_PROJECT_REF: tcqdhwtnjrwpfdxoijmv
     steps:
       - uses: actions/checkout@v4
       - name: Install PostgreSQL 17 client
@@ -42,6 +44,21 @@ jobs:
           test "${{ github.event_name }}" = "schedule" || test "$RESTORE_CONFIRMATION" = "RESTORE" || (echo "confirmation == 'RESTORE' tələb olunur" && exit 1)
           test -n "$RESTORE_DATABASE_URL" || (echo "RESTORE_DATABASE_URL yoxdur" && exit 1)
           test "$RESTORE_DATABASE_URL" != "$SUPABASE_DB_URL" || (echo "Refuse production as restore target" && exit 1)
+          case "$RESTORE_DATABASE_URL" in *"$PRODUCTION_PROJECT_REF"*) echo "Refuse production project ref as restore target"; exit 1;; esac
+          case "$RESTORE_DATABASE_URL" in *"$RESTORE_PROJECT_REF"*) ;; *) echo "Unexpected restore target"; exit 1;; esac
+      - name: Configure IPv4 staging pooler
+        run: |
+          RESTORE_DB_PASSWORD="$(node -e "const u=new URL(process.env.RESTORE_DATABASE_URL); process.stdout.write(decodeURIComponent(u.password))")"
+          test -n "$RESTORE_DB_PASSWORD" || (echo "RESTORE_DATABASE_URL parolu yoxdur" && exit 1)
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          {
+            echo "PGHOST=aws-0-ap-northeast-1.pooler.supabase.com"
+            echo "PGPORT=5432"
+            echo "PGDATABASE=postgres"
+            echo "PGUSER=postgres.$RESTORE_PROJECT_REF"
+            echo "PGPASSWORD=$RESTORE_DB_PASSWORD"
+            echo "PGSSLMODE=require"
+          } >> "$GITHUB_ENV"
       - name: Download selected backup
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,11 +74,11 @@ jobs:
         run: (cd backup && sha256sum --check SHA256SUMS)
       - name: Restore into isolated target
         run: |
-          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "drop schema if exists public cascade; create schema public;"
-          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f backup/schema.sql
-          pg_restore --exit-on-error --no-owner --no-privileges --dbname="$RESTORE_DATABASE_URL" backup/data.dump
+          psql -v ON_ERROR_STOP=1 -c "drop schema if exists public cascade; create schema public;"
+          psql -v ON_ERROR_STOP=1 -f backup/schema.sql
+          pg_restore --exit-on-error --no-owner --no-privileges --dbname=postgres backup/data.dump
       - name: Validate restored database
         run: |
-          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "select count(*) from public.tenants;"
-          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "select 'RESTORE_OK' as status;"
+          psql -v ON_ERROR_STOP=1 -c "select count(*) from public.tenants;"
+          psql -v ON_ERROR_STOP=1 -c "select 'RESTORE_OK' as status;"
 
