@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "overrides": {
+    "esbuild": "0.28.2"
+  },
   "engines": {
     "node": ">=24"
   },

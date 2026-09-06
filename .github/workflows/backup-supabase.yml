@@ -13,7 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGHOST: aws-0-ap-southeast-1.pooler.supabase.com
+      PGPORT: "5432"
+      PGDATABASE: postgres
+      PGUSER: postgres.tcqdhwtnjrwpfdxoijmv
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: require
       BACKUP_S3_URI: ${{ secrets.BACKUP_S3_URI }}
       AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
@@ -21,15 +26,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Require production database secret
-        run: test -n "$SUPABASE_DB_URL" || (echo "SUPABASE_DB_URL secret yoxdur" && exit 1)
+        run: test -n "$PGPASSWORD" || (echo "SUPABASE_DB_PASSWORD secret yoxdur" && exit 1)
       - name: Export roles and schema
         run: |
           mkdir -p backup
           # Role-only export: pg_dumpall --roles-only (legacy verifier token: --role-only).
-          pg_dumpall --dbname="$SUPABASE_DB_URL" --roles-only --no-role-passwords > backup/roles.sql
-          pg_dump "$SUPABASE_DB_URL" --schema-only --no-owner --no-privileges > backup/schema.sql
+          pg_dumpall --roles-only --no-role-passwords > backup/roles.sql
+          pg_dump --schema-only --no-owner --no-privileges > backup/schema.sql
       - name: Export data
-        run: pg_dump "$SUPABASE_DB_URL" --data-only --format=custom --no-owner --no-privileges --file=backup/data.dump
+        run: pg_dump --data-only --format=custom --no-owner --no-privileges --file=backup/data.dump
       - name: Create integrity manifest
         run: (cd backup && sha256sum roles.sql schema.sql data.dump > SHA256SUMS)
       - name: Upload encrypted-at-rest artifact

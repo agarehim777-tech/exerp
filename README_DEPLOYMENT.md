@@ -116,5 +116,5 @@ GitHub Actions additionally runs `supabase db lint --linked --level error`, a po
 - **RPO:** maksimum 24 saat. Supabase backup hər gecə işləyir və 30 gün saxlanılır.
 - **RTO:** 2 saat. Son uğurlu artifact ayrıca staging Supabase layihəsinə bərpa edilir.
 - Ayda ən azı bir dəfə `Supabase Restore Drill` workflow-u `RESTORE` təsdiqi ilə işlədilməlidir.
-- `SUPABASE_DB_URL` yalnız backup istifadəçisi, `RESTORE_DATABASE_URL` isə yalnız qeyri-production sınaq bazası olmalıdır.
+- Production backup GitHub runner-larında IPv4 uyğun Supabase session pooler üzərindən `SUPABASE_DB_PASSWORD` ilə işləyir. `SUPABASE_DB_URL` yalnız production hədəfini restore zamanı ayırd etmək, `RESTORE_DATABASE_URL` isə yalnız qeyri-production sınaq bazası üçün istifadə olunur.
 - Deploy lifecycle gate üçün `E2E_TEST_USER` və `E2E_TEST_PASS` ayrıca, demo datası olan test tenantına aid olmalıdır; production administrator hesabı istifadə edilməməlidir.
