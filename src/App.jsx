@@ -543,7 +543,7 @@ function App() {
       existing,
     });
   }, [state.kpiPeriods, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
-  const currentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
+  const legacyCurrentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
   const salesUsers = useMemo(() => {
     const byName = new Map();
@@ -570,6 +570,18 @@ function App() {
     return [...byName.values()];
   }, [state.employees, state.settings?.users]);
   const { can: dbCan, role: dbRole, loading: dbPermissionsLoading } = usePermissions();
+  const currentUser = useMemo(() => {
+    if (legacyCurrentUser) return legacyCurrentUser;
+    if (!authUser) return null;
+    const email = authUser.email || "";
+    return {
+      id: authUser.id,
+      name: authUser.user_metadata?.full_name || email.split("@")[0] || "İstifadəçi",
+      email,
+      role: dbRole || "authenticated",
+      status: "Aktiv",
+    };
+  }, [legacyCurrentUser, authUser, dbRole]);
   const visibleNavItems = useMemo(
     () => navItems.filter((item) => {
       // "Şirkətlər" (platform) is only for super-admins
