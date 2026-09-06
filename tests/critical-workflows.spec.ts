@@ -29,6 +29,7 @@ test.describe("Kritik ERP axınları", () => {
 
   test("HR əməkdaş forması ayrıca dialog kimi açılır", async ({ page }) => {
     await page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/hr\/emekdaslar(?:[/?#]|$)/);
     await expect(page.getByRole("heading", { name: "İnsan Resursları" })).toBeVisible();
     await page.getByRole("button", { name: "Yeni əməkdaş", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -38,6 +39,7 @@ test.describe("Kritik ERP axınları", () => {
 
   test("satışdan kredit sifarişi forması açılır", async ({ page }) => {
     await page.goto("/satis/sifarisler", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/satis\/sifarisler(?:[/?#]|$)/);
     await expect(page.getByRole("heading", { name: "Satışlar" })).toBeVisible();
     const createButton = page.getByRole("button", { name: /Yeni (satış|sifariş)/i }).first();
     await expect(createButton).toBeVisible();

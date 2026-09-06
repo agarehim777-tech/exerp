@@ -56,6 +56,14 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
+      - name: Upload browser test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: test-results
+          retention-days: 5
+
       - name: Bundle budget
         run: node scripts/check-bundle-budget.mjs
 
