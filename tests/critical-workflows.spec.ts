@@ -22,7 +22,8 @@ test.describe("Kritik ERP axınları", () => {
       await page.goto(route, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(1200);
       await expect(page).not.toHaveURL(/\/login/);
-      await expect(page.locator("main")).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[/?#]|$)`));
+      await expect(page.locator("main.main")).toBeVisible();
       expect(errors).toEqual([]);
     });
   }

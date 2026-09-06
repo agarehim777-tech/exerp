@@ -32,8 +32,7 @@ export async function restoreAuthenticatedSession(page: Page) {
     sessionJson = JSON.stringify(await response.json());
   }
 
-  await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => {});
-  await page.evaluate(
+  await page.addInitScript(
     ([name, value]) => window.localStorage.setItem(name, value),
     [storageKey, sessionJson],
   );
