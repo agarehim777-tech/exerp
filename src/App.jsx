@@ -1040,10 +1040,10 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    if (dbPermissionsLoading) return;
+    if (dbPermissionsLoading || !tenantStateReady) return;
     if (visibleNavItems.some((item) => item.id === active)) return;
     setActive(visibleNavItems[0]?.id || "dashboard");
-  }, [active, currentUser, dbPermissionsLoading, visibleNavItems]);
+  }, [active, currentUser, dbPermissionsLoading, tenantStateReady, visibleNavItems]);
 
   const filtered = useMemo(
     () => ({
@@ -1105,7 +1105,15 @@ function App() {
   const gitHubSync = useGitHubSync({ enabled: true, onPush: handleGitHubPush });
 
   function can(permission) {
-    return hasEffectivePermission(state.settings, permission);
+    if (!permission || isPlatformAdmin) return true;
+
+    const legacyOk = hasEffectivePermission(state.settings, permission);
+    if (!dbRole) return legacyOk;
+
+    const dbModule = getModuleForPermission(permission);
+    const dbOk = dbCan(dbModule, "edit");
+    if (dbRole === "owner" || dbRole === "admin") return dbOk;
+    return legacyOk && dbOk;
   }
 
   function requirePermission(permission, action) {
