@@ -1,10 +1,6 @@
-import fs from 'node:fs';
+import { readEnvironment } from './read-environment.mjs';
 
-const env = { ...process.env };
-if (fs.existsSync('.env')) for (const line of fs.readFileSync('.env', 'utf8').split(/\r?\n/)) {
-  const match = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
-  if (match && !env[match[1]]) env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
-}
+const env = readEnvironment();
 const base = env.VITE_SUPABASE_URL;
 const key = env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const email = env.E2E_TEST_USER || env.TEST_USER;

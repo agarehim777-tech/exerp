@@ -26,15 +26,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Safety gate
+        env:
+          RESTORE_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          test "${{ github.event_name }}" = "schedule" || test "${{ inputs.confirmation }}" = "RESTORE" || (echo "confirmation == 'RESTORE' tələb olunur" && exit 1)
+          test "${{ github.event_name }}" = "schedule" || test "$RESTORE_CONFIRMATION" = "RESTORE" || (echo "confirmation == 'RESTORE' tələb olunur" && exit 1)
           test -n "$RESTORE_DATABASE_URL" || (echo "RESTORE_DATABASE_URL yoxdur" && exit 1)
           test "$RESTORE_DATABASE_URL" != "$SUPABASE_DB_URL" || (echo "Refuse production as restore target" && exit 1)
       - name: Download selected backup
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_BACKUP_RUN_ID: ${{ inputs.backup_run_id }}
         run: |
-          RUN_ID="${{ inputs.backup_run_id }}"
+          RUN_ID="$REQUESTED_BACKUP_RUN_ID"
           if [ -z "$RUN_ID" ]; then
             RUN_ID="$(gh run list --workflow backup-supabase.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
           fi

@@ -1,17 +1,17 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session";
 
 /**
  * Tenant izolyasiyası və giriş nəzarəti üzrə e2e yoxlamalar.
  *
  * Sessiya olmadan işləyən hissə həmişə icra olunur (anon RLS yoxlaması).
- * Autentifikasiya tələb edən testlər yalnız LOVABLE_BROWSER_SUPABASE_* dəyişənləri
- * mövcud olduqda icra olunur, əks halda skip edilir.
+ * Autentifikasiya tələb edən testlər E2E_TEST_USER/E2E_TEST_PASS və ya hazır
+ * browser sessiyası olduqda işləyir, əks halda skip edilir.
  */
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 const STORAGE_KEY = process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY || "";
-const SESSION_JSON = process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON || "";
 
 const TENANT_TABLES = [
   "customers",
@@ -23,14 +23,6 @@ const TENANT_TABLES = [
   "inventory_units",
   "journal_entries",
 ];
-
-async function restoreSession(page: Page) {
-  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
-  await page.evaluate(
-    ([key, value]) => window.localStorage.setItem(key as string, value as string),
-    [STORAGE_KEY, SESSION_JSON],
-  );
-}
 
 test.describe("RLS — anonim giriş", () => {
   test.skip(!SUPABASE_URL || !SUPABASE_KEY, "Backend konfiqurasiyası yoxdur");
@@ -64,13 +56,13 @@ test.describe("Marşrut mühafizəsi", () => {
 });
 
 test.describe("Sessiya ilə tenant izolyasiyası", () => {
-  test.skip(!STORAGE_KEY || !SESSION_JSON, "Test sessiyası mövcud deyil");
+  test.skip(!hasAuthenticatedE2E, "E2E test istifadəçisi mövcud deyil");
 
   test("aktiv şirkət seçilib və əsas modullar xətasız açılır", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
 
-    await restoreSession(page);
+    await restoreAuthenticatedSession(page);
     for (const path of ["/", "/anbar/mehsullar", "/maliyye/jurnal", "/kredit"]) {
       await page.goto(path, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
       await page.waitForTimeout(1500);
@@ -80,7 +72,7 @@ test.describe("Sessiya ilə tenant izolyasiyası", () => {
   });
 
   test("başqa tenant-ın məlumatı sorğuda görünmür", async ({ page }) => {
-    await restoreSession(page);
+    await restoreAuthenticatedSession(page);
     await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(2000);
     const result = await page.evaluate(
@@ -92,7 +84,7 @@ test.describe("Sessiya ilə tenant izolyasiyası", () => {
         });
         return response.ok ? await response.json() : [];
       },
-      [SUPABASE_URL, SUPABASE_KEY, STORAGE_KEY],
+      [SUPABASE_URL, SUPABASE_KEY, STORAGE_KEY || `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token`],
     );
     const tenants = new Set((result as Array<{ tenant_id: string }>).map((row) => row.tenant_id));
     // İstifadəçi yalnız üzv olduğu şirkət(lər)in datasını görməlidir

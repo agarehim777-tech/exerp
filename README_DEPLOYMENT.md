@@ -34,19 +34,24 @@ npx playwright install chromium
 ## Supabase release
 
 1. Create a production Supabase project separate from development.
-2. Apply every migration in `supabase/migrations` in timestamp order.
-3. Deploy required functions from `supabase/functions`.
-4. Run `platform_health_check()` and verify all expected RLS helpers exist.
-5. Create the first tenant and owner through the authenticated bootstrap flow.
-6. Never create production users with a password stored in source code.
+2. Run `Migrate Production Database` manually, type `MIGRATE`, and approve the
+   protected `production` environment. Frontend deploys never mutate the database.
+3. The workflow lints and applies every migration in `supabase/migrations` in timestamp order.
+4. Deploy required functions from `supabase/functions`.
+5. Run `platform_health_check()` and verify all expected RLS helpers exist.
+6. Create the first tenant and owner through the authenticated bootstrap flow.
+7. Never create production users with a password stored in source code.
 
 ## Backup and recovery
 
 - `.github/workflows/backup-supabase.yml` creates role, schema and data dumps
-  every day at 02:17 UTC, records SHA-256 checksums and retains the compressed
-  GitHub artifact for 30 days.
-- Configure `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in the GitHub
-  `production` environment. GitHub encrypts workflow artifacts at rest.
+  every day at 01:17 UTC, records SHA-256 checksums and retains the compressed
+  GitHub artifact for 90 days.
+- Configure `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_URL`,
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SENTRY_DSN`,
+  `E2E_TEST_USER`, `E2E_TEST_PASS` and the browser E2E session values in the
+  protected GitHub `production` environment. GitHub encrypts secrets and
+  workflow artifacts at rest.
 - Configure `RESTORE_DATABASE_URL` only in the protected `disaster-recovery`
   environment. It must point to a disposable Supabase project and must never
   contain the production project reference.

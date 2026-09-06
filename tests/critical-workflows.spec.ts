@@ -1,21 +1,11 @@
-import { expect, test, type Page } from "@playwright/test";
-
-const STORAGE_KEY = process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY || "";
-const SESSION_JSON = process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON || "";
-
-async function restoreSession(page: Page) {
-  await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => {});
-  await page.evaluate(
-    ([key, value]) => window.localStorage.setItem(key as string, value as string),
-    [STORAGE_KEY, SESSION_JSON],
-  );
-}
+import { expect, test } from "@playwright/test";
+import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session";
 
 test.describe("Kritik ERP axınları", () => {
-  test.skip(!STORAGE_KEY || !SESSION_JSON, "E2E test sessiyası konfiqurasiya edilməyib");
+  test.skip(!hasAuthenticatedE2E, "E2E test istifadəçisi konfiqurasiya edilməyib");
 
   test.beforeEach(async ({ page }) => {
-    await restoreSession(page);
+    await restoreAuthenticatedSession(page);
   });
 
   for (const route of [

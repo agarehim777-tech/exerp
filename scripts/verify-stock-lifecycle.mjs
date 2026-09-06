@@ -10,20 +10,7 @@
  *   SUPABASE_ACCESS_TOKEN | LOVABLE_BROWSER_SUPABASE_ACCESS_TOKEN
  *   və ya TEST_USER + TEST_PASS
  */
-import fs from "node:fs";
-import path from "node:path";
-
-function readEnvironment() {
-  const values = { ...process.env };
-  const envPath = path.resolve(".env");
-  if (!fs.existsSync(envPath)) return values;
-  for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
-    if (!match || values[match[1]]) continue;
-    values[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
-  }
-  return values;
-}
+import { readEnvironment } from "./read-environment.mjs";
 
 const env = readEnvironment();
 const BASE = env.VITE_SUPABASE_URL;

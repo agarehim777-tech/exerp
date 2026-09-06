@@ -1,6 +1,12 @@
 import { defineConfig } from "@playwright/test";
 import fs from "fs";
 
+// Keep local and CI test processes aligned with Vite's environment loading.
+// Existing CI variables always win; local secrets remain git-ignored.
+for (const filename of [".env.local", ".env"]) {
+  if (fs.existsSync(filename)) process.loadEnvFile(filename);
+}
+
 // Sandbox mühitində əvvəlcədən quraşdırılmış Chromium varsa ondan istifadə edirik,
 // belə ki `playwright install` icra etmək mümkün olmaya bilər.
 const candidates = [

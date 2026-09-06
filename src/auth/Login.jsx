@@ -17,6 +17,18 @@ function appUrl(path = "/") {
   return new URL(`${base}${relativePath}`, window.location.origin).toString();
 }
 
+function authErrorMessage(error) {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
+    return "E-poçt və ya şifrə yanlışdır. Şifrəni unutmusunuzsa, bərpa keçidindən istifadə edin.";
+  }
+  if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+    return "E-poçt ünvanı hələ təsdiqlənməyib. Təsdiq məktubundakı keçidi açın.";
+  }
+  return error?.message || "Giriş zamanı xəta baş verdi. Yenidən cəhd edin.";
+}
+
 const MODULES = [
   { k: "CRM", d: "Müştəri münasibətləri, pipeline, tapşırıqlar", i: "M3 3h18v4H3zM3 10h11v11H3zM17 10h4v11h-4z" },
   { k: "Satış", d: "Sifariş → Göndərmə → Faktura axını", i: "M3 3v18h18M7 15l4-4 4 4 5-6" },
@@ -47,13 +59,14 @@ export default function Login() {
 
   async function forgot() {
     setError(null); setInfo(null);
-    if (!email) return setError("Əvvəlcə emailinizi daxil edin.");
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return setError("Əvvəlcə emailinizi daxil edin.");
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: appUrl("/reset-password"),
     });
     setBusy(false);
-    if (error) return setError(error.message);
+    if (error) return setError(authErrorMessage(error));
     setInfo("Şifrə bərpası linki emailinizə göndərildi.");
   }
 
@@ -73,12 +86,13 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setBusy(true);
+    const normalizedEmail = email.trim().toLowerCase();
     const fn = mode === "signup"
-      ? supabase.auth.signUp({ email, password, options: { emailRedirectTo: appUrl(next) } })
-      : supabase.auth.signInWithPassword({ email, password });
+      ? supabase.auth.signUp({ email: normalizedEmail, password, options: { emailRedirectTo: appUrl(next) } })
+      : supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     const { data, error } = await fn;
     setBusy(false);
-    if (error) return setError(error.message);
+    if (error) return setError(authErrorMessage(error));
     if (mode === "signup" && !data?.session) {
       setMode("signin");
       setInfo("Hesab yaradıldı. Emailinizə göndərilən təsdiq linkini açın, sonra daxil olun.");
