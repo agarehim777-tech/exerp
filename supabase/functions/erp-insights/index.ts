@@ -1,6 +1,4 @@
-import { generateText } from "npm:ai";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,13 +15,104 @@ function json(body: unknown, status = 200) {
 
 const num = (value: unknown) => Number(value ?? 0) || 0;
 
+type Insight = {
+  key: string;
+  category: "sales" | "procurement" | "inventory" | "receivables" | "hr" | "general";
+  priority: "high" | "medium" | "low";
+  title: string;
+  detail: string;
+  action: string;
+  impact: string;
+};
+
+const money = (value: number) => `${value.toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
+
+function buildInsights(signals: any, dismissedKeys: Set<string>): Insight[] {
+  const insights: Insight[] = [];
+  const add = (insight: Insight) => {
+    if (!dismissedKeys.has(insight.key)) insights.push(insight);
+  };
+
+  if (signals.overdueCreditTotal > 0) {
+    add({
+      key: "overdue-credit-collection",
+      category: "receivables",
+      priority: "high",
+      title: "Gecikmiş kredit ödənişlərini toplayın",
+      detail: `${signals.overdueCredit.length} kredit üzrə ümumilikdə ${money(signals.overdueCreditTotal)} gecikmiş borc var.`,
+      action: "Ən köhnə gecikmələrdən başlayaraq müştərilərlə əlaqə saxlayın və ödəniş planını yeniləyin.",
+      impact: `${money(signals.overdueCreditTotal)} pul axını riski`,
+    });
+  }
+
+  if (signals.overdueInvoiceTotal > 0) {
+    add({
+      key: "overdue-invoice-collection",
+      category: "receivables",
+      priority: "high",
+      title: "Vaxtı keçmiş fakturaları bağlayın",
+      detail: `${signals.overdueInvoices.filter((row: any) => row.overdue).length} faktura üzrə ${money(signals.overdueInvoiceTotal)} vaxtı keçmiş debitor borcu var.`,
+      action: "Məsul şəxsləri təyin edin və fakturalar üzrə ödəniş tarixlərini təsdiqləyin.",
+      impact: `${money(signals.overdueInvoiceTotal)} debitor riski`,
+    });
+  }
+
+  if (signals.lowStockCount > 0) {
+    const sample = signals.lowStock.slice(0, 3).map((row: any) => `${row.product} (${row.qty})`).join(", ");
+    add({
+      key: "low-stock-replenishment",
+      category: "inventory",
+      priority: signals.lowStockCount >= 5 ? "high" : "medium",
+      title: "Azalan stokları tamamlayın",
+      detail: `${signals.lowStockCount} məhsul aşağı qalıqdadır${sample ? `: ${sample}` : ""}.`,
+      action: "Minimum stok və açıq satınalma sifarişlərini müqayisə edib çatışmayan miqdar üçün PO yaradın.",
+      impact: `${signals.lowStockCount} məhsul üzrə satış itkisi riski`,
+    });
+  }
+
+  if (signals.openOrders.length > 0) {
+    add({
+      key: "open-sales-orders",
+      category: "sales",
+      priority: "medium",
+      title: "Açıq satış sifarişlərini tamamlayın",
+      detail: `${signals.openOrders.length} satış sifarişi təsdiq və ya təhvil mərhələsini gözləyir.`,
+      action: "Anbar rezervini və təhvil imkanını yoxlayıb gecikən sifarişlərə məsul şəxs təyin edin.",
+      impact: `${signals.openOrders.length} açıq sifariş`,
+    });
+  }
+
+  if (signals.openPurchaseOrders.length > 0) {
+    add({
+      key: "open-purchase-orders",
+      category: "procurement",
+      priority: "medium",
+      title: "Açıq satınalma sifarişlərini izləyin",
+      detail: `${signals.openPurchaseOrders.length} satınalma sifarişi hələ tam qəbul edilməyib.`,
+      action: "Vendorlardan gözlənilən tarixləri dəqiqləşdirin və gecikən mədaxilləri prioritetləşdirin.",
+      impact: `${signals.openPurchaseOrders.length} açıq PO`,
+    });
+  }
+
+  if (!insights.length) {
+    insights.push({
+      key: "operations-stable",
+      category: "general",
+      priority: "low",
+      title: "Kritik əməliyyat riski görünmür",
+      detail: "Cari 30 günlük məlumatda gecikmiş borc, aşağı stok və açıq əməliyyat siqnalı tapılmadı.",
+      action: "Göstəriciləri mütəmadi izləməyə davam edin.",
+      impact: "Kritik risk yoxdur",
+    });
+  }
+
+  return insights.slice(0, 8);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) return json({ error: "LOVABLE_API_KEY konfiqurasiya olunmayıb" }, 500);
-
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Not authenticated" }, 401);
 
@@ -50,13 +139,15 @@ Deno.serve(async (req) => {
 
     // ---- Deterministik siqnallar (RLS ilə cari şirkətə məhdudlaşır) ----
     const [balances, overdueInstallments, openOrders, openPos, invoices, dashboard] = await Promise.all([
-      supabase.from("stock_balances").select("qty,product:products(name,sku,price)").limit(500),
+      supabase.from("stock_balances")
+        .select("on_hand,reserved,problem_qty,minimum_level,product:products(name,sku,price,minimum_stock)")
+        .limit(500),
       supabase.from("credit_installments")
-        .select("due_date,amount_due,amount_paid,status,credit:credit_contracts(contract_no,customer:customers(name))")
+        .select("due_date,principal_due,principal_paid,penalty_due,penalty_paid,status,credit:credit_contracts(contract_no,customer:customers(name))")
         .lte("due_date", iso(today)).neq("status", "paid").order("due_date").limit(60),
       supabase.from("orders").select("order_no,order_date,status,total,payment_status,customer:customers(name)")
         .in("status", ["draft", "confirmed"]).order("order_date", { ascending: false }).limit(60),
-      supabase.from("purchase_orders").select("po_no,order_date,status,total,vendor:vendors(name)")
+      supabase.from("purchase_orders").select("po_number,order_date,status,vendor:vendors(name)")
         .in("status", ["draft", "approved", "partial"]).order("order_date", { ascending: false }).limit(60),
       supabase.from("sales_invoices").select("invoice_no,due_date,total,paid_amount,status,customer:customers(name)")
         .in("status", ["issued", "partial", "overdue"]).order("due_date").limit(60),
@@ -64,15 +155,21 @@ Deno.serve(async (req) => {
     ]);
 
     const lowStock = (balances.data ?? [])
-      .filter((row: any) => num(row.qty) <= 5)
+      .map((row: any) => ({
+        product: row.product?.name ?? "—",
+        sku: row.product?.sku ?? "",
+        qty: num(row.on_hand) - num(row.reserved) - num(row.problem_qty),
+        minimum: Math.max(num(row.minimum_level), num(row.product?.minimum_stock)),
+      }))
+      .filter((row: any) => row.qty <= row.minimum)
       .slice(0, 25)
-      .map((row: any) => ({ product: row.product?.name ?? "—", sku: row.product?.sku ?? "", qty: num(row.qty) }));
+      .map((row: any) => ({ product: row.product, sku: row.sku, qty: row.qty, minimum: row.minimum }));
 
     const overdueCredit = (overdueInstallments.data ?? []).map((row: any) => ({
       contract: row.credit?.contract_no ?? "—",
       customer: row.credit?.customer?.name ?? "—",
       dueDate: row.due_date,
-      remaining: num(row.amount_due) - num(row.amount_paid),
+      remaining: num(row.principal_due) - num(row.principal_paid) + num(row.penalty_due) - num(row.penalty_paid),
     })).filter((row) => row.remaining > 0);
 
     const overdueInvoices = (invoices.data ?? []).map((row: any) => ({
@@ -104,40 +201,9 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(40);
 
-    const accepted = (feedback ?? []).filter((f) => f.action !== "dismissed");
     const dismissed = (feedback ?? []).filter((f) => f.action === "dismissed");
-
-    const gateway = createLovableAiGatewayProvider(key);
-
-    const system = `Sən ExERP sisteminin "AI Agent v2" analitik məsləhətçisisən.
-Sənə şirkətin real ERP siqnalları verilir: satış xülasəsi, az qalan anbar məhsulları, vaxtı keçmiş kredit ödənişləri və fakturalar, açıq satış/satınalma sifarişləri.
-Vəzifən: 4-8 KONKRET, icra oluna bilən tövsiyə hazırlamaq.
-
-Cavabı YALNIZ aşağıdakı JSON formatında ver (əlavə mətn yoxdur):
-{"insights":[{"key":"qisa-latin-acar","category":"sales|procurement|inventory|receivables|hr","priority":"high|medium|low","title":"Qısa başlıq","detail":"2-3 cümlə izah, rəqəmlərlə","action":"Atılacaq konkret addım","impact":"Təxmini təsir, məs. 1 200 ₼ risk"}]}
-
-Qaydalar:
-- Azərbaycan dilində yaz, məbləğləri ₼ ilə göstər.
-- Yalnız verilən datadan çıxış et, uydurma.
-- İstifadəçinin əvvəl RƏDD etdiyi tövsiyə tiplərini təkrarlama.
-- İstifadəçinin əvvəl QƏBUL etdiyi tövsiyə tiplərinə üstünlük ver və davamını təklif et.`;
-
-    const prompt = `SİQNALLAR:\n${JSON.stringify(signals).slice(0, 24000)}\n\nƏVVƏL QƏBUL EDİLƏN TÖVSİYƏLƏR:\n${JSON.stringify(accepted.map((f) => ({ key: f.insight_key, title: f.title, note: f.note }))).slice(0, 3000)}\n\nƏVVƏL RƏDD EDİLƏN TÖVSİYƏLƏR (təkrarlama):\n${JSON.stringify(dismissed.map((f) => ({ key: f.insight_key, title: f.title, note: f.note }))).slice(0, 3000)}`;
-
-    const result = await generateText({
-      model: gateway("openai/gpt-5.6-sol"),
-      system,
-      prompt,
-    });
-
-    let insights: unknown[] = [];
-    try {
-      const text = result.text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
-      const parsed = JSON.parse(text);
-      insights = Array.isArray(parsed?.insights) ? parsed.insights : [];
-    } catch (_error) {
-      insights = [];
-    }
+    const dismissedKeys = new Set(dismissed.map((row) => String(row.insight_key || "")));
+    const insights = buildInsights(signals, dismissedKeys);
 
     return json({
       generatedAt: new Date().toISOString(),
@@ -149,7 +215,6 @@ Qaydalar:
         openPurchaseOrderCount: signals.openPurchaseOrders.length,
       },
       insights,
-      raw: insights.length ? undefined : result.text.slice(0, 2000),
     });
   } catch (error) {
     console.error("erp-insights error", error);

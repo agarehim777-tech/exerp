@@ -47,4 +47,24 @@ test.describe("Kritik ERP axınları", () => {
     await createButton.click();
     await expect(page.getByRole("dialog")).toBeVisible();
   });
+
+  test("ağıllı tövsiyələr Edge Function vasitəsilə yaradılır", async ({ page }) => {
+    await page.goto("/ai-tovsiyeler", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/ai-tovsiyeler(?:[/?#]|$)/);
+    await expect(page.getByText("Ağıllı tövsiyələr", { exact: false }).first()).toBeVisible();
+
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes("/functions/v1/erp-insights")
+        && response.request().method() === "POST",
+      { timeout: 20_000 },
+    );
+    await page.getByRole("button", { name: "Təhlil et", exact: true }).click();
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+
+    const payload = await response.json();
+    expect(Array.isArray(payload.insights)).toBe(true);
+    expect(payload.insights.length).toBeGreaterThan(0);
+    await expect(page.getByText("Failed to send a request to the Edge Function")).toHaveCount(0);
+  });
 });
