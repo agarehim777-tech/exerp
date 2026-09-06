@@ -13,7 +13,7 @@ test.describe("Kritik ERP axınları", () => {
     "/anbar/mehsullar",
     "/satinalma",
     "/maliyye/kassa",
-    "/credits",
+    "/kredit",
     "/hr/emekdaslar",
   ]) {
     test(`${route} runtime xətası olmadan açılır`, async ({ page }) => {
