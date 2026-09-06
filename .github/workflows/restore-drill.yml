@@ -58,6 +58,7 @@ jobs:
             echo "PGUSER=postgres.$RESTORE_PROJECT_REF"
             echo "PGPASSWORD=$RESTORE_DB_PASSWORD"
             echo "PGSSLMODE=require"
+            echo "PGCONNECT_TIMEOUT=10"
           } >> "$GITHUB_ENV"
       - name: Download selected backup
         env:
@@ -72,6 +73,18 @@ jobs:
           gh run download "$RUN_ID" --name "supabase-backup-$RUN_ID" --dir backup
       - name: Verify checksum
         run: (cd backup && sha256sum --check SHA256SUMS)
+      - name: Wait for staging database
+        run: |
+          for attempt in $(seq 1 15); do
+            if psql -v ON_ERROR_STOP=1 -c "select 1;" > /dev/null 2>&1; then
+              echo "Staging database is ready."
+              exit 0
+            fi
+            echo "Staging database is not ready (attempt $attempt/15)."
+            sleep 20
+          done
+          echo "Staging database remained unavailable for 5 minutes."
+          exit 1
       - name: Restore into isolated target
         run: |
           psql -v ON_ERROR_STOP=1 -c "drop schema if exists public cascade; create schema public;"

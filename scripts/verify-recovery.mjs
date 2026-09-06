@@ -22,6 +22,8 @@ const checks = [
   [restore, "Refuse production project ref as restore target"],
   [restore, "Unexpected restore target"],
   [restore, "aws-0-ap-northeast-1.pooler.supabase.com"],
+  [restore, "Wait for staging database"],
+  [restore, "attempt $attempt/15"],
   [restore, "ON_ERROR_STOP=1"],
   [restore, "postgresql-client-17"],
   [restore, "RESTORE_OK"],
