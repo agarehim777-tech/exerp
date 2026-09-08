@@ -50,6 +50,7 @@ function buildSalesCreditRecord(order, storedCredit) {
     salesSource: true,
     createdFrom: "Satış modulu",
     orderId: order.id,
+    orderNo: order.orderNo || order.order_no || order.id,
     date: storedCredit?.date || order.date || order.deliveryDate || null,
     customer: order.customer,
 
@@ -2274,6 +2275,7 @@ function buildSalesCreditForOrder(order, storedCredit) {
     salesSource: true,
     createdFrom: "Satış modulu",
     orderId: order.id,
+    orderNo: order.orderNo || order.order_no || order.id,
     contractId: order.contractId || storedCredit?.contractId || `MQ-${order.id}`,
     customer: order.customer,
     fin: order.fin,
@@ -3527,4 +3529,5 @@ export {
   getPageActionPermission,
   hasPageAction,
 };
+
 
