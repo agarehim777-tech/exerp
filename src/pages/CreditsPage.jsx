@@ -359,7 +359,7 @@ function CreditsPage({
                         onClick={() => onOpenSalesOrder?.(credit.orderId)}
                         data-testid="credit-row-order-link"
                       >
-                        {credit.orderId} sifarişi
+                        {credit.orderNo || credit.orderId} sifarişi
                       </button>
                     ) : (
                       "Manual qeyd"
@@ -646,3 +646,4 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
     </div>
   );
 }
+
