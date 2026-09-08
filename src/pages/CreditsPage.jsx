@@ -471,11 +471,11 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   );
   const firstPaymentDate = previewPlan.installments[0]?.due || "—";
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     if (!startDate || !initialComplete) return;
-    onStartCredit?.(item.credit.id, startDate);
-    onClose();
+    const started = await onStartCredit?.(item.credit.id, startDate);
+    if (started) onClose();
   }
 
   async function collectDeposit() {
