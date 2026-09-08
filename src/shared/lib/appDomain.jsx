@@ -4061,7 +4061,7 @@ export function CreditContext({ credit, onOpenSalesOrder }) {
             data-testid="credit-order-link"
             title="Bağlı sifariş detalına keç"
           >
-            {credit.orderId}
+            {credit.orderNo || credit.orderId}
           </button>
         </div>
       )}
@@ -4322,8 +4322,9 @@ export function CreditHealthSummary({ item }) {
       <div>
         <span>Mənbə</span>
         <strong>{getCreditSourceLabel(credit)}</strong>
-        <small>{credit.orderId ? `${credit.orderId} sifarişi` : "Manual qeyd"}</small>
+        <small>{credit.orderId ? `${credit.orderNo || credit.orderId} sifarişi` : "Manual qeyd"}</small>
       </div>
     </div>
   );
 }
+
