@@ -501,9 +501,10 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
             <span>Qalıq beh <strong>{money(initialRemaining)}</strong></span>
             <span>Ödənişdən sonra <strong>{money(projectedPaid)}</strong></span>
           </div>
-          {!initialComplete ? (
-            <div className="credit-schedule-preview">
-              <strong>İlkin ödənişi tamamla</strong>
+          <div className="credit-schedule-preview">
+            <strong>{initialComplete ? "İlkin ödəniş tamamlanıb" : "Qalıq ilkin ödənişi qəbul et"}</strong>
+            {!initialComplete ? (
+              <>
               <label>
                 <span>Qəbul ediləcək məbləğ</span>
                 <input
@@ -526,9 +527,19 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
               <p className="form-help">
                 İlkin ödəniş tam yığılmayınca kredit başladıla bilməz. Hədəf tamamlananda cədvəl avtomatik aktivləşir.
               </p>
-            </div>
-          ) : null}
-          <CreditInitialPaymentsHistory creditId={item.credit.id} refreshKey={historyKey} />
+              </>
+            ) : (
+              <p className="form-help">
+                Planlaşdırılmış {money(requiredInitial)} beh tam yığılıb. Kredit aktivləşdirilə bilər.
+              </p>
+            )}
+          </div>
+          <CreditInitialPaymentsHistory
+            creditId={item.credit.id}
+            orderId={item.credit.orderId}
+            orderNo={item.credit.orderNo}
+            refreshKey={historyKey}
+          />
           <label>
             <span>Kreditin başlanma tarixi</span>
             <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
@@ -646,4 +657,5 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
     </div>
   );
 }
+
 
