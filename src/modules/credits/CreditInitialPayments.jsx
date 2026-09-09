@@ -13,7 +13,7 @@ function formatStamp(value) {
  * Kredit üzrə beh və ilkin ödənişlərin ayrı-ayrı tarixçəsi.
  * Mənbə: audit_events (credits modulu) — hər sətir tarix, məbləğ və qeyd göstərir.
  */
-export function useCreditInitialPayments(creditId) {
+export function useCreditInitialPayments(creditId, orderId, orderNo) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -25,15 +25,31 @@ export function useCreditInitialPayments(creditId) {
     }
     setLoading(true);
     try {
-      const { data, error: queryError } = await supabase
+      const auditQuery = supabase
         .from("audit_events")
         .select("id,action,detail,payload,created_at")
         .eq("module", "credits")
         .in("action", ["create_draft", "initial_payment"])
         .contains("payload", { credit_id: creditId })
         .order("created_at", { ascending: true });
-      if (queryError) throw queryError;
-      const mapped = (data || [])
+      const links = [
+        creditId ? `reference_id.eq.${creditId}` : "",
+        orderId ? `reference_id.eq.${orderId}` : "",
+        orderNo ? `reference.eq.${orderNo}` : "",
+      ].filter(Boolean);
+      const cashQuery = links.length
+        ? supabase
+            .from("cash_transactions")
+            .select("id,amount,category,description,occurred_at,created_at")
+            .eq("direction", "in")
+            .in("category", ["sales_payment", "credit_initial"])
+            .or(links.join(","))
+            .order("occurred_at", { ascending: true })
+        : Promise.resolve({ data: [], error: null });
+      const [auditResult, cashResult] = await Promise.all([auditQuery, cashQuery]);
+      if (auditResult.error) throw auditResult.error;
+      if (cashResult.error) throw cashResult.error;
+      const auditRows = (auditResult.data || [])
         .map((row) => {
           const payload = row.payload || {};
           const amount =
@@ -52,7 +68,14 @@ export function useCreditInitialPayments(creditId) {
           };
         })
         .filter(Boolean);
-      setRows(mapped);
+      const cashRows = (cashResult.data || []).map((row) => ({
+        id: `cash-${row.id}`,
+        date: row.occurred_at || row.created_at,
+        amount: Number(row.amount || 0),
+        kind: row.category === "credit_initial" ? "Əlavə ilkin ödəniş" : "Beh (satış anında)",
+        note: row.description || "Kassaya daxil olub",
+      }));
+      setRows(cashRows.length ? cashRows : auditRows);
       setError(null);
     } catch (nextError) {
       setError(nextError);
@@ -60,7 +83,7 @@ export function useCreditInitialPayments(creditId) {
     } finally {
       setLoading(false);
     }
-  }, [creditId]);
+  }, [creditId, orderId, orderNo]);
 
   useEffect(() => {
     refresh();
@@ -69,8 +92,8 @@ export function useCreditInitialPayments(creditId) {
   return { rows, loading, error, refresh };
 }
 
-export function CreditInitialPaymentsHistory({ creditId, refreshKey = 0 }) {
-  const { rows, loading, error, refresh } = useCreditInitialPayments(creditId);
+export function CreditInitialPaymentsHistory({ creditId, orderId, orderNo, refreshKey = 0 }) {
+  const { rows, loading, error, refresh } = useCreditInitialPayments(creditId, orderId, orderNo);
 
   useEffect(() => {
     if (refreshKey) refresh();
@@ -119,3 +142,4 @@ export function CreditInitialPaymentsHistory({ creditId, refreshKey = 0 }) {
 }
 
 export default CreditInitialPaymentsHistory;
+
