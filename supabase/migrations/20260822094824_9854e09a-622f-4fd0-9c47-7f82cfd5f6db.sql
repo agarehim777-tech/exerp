@@ -35,7 +35,7 @@ BEGIN
     initial_payment, required_initial, term_months, start_date, status
   ) VALUES (
     _tenant_id, trim(_contract_no), _customer_id, _order_id, _principal,
-    paid_initial, target_initial, _term_months, NULL, 'draft'
+    paid_initial, target_initial, _term_months, _start_date, 'draft'
   ) RETURNING id INTO credit_id;
 
   INSERT INTO public.audit_events(id, tenant_id, actor_id, module, action, detail, payload)
@@ -193,3 +193,4 @@ BEGIN
   RETURN _credit_id;
 END;
 $function$;
+
