@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getDeliveryStockCheck,
   getRecommendedOrderPlan,
+  isDeliveryQueueOrder,
   userHasEffectivePermission,
 } from "../shared/lib/appDomain.jsx";
 import {
@@ -108,6 +109,14 @@ describe("inventory business rules", () => {
     expect(full.plan.deliverableTotal).toBe(2);
   });
 
+  it("excludes cancelled sales from the delivery queue", () => {
+    const productLines = [{ product: "Telefon A", qty: 1 }];
+
+    expect(isDeliveryQueueOrder({ status: "confirmed", productLines })).toBe(true);
+    expect(isDeliveryQueueOrder({ status: "cancelled", productLines })).toBe(false);
+    expect(isDeliveryQueueOrder({ status: "Ləğv edilib", productLines })).toBe(false);
+  });
+
 });
 
 describe("individual permission overrides", () => {
@@ -156,3 +165,4 @@ describe("receivable business rules", () => {
     ).toBe(925);
   });
 });
+
