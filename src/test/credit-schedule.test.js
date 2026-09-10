@@ -5,6 +5,7 @@ import {
   applyCreditPrincipalPayment,
   shiftPaymentDate,
   daysBetween,
+  getCreditDebtFormula,
   isCreditClosed,
 } from "../shared/lib/credit.js";
 
@@ -12,6 +13,26 @@ const sumInstallments = (plan) =>
   plan.installments.reduce((acc, row) => acc + Number(row.amount || 0), 0);
 
 describe("credit schedule", () => {
+  it("shows collected and remaining initial payment before activation", () => {
+    const credit = {
+      status: "draft",
+      total: 20000,
+      initialPayment: 5000,
+      requiredInitial: 5000,
+      initialPaid: 1000,
+      months: 18,
+    };
+    const plan = buildCreditPlan({ total: 20000, initialPayment: 5000, months: 18 });
+    const debt = getCreditDebtFormula({ credit, plan, paymentState: { nextInstallment: null } });
+
+    expect(debt).toMatchObject({
+      phase: "initial",
+      paid: 1000,
+      balance: 4000,
+      requiredInitial: 5000,
+    });
+  });
+
   it("spreads the financed amount across the full term without losing a manat", () => {
     const plan = buildCreditPlan({ total: 1234, initialPayment: 0, months: 12, startDate: "2026-01-10" });
     expect(plan.installments).toHaveLength(12);
@@ -139,3 +160,4 @@ describe("month-end credit schedules", () => {
     expect(shiftPaymentDate("2026-03-31", -1)).toBe("2026-02-28");
   });
 });
+
