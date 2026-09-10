@@ -79,11 +79,21 @@ function CreditsPage({
     0,
   );
   const portfolioBalance = enrichedCredits.reduce((sum, item) => sum + Number(item.plan.balance || 0), 0);
-  const paidTotal = enrichedCredits.reduce((sum, item) => sum + getCreditPaidTotal(item.plan), 0);
+  const paidTotal = enrichedCredits.reduce(
+    (sum, item) =>
+      sum +
+      (isCreditStarted(item.credit)
+        ? getCreditPaidTotal(item.plan)
+        : Number(item.credit.initialPaid || 0)),
+    0,
+  );
+  const initialPendingTotal = notStartedCredits.reduce((sum, item) => {
+    const required = Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0);
+    return sum + Math.max(0, required - Number(item.credit.initialPaid || 0));
+  }, 0);
   const averageMonthly = activeCredits.length ? Math.round(monthlyDue / activeCredits.length) : 0;
   const currentMonthCredits = enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Cari ay"));
   const linkedSalesCredits = salesCredits.filter((item) => item.credit.orderId && item.credit.contractId);
-  const uniqueContractCount = new Set(enrichedCredits.map((item) => item.credit.contractId || item.credit.id)).size;
   const collectionQueueCount = todayCredits.length + overdueCredits.length;
   const handoverItems = [
     {
@@ -93,10 +103,10 @@ function CreditsPage({
       tone: linkedSalesCredits.length === salesCredits.length ? "success" : "warning",
     },
     {
-      label: "Ayrı borc məntiqi",
-      value: uniqueContractCount,
-      hint: "Hər kredit ayrıca müqavilə kimi saxlanır",
-      tone: uniqueContractCount === enrichedCredits.length ? "success" : "warning",
+      label: "Qalıq ilkin ödəniş",
+      value: money(initialPendingTotal),
+      hint: `${notStartedCredits.length} başlanmamış kredit üzrə beh qalığı`,
+      tone: initialPendingTotal > 0 ? "warning" : "success",
     },
     {
       label: "Yığım növbəsi",
@@ -329,7 +339,7 @@ function CreditsPage({
           </div>
 
           <DataTable
-            columns={["#", "Müştəri", "Müqavilə / cihaz", "Müqavilə məbləği", "Ödənilib", "Qalıq", "Növbəti", "Status", "Əməl."]}
+            columns={["#", "Müştəri", "Müqavilə / cihaz", "Müqavilə məbləği", "Ödənilib / beh", "Qalıq", "Növbəti", "Status", "Əməl."]}
             rows={tableCredits.map((item, index) => {
               const { credit, plan, paymentState } = item;
               const nextAmount = Number(paymentState.nextInstallment?.amount || 0);
@@ -368,8 +378,14 @@ function CreditsPage({
                   </em>
                 </div>,
                 <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay · ${credit.date || "tarixsiz"}`} />,
-                <TwoLine title={money(debt.paid)} subtitle={`${credit.paidMonths || 0}/${plan.months} ay bağlanıb`} />,
-                <TwoLine title={money(debt.balance)} subtitle={`Növbəti ${money(debt.nextAmount)}`} />,
+                <TwoLine
+                  title={money(debt.paid)}
+                  subtitle={debt.phase === "initial" ? `Yığılan beh · hədəf ${money(debt.requiredInitial)}` : `${credit.paidMonths || 0}/${plan.months} ay bağlanıb`}
+                />,
+                <TwoLine
+                  title={money(debt.balance)}
+                  subtitle={debt.phase === "initial" ? "Qalıq ilkin ödəniş" : `Növbəti ${money(debt.nextAmount)}`}
+                />,
                 <TwoLine title={isCreditStarted(credit) ? paymentState.nextInstallment?.due || credit.next || "—" : "Tarix təyin edilməyib"} subtitle={!isCreditStarted(credit) ? "Başlatma gözləyir" : nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
                 <div className="credit-status-stack">
                   <StatusBadge status={getCreditManagementStatus(item)} />
