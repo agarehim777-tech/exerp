@@ -193,6 +193,24 @@ export function getCreditRemainingMonths(plan) {
 }
 
 export function getCreditDebtFormula(item) {
+  if (!isCreditStarted(item.credit)) {
+    const requiredInitial = Math.max(
+      0,
+      Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0),
+    );
+    const initialPaid = Math.max(0, Number(item.credit.initialPaid ?? 0));
+    return {
+      total: Number(item.plan.total || 0),
+      paid: initialPaid,
+      balance: Math.max(0, requiredInitial - initialPaid),
+      remainingMonths: Number(item.plan.months || 0),
+      nextAmount: 0,
+      phase: "initial",
+      requiredInitial,
+      initialPaid,
+    };
+  }
+
   const paidTotal = getCreditPaidTotal(item.plan);
   return {
     total: Number(item.plan.total || 0),
@@ -200,6 +218,7 @@ export function getCreditDebtFormula(item) {
     balance: Number(item.plan.balance || 0),
     remainingMonths: getCreditRemainingMonths(item.plan),
     nextAmount: Number(item.paymentState.nextInstallment?.amount || 0),
+    phase: "installment",
   };
 }
 
@@ -342,3 +361,4 @@ export function applyCreditPrincipalPayment(credit, principalAmount) {
 export function getReceivableClosureAmount(row) {
   return Math.max(0, Number(row?.amount || 0));
 }
+
