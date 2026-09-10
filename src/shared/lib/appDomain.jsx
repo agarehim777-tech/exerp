@@ -548,8 +548,16 @@ export function getDeliveryTotalQuantity(order) {
 }
 
 export function isDeliveryQueueOrder(order) {
+  const status = normalize(order?.status || "");
+  const isCancelled =
+    status === "cancelled" ||
+    status === "canceled" ||
+    status.includes("ləğv") ||
+    status.includes("legv");
+
   return Boolean(
     order &&
+      !isCancelled &&
       order.status !== "Təhvil verilib" &&
       Array.isArray(order.productLines) &&
       normalizeOrderProductLines(order.productLines).length > 0,
@@ -4327,4 +4335,5 @@ export function CreditHealthSummary({ item }) {
     </div>
   );
 }
+
 
