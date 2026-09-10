@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 69768)
+Total output lines: 7162
+
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
@@ -41,7 +44,28 @@ import {
   Send,
   Settings,
   ShieldCheck,
-  ShoppingCart,import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
+  ShoppingCart,
+  Sparkles,
+  SlidersHorizontal,
+  TrendingUp,
+  Trash2,
+  Truck,
+  Upload,
+  UserCog,
+  Users,
+  Wallet,
+  Warehouse,
+  X,
+} from "lucide-react";
+import {
+  contractTemplates,
+  initialState,
+  navItems,
+  stages,
+} from "./data.js";
+import { pageMeta } from "./config/page-meta.js";
+import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
+import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
 import { AccessCheckPage, AccountingPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancePage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
   createRemoteCompany,
@@ -880,8 +904,176 @@ function App() {
           ...current,
           settings: { ...current.settings, sessionUserId: null },
         }),
+      );
+      setRemoteAuthStatus("signedOut");
+      return undefined;
+    }
+
+    getRemoteSession()
+      .then(async (session) => {
+        if (!active) return;
+        setRemoteUser(session.user);
+        if (session.user.mustChangePassword) {
+          setRemoteAuthStatus("signedIn");
+          setAuthError("");
+          return;
+        }
+        const payload = await loadRemoteState();
+        if (!active) return;
+        const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
+        const sessionUser = { ...session.user, moduleAccess: session.user.companyModules || navItems.map((item) => item.id) };
+        const users = tenantUsers.some((user) => user.id === session.user.id)
+          ? tenantUsers.map((user) => (user.id === session.user.id ? { ...user, ...sessionUser } : user))
+          : [sessionUser, ...tenantUsers];
+        setState(
+          hydrateState({
+            ...(payload.state || initialState),
+            settings: {
+              ...(payload.state?.settings || initialState.settings),
+              users,
+              sessionUserId: session.user.id,
+              currentRole: session.user.role,
+            },
+          }),
+        );
+        setRemoteAuthStatus("signedIn");
+        setAuthError("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setRemoteUser(null);
+        setRemoteToken("");
+        setState((current) =>
+          hydrateState({
+            ...current,
+            settings: { ...current.settings, sessionUserId: null },
+          }),
+        );
+        setRemoteAuthStatus("signedOut");
+        setAuthError(error instanceof Error ? error.message : "Server sessiyası açılmadı.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!remoteApiEnabled || !getRemoteToken()) {
+      return undefined;
+    }
+    window.clearTimeout(remoteSaveTimer.current);
+    remoteSaveTimer.current = window.setTimeout(() => {
+      saveRemoteState(state).catch((error) => {
+        setAuthError(error instanceof Error ? error.message : "Serverə yazılış alınmadı.");
+      });
+    }, 500);
+    return () => {
+      window.clearTimeout(remoteSaveTimer.current);
+    };
+  }, [state, remoteUser?.role, activeTenantId, authUser?.id, tenantStateReady]);
+
+  useEffect(() => {
+    const entry = state.auditLog?.[0];
+    if (!entry?.id || !activeTenantId || !authUser?.id || syncedAuditIds.current.has(entry.id)) return;
+
+    syncedAuditIds.current.add(entry.id);
+    supabase
       .from("audit_events")
-      taxCalendar: filterRows(taxCalendarRows, query),      apiWebhooks: filterRows(apiWebhookRows, query),
+      .upsert(
+        {
+          id: entry.id,
+          tenant_id: activeTenantId,
+          actor_id: authUser.id,
+          actor_role: entry.role || activeRoleInfo?.name || "System",
+          module: entry.module || "Sistem",
+          action: entry.action || "Əməliyyat",
+          detail: entry.detail || "",
+          status: entry.status || "Tamamlandı",
+          payload: entry,
+          occurred_at: entry.date || new Date().toISOString(),
+        },
+        { onConflict: "id", ignoreDuplicates: true },
+      )
+      .then(({ error }) => {
+        if (error) {
+          syncedAuditIds.current.delete(entry.id);
+          console.warn("[audit] immutable server log unavailable", {
+            code: error.code,
+            message: error.message,
+          });
+        }
+      });
+  }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name]);
+
+  useEffect(() => {
+    if (state.employees.length === 0) return;
+
+    setState((current) => {
+      const payrollExpense = buildPayrollExpense(current.employees);
+      const existing = current.expenses.find((expense) => expense.id === payrollExpense.id);
+      const nextExpense = existing
+        ? {
+            ...existing,
+            ...payrollExpense,
+            status: existing.status || payrollExpense.status,
+          }
+        : payrollExpense;
+      const isSame =
+        existing &&
+        Number(existing.amount || 0) === payrollExpense.amount &&
+        Number(existing.grossTotal || 0) === payrollExpense.grossTotal &&
+        Number(existing.deductions || 0) === payrollExpense.deductions &&
+        existing.source === payrollExpense.source &&
+        existing.cashImpact === payrollExpense.cashImpact;
+
+      if (isSame) return current;
+
+      const expenses = existing
+        ? current.expenses.map((expense) => (expense.id === payrollExpense.id ? nextExpense : expense))
+        : [nextExpense, ...current.expenses];
+
+      return appendAudit(
+        {
+          ...current,
+          expenses,
+        },
+        {
+          module: "HR/Maliyyə",
+          action: existing ? "Payroll expense yeniləndi" : "Payroll expense yaradıldı",
+          detail: `${money(payrollExpense.amount)} payroll maliyyəyə avtomatik düşdü`,
+          status: "Avtomatik",
+          role: "System",
+        },
+      );
+    });
+  }, [state.employees]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [active]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (dbPermissionsLoading || !tenantStateReady) return;
+    if (visibleNavItems.some((item) => item.id === active)) return;
+    setActive(visibleNavItems[0]?.id || "dashboard");
+  }, [active, currentUser, dbPermissionsLoading, tenantStateReady, visibleNavItems]);
+
+  const filtered = useMemo(
+    () => ({
+      customers: filterRows(state.customers, query),
+      orders: filterRows(state.orders, query),
+      stock: filterRows(state.stock, query),
+      warehouses: filterRows(state.warehouses, query),
+      expenses: filterRows(state.expenses, query),
+      cashEntries: filterRows(state.cashEntries || [], query),
+      invoices: filterRows(invoiceRows, query),
+      accountingJournal: filterRows(accountingData.journalRows, query),
+      accountingChart: filterRows(accountingData.chartRows, query),
+      taxCalendar: filterRows(taxCalendarRows, query),
+      currency: filterRows(currencyExposureRows, query),
+      apiWebhooks: filterRows(apiWebhookRows, query),
       credits: filterRows(creditRecords, query),
       vendors: filterRows(state.vendors, query),
       employees: filterRows(state.employees, query),
@@ -905,7 +1097,16 @@ function App() {
       accountingData,
       taxCalendarRows,
       currencyExposureRows,
-      apiWebhookRows,      setToasts((items) => items.filter((item) => item.id !== id));
+      apiWebhookRows,
+      messageConversations,
+    ],
+  );
+
+  function notify(message, variant = "success") {
+    const id = Date.now() + Math.random();
+    setToasts((items) => [...items, { id, message, variant }]);
+    window.setTimeout(() => {
+      setToasts((items) => items.filter((item) => item.id !== id));
     }, 3200);
   }
 
@@ -940,7 +1141,7 @@ function App() {
         module: "Permission",
         action: "Əməliyyat bloklandı",
         detail: `${roleName}: ${action}`,
-
+        status: "İcazə yoxdur",
         role: roleName,
       }),
     );
@@ -974,7 +1175,234 @@ function App() {
         module: "Satış",
         action: values.paymentMethod === "Kredit" ? "Kredit satış yaradıldı" : "Satış yaradıldı",
         detail: `${values.customer || "Müştəri"} · ${money(Number(values.orderTotal ?? values.amount ?? 0))}`,
-      },          },
+      },
+      dashboard: {
+        module: "Satış",
+        action: values.paymentMethod === "Kredit" ? "Kredit satış yaradıldı" : "Satış yaradıldı",
+        detail: `${values.customer || "Müştəri"} · ${money(Number(values.orderTotal ?? values.amount ?? 0))}`,
+      },
+      finance: {
+        module: "Maliyyə",
+        action: "Xərc yaradıldı",
+        detail: `${values.description || "Xərc"} · ${money(Number(values.amount || 0))}`,
+      },
+      credits: {
+        module: "Kredit",
+        action: "Manual kredit yaradıldı",
+        detail: `${values.customer || "Müştəri"} · ${money(Number(values.total || 0))}`,
+      },
+      vendors: { module: "Vendor", action: "Vendor yaradıldı", detail: values.name },
+      product: { module: "Məhsul", action: "Məhsul yaradıldı", detail: values.name },
+      hr: { module: "HR", action: "Əməkdaş yaradıldı", detail: values.name },
+      contracts: { module: "Müqavilə", action: "Müqavilə yaradıldı", detail: values.customer },
+    };
+
+    return auditByType[type] || { module: "Sistem", action: "Qeyd yaradıldı", detail: type };
+  }
+
+  function hasCreatePermission(type, values) {
+    const permission = createPermissionByType[type];
+    if (!permission) return true;
+
+    const isCreditSale = (type === "sales" || type === "dashboard") && values.paymentMethod === "Kredit";
+    if (can(permission) || (isCreditSale && can("credits.manage"))) return true;
+
+    const action = isCreditSale ? "kredit satış yaratmaq" : createConfig[type]?.title || "qeyd yaratmaq";
+    return requirePermission(permission, action);
+  }
+
+  function choosePage(id) {
+    const isVisible = visibleNavItems.some((item) => item.id === id);
+    if (!isVisible) {
+      notify("Bu modul aktiv istifadəçi üçün gizlədilib.", "warning");
+      return false;
+    }
+    setActive(id);
+    setMobileNav(false);
+    return true;
+  }
+
+  function loginUser(userId) {
+    const user = state.settings.users.find((item) => item.id === userId && item.status === "Aktiv");
+    if (!user) {
+      notify("Aktiv istifadəçi seçin.", "warning");
+      return;
+    }
+
+    setState((current) =>
+      appendAudit(
+        {
+          ...current,
+          settings: {
+            ...current.settings,
+            sessionUserId: user.id,
+            currentRole: user.role,
+          },
+        },
+        {
+          module: "Auth",
+          action: "Giriş edildi",
+          detail: `${user.name} · ${user.role}`,
+          role: user.role,
+        },
+      ),
+    );
+    notify(`${user.name} kimi giriş edildi.`);
+  }
+
+  async function loginWithPassword({ email, password }) {
+    if (!remoteApiEnabled) return;
+    setRemoteAuthStatus("checking");
+    setAuthError("");
+    try {
+      const login = await loginRemote(email, password);
+      setRemoteToken(login.token);
+      setRemoteUser(login.user);
+      if (login.user.mustChangePassword) {
+        setRemoteAuthStatus("signedIn");
+        notify("İlk giriş üçün yeni parol təyin edin.");
+        return;
+      }
+      const payload = await loadRemoteState();
+      const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
+      const sessionUser = { ...login.user, moduleAccess: login.user.companyModules || navItems.map((item) => item.id) };
+      const users = tenantUsers.some((user) => user.id === login.user.id)
+        ? tenantUsers.map((user) => (user.id === login.user.id ? { ...user, ...sessionUser } : user))
+        : [sessionUser, ...tenantUsers];
+      setState(
+        hydrateState({
+          ...(payload.state || initialState),
+          settings: {
+            ...(payload.state?.settings || initialState.settings),
+            users,
+            sessionUserId: login.user.id,
+            currentRole: login.user.role,
+          },
+        }),
+      );
+      setRemoteAuthStatus("signedIn");
+      notify(`${login.user.name} kimi giriş edildi.`);
+    } catch (error) {
+      setRemoteToken("");
+      setRemoteUser(null);
+      setRemoteAuthStatus("signedOut");
+      setAuthError(error instanceof Error ? error.message : "Giriş alınmadı.");
+    }
+  }
+
+  async function logoutUser() {
+    const userName = currentUser?.name || "İstifadəçi";
+    try {
+      if (remoteApiEnabled) {
+        await logoutRemote().catch(() => undefined);
+        setRemoteToken("");
+        setRemoteUser(null);
+        setRemoteAuthStatus("signedOut");
+      }
+      await signOut();
+      setState((current) =>
+        appendAudit(
+          {
+            ...current,
+            settings: {
+              ...current.settings,
+              sessionUserId: null,
+            },
+          },
+          {
+            module: "Auth",
+            action: "Çıxış edildi",
+            detail: userName,
+            role: activeRoleInfo?.name || "System",
+          },
+        ),
+      );
+      navigate("/login", { replace: true });
+    } catch (error) {
+      notify(error instanceof Error ? `Çıxış alınmadı: ${error.message}` : "Çıxış alınmadı. Yenidən cəhd edin.");
+    }
+  }
+
+  async function createUser(values) {
+    if (!requirePermission("settings.manage", "istifadəçi yaratmaq")) return;
+
+    const userName = String(values.name || "").trim();
+    const email = String(values.email || "").trim();
+    const role = values.role || defaultRoles[0].name;
+    const roleOptions = state.settings.roles || defaultRoles;
+    const moduleAccess = normalizeUserModuleAccess(
+      {
+        role,
+        moduleAccess: Array.isArray(values.moduleAccess) ? values.moduleAccess : undefined,
+      },
+      roleOptions,
+    );
+
+    if (!userName || !email) {
+      notify("İstifadəçi adı və email daxil edin.", "warning");
+      return;
+    }
+
+    let user = {
+      id: `USR-${Date.now()}`,
+      name: userName,
+      email,
+      role,
+      status: "Aktiv",
+      moduleAccess,
+    };
+
+    if (remoteApiEnabled) {
+      const password = String(values.password || "");
+      if (password.length < 8) {
+        notify("Server istifadəçisi üçün ən azı 8 simvoldan ibarət parol daxil edin.", "warning");
+        return;
+      }
+      try {
+        const remote = await createRemoteUser({ ...user, password });
+        user = { ...remote.user, moduleAccess };
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "İstifadəçi yaradılmadı.", "warning");
+        return;
+      }
+    }
+
+    setState((current) =>
+      auditCurrentState(
+        {
+          ...current,
+          settings: {
+            ...current.settings,
+            users: [user, ...(current.settings.users || [])],
+          },
+        },
+        {
+          module: "Ayarlar/Auth",
+          action: "İstifadəçi yaradıldı",
+          detail: `${user.name} · ${user.role}`,
+        },
+      ),
+    );
+    notify(`${user.name} istifadəçisi yaradıldı.`);
+  }
+
+  function updateUserStatus(userId, status) {
+    if (!requirePermission("settings.manage", "istifadəçi statusunu dəyişmək")) return;
+
+    setState((current) => {
+      const nextUsers = (current.settings.users || []).map((user) =>
+        user.id === userId ? { ...user, status } : user,
+      );
+      const nextSessionUserId = status !== "Aktiv" && current.settings.sessionUserId === userId ? null : current.settings.sessionUserId;
+
+      return auditCurrentState(
+        {
+          ...current,
+          settings: {
+            ...current.settings,
+            users: nextUsers,
+            sessionUserId: nextSessionUserId,
+          },
         },
         {
           module: "Ayarlar/Auth",
@@ -2646,7 +3074,13 @@ function App() {
         nextPeriod = {
           ...baseSnapshot,
           status: "Period bağlandı",
-          approvalStatus: "Təsdiq edildi",        audit = {
+          approvalStatus: "Təsdiq edildi",
+          payoutStatus: "Ödənildi",
+          paidAt: stamp,
+          payoutExpenseId: expenseId,
+          updatedAt: stamp,
+        };
+        audit = {
           module: "KPI",
           action: "KPI payout ödənildi",
           detail: `${period} · ${money(baseSnapshot.payoutAmount)} maliyyə xərcinə yazıldı`,
@@ -2905,511 +3339,7 @@ function App() {
         warehouseStock: {
           ...current.warehouseStock,
           [id]: [],
-        },
-      }));
-      setSelectedWarehouseId(id);
-      setModal(null);
-      notify("Yeni anbar yaradıldı.");
-      auditOperation({
-        module: "Anbar",
-        action: "Anbar yaradıldı",
-        detail: `${warehouse.name} (${warehouse.code})`,
-      });
-      return;
-    }
-
-    if (type === "product") {
-      const name = String(values.name || "").trim();
-      const sku = String(values.sku || "").trim().toUpperCase();
-      if (!name || !sku) {
-        notify("Məhsul adı və SKU daxil edin.", "warning");
-        return;
-      }
-      if (state.products.some((product) => normalize(product.sku) === normalize(sku))) {
-        notify("Bu SKU artıq məhsul kataloqunda var.", "warning");
-        return;
-      }
-      let persistedProduct = null;
-      if (activeTenantId && createDbProduct) {
-        try {
-          persistedProduct = await createDbProduct({
-            sku,
-            name,
-            description: values.category || null,
-            unit: values.unit || "ədəd",
-            price: Math.max(0, Number(values.salePrice || 0)),
-            minimum_stock: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
-            recommended_order_qty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
-            currency: "AZN",
-            vat_rate: 18,
-            is_active: true,
-          });
-          if (values.imageFile && uploadDbProductImage) {
-            persistedProduct = await uploadDbProductImage(persistedProduct.id, values.imageFile);
-          }
-        } catch (err) {
-          console.error("[products] DB insert failed:", err);
-          notify(`Məhsul DB-yə saxlanılmadı: ${err.message || err}`, "warning");
-          return;
-        }
-      }
-      const product = {
-        id: persistedProduct?.id || `PRD-${Date.now()}`,
-        name,
-        sku,
-        category: values.category || "Digər",
-        unit: values.unit || "ədəd",
-        salePrice: Math.max(0, Number(values.salePrice || 0)),
-        costPrice: Math.max(0, Number(values.costPrice || 0)),
-        reorderLevel: Math.max(0, Math.round(Number(values.reorderLevel || 0))),
-        recommendedOrderQty: Math.max(0, Math.round(Number(values.recommendedOrderQty || 0))),
-        serialTracked: values.serialTracked === "Bəli",
-        status: "Aktiv",
-        imagePath: persistedProduct?.image_path || "",
-        imageUrl: persistedProduct?.image_url || "",
-      };
-      setState((current) =>
-        auditCurrentState(
-          { ...current, products: [product, ...(current.products || [])] },
-          getCreateAudit("product", product),
-        ),
-      );
-      setModal(null);
-      notify(`${product.name} məhsul kataloquna əlavə edildi.`);
-      return;
-    }
-
-    if (type === "crm" && activeTenantId && createDbCustomer && values.name) {
-      createDbCustomer({
-        name: String(values.name).trim(),
-        phone: values.phone || null,
-        tax_id: values.fin || null,
-        notes: values.category ? `Kateqoriya: ${values.category}` : null,
-      }).catch((err) => {
-        console.error("[customers] DB insert failed:", err);
-        notify(`Müştəri DB-yə saxlanılmadı: ${err.message || err}`, "warning");
-      });
-    }
-
-    setState((current) => {
-      if (type === "crm") {
-        return {
-          ...current,
-          customers: [
-            {
-              fin: values.fin || `FIN${current.customers.length + 1}`,
-              name: values.name,
-              phone: values.phone,
-              category: values.category,
-              limit: Number(values.limit || 0),
-              debt: Number(values.debt || 0),
-              delay: 0,
-            },
-            ...current.customers,
-          ],
-        };
-      }
-
-      if (type === "sales" || type === "dashboard") {
-        const nextId = `SF-${Date.now()}`;
-        const orderProducts = Array.isArray(values.products) ? values.products : [];
-        const orderSellers = Array.isArray(values.sellers) ? values.sellers : [];
-        const amount = Number(values.orderTotal ?? values.amount ?? 0);
-        const paymentMethod = values.paymentMethod || "Nağd";
-        const isCreditSale = paymentMethod === "Kredit";
-        const creditPlan = isCreditSale
-          ? buildCreditPlan({
-              total: amount,
-              initialPayment: values.initialPayment,
-              months: values.creditMonths,
-            })
-          : null;
-        const depositPaid = isCreditSale
-          ? Math.min(Number(values.depositPaid ?? creditPlan.initialPayment ?? 0), creditPlan.initialPayment)
-          : 0;
-        const paid = isCreditSale
-          ? depositPaid
-          : ["Nağd", "Kart", "Köçürmə"].includes(paymentMethod)
-            ? amount
-            : 0;
-        const creditId = isCreditSale ? `KR-${String(nextId).replace(/\D/g, "")}` : null;
-        const contractId = isCreditSale ? nextContractNumber(current) : null;
-        const warehouseId = values.warehouseId || current.warehouses?.[0]?.id;
-        const warehouseName =
-          current.warehouses.find((warehouse) => warehouse.id === warehouseId)?.name || "Baş Anbar";
-        const productLines = orderProducts
-          .filter((item) => item.product)
-          .map((item) => ({
-            product: item.product,
-            qty: Number(item.qty || 0),
-            price: Number(item.price || 0),
-            serials: Array.isArray(item.serials) ? item.serials.filter(Boolean) : [],
-          }));
-        const productSummary = orderProducts
-          .filter((item) => item.product)
-          .map((item) => `${item.product}${Number(item.qty) > 1 ? ` x${Number(item.qty)}` : ""}`)
-          .join(", ");
-        const sellerSummary = orderSellers
-          .filter((item) => item.seller)
-          .map((item) => `${item.seller} ${Number(item.bonus || 0)}%`)
-          .join(", ");
-        const sellerBonuses = orderSellers
-          .filter((item) => item.seller)
-          .map((item) => ({
-            seller: item.seller,
-            bonus: Number(item.bonus || 0),
-          }));
-        const reservedByProduct = buildQuantityMap(productLines);
-        const nextWarehouseStock =
-          warehouseId && current.warehouseStock?.[warehouseId]
-            ? {
-                ...current.warehouseStock,
-                [warehouseId]: updateSerialStatuses(
-                  adjustStockRows(current.warehouseStock[warehouseId], reservedByProduct, {
-                    reservedDelta: 1,
-                    createMissing: true,
-                  }),
-                  productLines,
-                  "Rezervdə",
-                  nextId,
-                ),
-              }
-            : current.warehouseStock;
-        return {
-          ...current,
-          warehouseStock: nextWarehouseStock,
-          stock: adjustStockRows(current.stock, reservedByProduct, { reservedDelta: 1, createMissing: true }),
-          credits: isCreditSale
-            ? [
-                {
-                  id: creditId,
-                  customer: values.customer,
-                  fin: values.fin || "Yeni FİN",
-                  orderId: nextId,
-                  contractId,
-                  product: productSummary,
-                  device: productSummary,
-                  total: amount,
-                  initialPayment: creditPlan.initialPayment,
-                  requiredInitial: creditPlan.initialPayment,
-                  initialPaid: depositPaid,
-                  balance: creditPlan.balance,
-                  monthly: creditPlan.monthly,
-                  lastPayment: creditPlan.lastPayment,
-                  months: creditPlan.months,
-                  paidMonths: 0,
-                  rate: 0,
-                  next: "—",
-                  status: "Başlanmamış",
-                  installments: creditPlan.installments,
-                  createdFrom: "Satış sifarişi",
-                },
-                ...current.credits,
-              ]
-            : current.credits,
-          orders: [
-            {
-              id: nextId,
-              customer: values.customer,
-              fin: values.fin || "Yeni FİN",
-              products: productSummary || values.products,
-              productLines,
-              seller: sellerSummary || values.seller || "Təyin edilməyib",
-              sellerBonuses,
-              amount,
-              paid,
-              status: values.status || "Anbardadır",
-              date: values.date || currentBusinessDate,
-              address: values.address || "Qeyd edilməyib",
-              driver: "—",
-              warehouseId,
-              warehouseName,
-              paymentMethod,
-              paymentStatus: paymentMethod === "Kredit" ? "Kredit satış" : "Ödənilib",
-              creditId,
-              contractId,
-              creditMonths: creditPlan?.months || null,
-              initialPayment: creditPlan?.initialPayment || 0,
-              requiredInitial: creditPlan?.initialPayment || 0,
-              initialPaid: isCreditSale ? depositPaid : 0,
-              creditBalance: creditPlan?.balance || 0,
-              creditMonthly: creditPlan?.monthly || 0,
-              creditLastPayment: creditPlan?.lastPayment || 0,
-              deliveryStatus: "Təhvil gözləyir",
-              note: serializeOrderNotes(values.note, values.internalNotes) || "",
-              bonusTotal: Number(values.bonusTotal || 0),
-            },
-            ...current.orders,
-          ],
-          contracts: isCreditSale
-            ? [
-                {
-                  id: contractId,
-                  customer: values.customer,
-                  fin: values.fin || "Yeni FİN",
-                  product: productSummary,
-                  amount,
-                  status: "Hazırlanır",
-                  orderId: nextId,
-                },
-                ...current.contracts,
-              ]
-            : current.contracts,
-        };
-      }
-
-      if (type === "finance") {
-        return {
-          ...current,
-          expenses: [
-            {
-              id: `MX-${Date.now()}`,
-              description: values.description,
-              category: values.category,
-              date: values.date || currentBusinessDate,
-              amount: Number(values.amount || 0),
-              status: "Təsdiq gözləyir",
-            },
-            ...current.expenses,
-          ],
-        };
-      }
-
-      if (type === "credits") {
-        const creditPlan = buildCreditPlan({
-          total: values.total,
-          initialPayment: values.initialPayment,
-          months: values.months,
-        });
-        return {
-          ...current,
-          credits: [
-            {
-              id: `KR-${Date.now()}`,
-              customer: values.customer,
-              contractId: nextContractNumber(current),
-              product: values.product,
-              device: values.product,
-              total: creditPlan.total,
-              initialPayment: creditPlan.initialPayment,
-              balance: creditPlan.balance,
-              monthly: creditPlan.monthly,
-              lastPayment: creditPlan.lastPayment,
-              months: creditPlan.months,
-              paidMonths: 0,
-              rate: 0,
-              next: values.next || creditPlan.installments[0]?.due || "—",
-              status: "Aktiv",
-              installments: creditPlan.installments,
-            },
-            ...current.credits,
-          ],
-        };
-      }
-
-      if (type === "vendors") {
-        const vendor = normalizeVendor(values);
-        if (!vendor.name || !vendor.country) return current;
-        return {
-          ...current,
-          vendors: [vendor, ...current.vendors],
-        };
-      }
-
-      if (type === "hr") {
-        const manager = current.employees.find(
-          (employee) => getEmployeeKey(employee) === values.managerId || employee.name === values.managerName,
-        );
-        const documentsComplete = Math.max(0, Math.min(100, Number(values.documentsComplete ?? 100)));
-        const documentReviewRequired = documentsComplete < 100;
-        return {
-          ...current,
-          employees: [
-            {
-              id: `EMP-${Date.now()}`,
-              initials: values.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toLocaleUpperCase("az-AZ"),
-              name: values.name,
-              position: values.position,
-              department: values.department,
-              departmentParent: values.departmentParent || "",
-              managerId: manager ? getEmployeeKey(manager) : "",
-              managerName: manager?.name || values.managerName || "",
-              level: values.level || "Komanda üzvü",
-              salary: Number(values.salary || 0),
-              kpi: Number(values.kpi || 85),
-              hireDate: values.hireDate || currentBusinessDate,
-              workMode: values.workMode || "Ofis",
-              shift: values.shift || "09:00-18:00",
-              employmentType: values.employmentType || "Tam ştat",
-              leaveBalance: Math.max(0, Number(values.leaveBalance || 0)),
-              usedLeave: 0,
-              documentsComplete,
-              hrStatus: documentReviewRequired ? "Məlumat gözləyir" : "Stabil",
-              documentReviewRequired,
-              skills: String(values.skills || "")
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean),
-            },
-            ...current.employees,
-          ],
-        };
-      }
-
-      if (type === "contracts") {
-        return {
-          ...current,
-          contracts: [
-            {
-              id: nextContractNumber(current),
-              customer: values.customer,
-              fin: values.fin || "Yeni FİN",
-              product: values.product,
-              amount: Number(values.amount || 0),
-              status: "Hazırlanır",
-            },
-            ...current.contracts,
-          ],
-        };
-      }
-
-      return current;
-    });
-    setModal(null);
-    notify("Yeni qeyd əlavə olundu.");
-    auditOperation(getCreateAudit(type, values));
-  }
-
-  function updateVendor(vendorKey, values) {
-    if (!requirePermission("vendors.manage", "vendoru redaktə etmək")) return;
-
-    const currentVendor = (state.vendors || []).find((vendor) => getVendorKey(vendor) === vendorKey);
-    const nextVendor = normalizeVendor(values, currentVendor);
-    if (!currentVendor || !nextVendor.name || !nextVendor.country) {
-      notify("Vendor adı və ölkə daxil edin.", "warning");
-      return;
-    }
-    if ((state.vendors || []).some((vendor) => getVendorKey(vendor) !== vendorKey && normalize(vendor.name) === normalize(nextVendor.name))) {
-      notify("Bu adda vendor artıq mövcuddur.", "warning");
-      return;
-    }
-
-    setState((current) =>
-      auditCurrentState(
-        {
-          ...current,
-          vendors: (current.vendors || []).map((vendor) => (getVendorKey(vendor) === vendorKey ? nextVendor : vendor)),
-          purchaseOrders: (current.purchaseOrders || []).map((po) =>
-            po.vendor === currentVendor.name
-              ? {
-                  ...po,
-                  vendor: nextVendor.name,
-                  supplierSource: po.supplierSource === currentVendor.name ? nextVendor.name : po.supplierSource,
-                }
-              : po,
-          ),
-        },
-        {
-          module: "Vendor",
-          action: "Vendor redaktə edildi",
-          detail: `${currentVendor.name} → ${nextVendor.name}`,
-        },
-      ),
-    );
-    setModal(null);
-    notify(`${nextVendor.name} vendor məlumatları yeniləndi.`);
-  }
-
-  function deleteVendor(vendorKey) {
-    if (!requirePermission("vendors.manage", "vendoru silmək")) return;
-
-    const targetVendor = (state.vendors || []).find((vendor) => getVendorKey(vendor) === vendorKey);
-    if (!targetVendor) return;
-    const openPoCount = (state.purchaseOrders || []).filter((po) => po.vendor === targetVendor.name && isPurchaseOrderOpen(po)).length;
-    if (openPoCount > 0) {
-      notify("Bu vendor üzrə açıq PO var. Əvvəl PO-nu təsdiqləyin və ya vendoru Passiv edin.", "warning");
-      return;
-    }
-
-    setState((current) =>
-      auditCurrentState(
-        {
-          ...current,
-          vendors: (current.vendors || []).filter((vendor) => getVendorKey(vendor) !== vendorKey),
-        },
-        {
-          module: "Vendor",
-          action: "Vendor silindi",
-          detail: targetVendor.name,
-          status: "Tamamlandı",
-        },
-      ),
-    );
-    setModal(null);
-    notify(`${targetVendor.name} vendor reyestrindən silindi.`);
-  }
-
-  function updateWarehouse(id, values) {
-    if (!requirePermission("warehouse.manage", "anbarı redaktə etmək")) return;
-
-    setState((current) => ({
-      ...current,
-      warehouses: current.warehouses.map((warehouse) =>
-        warehouse.id === id
-          ? {
-              ...warehouse,
-              code: values.code,
-              name: values.name,
-              city: values.city,
-              address: values.address,
-              manager: values.manager,
-              type: values.type,
-              capacity: Number(values.capacity || 0),
-              status: values.status,
-            }
-          : warehouse,
-      ),
-    }));
-    setModal(null);
-    notify("Anbar məlumatları yeniləndi.");
-    auditOperation({
-      module: "Anbar",
-      action: "Anbar redaktə edildi",
-      detail: `${values.name} (${values.code})`,
-    });
-  }
-
-  function recordStockIntake(values) {
-    if (!requirePermission("warehouse.manage", "anbara mədaxil etmək")) return;
-
-    const warehouseId = values.warehouseId;
-    const warehouse = state.warehouses.find((item) => item.id === warehouseId);
-    const product = String(values.product || "").trim();
-    const qty = Math.max(0, Math.round(Number(values.qty || 0)));
-    const price = Math.max(0, Number(values.price || 0));
-
-    if (!warehouse || !product || qty <= 0) {
-      notify("Mədaxil üçün anbar, məhsul və etibarlı miqdar daxil edin.", "warning");
-      return;
-    }
-
-    setState((current) => {
-      const knownProduct = (current.products || []).find((item) => normalize(item.name) === normalize(product));
-      const catalogProduct = knownProduct
-        ? {
-            ...knownProduct,
-            salePrice: price || Number(knownProduct.salePrice || 0),
-          }
-        : {
-            id: `PRD-${Date.now()}`,
-            name: product,
-            sku: `SKU-${Date.now().toString().slice(-6)}`,
-            category: "Digər",
+  …4768 tokens truncated…  category: "Digər",
             unit: "ədəd",
             salePrice: price,
             costPrice: 0,
@@ -6727,4 +6657,5 @@ import {
 
 
 export default App;
+
 
