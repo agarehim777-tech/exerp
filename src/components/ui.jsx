@@ -52,13 +52,15 @@ export function PanelHeader({ title, subtitle, icon: Icon }) {
 }
 
 export function DataTable({ columns, rows, onRowClick }) {
+  const numericLabels = /məbləğ|qiymət|maaş|borc|qalıq|ödəni|gəlir|xərc|cəmi|ümumi|say|ədəd|faiz|kpi|aylıq|netto|brutto|vergi|dsmf|işsizlik|tibbi|stok|rezerv|norma|saat|gün/i;
+  const columnClass = (column) => numericLabels.test(String(column)) ? "is-numeric" : undefined;
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column}>{column}</th>
+              <th key={column} className={columnClass(column)}>{column}</th>
             ))}
           </tr>
         </thead>
@@ -66,7 +68,7 @@ export function DataTable({ columns, rows, onRowClick }) {
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex} onClick={() => onRowClick?.(rowIndex)} style={onRowClick ? { cursor: "pointer" } : undefined}>
               {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`}>{cell}</td>
+                <td key={`${rowIndex}-${cellIndex}`} className={columnClass(columns[cellIndex])}>{cell}</td>
               ))}
             </tr>
           ))}
@@ -155,3 +157,4 @@ export function Field({ label, value, onChange, full = false, disabled = false }
     </label>
   );
 }
+

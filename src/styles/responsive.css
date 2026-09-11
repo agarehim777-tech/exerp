@@ -1,0 +1,32 @@
+/* Canonical breakpoints: 1440, 1180, 900 and 640. */
+@media (max-width: 1440px) {
+  .main { padding: 22px; }
+}
+
+@media (max-width: 1180px) {
+  .main { padding: 18px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .main { padding: 16px; }
+  .page-header { margin-bottom: 16px; }
+  .hr-platform-toolbar { align-items: stretch; }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --panel-padding: 12px;
+    --content-gap: 10px;
+    --table-row-height: 42px;
+  }
+
+  .main { padding: 12px 10px 24px; }
+  .main .page-header h1 { font-size: 21px; }
+  .metric-grid,
+  .metric-grid.three,
+  .metric-grid.four { grid-template-columns: 1fr; }
+  .main :where(.primary-btn, .secondary-btn) { min-height: 44px; height: 44px; }
+  .main :where(input:not([type="checkbox"]):not([type="radio"]), select) { min-height: 44px !important; height: 44px !important; }
+}
+

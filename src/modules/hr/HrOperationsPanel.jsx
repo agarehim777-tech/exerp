@@ -14,10 +14,11 @@ const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimum
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const currentPeriod = () => new Date().toISOString().slice(0, 7);
 
-export default function HrOperationsPanel({ employees = [] }) {
+export default function HrOperationsPanel({ employees = [], controlledTab = null }) {
   const { activeTenantId } = useAuth();
   const ops = useHrOperations(activeTenantId, employees);
-  const [tab, setTab] = useState("attendance");
+  const [internalTab, setInternalTab] = useState("attendance");
+  const tab = controlledTab || internalTab;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const [period, setPeriod] = useState(currentPeriod());
@@ -84,13 +85,13 @@ export default function HrOperationsPanel({ employees = [] }) {
         <input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} style={S.input} />
       </div>
 
-      <div style={S.tabs}>
+      {!controlledTab && <div style={S.tabs}>
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} style={{ ...S.tab, ...(tab === id ? S.tabOn : {}) }}>
+          <button key={id} onClick={() => setInternalTab(id)} style={{ ...S.tab, ...(tab === id ? S.tabOn : {}) }}>
             <Icon size={15} /> {label}
           </button>
         ))}
-      </div>
+      </div>}
 
       <div style={S.guide}>
         <ActiveTabIcon size={19} />
@@ -323,3 +324,4 @@ const S = {
   err: { background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", padding: 10, borderRadius: 8, fontSize: 13 },
   loading: { background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: 10, borderRadius: 8, fontSize: 13 },
 };
+

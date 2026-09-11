@@ -1,0 +1,26 @@
+.main > .stack {
+  gap: var(--content-gap);
+}
+
+.density-compact,
+.main > .stack:not(.density-comfortable) {
+  --content-gap: 12px;
+  --panel-padding: var(--panel-padding-compact);
+  --table-row-height: 40px;
+}
+
+.density-comfortable {
+  --content-gap: 18px;
+  --panel-padding: 18px;
+  --table-row-height: 46px;
+}
+
+.main .panel {
+  padding: var(--panel-padding);
+}
+
+.dashboard-page .panel,
+.dashboard-page .metric-card {
+  border-radius: var(--radius-dashboard);
+}
+

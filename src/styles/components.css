@@ -1,0 +1,53 @@
+.main .panel,
+.main .metric-card {
+  border-radius: var(--radius-panel);
+}
+
+.main :where(.primary-btn, .secondary-btn) {
+  min-height: var(--control-height);
+  height: var(--control-height);
+  border-radius: var(--radius-control);
+  padding-inline: 14px;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.main :where(.primary-btn, .secondary-btn).compact {
+  min-height: var(--control-height-compact);
+  height: var(--control-height-compact);
+  font-size: var(--font-size-sm);
+}
+
+.main :where(input:not([type="checkbox"]):not([type="radio"]), select) {
+  min-height: var(--control-height) !important;
+  height: var(--control-height) !important;
+  border-radius: var(--radius-control);
+}
+
+.main textarea {
+  min-height: 76px;
+  border-radius: var(--radius-control);
+}
+
+.main .table-wrap table {
+  font-size: var(--font-size-sm);
+}
+
+.main .table-wrap :where(th, td) {
+  height: var(--table-row-height);
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.main .table-wrap th {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.main .table-wrap .is-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+

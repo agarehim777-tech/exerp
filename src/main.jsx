@@ -8,6 +8,7 @@ import RouteMeta from "./components/RouteMeta.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
+import "./styles/index.css";
 import { installChunkErrorRecovery } from "./lib/pwa.js";
 
 initObservability();
@@ -87,3 +88,4 @@ createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+

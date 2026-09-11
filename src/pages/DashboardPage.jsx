@@ -116,7 +116,7 @@ export default function DashboardPage({
   const maxProductQuantity = Math.max(1, ...productPerformance.map((row) => row.quantity));
 
   return (
-    <div className="stack">
+    <div className="stack dashboard-page density-comfortable">
       <section className="mobile-operations" aria-label="Sürətli əməliyyatlar">
         <button type="button" onClick={() => navigate('/satis/sifarisler')}><Plus size={18} /><span>Satış</span></button>
         <button type="button" onClick={() => navigate('/maliyye/kassa')}><BadgeDollarSign size={18} /><span>Ödəniş</span></button>
@@ -209,4 +209,5 @@ export default function DashboardPage({
     </div>
   );
 }
+
 

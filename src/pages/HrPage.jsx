@@ -134,9 +134,11 @@ export default function HrPage({
         {hrView === "Recruitment" && <HrRecruitmentPlatform rows={recruitmentRows} onCreate={onCreateVacancy} />}
       </Panel>
 
-      <HrOperationsPanel employees={allEmployees} />
+      {hrView === "İş vaxtı" && <HrOperationsPanel employees={allEmployees} controlledTab="attendance" />}
+      {hrView === "Məzuniyyət" && <HrOperationsPanel employees={allEmployees} controlledTab="leave" />}
+      {hrView === "Payroll" && <HrOperationsPanel employees={allEmployees} controlledTab="payroll" />}
 
-      <Panel className="hr-planning-panel">
+      {hrView === "Recruitment" && <Panel className="hr-planning-panel">
         <PanelHeader
           title="HR planlama"
           subtitle="Vakansiya, onboarding, təlim və maaş forecast göstəriciləri"
@@ -171,9 +173,9 @@ export default function HrPage({
             <StatusBadge status={row.status} />,
           ])}
         />
-      </Panel>
+      </Panel>}
 
-      <section className="hr-structure-layout">
+      {hrView === "Komanda" && <section className="hr-structure-layout">
         <Panel className="hr-builder-panel">
           <PanelHeader title="Struktur qurucusu" subtitle="Əməkdaşı seçin, rəhbər və şöbə əlaqəsini təyin edin" icon={UserCog} />
           {selectedEmployee ? (
@@ -197,9 +199,9 @@ export default function HrPage({
           </div>
           <HrStructureTree structure={structure} employees={allEmployees} onSelectEmployee={setSelectedEmployeeName} />
         </Panel>
-      </section>
+      </section>}
 
-      <Panel className="hr-employee-registry-panel">
+      {hrView === "Komanda" && <Panel className="hr-employee-registry-panel">
         <PanelHeader title={`Əməkdaşlar (${visibleRegistryEmployees.length})`} subtitle="Vəzifə, şöbə, maaş və KPI" />
         <DataTable
           columns={["Əməkdaş", "Vəzifə", "Şöbə", "Rəhbər", "Səviyyə", "Maaş", "KPI", ""]}
@@ -237,7 +239,8 @@ export default function HrPage({
             </div>
           ))}
         </div>
-      </Panel>
+      </Panel>}
     </div>
   );
 }
+

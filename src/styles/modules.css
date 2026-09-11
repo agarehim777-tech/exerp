@@ -1,0 +1,29 @@
+.main > .stack:not(.dashboard-page) .metric-card {
+  min-height: 104px;
+  padding: 16px;
+  background: var(--panel);
+  box-shadow: 0 2px 8px rgba(6, 78, 59, 0.05);
+}
+
+.main > .stack:not(.dashboard-page) .metric-card::after {
+  display: none;
+}
+
+.main > .stack:not(.dashboard-page) .metric-card strong {
+  font-size: 22px;
+}
+
+.hr-platform-panel {
+  overflow: hidden;
+}
+
+.hr-platform-panel > .hr-platform-toolbar {
+  margin-bottom: 12px;
+}
+
+.hr-planning-panel,
+.hr-structure-layout,
+.hr-employee-registry-panel {
+  animation: none;
+}
+
