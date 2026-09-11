@@ -27,3 +27,41 @@
   animation: none;
 }
 
+.dashboard-page .mobile-operations {
+  display: flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d4e0dc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(25, 65, 53, 0.05);
+}
+
+.dashboard-page .mobile-operations button {
+  display: inline-flex;
+  min-width: 92px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #31574b;
+  font-size: var(--font-size-sm);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.dashboard-page .mobile-operations button:first-child {
+  background: #08765d;
+  color: #fff;
+}
+
+.dashboard-page .mobile-operations button:not(:first-child):hover {
+  background: #edf5f2;
+  color: #08765d;
+}
+

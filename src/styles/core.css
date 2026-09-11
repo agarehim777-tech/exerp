@@ -24,3 +24,11 @@ textarea {
   font-size: var(--font-size-page);
 }
 
+body { background: #f3f6f5; }
+
+.main {
+  background: linear-gradient(180deg, rgba(226, 239, 234, 0.72) 0, rgba(243, 246, 245, 0) 190px), #f3f6f5;
+}
+
+.main :where(button, input, select, textarea) { letter-spacing: 0; }
+
