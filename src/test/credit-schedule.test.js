@@ -28,8 +28,9 @@ describe("credit schedule", () => {
     expect(debt).toMatchObject({
       phase: "initial",
       paid: 1000,
-      balance: 4000,
+      balance: 19000,
       requiredInitial: 5000,
+      remainingInitial: 4000,
     });
   });
 
@@ -160,4 +161,5 @@ describe("month-end credit schedules", () => {
     expect(shiftPaymentDate("2026-03-31", -1)).toBe("2026-02-28");
   });
 });
+
 

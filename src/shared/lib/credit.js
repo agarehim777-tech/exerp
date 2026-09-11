@@ -202,12 +202,13 @@ export function getCreditDebtFormula(item) {
     return {
       total: Number(item.plan.total || 0),
       paid: initialPaid,
-      balance: Math.max(0, requiredInitial - initialPaid),
+      balance: Math.max(0, Number(item.plan.total || 0) - initialPaid),
       remainingMonths: Number(item.plan.months || 0),
       nextAmount: 0,
       phase: "initial",
       requiredInitial,
       initialPaid,
+      remainingInitial: Math.max(0, requiredInitial - initialPaid),
     };
   }
 
@@ -361,4 +362,5 @@ export function applyCreditPrincipalPayment(credit, principalAmount) {
 export function getReceivableClosureAmount(row) {
   return Math.max(0, Number(row?.amount || 0));
 }
+
 

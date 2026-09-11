@@ -380,11 +380,13 @@ function CreditsPage({
                 <TwoLine title={money(debt.total)} subtitle={`${plan.months} ay · ${credit.date || "tarixsiz"}`} />,
                 <TwoLine
                   title={money(debt.paid)}
-                  subtitle={debt.phase === "initial" ? `Yığılan beh · hədəf ${money(debt.requiredInitial)}` : `${credit.paidMonths || 0}/${plan.months} ay bağlanıb`}
+                  subtitle={debt.phase === "initial"
+                    ? <b className="credit-deposit-target">Yığılan beh · hədəf {money(debt.requiredInitial)}</b>
+                    : `${credit.paidMonths || 0}/${plan.months} ay bağlanıb`}
                 />,
                 <TwoLine
                   title={money(debt.balance)}
-                  subtitle={debt.phase === "initial" ? "Qalıq ilkin ödəniş" : `Növbəti ${money(debt.nextAmount)}`}
+                  subtitle={debt.phase === "initial" ? "Qalıq ümumi borc" : `Növbəti ${money(debt.nextAmount)}`}
                 />,
                 <TwoLine title={isCreditStarted(credit) ? paymentState.nextInstallment?.due || credit.next || "—" : "Tarix təyin edilməyib"} subtitle={!isCreditStarted(credit) ? "Başlatma gözləyir" : nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
                 <div className="credit-status-stack">
@@ -673,5 +675,6 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
     </div>
   );
 }
+
 
 
