@@ -160,15 +160,7 @@ export function useOrders(tenantId) {
 
   useRealtimeResync(tenantId, ['orders', 'order_items'], fetchAll, { channelPrefix: 'orders' });
 
-  const registerInitialPayment = async (orderId, amount, currency = 'AZN') => {
-    const expected = Number(amount || 0);
-    if (!orderId || !Number.isFinite(expected) || expected <= 0) return;
-    const { data: order, error: orderError } = await supabase.from('orders')
-      .select('id,paid_amount').eq('id', orderId).eq('tenant_id', tenantId).single();
-    if (orderError) throw orderError;
-    const missingAmount = Number((expected - Number(order.paid_amount || 0)).toFixed(2));
-    if (missingAmount <= 0) return;
-
+  const resolveMainCashAccount = async (currency = 'AZN') => {
     const code = mainCashCode(tenantId);
     let { data: account, error: accountError } = await supabase.from('cash_accounts')
       .select('id').eq('tenant_id', tenantId).eq('account_no', code).eq('is_active', true)
@@ -199,6 +191,19 @@ export function useOrders(tenantId) {
         account = createdAccount;
       }
     }
+    return account;
+  };
+
+  const registerInitialPayment = async (orderId, amount, currency = 'AZN') => {
+    const expected = Number(amount || 0);
+    if (!orderId || !Number.isFinite(expected) || expected <= 0) return;
+    const { data: order, error: orderError } = await supabase.from('orders')
+      .select('id,paid_amount').eq('id', orderId).eq('tenant_id', tenantId).single();
+    if (orderError) throw orderError;
+    const missingAmount = Number((expected - Number(order.paid_amount || 0)).toFixed(2));
+    if (missingAmount <= 0) return;
+
+    const account = await resolveMainCashAccount(currency);
     const { error: paymentError } = await supabase.rpc('register_order_payment', {
       _order_id: orderId,
       _amount: missingAmount,
@@ -318,6 +323,30 @@ export function useOrders(tenantId) {
 
   const create = async ({ items = [], request_key: requestKey, credit = null, bonus_allocations: bonusAllocations = [], ...header }) => {
     if (requestKey && header.customer_id) {
+      const initialPayment = Number(credit?.initial_payment || 0);
+      const paymentAccount = initialPayment > 0
+        ? await resolveMainCashAccount(header.currency || 'AZN')
+        : null;
+      const completeResult = await supabase.rpc('create_sales_order_complete', {
+        _tenant_id: tenantId,
+        _request_key: requestKey,
+        _order_no: header.order_no,
+        _customer_id: header.customer_id,
+        _order_date: header.order_date || new Date().toISOString().slice(0, 10),
+        _currency: header.currency || 'AZN',
+        _notes: header.notes || null,
+        _items: items,
+        _credit: credit,
+        _bonus_allocations: bonusAllocations,
+        _initial_payment: initialPayment,
+        _account_id: paymentAccount?.id || null,
+      });
+      if (!completeResult.error) {
+        await fetchAll();
+        return { id: completeResult.data.order_id, creditId: completeResult.data.credit_id };
+      }
+      if (!isMissingRpc(completeResult.error)) throw completeResult.error;
+
       const { data: atomicResult, error: atomicError } = await supabase.rpc('create_sales_order_atomic', {
         _tenant_id: tenantId,
         _request_key: requestKey,
