@@ -65,3 +65,146 @@
   color: #08765d;
 }
 
+/* Credit workspace: one reading path, fewer competing cards. */
+.credit-detail-modal-card {
+  width: min(1040px, calc(100vw - 32px));
+  border-radius: 8px;
+  background: #f5f8f7;
+}
+
+.credit-detail-modal-head {
+  min-height: 82px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #d8e2de;
+}
+
+.credit-detail-modal-head h2 { font-size: 20px; }
+.credit-detail-modal-head > div > p { margin-top: 4px; }
+.credit-detail-title-meta { margin-top: 7px; }
+.credit-detail-title-meta span { max-width: 210px; border-radius: 5px; background: #f1f5f3; }
+.credit-detail-modal-body { padding: 14px; }
+
+.credit-detail-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  gap: 12px;
+}
+
+.credit-detail-layout.not-started { grid-template-columns: minmax(0, 1fr); }
+.credit-detail-layout.not-started .credit-detail-aside { position: static; }
+.credit-detail-layout.not-started .credit-health-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.credit-detail-primary {
+  gap: 12px;
+  padding: 14px;
+  border-color: #d6e1dd;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.credit-context-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #dde6e2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.credit-context-grid div {
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 0;
+  border-right: 1px solid #e3eae7;
+  border-radius: 0;
+  background: transparent;
+}
+
+.credit-context-grid div:last-child { border-right: 0; }
+
+.credit-contract-snapshot { gap: 0; border: 1px solid #d8e3df; border-radius: 8px; overflow: hidden; }
+
+.credit-contract-tile {
+  min-height: 82px;
+  padding: 12px 14px;
+  border: 0;
+  border-right: 1px solid #dfe7e4;
+  border-radius: 0;
+  background: #fff;
+}
+
+.credit-contract-tile:last-child { border-right: 0; }
+.credit-contract-tile.total { background: #f4f9fc; }
+.credit-contract-tile.paid { background: #f2faf6; }
+.credit-contract-tile.balance { background: #fff8f1; }
+
+.credit-terms-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #dce5e2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.credit-terms-strip > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 11px 13px;
+  border-right: 1px solid #e2e9e6;
+}
+
+.credit-terms-strip > div:last-child { border-right: 0; }
+.credit-terms-strip span { color: #6a7f78; font-size: 11px; }
+.credit-terms-strip strong { color: #173a30; font-size: 15px; font-variant-numeric: tabular-nums; }
+.credit-terms-strip .warning { background: #fff8ed; }
+.credit-terms-strip .warning strong { color: #a6530c; }
+.credit-terms-strip .complete { background: #f0faf5; }
+.credit-terms-strip .complete strong { color: #08765d; }
+
+.credit-payment-alert,
+.credit-plan-card,
+.credit-payment-history,
+.credit-schedule-edit-block,
+.credit-payment-form,
+.credit-detail-actions,
+.credit-health-grid div {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.credit-detail-records { grid-template-columns: minmax(260px, 0.82fr) minmax(360px, 1.18fr); }
+
+@media (max-width: 900px) {
+  .credit-detail-layout,
+  .credit-detail-layout.is-started { grid-template-columns: 1fr; }
+  .credit-detail-aside { position: static; }
+  .credit-context-grid,
+  .credit-contract-snapshot,
+  .credit-terms-strip,
+  .credit-detail-layout.not-started .credit-health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .credit-context-grid div:nth-child(2n),
+  .credit-contract-tile:nth-child(2n),
+  .credit-terms-strip > div:nth-child(2n) { border-right: 0; }
+  .credit-context-grid div:nth-child(-n + 2),
+  .credit-contract-tile:nth-child(-n + 2),
+  .credit-terms-strip > div:nth-child(-n + 2) { border-bottom: 1px solid #e2e9e6; }
+}
+
+@media (max-width: 640px) {
+  .credit-detail-modal-head { padding: 14px; }
+  .credit-detail-modal-body { padding: 8px; }
+  .credit-detail-primary { padding: 10px; }
+  .credit-context-grid,
+  .credit-contract-snapshot,
+  .credit-terms-strip,
+  .credit-detail-layout.not-started .credit-health-grid,
+  .credit-detail-records { grid-template-columns: 1fr; }
+  .credit-context-grid div,
+  .credit-contract-tile,
+  .credit-terms-strip > div { border-right: 0; border-bottom: 1px solid #e2e9e6; }
+  .credit-context-grid div:last-child,
+  .credit-contract-tile:last-child,
+  .credit-terms-strip > div:last-child { border-bottom: 0; }
+}
+

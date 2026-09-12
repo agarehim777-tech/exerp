@@ -3969,10 +3969,13 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
   const { credit, plan, paymentState, progress } = item;
   const debt = getCreditDebtFormula(item);
   const started = isCreditStarted(credit);
+  const requiredInitial = Number(credit.requiredInitial ?? plan.initialPayment ?? credit.initialPayment ?? 0);
+  const initialPaid = Math.min(requiredInitial, Number(credit.initialPaid ?? credit.paid ?? 0));
+  const initialRemaining = Math.max(0, requiredInitial - initialPaid);
 
   return (
     <div className="credit-detail">
-      <div className="credit-detail-layout">
+      <div className={`credit-detail-layout ${started ? "is-started" : "not-started"}`}>
         <section className="credit-detail-primary">
           <div className="credit-detail-head">
             <div>
@@ -3992,12 +3995,23 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
             </div>
           ) : null}
           <CreditContractSnapshot item={item} />
-          <CreditDebtFormula item={item} />
-          <div className="credit-detail-values">
-            <TwoLine title="İlkin müqavilə" subtitle={money(debt.total)} />
-            <TwoLine title="İlkin ödəniş" subtitle={money(plan.initialPayment)} />
-            <TwoLine title="Qalan ay" subtitle={`${debt.remainingMonths} ay`} />
-            <TwoLine title="Müddət" subtitle={`${plan.months} ay`} />
+          <div className="credit-terms-strip" aria-label="İlkin ödəniş və müqavilə şərtləri">
+            <div>
+              <span>İlkin ödəniş hədəfi</span>
+              <strong>{money(requiredInitial)}</strong>
+            </div>
+            <div>
+              <span>Yığılan ilkin ödəniş</span>
+              <strong>{money(initialPaid)}</strong>
+            </div>
+            <div className={initialRemaining > 0 ? "warning" : "complete"}>
+              <span>Qalıq ilkin ödəniş</span>
+              <strong>{money(initialRemaining)}</strong>
+            </div>
+            <div>
+              <span>Müddət</span>
+              <strong>{plan.months} ay</strong>
+            </div>
           </div>
           <div className="credit-plan-card">
             <div className="credit-plan-note">
