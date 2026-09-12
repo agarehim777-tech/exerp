@@ -39,3 +39,12 @@ const report = buildOperationalHealth({ orders, credits, cashTransactions: payme
 console.log(JSON.stringify({ tenant, ...report.summary, issues: report.issues }, null, 2));
 if (!report.summary.healthy) process.exit(1);
 
+const scanResponse = await fetch(`${base}/rest/v1/rpc/scan_erp_integrity`, {
+  method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
+  body: JSON.stringify({ _tenant_id: tenant }),
+});
+const scan = await scanResponse.json();
+if (!scanResponse.ok) throw new Error(`Server reconciliation scan failed: ${JSON.stringify(scan).slice(0, 300)}`);
+console.log(JSON.stringify({ serverReconciliation: scan }, null, 2));
+if (Number(scan.critical_count || 0) > 0) process.exit(1);
+

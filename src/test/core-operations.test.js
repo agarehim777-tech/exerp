@@ -10,11 +10,13 @@ import {
   completeDelivery,
   createIdempotencyKey,
   createSalesOrderAtomic,
+  createSalesOrderComplete,
   createCreditContract,
   lockAccountingPeriod,
   reopenAccountingPeriod,
   postCreditPayment,
   reserveStock,
+  reverseSalesOrder,
   startCreditContract,
 } from "../services/coreOperations";
 
@@ -41,6 +43,28 @@ describe("normalized core operations", () => {
       _order_no: "SF-1002",
       _credit: expect.objectContaining({ contract_no: "IN-1002" }),
     }));
+  });
+
+  it("requires lifecycle v3 before creating a complete sale", async () => {
+    rpc.mockResolvedValueOnce({ data: { schema_version: 3 }, error: null });
+    rpc.mockResolvedValueOnce({ data: { order_id: "order-1", credit_id: "credit-1" }, error: null });
+    await createSalesOrderComplete({ tenantId: "tenant-1", requestKey: "sales:req-1", orderNo: "SF-1", customerId: "customer-1", orderDate: "2026-09-12", items: [{ product_id: "p-1", qty: 1 }] });
+    expect(rpc).toHaveBeenNthCalledWith(1, "erp_runtime_capabilities");
+    expect(rpc).toHaveBeenNthCalledWith(2, "create_sales_order_complete", expect.objectContaining({ _request_key: "sales:req-1" }));
+  });
+
+  it("fails closed when the lifecycle migration is missing", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "function does not exist" } });
+    await expect(createSalesOrderComplete({ tenantId: "tenant-1", requestKey: "sales:req-2", orderNo: "SF-2", customerId: "customer-1", orderDate: "2026-09-12", items: [{}] }))
+      .rejects.toMatchObject({ code: "ERP_SCHEMA_MIGRATION_REQUIRED" });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("reverses a sale with tenant scope and idempotency", async () => {
+    rpc.mockResolvedValueOnce({ data: { schema_version: 3 }, error: null });
+    rpc.mockResolvedValueOnce({ data: { status: "cancelled" }, error: null });
+    await reverseSalesOrder({ tenantId: "tenant-1", orderId: "order-1", reason: "customer request", requestKey: "reverse:req-1" });
+    expect(rpc).toHaveBeenNthCalledWith(2, "reverse_sales_order_v3", { _tenant_id: "tenant-1", _order_id: "order-1", _reason: "customer request", _request_key: "reverse:req-1" });
   });
 
   it("generates a unique client request key", () => {

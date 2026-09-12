@@ -42,8 +42,8 @@ export function useCustomers(tenantId) {
     ]);
     if (customerResult.error) setError(customerResult.error);
     else {
-      const storedLevels = JSON.parse(localStorage.getItem(`crm-levels:${tenantId}`) || 'null');
-      const nextLevels = levelResult.data ? { silver: Number(levelResult.data.silver_min), gold: Number(levelResult.data.gold_min), platinum: Number(levelResult.data.platinum_min) } : (storedLevels || { silver: 1000, gold: 5000, platinum: 15000 });
+      if (levelResult.error) setError(levelResult.error);
+      const nextLevels = levelResult.data ? { silver: Number(levelResult.data.silver_min), gold: Number(levelResult.data.gold_min), platinum: Number(levelResult.data.platinum_min) } : { silver: 1000, gold: 5000, platinum: 15000 };
       setLevels(nextLevels);
       const paidByCustomer = new Map();
       (orderResult.data || []).forEach((row) => paidByCustomer.set(row.customer_id, Number(row.paid_total || 0)));
@@ -80,8 +80,7 @@ export function useCustomers(tenantId) {
   const saveLevels = async (next) => {
     const payload = { tenant_id: tenantId, silver_min: Number(next.silver), gold_min: Number(next.gold), platinum_min: Number(next.platinum) };
     const { error } = await supabase.from('customer_level_settings').upsert(payload, { onConflict: 'tenant_id' });
-    if (error && !String(error.message || '').includes('customer_level_settings')) throw error;
-    localStorage.setItem(`crm-levels:${tenantId}`, JSON.stringify(next));
+    if (error) throw error;
     setLevels(next);
     await fetchAll();
   };

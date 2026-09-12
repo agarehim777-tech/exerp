@@ -4,6 +4,8 @@ import { useBlobReconciliation } from "../../shared/hooks/useBlobReconciliation.
 import { useOperationalHealth } from "../../shared/hooks/useOperationalHealth.js";
 import { useRecoveryStatus } from "../../shared/hooks/useRecoveryStatus.js";
 import { reconciliationToCsv } from "../../shared/lib/blobReconciliation.js";
+import { supabase } from "../../integrations/supabase/client.js";
+import { createIdempotencyKey } from "../../services/coreOperations.js";
 import {
   badge, card, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -46,6 +48,10 @@ export default function DataReconciliationPage() {
   const operations = useOperationalHealth(tenantId);
   const recovery = useRecoveryStatus();
   const [tab, setTab] = useState("operations");
+  const [serverReport, setServerReport] = useState(null);
+  const [repairReason, setRepairReason] = useState("");
+  const [serverBusy, setServerBusy] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
@@ -61,13 +67,32 @@ export default function DataReconciliationPage() {
   };
 
   const s = report?.summary;
+  const runServerScan = async () => {
+    setServerBusy(true); setServerError("");
+    const { data, error: scanError } = await supabase.rpc("scan_erp_integrity", { _tenant_id: tenantId });
+    setServerBusy(false);
+    if (scanError) { setServerError(scanError.message); return; }
+    setServerReport(data);
+  };
+  const repairIssue = async (issue) => {
+    if (repairReason.trim().length < 3) { setServerError("Düzəlişi təsdiqləmək üçün səbəb yazın."); return; }
+    setServerBusy(true); setServerError("");
+    const { error: repairError } = await supabase.rpc("repair_erp_integrity_issue", {
+      _tenant_id: tenantId, _order_id: issue.order_id, _reason: repairReason.trim(),
+      _request_key: createIdempotencyKey(`reconciliation:${issue.order_id}`),
+    });
+    if (repairError) { setServerBusy(false); setServerError(repairError.message); return; }
+    setRepairReason("");
+    await runServerScan();
+    operations.refresh();
+  };
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div style={card}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" style={primaryBtn} onClick={() => { refresh(); operations.refresh(); }} disabled={loading || operations.loading}>
-            {loading || operations.loading ? "Yoxlanılır…" : "Sistemi yoxla"}
+          <button type="button" style={primaryBtn} onClick={() => { refresh(); operations.refresh(); runServerScan(); }} disabled={loading || operations.loading || serverBusy}>
+            {loading || operations.loading || serverBusy ? "Yoxlanılır…" : "Sistemi yoxla"}
           </button>
           <button type="button" style={secondaryBtn} onClick={downloadCsv} disabled={!report}>
             CSV ixrac
@@ -80,6 +105,7 @@ export default function DataReconciliationPage() {
 
       {error && <div style={msgBox}>Xəta: {error}</div>}
       {operations.error && <div style={msgBox}>Əməliyyat yoxlaması: {operations.error}</div>}
+      {serverError && <div style={msgBox}>Server reconciliation: {serverError}</div>}
 
       {report && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -128,6 +154,20 @@ export default function DataReconciliationPage() {
               </tbody>
             </table>
           </div>
+          {serverReport && (
+            <div style={card}>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>Database lifecycle preview</div>
+              <p style={{ opacity: 0.72 }}>Yoxlama məlumatı dəyişmir. Düzəliş yalnız səbəb yazıldıqdan və ayrıca düymə basıldıqdan sonra tətbiq edilir.</p>
+              <input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" style={{ width: "100%", marginBottom: 10 }} />
+              <table style={table}>
+                <thead><tr><th style={th}>Sifariş</th><th style={th}>Uyğunsuzluq</th><th style={th}>Say</th><th style={th}>Əməliyyat</th></tr></thead>
+                <tbody>
+                  {!(serverReport.issues || []).length && <EmptyRow colSpan={4} text="Database səviyyəsində kritik uyğunsuzluq yoxdur." />}
+                  {(serverReport.issues || []).map((issue) => <tr key={`${issue.type}:${issue.order_id}`}><td style={td}>{issue.order_no}</td><td style={td}>{issue.type}</td><td style={td}>{issue.count}</td><td style={td}><button type="button" style={secondaryBtn} disabled={serverBusy} onClick={() => repairIssue(issue)}>Təsdiqli düzəliş</button></td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

@@ -291,6 +291,8 @@ import {
   hasPageAction,
 } from "./shared/lib/appHelpers.jsx";
 
+const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === "true";
+
 function App() {
 
   const [state, setState] = useState(() => hydrateState(withoutOperationalData(initialState)));
@@ -309,6 +311,7 @@ function App() {
   });
 
   useEffect(() => {
+    if (!ENABLE_LEGACY_WRITES) return;
     if (!activeTenantId || !dbOrders.length) return;
     const used = dbOrders.map(order => String(order.order_no || "").match(/^SF-(\d+)$/u)).filter(Boolean).map(match => Number(match[1]));
     let next = Math.max(1000, ...used) + 1;
@@ -321,6 +324,7 @@ function App() {
   }, [activeTenantId, dbOrders, updateDbOrder]);
 
   useEffect(() => {
+    if (!ENABLE_LEGACY_WRITES) return;
     if (!activeTenantId || !dbOrders.length || !(state.cashEntries || []).length) return;
     const paidByOrder = new Map();
     (state.cashEntries || []).filter(entry => Number(entry.principal ?? entry.amount ?? 0) > 0).forEach(entry => {
@@ -344,6 +348,7 @@ function App() {
   // Older sales stored seller percentages only inside the tenant snapshot.
   // Recover those assignments before the DB read-bridge replaces legacy rows.
   useEffect(() => {
+    if (!ENABLE_LEGACY_WRITES) return undefined;
     if (!activeTenantId || !tenantStateReady || !dbOrders.length) return;
     const migrationKey = `${activeTenantId}:${dbOrders.map((row) => `${row.id}:${row.bonus_assignments?.length || 0}`).join("|")}`;
     if (legacyBonusMigrationRef.current === migrationKey) return;

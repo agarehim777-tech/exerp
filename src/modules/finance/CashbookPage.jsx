@@ -172,10 +172,7 @@ function TransactionsPanel({ book, tenantId }) {
   const [hiddenIds, setHiddenIds] = useState(new Set());
   const [showHidden, setShowHidden] = useState(false);
 
-  useEffect(() => {
-    try { setHiddenIds(new Set(JSON.parse(localStorage.getItem(`erp.cash.hidden.${tenantId}`) || "[]"))); }
-    catch { setHiddenIds(new Set()); }
-  }, [tenantId]);
+  useEffect(() => { setHiddenIds(new Set()); }, [tenantId]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -228,7 +225,6 @@ function TransactionsPanel({ book, tenantId }) {
     }).map(item => item.id);
     const next = new Set([...hiddenIds, transaction.id, ...pairIds]);
     setHiddenIds(next);
-    localStorage.setItem(`erp.cash.hidden.${tenantId}`, JSON.stringify([...next]));
     setMsg("Ləğv edilmiş əməliyyat cədvəldən silindi. Audit məlumatı qorunur.");
   };
 
@@ -240,7 +236,6 @@ function TransactionsPanel({ book, tenantId }) {
     }).map(item => item.id);
     const next = new Set([...hiddenIds].filter(id => !pairIds.includes(id)));
     setHiddenIds(next);
-    localStorage.setItem(`erp.cash.hidden.${tenantId}`, JSON.stringify([...next]));
   };
 
   return (

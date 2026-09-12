@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
+import { createIdempotencyKey, createSalesOrderComplete, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
+
+const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
 
 const mainCashCode = tenantId => `MAIN-${String(tenantId || '').slice(0, 8).toUpperCase()}`;
 
@@ -243,6 +246,7 @@ export function useOrders(tenantId) {
   };
 
   useEffect(() => {
+    if (!ENABLE_LEGACY_WRITES) return undefined;
     if (!tenantId || loading || !orders.length) return;
     const drafts = orders.map(buildMissingCreditDraft).filter(Boolean);
     if (!drafts.length) {
@@ -292,6 +296,7 @@ export function useOrders(tenantId) {
   };
 
   useEffect(() => {
+    if (!ENABLE_LEGACY_WRITES) return undefined;
     if (!tenantId || loading || !orders.length) return;
     const reconciliationKey = `${tenantId}:${orders.map((order) => `${order.id}:${Number(order.paid_amount || 0)}`).sort().join('|')}`;
     if (reconciliationKeyRef.current === reconciliationKey) return;
@@ -324,28 +329,18 @@ export function useOrders(tenantId) {
   const create = async ({ items = [], request_key: requestKey, credit = null, bonus_allocations: bonusAllocations = [], ...header }) => {
     if (requestKey && header.customer_id) {
       const initialPayment = Number(credit?.initial_payment || 0);
-      const paymentAccount = initialPayment > 0
-        ? await resolveMainCashAccount(header.currency || 'AZN')
-        : null;
-      const completeResult = await supabase.rpc('create_sales_order_complete', {
-        _tenant_id: tenantId,
-        _request_key: requestKey,
-        _order_no: header.order_no,
-        _customer_id: header.customer_id,
-        _order_date: header.order_date || new Date().toISOString().slice(0, 10),
-        _currency: header.currency || 'AZN',
-        _notes: header.notes || null,
-        _items: items,
-        _credit: credit,
-        _bonus_allocations: bonusAllocations,
-        _initial_payment: initialPayment,
-        _account_id: paymentAccount?.id || null,
-      });
-      if (!completeResult.error) {
+      try {
+        const completeResult = await createSalesOrderComplete({
+          tenantId, requestKey, orderNo: header.order_no, customerId: header.customer_id,
+          orderDate: header.order_date || new Date().toISOString().slice(0, 10),
+          currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
+          bonusAllocations, initialPayment, accountId: null,
+        });
         await fetchAll();
-        return { id: completeResult.data.order_id, creditId: completeResult.data.credit_id };
+        return { id: completeResult.order_id, creditId: completeResult.credit_id };
+      } catch (completeError) {
+        if (!ENABLE_LEGACY_WRITES || (!isMissingRpc(completeError) && completeError?.code !== 'ERP_SCHEMA_MIGRATION_REQUIRED')) throw completeError;
       }
-      if (!isMissingRpc(completeResult.error)) throw completeResult.error;
 
       const { data: atomicResult, error: atomicError } = await supabase.rpc('create_sales_order_atomic', {
         _tenant_id: tenantId,
@@ -366,6 +361,8 @@ export function useOrders(tenantId) {
       }
       if (!isMissingRpc(atomicError)) throw atomicError;
     }
+
+    if (!ENABLE_LEGACY_WRITES) throw migrationRequiredError('satış yaratma');
 
     const { data: orderId, error } = await supabase.rpc('create_sales_order', {
       _tenant_id: tenantId,
@@ -434,24 +431,9 @@ export function useOrders(tenantId) {
   };
 
   const updateStatus = async (id, status) => {
-    // Intermediate workflow steps only change the order header. Running the
-    // accounting RPC for these steps made "Hazırlamağa başla" depend on
-    // finance/inventory permissions even though no accounting event occurs.
-    if (['draft', 'pending', 'confirmed', 'processing', 'shipped'].includes(status)) {
-      const { data, error } = await supabase.from('orders')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('tenant_id', tenantId)
-        .select('id')
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error('Sifariş tapılmadı və ya statusu dəyişmək icazəniz yoxdur.');
-      await fetchAll();
-      return;
-    }
     const { error } = await supabase.rpc('process_sales_order_status', { _order_id: id, _status: status });
     if (error) {
-      if (!isMissingRpc(error)) throw error;
+      if (!isMissingRpc(error) || !ENABLE_LEGACY_WRITES) throw error;
       const { error: fallbackError } = await supabase.from('orders')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id).eq('tenant_id', tenantId);
@@ -481,25 +463,7 @@ export function useOrders(tenantId) {
         .select('id').eq('tenant_id', tenantId).eq('currency', order.currency || 'AZN').eq('is_active', true).limit(1).maybeSingle();
       if (accountError) throw accountError;
       if (existingAccount) resolvedAccountId = existingAccount.id;
-      else {
-        const code = mainCashCode(tenantId);
-        const { data: inactiveAccount, error: inactiveError } = await supabase.from('cash_accounts')
-          .select('id').eq('tenant_id', tenantId).eq('account_no', code).limit(1).maybeSingle();
-        if (inactiveError) throw inactiveError;
-        if (inactiveAccount) {
-          const { data: reactivated, error: reactivateError } = await supabase.from('cash_accounts')
-            .update({ is_active: true, name: 'Əsas kassa', type: 'cash', currency: order.currency || 'AZN' })
-            .eq('id', inactiveAccount.id).eq('tenant_id', tenantId).select('id').single();
-          if (reactivateError) throw reactivateError;
-          resolvedAccountId = reactivated.id;
-        } else {
-          const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
-            tenant_id: tenantId, account_no: code, name: 'Əsas kassa', type: 'cash', currency: order.currency || 'AZN', opening_balance: 0, is_active: true,
-          }).select('id').single();
-          if (createAccountError) throw createAccountError;
-          resolvedAccountId = createdAccount.id;
-        }
-      }
+      else throw new Error('Ödəniş üçün aktiv kassa hesabı yaradılmalıdır.');
     }
 
     const { error: paymentError } = await supabase.rpc('register_order_payment', {
@@ -559,14 +523,7 @@ export function useOrders(tenantId) {
   };
 
   const remove = async (id, reason = 'İstifadəçi tərəfindən satış ləğv edildi') => {
-    const { error: rpcError } = await supabase.rpc('reverse_sales_order', {
-      _order_id: id,
-      _reason: reason,
-    });
-    if (rpcError && !isMissingRpc(rpcError)) throw rpcError;
-    if (rpcError && isMissingRpc(rpcError)) {
-      throw new Error('Satış ləğvi bazada aktiv deyil. Son Supabase migration-ını tətbiq edin.');
-    }
+    await reverseSalesOrder({ tenantId, orderId: id, reason, requestKey: createIdempotencyKey(`sales-reversal:${id}`) });
     await fetchAll();
   };
 

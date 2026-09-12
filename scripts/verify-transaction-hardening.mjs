@@ -10,6 +10,8 @@ const journalMigrationPath = "supabase/migrations/20260905120000_immutable_journ
 const journalMigration = await readFile(resolve(root, journalMigrationPath), "utf8");
 const creditCashMigrationPath = "supabase/migrations/20260908140000_reconcile_credit_payments_to_cash.sql";
 const creditCashMigration = await readFile(resolve(root, creditCashMigrationPath), "utf8");
+const lifecycleV3Path = "supabase/migrations/20260912120000_erp_lifecycle_v3.sql";
+const lifecycleV3 = await readFile(resolve(root, lifecycleV3Path), "utf8");
 const service = await readFile(resolve(root, "src/services/coreOperations.js"), "utf8");
 const failures = [];
 
@@ -69,7 +71,19 @@ for (const signal of ["PERFORM public.register_order_payment(target_order.id, ap
   if (!creditCashMigration.includes(signal)) failures.push(`${creditCashMigrationPath}: missing ${signal}`);
 }
 
-for (const signal of ["createSalesOrderAtomic", "createIdempotencyKey", "lockAccountingPeriod", "listAccountingPeriodLocks", "reopenAccountingPeriod"]) {
+const requiredLifecycleV3Signals = [
+  "public.erp_runtime_capabilities", "private.reverse_sales_order_v3_impl",
+  "public.reverse_sales_order_v3", "public.scan_erp_integrity",
+  "public.repair_erp_integrity_issue", "public.erp_reconciliation_reports",
+  "reject_cancelled_order_credit", "reject_cancelled_order_reservation",
+  "reject_cancelled_order_delivery", "reject_cancelled_order_cash",
+  "public.cancel_sales_invoice", "sales_order_cancellation", "operation_requests",
+];
+for (const signal of requiredLifecycleV3Signals) {
+  if (!lifecycleV3.includes(signal)) failures.push(`${lifecycleV3Path}: missing ${signal}`);
+}
+
+for (const signal of ["createSalesOrderAtomic", "createSalesOrderComplete", "reverseSalesOrder", "requireErpSchema", "createIdempotencyKey", "lockAccountingPeriod", "listAccountingPeriodLocks", "reopenAccountingPeriod"]) {
   if (!service.includes(signal)) failures.push(`src/services/coreOperations.js: missing ${signal}`);
 }
 
@@ -83,7 +97,7 @@ if (failures.length) {
   console.error(JSON.stringify({ ok: false, failures }, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + requiredReversalSignals.length + requiredJournalSignals.length + 6 }, null, 2));
+  console.log(JSON.stringify({ ok: true, checks: requiredMigrationSignals.length + requiredReversalSignals.length + requiredJournalSignals.length + requiredLifecycleV3Signals.length + 9 }, null, 2));
 }
 
 

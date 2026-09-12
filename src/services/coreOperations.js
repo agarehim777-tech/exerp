@@ -18,6 +18,23 @@ async function callRpc(name, payload) {
   return data;
 }
 
+export const ERP_SCHEMA_VERSION = 3;
+
+export function migrationRequiredError(operation, cause = null) {
+  const error = new Error(`ERP verilənlər bazası köhnədir. ${operation} üçün son Supabase migration-larını tətbiq edin.`);
+  error.code = "ERP_SCHEMA_MIGRATION_REQUIRED";
+  error.cause = cause;
+  return error;
+}
+
+export async function requireErpSchema(minimumVersion = ERP_SCHEMA_VERSION) {
+  const { data, error } = await supabase.rpc("erp_runtime_capabilities");
+  if (error || Number(data?.schema_version || 0) < minimumVersion) {
+    throw migrationRequiredError("əməliyyat", error);
+  }
+  return data;
+}
+
 export function createIdempotencyKey(prefix = "operation") {
   const randomPart = globalThis.crypto?.randomUUID?.()
     || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -48,6 +65,28 @@ export function createSalesOrderAtomic({
     _notes: notes,
     _items: items,
     _credit: credit,
+  });
+}
+
+export async function createSalesOrderComplete({ tenantId, requestKey, orderNo, customerId, orderDate,
+  currency = "AZN", notes = null, items, credit = null, bonusAllocations = [], initialPayment = 0,
+  accountId = null }) {
+  if (!Array.isArray(items) || items.length === 0) throw new Error("Sifariş üçün ən azı bir məhsul tələb olunur");
+  await requireErpSchema();
+  return callRpc("create_sales_order_complete", {
+    _tenant_id: requireValue(tenantId, "tenantId"), _request_key: requireValue(requestKey, "requestKey"),
+    _order_no: requireValue(orderNo, "orderNo"), _customer_id: requireValue(customerId, "customerId"),
+    _order_date: requireValue(orderDate, "orderDate"), _currency: currency, _notes: notes, _items: items,
+    _credit: credit, _bonus_allocations: bonusAllocations, _initial_payment: Number(initialPayment || 0),
+    _account_id: accountId,
+  });
+}
+
+export async function reverseSalesOrder({ tenantId, orderId, reason, requestKey }) {
+  await requireErpSchema();
+  return callRpc("reverse_sales_order_v3", {
+    _tenant_id: requireValue(tenantId, "tenantId"), _order_id: requireValue(orderId, "orderId"),
+    _reason: requireValue(reason, "reason"), _request_key: requireValue(requestKey, "requestKey"),
   });
 }
 

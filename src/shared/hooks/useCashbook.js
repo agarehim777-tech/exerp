@@ -45,13 +45,8 @@ export function useCashbook(tenantId) {
     setExpenses(exp.data || []);
     setCustomers(customerResult.data || []);
     setEmployees(employeeResult.data || []);
-    const fallbackKey = `erp.expense_categories.${tenantId}`;
-    const fallbackNames = ['icarə', 'kommunal', 'əmək haqqı', 'marketinq', 'nəqliyyat', 'digər'];
-    let fallback = [];
-    try { fallback = JSON.parse(localStorage.getItem(fallbackKey) || '[]'); } catch { fallback = []; }
-    setExpenseCategories(categoryResult.error
-      ? (fallback.length ? fallback : fallbackNames.map(name => ({ id: `local-${name}`, name, is_active: true })))
-      : (categoryResult.data || []));
+    if (categoryResult.error) setError(current => current || categoryResult.error);
+    setExpenseCategories(categoryResult.data || []);
     setLoading(false);
   }, [tenantId]);
 
@@ -126,32 +121,28 @@ export function useCashbook(tenantId) {
     await fetchAll();
   };
 
-  const persistFallbackCategories = rows => {
-    localStorage.setItem(`erp.expense_categories.${tenantId}`, JSON.stringify(rows));
-    setExpenseCategories(rows);
-  };
-
   const createExpenseCategory = async (name) => {
     const cleanName = String(name || '').trim();
     if (!cleanName) throw new Error('Kateqoriya adını daxil edin.');
     if (expenseCategories.some(item => item.name.toLocaleLowerCase('az') === cleanName.toLocaleLowerCase('az'))) throw new Error('Bu kateqoriya artıq mövcuddur.');
     const { data, error: categoryError } = await supabase.from('expense_categories').insert({ tenant_id: tenantId, name: cleanName }).select('*').single();
-    if (categoryError) persistFallbackCategories([...expenseCategories, { id: createClientId(), name: cleanName, is_active: true }].sort((a, b) => a.name.localeCompare(b.name, 'az')));
-    else { setExpenseCategories(current => [...current, data].sort((a, b) => a.name.localeCompare(b.name, 'az'))); }
+    if (categoryError) throw categoryError;
+    setExpenseCategories(current => [...current, data].sort((a, b) => a.name.localeCompare(b.name, 'az')));
   };
 
   const updateExpenseCategory = async (category, name) => {
     const cleanName = String(name || '').trim();
     if (!cleanName) throw new Error('Kateqoriya adını daxil edin.');
     const { error: categoryError } = await supabase.from('expense_categories').update({ name: cleanName }).eq('id', category.id).eq('tenant_id', tenantId);
+    if (categoryError) throw categoryError;
     const next = expenseCategories.map(item => item.id === category.id ? { ...item, name: cleanName } : item).sort((a, b) => a.name.localeCompare(b.name, 'az'));
-    if (categoryError || String(category.id).startsWith('local-')) persistFallbackCategories(next); else setExpenseCategories(next);
+    setExpenseCategories(next);
   };
 
   const removeExpenseCategory = async (category) => {
     const { error: categoryError } = await supabase.from('expense_categories').update({ is_active: false }).eq('id', category.id).eq('tenant_id', tenantId);
-    const next = expenseCategories.filter(item => item.id !== category.id);
-    if (categoryError || String(category.id).startsWith('local-')) persistFallbackCategories(next); else setExpenseCategories(next);
+    if (categoryError) throw categoryError;
+    setExpenseCategories(expenseCategories.filter(item => item.id !== category.id));
   };
 
   const setExpenseStatus = async (id, status) => {
