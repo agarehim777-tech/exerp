@@ -172,7 +172,21 @@ function TransactionsPanel({ book, tenantId }) {
   const [hiddenIds, setHiddenIds] = useState(new Set());
   const [showHidden, setShowHidden] = useState(false);
 
-  useEffect(() => { setHiddenIds(new Set()); }, [tenantId]);
+  const hiddenStorageKey = tenantId ? `erp.cash.hidden.${tenantId}` : null;
+  const persistHidden = (next) => {
+    setHiddenIds(next);
+    if (!hiddenStorageKey) return;
+    try { window.localStorage.setItem(hiddenStorageKey, JSON.stringify([...next])); } catch { /* storage unavailable */ }
+  };
+
+  useEffect(() => {
+    if (!hiddenStorageKey) { setHiddenIds(new Set()); return; }
+    try {
+      const raw = window.localStorage.getItem(hiddenStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setHiddenIds(new Set(Array.isArray(parsed) ? parsed : []));
+    } catch { setHiddenIds(new Set()); }
+  }, [hiddenStorageKey]);
 
   const submit = async (event) => {
     event.preventDefault();
