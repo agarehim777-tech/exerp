@@ -4,7 +4,7 @@ import { authenticatedApi, hasLifecycleEnvironment, runId } from "./supabase-lif
 test.describe.configure({ mode: "serial" });
 test.skip(!hasLifecycleEnvironment, "Authenticated Supabase lifecycle environment is not configured");
 
-test("expense → approval → acceptance → cancellation restores cash balance", async ({ request }) => {
+test("@lifecycle expense → approval → acceptance → cancellation restores cash balance", async ({ request }) => {
   const { call, tenantId } = await authenticatedApi(request);
   const marker = runId("E2E-EXP");
   let accountId = "";
@@ -38,6 +38,7 @@ test("expense → approval → acceptance → cancellation restores cash balance
     expect(ledger).toHaveLength(2);
     expect(ledger.reduce((sum: number, row: { direction: string; amount: number }) => sum + (row.direction === "in" ? Number(row.amount) : -Number(row.amount)), 0)).toBe(0);
   } finally {
+    if (expenseId) await call("delete", `cash_transactions?tenant_id=eq.${tenantId}&or=(reference.eq.${encodeURIComponent(`EXPENSE:${expenseId}`)},reference.eq.${encodeURIComponent(`EXPENSE-REVERSAL:${expenseId}`)})`).catch(() => null);
     if (expenseId) await call("delete", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}`).catch(() => null);
     if (accountId) await call("delete", `cash_accounts?id=eq.${accountId}&tenant_id=eq.${tenantId}`).catch(() => null);
   }

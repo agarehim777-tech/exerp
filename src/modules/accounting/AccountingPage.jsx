@@ -104,77 +104,45 @@ function JournalPanel({ isAdmin }) {
   };
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Jurnal yazılışları ({entries.length})</h3>
-        {isAdmin && <button onClick={() => setShowForm(!showForm)} style={primaryBtn}>{showForm ? "Bağla" : "+ Yeni yazılış"}</button>}
-      </div>
-      {msg && <div style={msgBox}>{msg}</div>}
+    <Card title={`Jurnal yazılışları (${entries.length})`} actions={isAdmin && <Button onClick={() => setShowForm(!showForm)}>{showForm ? "Bağla" : "+ Yeni yazılış"}</Button>}>
+      {msg && <Notice tone={msg.startsWith("Xəta") || msg.includes("bərabər") ? "danger" : "info"}>{msg}</Notice>}
       {showForm && (
-        <form onSubmit={submit} style={{ background: "#faf5e2", padding: 12, borderRadius: 8, marginBottom: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "160px 200px 1fr", gap: 8, marginBottom: 8 }}>
-            <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} style={input} required />
-            <input placeholder="Reference" value={reference} onChange={(e) => setReference(e.target.value)} style={input} />
-            <input placeholder="Təsvir" value={description} onChange={(e) => setDescription(e.target.value)} style={input} />
-          </div>
-          <table style={table}>
-            <thead><tr><th style={th}>Hesab</th><th style={th}>Debet</th><th style={th}>Kredit</th><th style={th}>Memo</th></tr></thead>
+        <form onSubmit={submit} className="ui-form-surface ui-spacer-top">
+          <FormGrid>
+            <Input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} required />
+            <Input placeholder="Reference" value={reference} onChange={(e) => setReference(e.target.value)} />
+            <Input placeholder="Təsvir" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </FormGrid>
+          <div className="ui-table-wrap ui-spacer-top"><table className="ui-table">
+            <thead><tr><th>Hesab</th><th className="is-numeric">Debet</th><th className="is-numeric">Kredit</th><th>Memo</th></tr></thead>
             <tbody>
               {lines.map((l, i) => (
                 <tr key={i}>
-                  <td style={td}>
-                    <select value={l.account_id} onChange={(e) => upd(i, "account_id", e.target.value)} style={input} required>
+                  <td>
+                    <Select value={l.account_id} onChange={(e) => upd(i, "account_id", e.target.value)} required>
                       <option value="">— Hesab seç —</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                    </select>
+                    </Select>
                   </td>
-                  <td style={td}><input type="number" step="0.01" min="0" value={l.debit} onChange={(e) => upd(i, "debit", e.target.value)} style={{ ...input, width: 100 }} /></td>
-                  <td style={td}><input type="number" step="0.01" min="0" value={l.credit} onChange={(e) => upd(i, "credit", e.target.value)} style={{ ...input, width: 100 }} /></td>
-                  <td style={td}><input value={l.memo} onChange={(e) => upd(i, "memo", e.target.value)} style={input} /></td>
+                  <td><Input type="number" step="0.01" min="0" value={l.debit} onChange={(e) => upd(i, "debit", e.target.value)} /></td>
+                  <td><Input type="number" step="0.01" min="0" value={l.credit} onChange={(e) => upd(i, "credit", e.target.value)} /></td>
+                  <td><Input value={l.memo} onChange={(e) => upd(i, "memo", e.target.value)} /></td>
                 </tr>
               ))}
               <tr>
-                <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>Cəm:</td>
-                <td style={{ ...td, color: totals.balanced ? "#064e3b" : "#b23a3a" }}><b>{totals.d.toFixed(2)}</b></td>
-                <td style={{ ...td, color: totals.balanced ? "#064e3b" : "#b23a3a" }}><b>{totals.c.toFixed(2)}</b></td>
-                <td style={td}>{totals.balanced ? "✓ balanslıdır" : "✗ balanssız"}</td>
+                <td className="is-numeric"><strong>Cəm:</strong></td>
+                <td className="is-numeric"><Badge tone={totals.balanced ? "success" : "danger"}>{totals.d.toFixed(2)}</Badge></td>
+                <td className="is-numeric"><Badge tone={totals.balanced ? "success" : "danger"}>{totals.c.toFixed(2)}</Badge></td>
+                <td>{totals.balanced ? "✓ balanslıdır" : "✗ balanssız"}</td>
               </tr>
             </tbody>
-          </table>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button type="button" onClick={addLine} style={secondaryBtn}>+ Sətir</button>
-            <button type="submit" disabled={busy || !totals.balanced} style={primaryBtn}>Yarat</button>
-          </div>
+          </table></div>
+          <TableActions><Button type="button" variant="secondary" onClick={addLine}>+ Sətir</Button><Button type="submit" disabled={busy || !totals.balanced}>Yarat</Button></TableActions>
         </form>
       )}
-      {loading ? <div>Yüklənir…</div> : (
-        <table style={table}>
-          <thead><tr><th style={th}>Tarix</th><th style={th}>Ref</th><th style={th}>Təsvir</th><th style={th}>Cəm</th><th style={th}>Status</th>{isAdmin && <th style={th}></th>}</tr></thead>
-          <tbody>
-            {entries.map((e) => {
-              const total = (e.journal_lines || []).reduce((s, l) => s + Number(l.debit), 0);
-              return (
-                <tr key={e.id}>
-                  <td style={td}>{e.entry_date}</td>
-                  <td style={td}>{e.reference || "—"}</td>
-                  <td style={td}>{e.description || "—"}</td>
-                  <td style={td}>{total.toFixed(2)}</td>
-                  <td style={td}>{e.posted ? <span style={badgeGreen}>Postlanıb</span> : <span style={badgeGray}>Layihə</span>}</td>
-                  {isAdmin && (
-                    <td style={td}>
-                      {!e.posted && <button onClick={() => setPendingAction({ type: 'post', entry: e })} style={secondaryBtn}>Postla</button>}
-                      {!e.posted && <button onClick={() => setPendingAction({ type: 'delete', entry: e })} style={delBtn}>Sil</button>}
-                      {e.posted && e.source_type !== 'journal_reversal' && <button onClick={() => { setReason(''); setPendingAction({ type: 'reverse', entry: e }); }} style={delBtn}>Əks yazılış</button>}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
+      <DataTable columns={[{ key: "entry_date", label: "Tarix" }, { key: "reference", label: "Ref" }, { key: "description", label: "Təsvir" }, { key: "total", label: "Cəm", align: "right" }, { key: "status", label: "Status" }, ...(isAdmin ? [{ key: "actions", label: "" }] : [])]} rows={loading ? [] : entries} emptyText={loading ? "Yüklənir…" : "Jurnal yazılışı yoxdur."} renderCell={(entry, column) => ({ entry_date: entry.entry_date, reference: entry.reference || "—", description: entry.description || "—", total: (entry.journal_lines || []).reduce((sum, line) => sum + Number(line.debit), 0).toFixed(2), status: <Badge tone={entry.posted ? "success" : "neutral"}>{entry.posted ? "Postlanıb" : "Layihə"}</Badge>, actions: <TableActions>{!entry.posted && <Button variant="secondary" size="compact" onClick={() => setPendingAction({ type: "post", entry })}>Postla</Button>}{!entry.posted && <Button variant="danger" size="compact" onClick={() => setPendingAction({ type: "delete", entry })}>Sil</Button>}{entry.posted && entry.source_type !== "journal_reversal" && <Button variant="danger" size="compact" onClick={() => { setReason(""); setPendingAction({ type: "reverse", entry }); }}>Əks yazılış</Button>}</TableActions> })[column.key]} />
       <ConfirmActionDialog open={Boolean(pendingAction)} title={pendingAction?.type === 'reverse' ? 'Əks jurnal yaradılsın?' : pendingAction?.type === 'post' ? 'Jurnal postlansın?' : 'Jurnal layihəsi silinsin?'} description={pendingAction?.type === 'reverse' ? 'Orijinal jurnal dəyişməyəcək; debet və kreditləri əks olan yeni jurnal yaradılacaq.' : pendingAction?.type === 'post' ? 'Postlandıqdan sonra jurnal dəyişdirilə və silinə bilməz.' : 'Yalnız post edilməmiş jurnal layihəsi silinəcək.'} confirmLabel={pendingAction?.type === 'reverse' ? 'Əks yazılış yarat' : pendingAction?.type === 'post' ? 'Postla' : 'Layihəni sil'} destructive={pendingAction?.type !== 'post'} reason={reason} onReasonChange={pendingAction?.type === 'reverse' ? setReason : undefined} reasonRequired={pendingAction?.type === 'reverse'} onCancel={() => setPendingAction(null)} onConfirm={async () => { try { if (pendingAction.type === 'post') await post(pendingAction.entry.id); else if (pendingAction.type === 'reverse') await reverse(pendingAction.entry.id, reason); else await remove(pendingAction.entry.id); setPendingAction(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
-    </div>
+    </Card>
   );
 }
 
@@ -196,50 +164,10 @@ function TrialBalancePanel({ tenantId }) {
   const totals = rows.reduce((a, r) => ({ d: a.d + Number(r.debit), c: a.c + Number(r.credit) }), { d: 0, c: 0 });
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-        <h3 style={{ margin: 0, flex: 1 }}>Trial Balance</h3>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} />
-        <button onClick={load} style={primaryBtn}>Yenilə</button>
-      </div>
-      {loading ? <div>Yüklənir…</div> : (
-        <table style={table}>
-          <thead><tr><th style={th}>Kod</th><th style={th}>Hesab</th><th style={th}>Tip</th><th style={th}>Debet</th><th style={th}>Kredit</th><th style={th}>Balans</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.account_id}>
-                <td style={td}><b>{r.code}</b></td>
-                <td style={td}>{r.name}</td>
-                <td style={td}>{TYPE_LABEL[r.type]}</td>
-                <td style={td}>{Number(r.debit).toFixed(2)}</td>
-                <td style={td}>{Number(r.credit).toFixed(2)}</td>
-                <td style={{ ...td, fontWeight: 600 }}>{Number(r.balance).toFixed(2)}</td>
-              </tr>
-            ))}
-            <tr style={{ background: "#faf5e2" }}>
-              <td colSpan={3} style={{ ...td, textAlign: "right", fontWeight: 700 }}>Cəm</td>
-              <td style={{ ...td, fontWeight: 700 }}>{totals.d.toFixed(2)}</td>
-              <td style={{ ...td, fontWeight: 700 }}>{totals.c.toFixed(2)}</td>
-              <td style={td}>{Math.abs(totals.d - totals.c) < 0.01 ? "✓" : "✗ balanssız"}</td>
-            </tr>
-          </tbody>
-        </table>
-      )}
-    </div>
+    <Card title="Trial Balance" actions={<Toolbar><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /><Button onClick={load}>Yenilə</Button></Toolbar>}>
+      <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Hesab" }, { key: "type", label: "Tip" }, { key: "debit", label: "Debet", align: "right" }, { key: "credit", label: "Kredit", align: "right" }, { key: "balance", label: "Balans", align: "right" }]} rows={loading ? [] : rows} emptyText={loading ? "Yüklənir…" : "Məlumat yoxdur."} renderCell={(row, column) => column.key === "code" ? <strong>{row.code}</strong> : column.key === "type" ? TYPE_LABEL[row.type] : ["debit", "credit", "balance"].includes(column.key) ? Number(row[column.key]).toFixed(2) : row[column.key]} footer={<tfoot><tr><td colSpan={3} className="is-numeric"><strong>Cəm</strong></td><td className="is-numeric"><strong>{totals.d.toFixed(2)}</strong></td><td className="is-numeric"><strong>{totals.c.toFixed(2)}</strong></td><td className="is-numeric"><Badge tone={Math.abs(totals.d - totals.c) < 0.01 ? "success" : "danger"}>{Math.abs(totals.d - totals.c) < 0.01 ? "✓" : "✗ balanssız"}</Badge></td></tr></tfoot>} />
+    </Card>
   );
 }
 
-const card = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: 20, boxShadow: "0 4px 18px rgba(6,78,59,0.06)" };
-const table = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
-const th = { textAlign: "left", padding: "8px 10px", background: "#f0e6c8", color: "#5a4a1e", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid #e6dfc9" };
-const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb" };
-const input = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d4c9a3", fontSize: 13, background: "#fff" };
-const primaryBtn = { background: "#064e3b", color: "#fbe89a", border: 0, padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 };
-const secondaryBtn = { background: "#f0e6c8", color: "#5a4a1e", border: 0, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 12 };
-const delBtn = { background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12, marginLeft: 4 };
-const msgBox = { background: "#faf5e2", color: "#5a4a1e", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 10 };
-const tabBtn = (active) => ({ background: active ? "#064e3b" : "transparent", color: active ? "#fbe89a" : "#064e3b", border: 0, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 });
-const badgeGreen = { background: "#064e3b", color: "#fbe89a", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
-const badgeGray = { background: "#e6dfc9", color: "#5a4a1e", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 };
 

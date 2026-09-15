@@ -4,11 +4,10 @@ import { authenticatedApi, hasLifecycleEnvironment, runId } from "./supabase-lif
 test.describe.configure({ mode: "serial" });
 test.skip(!hasLifecycleEnvironment, "Authenticated Supabase lifecycle environment is not configured");
 
-test("sales order → payment → cancellation stays cancelled after reload", async ({ request }) => {
+test("@lifecycle sales order → payment → cancellation stays cancelled after reload", async ({ request }) => {
   const { call, tenantId } = await authenticatedApi(request);
   const marker = runId("E2E-SALE");
   let orderId = "";
-  let createdAccountId = "";
 
   try {
     const customers = await call("get", `customers?tenant_id=eq.${tenantId}&select=id&limit=1`);
@@ -25,21 +24,12 @@ test("sales order → payment → cancellation stays cancelled after reload", as
       _items: [{ line_no: 1, description: "CI lifecycle item", qty: 1, unit_price: 100, discount_pct: 0, vat_rate: 0 }],
       _credit: null,
       _bonus_allocations: [],
-      _initial_payment: 0,
+      _initial_payment: 25,
       _account_id: null,
     });
     orderId = created.order_id;
     expect(orderId).toBeTruthy();
 
-    let accounts = await call("get", `cash_accounts?tenant_id=eq.${tenantId}&currency=eq.AZN&is_active=eq.true&select=id&limit=1`);
-    if (!accounts?.length) {
-      accounts = await call("post", "cash_accounts?select=id", {
-        tenant_id: tenantId, account_no: marker, code: marker, name: marker, type: "cash", currency: "AZN", opening_balance: 0, is_active: true,
-      }, { Prefer: "return=representation" });
-      createdAccountId = accounts[0].id;
-    }
-
-    await call("post", "rpc/register_order_payment", { _order_id: orderId, _amount: 25, _account_id: accounts[0].id });
     const paid = await call("get", `orders?id=eq.${orderId}&tenant_id=eq.${tenantId}&select=id,status,paid_amount,payment_status`);
     expect(Number(paid[0].paid_amount)).toBe(25);
 
@@ -52,6 +42,5 @@ test("sales order → payment → cancellation stays cancelled after reload", as
     expect(reversed.length).toBeGreaterThanOrEqual(1);
   } finally {
     if (orderId) await call("delete", `operation_requests?tenant_id=eq.${tenantId}&request_key=like.${encodeURIComponent(`${marker}*`)}`).catch(() => null);
-    if (createdAccountId) await call("delete", `cash_accounts?id=eq.${createdAccountId}&tenant_id=eq.${tenantId}`).catch(() => null);
   }
 });
