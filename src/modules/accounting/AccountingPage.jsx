@@ -24,7 +24,7 @@ export default function AccountingPage() {
       {tab === "tb" && <TrialBalancePanel tenantId={tenantId} />}
       {tab === "reconciliation" && <ReconciliationPanel />}
       {tab === "periods" && <AccountingPeriodPanel tenantId={tenantId} canManage={isAdmin} />}
-    </div>
+    </PageStack>
   );
 }
 
@@ -64,7 +64,7 @@ function ChartOfAccountsPanel({ isAdmin }) {
       )}
       <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Ad" }, { key: "type", label: "Tip" }, ...(isAdmin ? [{ key: "actions", label: "" }] : [])]} rows={loading ? [] : accounts} emptyText={loading ? "Yüklənir…" : "Hesab yoxdur."} renderCell={(account, column) => column.key === "code" ? <strong>{account.code}</strong> : column.key === "type" ? TYPE_LABEL[account.type] : column.key === "actions" ? <Button variant="danger" size="compact" onClick={() => setPendingDelete(account)}>Sil</Button> : account[column.key]} />
       <ConfirmActionDialog open={Boolean(pendingDelete)} title="Hesab silinsin?" description={`${pendingDelete?.code || ''} ${pendingDelete?.name || ''} hesabı yalnız istifadə edilməyibsə silinəcək.`} confirmLabel="Hesabı sil" destructive onCancel={() => setPendingDelete(null)} onConfirm={async () => { try { await remove(pendingDelete.id); setPendingDelete(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
-    </PageStack>
+    </Card>
   );
 }
 
@@ -174,7 +174,7 @@ function JournalPanel({ isAdmin }) {
         </table>
       )}
       <ConfirmActionDialog open={Boolean(pendingAction)} title={pendingAction?.type === 'reverse' ? 'Əks jurnal yaradılsın?' : pendingAction?.type === 'post' ? 'Jurnal postlansın?' : 'Jurnal layihəsi silinsin?'} description={pendingAction?.type === 'reverse' ? 'Orijinal jurnal dəyişməyəcək; debet və kreditləri əks olan yeni jurnal yaradılacaq.' : pendingAction?.type === 'post' ? 'Postlandıqdan sonra jurnal dəyişdirilə və silinə bilməz.' : 'Yalnız post edilməmiş jurnal layihəsi silinəcək.'} confirmLabel={pendingAction?.type === 'reverse' ? 'Əks yazılış yarat' : pendingAction?.type === 'post' ? 'Postla' : 'Layihəni sil'} destructive={pendingAction?.type !== 'post'} reason={reason} onReasonChange={pendingAction?.type === 'reverse' ? setReason : undefined} reasonRequired={pendingAction?.type === 'reverse'} onCancel={() => setPendingAction(null)} onConfirm={async () => { try { if (pendingAction.type === 'post') await post(pendingAction.entry.id); else if (pendingAction.type === 'reverse') await reverse(pendingAction.entry.id, reason); else await remove(pendingAction.entry.id); setPendingAction(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
-    </Card>
+    </div>
   );
 }
 
