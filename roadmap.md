@@ -5,4 +5,5 @@
 3. [x] Çatışmayan xarici açar indekslərini əlavə etmək (19 indeks)
 4. [x] Yeni saxlama məntiqi üçün testlər (175 test keçir) + canlı yoxlama: işçi əlavə → yenidən yükləmə → qalır
 5. [x] Paket bölgüsü yoxlanıldı — PDF və qrafiklər onsuz da yalnız lazım olanda yüklənir; ümumi vendor birləşdirmə daha pis nəticə verdiyi üçün saxlanılmadı
-6. [~] Ümumi komponentlər (`src/shared/ui/primitives.jsx`: Button, Card, Input, Select, Field, DataTable) hazırdır; səhifələrin bu komponentlərə tədricən keçirilməsi davam edir
+6. [~] Ümumi komponentlər CSS/token əsaslı vahid kitabxanaya çevrildi; maliyyə, mühasibat, hesabat və dashboard səhifələrinin mərhələli keçidi davam edir
+7. [~] Satış və xərc həyat dövrü integration/E2E testləri və CI qapısı əlavə edilir
