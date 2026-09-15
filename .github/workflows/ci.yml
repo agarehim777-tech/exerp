@@ -56,6 +56,14 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
+      - name: Sales and expense lifecycle tests
+        run: npm run e2e:lifecycle
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
       - name: All 21 business lifecycle flows
         run: npm run audit:flows
         env:

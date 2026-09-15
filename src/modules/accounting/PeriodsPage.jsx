@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAccountingPeriods } from "../../shared/hooks/useAccountingPeriods.js";
-import {
-  badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
-  statLabel, statTile, statValue, table, td, th,
-} from "../../shared/ui/tokens.js";
+import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, StatCard, StatGrid, TableActions } from "../../shared/ui/primitives.jsx";
 
 const STATUS_LABEL = { open: "Açıq", locked: "Bağlı", closed: "Yekunlaşıb" };
 const STATUS_TONE = { open: "green", locked: "amber", closed: "gray" };
@@ -40,108 +37,68 @@ export default function PeriodsPage() {
     try { await fn(); } catch (error) { setMsg(`Xəta: ${error.message}`); }
   };
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <Card>Aktiv şirkət seçilməyib.</Card>;
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={statTile}><div style={statLabel}>Dövr sayı</div><div style={statValue}>{stats.total}</div></div>
-        <div style={statTile}><div style={statLabel}>Açıq</div><div style={statValue}>{stats.open}</div></div>
-        <div style={statTile}><div style={statLabel}>Bağlı</div><div style={statValue}>{stats.locked}</div></div>
-      </div>
+    <PageStack>
+      <StatGrid>
+        <StatCard label="Dövr sayı" value={stats.total} />
+        <StatCard label="Açıq" value={stats.open} />
+        <StatCard label="Bağlı" value={stats.locked} />
+      </StatGrid>
 
-      {msg && <div style={msgBox}>{msg}</div>}
+      {msg && <Notice tone="danger">{msg}</Notice>}
 
-      <div style={card}>
-        <h3 style={{ marginTop: 0 }}>Dövr kilidi necə işləyir?</h3>
-        <p style={{ fontSize: 13, color: "#5b6b62", margin: 0 }}>
+      <Card title="Dövr kilidi necə işləyir?">
+        <p className="ui-help-text">
           Dövr <b>Bağlı</b> statusuna keçəndə həmin tarix aralığına düşən jurnal yazılışları və satış
           fakturaları üçün yaratma, dəyişdirmə və silmə əməliyyatları verilənlər bazası səviyyəsində
           bloklanır. Bu, keçmiş hesabat dövrlərinin sonradan dəyişdirilməsinin qarşısını alır.
         </p>
-      </div>
+      </Card>
 
       {isAdmin && (
-        <div style={card}>
-          <h3 style={{ marginTop: 0 }}>Yeni dövr</h3>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              style={{ ...input, minWidth: 180 }}
+        <Card title="Yeni dövr">
+          <FormGrid>
+            <Input
               placeholder="Dövr adı"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <input
-              style={input}
+            <Input
               type="date"
               value={form.start_date}
               onChange={(e) => setForm({ ...form, start_date: e.target.value })}
             />
-            <input
-              style={input}
+            <Input
               type="date"
               value={form.end_date}
               onChange={(e) => setForm({ ...form, end_date: e.target.value })}
             />
-            <button style={secondaryBtn} onClick={() => setForm(monthRange(-1))}>Keçən ay</button>
-            <button style={secondaryBtn} onClick={() => setForm(monthRange(0))}>Bu ay</button>
-            <button
-              style={primaryBtn}
+            <Button variant="secondary" onClick={() => setForm(monthRange(-1))}>Keçən ay</Button>
+            <Button variant="secondary" onClick={() => setForm(monthRange(0))}>Bu ay</Button>
+            <Button
               onClick={() => run(async () => {
                 await create(form);
                 setForm(monthRange(0));
               })}
             >
               + Dövr yarat
-            </button>
-          </div>
-        </div>
+            </Button>
+          </FormGrid>
+        </Card>
       )}
 
-      <div style={card}>
-        <h3 style={{ marginTop: 0 }}>Mühasibat dövrləri ({periods.length})</h3>
-        <table style={table}>
-          <thead>
-            <tr>
-              <th style={th}>Dövr</th><th style={th}>Başlanğıc</th><th style={th}>Bitmə</th>
-              <th style={th}>Status</th><th style={th}>Bağlanma</th><th style={th} />
-            </tr>
-          </thead>
-          <tbody>
-            {periods.map((period) => (
-              <tr key={period.id}>
-                <td style={td}><b>{period.name}</b></td>
-                <td style={td}>{new Date(period.start_date).toLocaleDateString("az-AZ")}</td>
-                <td style={td}>{new Date(period.end_date).toLocaleDateString("az-AZ")}</td>
-                <td style={td}>
-                  <span style={badge(STATUS_TONE[period.status])}>{STATUS_LABEL[period.status] || period.status}</span>
-                </td>
-                <td style={td}>{period.locked_at ? new Date(period.locked_at).toLocaleString("az-AZ") : "—"}</td>
-                <td style={td}>
-                  {isAdmin && (
-                    <>
-                      {period.status === "open" ? (
-                        <button style={secondaryBtn} onClick={() => run(() => setStatus(period.id, "locked"))}>Bağla</button>
-                      ) : (
-                        <button style={secondaryBtn} onClick={() => run(() => setStatus(period.id, "open"))}>Aç</button>
-                      )}
-                      <button
-                        style={delBtn}
-                        onClick={() => window.confirm("Dövr silinsin?") && run(() => remove(period.id))}
-                      >
-                        Sil
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!periods.length && !loading && (
-              <tr><td style={td} colSpan={6}>Dövr yaradılmayıb.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <Card title={`Mühasibat dövrləri (${periods.length})`}>
+        <DataTable columns={[{ key: "name", label: "Dövr" }, { key: "start_date", label: "Başlanğıc" }, { key: "end_date", label: "Bitmə" }, { key: "status", label: "Status" }, { key: "locked_at", label: "Bağlanma" }, { key: "actions", label: "" }]} rows={periods} emptyText={loading ? "Yüklənir…" : "Dövr yaradılmayıb."} renderCell={(period, column) => ({
+          name: <strong>{period.name}</strong>,
+          start_date: new Date(period.start_date).toLocaleDateString("az-AZ"),
+          end_date: new Date(period.end_date).toLocaleDateString("az-AZ"),
+          status: <Badge tone={STATUS_TONE[period.status] === "green" ? "success" : STATUS_TONE[period.status] === "amber" ? "warning" : "neutral"}>{STATUS_LABEL[period.status] || period.status}</Badge>,
+          locked_at: period.locked_at ? new Date(period.locked_at).toLocaleString("az-AZ") : "—",
+          actions: isAdmin && <TableActions><Button variant="secondary" size="compact" onClick={() => run(() => setStatus(period.id, period.status === "open" ? "locked" : "open"))}>{period.status === "open" ? "Bağla" : "Aç"}</Button><Button variant="danger" size="compact" onClick={() => window.confirm("Dövr silinsin?") && run(() => remove(period.id))}>Sil</Button></TableActions>,
+        })[column.key]} />
+      </Card>
+    </PageStack>
   );
 }
