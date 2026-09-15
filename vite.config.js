@@ -49,12 +49,6 @@ export default defineConfig(({ mode }) => {
           ) {
             return "react-vendor";
           }
-          if (/\/node_modules\/(recharts|d3-[^/]+|victory-vendor)\//.test(normalizedId)) {
-            return "charts-vendor";
-          }
-          if (/\/node_modules\/(jspdf|html2canvas|canvg|dompurify)\//.test(normalizedId)) {
-            return "export-vendor";
-          }
           return undefined;
         },
       },
