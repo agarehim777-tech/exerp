@@ -249,7 +249,7 @@ function TransactionsPanel({ book, tenantId }) {
       return item.id === originalId || item.reversal_of === originalId || markerId === originalId;
     }).map(item => item.id);
     const next = new Set([...hiddenIds].filter(id => !pairIds.includes(id)));
-    setHiddenIds(next);
+    persistHidden(next);
   };
 
   return (
