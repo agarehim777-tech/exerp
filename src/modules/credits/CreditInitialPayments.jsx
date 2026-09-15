@@ -62,14 +62,17 @@ export function useCreditInitialPayments(creditId, orderId, orderNo) {
           };
         })
         .filter(Boolean);
-      const cashRows = (cashResult.data || []).map((row) => ({
-        id: `cash-${row.id}`,
-        date: row.occurred_at || row.created_at,
-        amount: Number(row.amount || 0),
-        kind: row.category === "credit_initial" ? "Əlavə ilkin ödəniş" : "Beh (satış anında)",
-        note: row.description || "Kassaya daxil olub",
-      }));
-      setRows(cashRows.length ? cashRows : auditRows);
+      // Kassa sorğusu uğursuz olarsa audit tarixçəsi göstərilməyə davam edir.
+      const cashRows = cashResult.error
+        ? []
+        : (cashResult.data || []).map((row) => ({
+            id: `cash-${row.id}`,
+            date: row.occurred_at || row.created_at,
+            amount: Number(row.amount || 0),
+            kind: "Əlavə ilkin ödəniş",
+            note: row.description || "Kassaya daxil olub",
+          }));
+      setRows(auditRows.length ? auditRows : cashRows);
       setError(null);
     } catch (nextError) {
       setError(nextError);
