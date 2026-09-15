@@ -12,16 +12,22 @@ export default defineConfig(({ mode }) => {
   const resolvedUrl = process.env.VITE_SUPABASE_URL || fileEnv.VITE_SUPABASE_URL;
   const resolvedKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || fileEnv.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!resolvedUrl || !resolvedKey) {
-    throw new Error("VITE_SUPABASE_URL və VITE_SUPABASE_PUBLISHABLE_KEY mütləq verilməlidir.");
+    // Some build environments inject these later; warn instead of failing the build.
+    console.warn("[vite] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY tapılmadı — standart env emalı istifadə olunur.");
   }
 
+  const supabaseDefines = resolvedUrl && resolvedKey
+    ? {
+        "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(resolvedUrl),
+        "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(resolvedKey),
+      }
+    : {};
 
   return {
   base: process.env.VITE_BASE_PATH || "/",
   define: {
     __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID),
-    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(resolvedUrl),
-    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(resolvedKey),
+    ...supabaseDefines,
   },
   plugins: [
     react(),
