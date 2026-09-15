@@ -4514,6 +4514,7 @@ export type Database = {
           reference: string | null
           reference_id: string | null
           reference_type: string | null
+          reversal_of: string | null
           sku: string | null
           tenant_id: string
           unit_cost: number
@@ -4535,6 +4536,7 @@ export type Database = {
           reference?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_of?: string | null
           sku?: string | null
           tenant_id: string
           unit_cost?: number
@@ -4556,6 +4558,7 @@ export type Database = {
           reference?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_of?: string | null
           sku?: string | null
           tenant_id?: string
           unit_cost?: number
@@ -4568,6 +4571,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
             referencedColumns: ["id"]
           },
           {
