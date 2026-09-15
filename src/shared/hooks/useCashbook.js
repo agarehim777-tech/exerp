@@ -204,6 +204,21 @@ export function useCashbook(tenantId) {
     await fetchAll();
   };
 
+  // Bir addımlı ləğv: status "cancelled" olur və məbləğ əks yazılışla kassaya qayıdır.
+  const cancelExpense = async (expense, reason = null) => {
+    const { data, error: err } = await supabase.rpc('cancel_expense', { _tenant_id: tenantId, _expense_id: expense.id, _reason: reason });
+    if (err) throw err;
+    await fetchAll();
+    return data || {};
+  };
+
+  const acceptExpense = async (expense) => {
+    const { data, error: err } = await supabase.rpc('accept_expense', { _tenant_id: tenantId, _expense_id: expense.id });
+    if (err) throw err;
+    await fetchAll();
+    return data || {};
+  };
+
   const approveExpenseRefund = async (expense) => {
     if (expense.status !== 'refund_pending') throw new Error('Bu xərc geri qaytarma növbəsində deyil.');
     const account = accounts.find(item => item.id === expense.account_id);
@@ -517,6 +532,6 @@ export function useCashbook(tenantId) {
 
   return {
     accounts, transactions, expenses, expenseCategories, customers, employees, loading, error, degraded, refresh: fetchAll,
-    createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, approveExpenseRefund, syncExpenseCashImpact, removeTransaction, syncOrderPayments, removeAccount, transfer, balanceOf,
+    createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, cancelExpense, acceptExpense, approveExpenseRefund, syncExpenseCashImpact, removeTransaction, syncOrderPayments, removeAccount, transfer, balanceOf,
   };
 }

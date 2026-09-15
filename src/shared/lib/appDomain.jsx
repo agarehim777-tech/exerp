@@ -3107,6 +3107,35 @@ export function buildDailyCashSummary(ledger, openingBalance = 0, targetDate = b
   };
 }
 
+export const EXPENSE_STATUS = {
+  pending: "Təsdiq gözləyir",
+  approved: "Təsdiq edildi",
+  accepted: "Qəbul edildi",
+  cancelled: "Ləğv edildi",
+  rejected: "İmtina edildi",
+};
+
+export const EXPENSE_STATUS_OPTIONS = Object.values(EXPENSE_STATUS);
+
+/** Maps an app-level expense status to the cash posting action stored in the database. */
+export function expenseCashAction(status) {
+  if (status === EXPENSE_STATUS.approved) return "approved";
+  if (status === EXPENSE_STATUS.accepted) return "accepted";
+  if (status === EXPENSE_STATUS.cancelled || status === EXPENSE_STATUS.rejected) return "cancelled";
+  return null;
+}
+
+export function isExpenseCashPosted(expense = {}) {
+  return (
+    hasExpenseCashImpact(expense) &&
+    [EXPENSE_STATUS.approved, EXPENSE_STATUS.accepted].includes(expense.status)
+  );
+}
+
+export function isExpenseCancelled(expense = {}) {
+  return [EXPENSE_STATUS.cancelled, EXPENSE_STATUS.rejected].includes(expense.status);
+}
+
 export function buildExpenseCategoryRows(expenses) {
   const byCategory = expenses.reduce((map, expense) => {
     const current = map.get(expense.category) || {
@@ -3117,9 +3146,9 @@ export function buildExpenseCategoryRows(expenses) {
       rejected: 0,
     };
     current.total += Number(expense.amount || 0);
-    if (expense.status === "Təsdiq edildi") current.approved += Number(expense.amount || 0);
-    if (expense.status === "Təsdiq gözləyir") current.pending += Number(expense.amount || 0);
-    if (expense.status === "İmtina edildi") current.rejected += Number(expense.amount || 0);
+    if (isExpenseCashPosted(expense)) current.approved += Number(expense.amount || 0);
+    if (expense.status === EXPENSE_STATUS.pending) current.pending += Number(expense.amount || 0);
+    if (isExpenseCancelled(expense)) current.rejected += Number(expense.amount || 0);
     map.set(expense.category, current);
     return map;
   }, new Map());
@@ -3177,8 +3206,8 @@ export function buildFinanceLedger({ orders, expenses, cashEntries }) {
   }));
 
   const expenseRows = expenses.map((expense) => {
-    const approved = expense.status === "Təsdiq edildi";
-    const rejected = expense.status === "İmtina edildi";
+    const approved = isExpenseCashPosted(expense);
+    const rejected = isExpenseCancelled(expense);
     const cashImpact = hasExpenseCashImpact(expense);
     const direction = !cashImpact ? "accrual" : approved ? "out" : rejected ? "ignored" : "pending";
     return {

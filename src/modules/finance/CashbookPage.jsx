@@ -335,7 +335,7 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
   const categoryNames = book.expenseCategories.map(item => item.name);
   const visibleExpenses = book.expenses.filter(expense => {
     const search = filters.search.trim().toLocaleLowerCase("az");
-    const statusGroup = ["pending", "draft"].includes(expense.status) ? "pending" : ["approved", "paid"].includes(expense.status) ? "approved" : expense.status;
+    const statusGroup = ["pending", "draft"].includes(expense.status) ? "pending" : expense.status === "rejected" ? "cancelled" : expense.status;
     return (!search || `${expense.description || ""} ${expense.category || ""}`.toLocaleLowerCase("az").includes(search))
       && (!filters.category || expense.category === filters.category)
       && (!filters.status || statusGroup === filters.status)
@@ -400,36 +400,46 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, marginBottom: 12, width: "100%" }}>
         <input value={filters.search} onChange={event => setFilters({ ...filters, search: event.target.value })} placeholder="Axtar…" style={{ ...input, minWidth: 0, boxSizing: "border-box" }} />
         <select value={filters.category} onChange={event => setFilters({ ...filters, category: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün kateqoriyalar</option>{categoryNames.map(category => <option key={category}>{category}</option>)}</select>
-        <select value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün statuslar</option><option value="pending">Təsdiq gözləyir</option><option value="approved">Təsdiqləndi</option><option value="refund_pending">Geri qaytarma gözləyir</option><option value="cancelled">Ləğv edildi</option></select>
+        <select value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün statuslar</option><option value="pending">Təsdiq gözləyir</option><option value="approved">Təsdiqləndi</option><option value="paid">Qəbul edildi</option><option value="refund_pending">Geri qaytarma gözləyir</option><option value="cancelled">Ləğv edildi</option></select>
         <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 10, color: "#64748b" }}><span>Başlanğıc tarixi</span><input type="date" value={filters.dateFrom} onChange={event => setFilters({ ...filters, dateFrom: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
         <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 10, color: "#64748b" }}><span>Bitmə tarixi</span><input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
         <button type="button" style={{ ...primaryBtn, minWidth: 0, alignSelf: "end", background: "#fff", color: "#475569", border: "1px solid #cbd5e1" }} onClick={() => setFilters({ search: "", category: "", status: "", dateFrom: "", dateTo: "" })}>Təmizlə</button>
       </div>
       <table style={table}>
-        <thead><tr><th style={th}>Tarix</th><th style={th}>Kateqoriya</th><th style={th}>Təsvir</th><th style={th}>Məbləğ</th><th style={th}>Status</th><th style={th} /></tr></thead>
+        <thead><tr><th style={th}>Tarix</th><th style={th}>Kateqoriya</th><th style={th}>Təsvir</th><th style={th}>Məbləğ</th><th style={th}>Status</th><th style={th}>Təsdiq</th><th style={th}>Qəbul</th><th style={th}>Ləğv</th><th style={th}>Kassa təsiri</th><th style={th} /></tr></thead>
         <tbody>
-          {visibleExpenses.map((e) => (
+          {visibleExpenses.map((e) => {
+            const isPending = ["pending", "draft"].includes(e.status);
+            const isCancelled = ["cancelled", "rejected"].includes(e.status);
+            const isAccepted = e.status === "paid";
+            const isApproved = isAccepted || e.status === "approved";
+            const cashImpact = isCancelled ? 0 : -Number(e.amount || 0);
+            return (
             <tr key={e.id}>
               <td style={td}>{new Date(e.expense_date).toLocaleDateString("az-AZ")}</td>
               <td style={td}>{e.category}</td>
               <td style={td}>{e.description || "—"}</td>
               <td style={{ ...td, fontWeight: 600 }}>{azn(e.amount)}</td>
-              <td style={td}><span style={badge(["approved", "paid", "cancelled"].includes(e.status) ? "green" : e.status === "refund_pending" ? "red" : "amber")}>{["approved", "paid"].includes(e.status) ? "Təsdiqləndi" : e.status === "cancelled" ? "Ləğv edildi / qaytarıldı" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span></td>
+              <td style={td}><span style={badge(isCancelled ? "red" : isApproved ? "green" : e.status === "refund_pending" ? "red" : "amber")}>{isAccepted ? "Qəbul edildi" : e.status === "approved" ? "Təsdiqləndi" : isCancelled ? "Ləğv edildi" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span></td>
+              <td style={td}>{isApproved ? "Bəli" : "—"}</td>
+              <td style={td}>{isAccepted ? "Bəli" : "—"}</td>
+              <td style={td}>{isCancelled ? "Bəli" : "—"}</td>
+              <td style={{ ...td, color: cashImpact ? "#b91c1c" : "#64748b" }}>{cashImpact ? azn(cashImpact) : "Kassaya qaytarılıb"}</td>
               <td style={td}>
-                {["pending", "draft"].includes(e.status) && <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                {isPending && <>
                   <button style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setEditing({ original: e, values: { account_id: e.account_id || "", category: e.category, description: e.description || "", amount: e.amount, vat_amount: e.vat_amount || "", expense_date: e.expense_date } })}>Redaktə et</button>
                   <button style={delBtn} onClick={async () => { if (!window.confirm("Xərc silinsin və məbləğ kassaya qaytarılsın?")) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc silindi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button>
-                  {canApprove && <>
-                  <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpense(e); setMsg("Xərc audit tərəfindən təsdiqləndi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Təsdiqlə</button>
-                  <button style={delBtn} onClick={async () => { setMsg(""); try { await book.rejectExpense(e.id); setMsg("Xərc ləğv edildi, məbləğ geri qaytarma növbəsinə düşdü."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>
-                  </>}
-                </div>}
-                {canApprove && ["approved", "paid"].includes(e.status) && <button style={delBtn} onClick={async () => { setMsg(""); try { await book.rejectExpense(e.id); setMsg("Xərc ləğv edildi, məbləğ geri qaytarma növbəsinə düşdü."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
+                </>}
+                {canApprove && isPending && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpense(e); setMsg("Xərc təsdiqləndi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Təsdiqlə</button>}
+                {canApprove && !isAccepted && !isCancelled && <button style={{ ...primaryBtn, background: "#0f766e" }} onClick={async () => { setMsg(""); try { await book.acceptExpense(e); setMsg("Xərc qəbul edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Qəbul et</button>}
+                {canApprove && !isCancelled && <button style={delBtn} onClick={async () => { if (!window.confirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?")) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
                 {canApprove && e.status === "refund_pending" && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpenseRefund(e); setMsg("Ləğv edilmiş məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Məbləği kassaya qaytar</button>}
+                </div>
               </td>
             </tr>
-          ))}
-          {!visibleExpenses.length && <tr><td style={td} colSpan={6}>Filterə uyğun xərc yoxdur.</td></tr>}
+          );})}
+          {!visibleExpenses.length && <tr><td style={td} colSpan={10}>Filterə uyğun xərc yoxdur.</td></tr>}
         </tbody>
       </table>
     </div>

@@ -38,6 +38,11 @@ import {
   hasExpenseCashImpact,
   isCreditClosed,
 } from "../shared/lib/appDomain.jsx";
+import {
+  EXPENSE_STATUS,
+  isExpenseCancelled,
+  isExpenseCashPosted,
+} from "../shared/lib/appDomain.jsx";
 
 export default FinancePage;
 
@@ -66,8 +71,21 @@ function FinancePage({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [ledgerSearch, setLedgerSearch] = useState("");
-  const pending = expenses.filter((expense) => expense.status === "Təsdiq gözləyir");
-  const approvedExpenses = expenses.filter((expense) => expense.status === "Təsdiq edildi");
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState("Hamısı");
+  const pending = expenses.filter((expense) => expense.status === EXPENSE_STATUS.pending);
+  const approvedExpenses = expenses.filter((expense) => isExpenseCashPosted(expense));
+  const expenseStatusFilters = [
+    { label: "Hamısı", count: expenses.length },
+    { label: EXPENSE_STATUS.pending, count: pending.length },
+    { label: EXPENSE_STATUS.approved, count: expenses.filter((expense) => expense.status === EXPENSE_STATUS.approved).length },
+    { label: EXPENSE_STATUS.accepted, count: expenses.filter((expense) => expense.status === EXPENSE_STATUS.accepted).length },
+    { label: EXPENSE_STATUS.cancelled, count: expenses.filter((expense) => isExpenseCancelled(expense)).length },
+  ];
+  const visibleExpenses = expenses.filter((expense) => {
+    if (expenseStatusFilter === "Hamısı") return true;
+    if (expenseStatusFilter === EXPENSE_STATUS.cancelled) return isExpenseCancelled(expense);
+    return expense.status === expenseStatusFilter;
+  });
   const approvedCashExpenses = approvedExpenses.filter((expense) => hasExpenseCashImpact(expense));
   const pendingCashExpenses = pending.filter((expense) => hasExpenseCashImpact(expense));
   const nonCashExpenseTotal = expenses
@@ -516,25 +534,46 @@ function FinancePage({
         </Panel>
 
         <Panel className="finance-expense-queue-panel span-2">
-          <PanelHeader title="Xərc təsdiq növbəsi" subtitle="Rəhbərlik təsdiqi və imtina axını" />
+          <PanelHeader title="Xərc qeydləri" subtitle="Təsdiq, ləğv və qəbul axını · kassa təsiri" />
+          <div className="tabs finance-filter-tabs">
+            {expenseStatusFilters.map((item) => (
+              <button
+                key={item.label}
+                className={expenseStatusFilter === item.label ? "active" : ""}
+                onClick={() => setExpenseStatusFilter(item.label)}
+              >
+                {item.label}
+                <span>{item.count}</span>
+              </button>
+            ))}
+          </div>
           <DataTable
-            columns={["Təsvir", "Kateqoriya", "Tarix", "Məbləğ", "Status", "Əməliyyat"]}
-            rows={expenses.map((expense) => [
+            columns={["Təsvir", "Kateqoriya", "Tarix", "Məbləğ", "Status", "Təsdiq", "Ləğv", "Qəbul", "Kassa təsiri", "Əməliyyat"]}
+            rows={visibleExpenses.map((expense) => [
               <strong>{expense.description}</strong>,
               expense.category,
               expense.date,
               money(expense.amount),
               <StatusBadge status={expense.status} />,
+              <StatusBadge status={expense.status === EXPENSE_STATUS.approved ? "Təsdiqlənib" : isExpenseCancelled(expense) ? "Yox" : "Gözləyir"} />,
+              <StatusBadge status={isExpenseCancelled(expense) ? "Ləğv edilib" : "Aktiv"} />,
+              <StatusBadge status={expense.status === EXPENSE_STATUS.accepted ? "Qəbul edilib" : "Gözləyir"} />,
+              isExpenseCashPosted(expense) ? `-${money(expense.amount)}` : isExpenseCancelled(expense) ? "Qaytarıldı" : "Təsirsiz",
               <div className="row-actions operation-table-actions">
-                {expense.status === "Təsdiq gözləyir" && (
-                  <>
-                    <button className="text-btn" onClick={() => setExpenseStatus(expense.id, "Təsdiq edildi")}>
-                      Təsdiq
-                    </button>
-                    <button className="text-btn danger" onClick={() => setExpenseStatus(expense.id, "İmtina edildi")}>
-                      İmtina
-                    </button>
-                  </>
+                {[EXPENSE_STATUS.pending].includes(expense.status) && (
+                  <button className="text-btn" onClick={() => setExpenseStatus(expense.id, EXPENSE_STATUS.approved)}>
+                    Təsdiqlə
+                  </button>
+                )}
+                {expense.status === EXPENSE_STATUS.approved && (
+                  <button className="text-btn" onClick={() => setExpenseStatus(expense.id, EXPENSE_STATUS.accepted)}>
+                    Qəbul et
+                  </button>
+                )}
+                {!isExpenseCancelled(expense) && (
+                  <button className="text-btn danger" onClick={() => setExpenseStatus(expense.id, EXPENSE_STATUS.cancelled)}>
+                    Ləğv et
+                  </button>
                 )}
                 <button className="text-btn" onClick={() => onEditExpense(expense.id)}>Redaktə</button>
                 <button className="text-btn danger" onClick={() => onDeleteExpense(expense.id)}>Sil</button>

@@ -5380,6 +5380,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_expense: {
+        Args: { _expense_id: string; _tenant_id: string }
+        Returns: Json
+      }
       accept_tenant_invite: { Args: { _token: string }; Returns: string }
       apply_invoice_match: {
         Args: {
@@ -5392,6 +5396,10 @@ export type Database = {
       backfill_sales_bonus_for_order: {
         Args: { _order_id: string }
         Returns: number
+      }
+      cancel_expense: {
+        Args: { _expense_id: string; _reason?: string; _tenant_id: string }
+        Returns: Json
       }
       cancel_sales_invoice: {
         Args: { _invoice_id: string }
@@ -5798,6 +5806,10 @@ export type Database = {
       start_credit_contract: {
         Args: { _credit_id: string; _start_date: string; _tenant_id: string }
         Returns: string
+      }
+      sync_expense_cash: {
+        Args: { _expense_no: string; _status: string; _tenant_id: string }
+        Returns: Json
       }
       sync_grn_landed_cost_shipment: { Args: { _grn: string }; Returns: string }
       trial_balance: {

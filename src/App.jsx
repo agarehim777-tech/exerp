@@ -10,6 +10,7 @@ import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
+import { syncExpenseCash } from "./services/expenseCash.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -4524,12 +4525,24 @@ function App() {
   function setExpenseStatus(id, status) {
     if (!requirePermission("finance.manage", "xərc statusunu dəyişmək")) return;
 
+    const target = (state.expenses || []).find((expense) => expense.id === id);
     setState((current) => ({
       ...current,
       expenses: current.expenses.map((expense) =>
         expense.id === id ? { ...expense, status } : expense,
       ),
     }));
+    if (activeTenantId && target) {
+      syncExpenseCash(activeTenantId, target, status)
+        .then((result) => {
+          if (result?.reversed) notify("Xərc ləğv edildi, məbləğ kassaya qaytarıldı.", "success");
+          else if (result?.posted) notify("Xərc məbləği Əsas kassadan məxaric edildi.", "success");
+        })
+        .catch((error) => {
+          console.error("[expense-cash]", error);
+          notify(`Kassa yazılışı alınmadı: ${error.message}`, "error");
+        });
+    }
     notify(`Xərc əməliyyatı: ${status}.`);
     auditOperation({
       module: "Maliyyə",
