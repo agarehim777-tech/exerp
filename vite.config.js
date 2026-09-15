@@ -1,15 +1,20 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 const APP_BUILD_ID = process.env.VITE_APP_BUILD_ID || String(Date.now());
 export default defineConfig(({ mode }) => {
-  const fileEnv = loadEnv(mode, process.cwd(), "VITE_");
+  // Read .env from the project directory (not the process CWD, which differs in CI/hosted builds).
+  const fileEnv = { ...loadEnv(mode, projectRoot, "VITE_"), ...loadEnv(mode, process.cwd(), "VITE_") };
   // Hosted builds inject the values as real environment variables (no .env file).
   const resolvedUrl = process.env.VITE_SUPABASE_URL || fileEnv.VITE_SUPABASE_URL;
   const resolvedKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || fileEnv.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!resolvedUrl || !resolvedKey) {
     throw new Error("VITE_SUPABASE_URL və VITE_SUPABASE_PUBLISHABLE_KEY mütləq verilməlidir.");
   }
+
 
   return {
   base: process.env.VITE_BASE_PATH || "/",
