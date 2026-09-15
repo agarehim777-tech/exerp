@@ -329,12 +329,16 @@ export function useOrders(tenantId) {
   const create = async ({ items = [], request_key: requestKey, credit = null, bonus_allocations: bonusAllocations = [], ...header }) => {
     if (requestKey && header.customer_id) {
       const initialPayment = Number(credit?.initial_payment || 0);
+      let resolvedAccount = null;
+      if (initialPayment > 0) {
+        resolvedAccount = await resolveMainCashAccount(header.currency || 'AZN');
+      }
       try {
         const completeResult = await createSalesOrderComplete({
           tenantId, requestKey, orderNo: header.order_no, customerId: header.customer_id,
           orderDate: header.order_date || new Date().toISOString().slice(0, 10),
           currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
-          bonusAllocations, initialPayment, accountId: null,
+          bonusAllocations, initialPayment, accountId: resolvedAccount?.id || null,
         });
         await fetchAll();
         return { id: completeResult.order_id, creditId: completeResult.credit_id };
@@ -463,7 +467,7 @@ export function useOrders(tenantId) {
         .select('id').eq('tenant_id', tenantId).eq('currency', order.currency || 'AZN').eq('is_active', true).limit(1).maybeSingle();
       if (accountError) throw accountError;
       if (existingAccount) resolvedAccountId = existingAccount.id;
-      else throw new Error('Ödəniş üçün aktiv kassa hesabı yaradılmalıdır.');
+      else resolvedAccountId = (await resolveMainCashAccount(order.currency || 'AZN')).id;
     }
 
     const { error: paymentError } = await supabase.rpc('register_order_payment', {

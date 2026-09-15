@@ -172,7 +172,21 @@ function TransactionsPanel({ book, tenantId }) {
   const [hiddenIds, setHiddenIds] = useState(new Set());
   const [showHidden, setShowHidden] = useState(false);
 
-  useEffect(() => { setHiddenIds(new Set()); }, [tenantId]);
+  const hiddenStorageKey = tenantId ? `erp.cash.hidden.${tenantId}` : null;
+  const persistHidden = (next) => {
+    setHiddenIds(next);
+    if (!hiddenStorageKey) return;
+    try { window.localStorage.setItem(hiddenStorageKey, JSON.stringify([...next])); } catch { /* storage unavailable */ }
+  };
+
+  useEffect(() => {
+    if (!hiddenStorageKey) { setHiddenIds(new Set()); return; }
+    try {
+      const raw = window.localStorage.getItem(hiddenStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setHiddenIds(new Set(Array.isArray(parsed) ? parsed : []));
+    } catch { setHiddenIds(new Set()); }
+  }, [hiddenStorageKey]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -224,7 +238,7 @@ function TransactionsPanel({ book, tenantId }) {
       return item.id === transaction.id || item.reversal_of === transaction.id || markerId === transaction.id;
     }).map(item => item.id);
     const next = new Set([...hiddenIds, transaction.id, ...pairIds]);
-    setHiddenIds(next);
+    persistHidden(next);
     setMsg("Ləğv edilmiş əməliyyat cədvəldən silindi. Audit məlumatı qorunur.");
   };
 
@@ -235,7 +249,7 @@ function TransactionsPanel({ book, tenantId }) {
       return item.id === originalId || item.reversal_of === originalId || markerId === originalId;
     }).map(item => item.id);
     const next = new Set([...hiddenIds].filter(id => !pairIds.includes(id)));
-    setHiddenIds(next);
+    persistHidden(next);
   };
 
   return (
