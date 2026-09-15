@@ -1,5 +1,5 @@
-// Operational records live in Supabase. Browser and tenant snapshots may only
-// persist UI preferences and non-transactional configuration.
+// Operational records that have their own Supabase tables are always loaded
+// from those tables and never kept in the tenant snapshot.
 export const dbBackedCollections = Object.freeze([
   "customers",
   "products",
@@ -11,8 +11,9 @@ export const dbBackedCollections = Object.freeze([
   "accounting",
 ]);
 
-export const operationalCollections = Object.freeze([
-  ...dbBackedCollections,
+// Modules that still live in the tenant snapshot (stored in Supabase, table
+// `tenant_state_snapshots`) because they have no dedicated table binding yet.
+export const snapshotBackedCollections = Object.freeze([
   "warehouseStock",
   "expenses",
   "cashEntries",
@@ -23,6 +24,11 @@ export const operationalCollections = Object.freeze([
   "leaveRequests",
   "vacancies",
   "contracts",
+]);
+
+export const operationalCollections = Object.freeze([
+  ...dbBackedCollections,
+  ...snapshotBackedCollections,
 ]);
 
 export function stripDbBackedCollections(state = {}) {
@@ -43,7 +49,19 @@ export function withoutOperationalData(state = {}) {
   return next;
 }
 
-export function writeTenantUiCache(storage, key, state) {
-  storage.setItem(key, JSON.stringify(stripOperationalCollections(state)));
+// Hydration path: only the table-backed collections are reset, snapshot-backed
+// modules (HR, expenses, cash entries, credits…) survive a reload.
+export function withoutDbBackedData(state = {}) {
+  const next = stripDbBackedCollections(state);
+  dbBackedCollections.forEach((key) => { next[key] = []; });
+  if (!next.warehouseStock || typeof next.warehouseStock !== "object") next.warehouseStock = {};
+  snapshotBackedCollections.forEach((key) => {
+    if (key === "warehouseStock") return;
+    if (!Array.isArray(next[key])) next[key] = [];
+  });
+  return next;
 }
 
+export function writeTenantUiCache(storage, key, state) {
+  storage.setItem(key, JSON.stringify(stripDbBackedCollections(state)));
+}
