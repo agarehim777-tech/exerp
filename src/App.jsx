@@ -6779,28 +6779,6 @@ function App() {
               onCompleteDelivery={completeWarehouseDelivery}
             />
           )}
-          {active === "finance" && (
-            <FinancePage
-              expenses={filtered.expenses}
-              cashEntries={filtered.cashEntries}
-              orders={filtered.orders}
-            credits={creditRecords}
-            currencyRows={filtered.currency}
-            setExpenseStatus={setExpenseStatus}
-            accounts={state.financeAccounts || []}
-            openingBalance={financeOpeningBalance}
-            onCreateAccount={() => setModal({ type: "financeAccount", mode: "create" })}
-            onEditAccount={(accountId) => setModal({ type: "financeAccount", mode: "edit", accountId })}
-            onEditExpense={openExpenseEditor}
-            onDeleteExpense={openExpenseDelete}
-            onOpenSalesOrder={openLinkedSalesOrder}
-            onOpenCredit={openLinkedCredit}
-            onOpenVendors={openVendorModule}
-            tenantId={activeTenantId}
-            canManagePeriods={can("finance.manage")}
-            notify={notify}
-            />
-          )}
           {active === "invoices" && (
             <InvoicesPage
               invoices={filtered.invoices}
