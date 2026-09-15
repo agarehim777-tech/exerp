@@ -729,6 +729,9 @@ export type Database = {
           penalty_amount: number
           principal_amount: number
           receipt_no: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
           tenant_id: string
           unallocated_amount: number
         }
@@ -744,6 +747,9 @@ export type Database = {
           penalty_amount?: number
           principal_amount?: number
           receipt_no: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           tenant_id: string
           unallocated_amount?: number
         }
@@ -759,6 +765,9 @@ export type Database = {
           penalty_amount?: number
           principal_amount?: number
           receipt_no?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           tenant_id?: string
           unallocated_amount?: number
         }
@@ -5646,8 +5655,8 @@ export type Database = {
         Returns: string
       }
       reverse_sales_order: {
-        Args: { _order_id: string; _reason?: string }
-        Returns: undefined
+        Args: { _order_id: string; _reason: string }
+        Returns: Json
       }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
