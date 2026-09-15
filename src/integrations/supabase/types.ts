@@ -5607,6 +5607,10 @@ export type Database = {
       }
       post_invoice_to_gl: { Args: { _invoice_id: string }; Returns: string }
       post_payment_to_gl: { Args: { _payment_id: string }; Returns: string }
+      preview_sales_order_reversal: {
+        Args: { _order_id: string }
+        Returns: Json
+      }
       process_sales_order_status: {
         Args: { _order_id: string; _status: string }
         Returns: undefined
