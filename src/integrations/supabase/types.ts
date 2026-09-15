@@ -1752,6 +1752,8 @@ export type Database = {
           expense_no: string | null
           gl_account_id: string | null
           id: string
+          note: string | null
+          source: string | null
           status: string
           tenant_id: string
           updated_at: string
@@ -1770,6 +1772,8 @@ export type Database = {
           expense_no?: string | null
           gl_account_id?: string | null
           id?: string
+          note?: string | null
+          source?: string | null
           status?: string
           tenant_id: string
           updated_at?: string
@@ -1788,6 +1792,8 @@ export type Database = {
           expense_no?: string | null
           gl_account_id?: string | null
           id?: string
+          note?: string | null
+          source?: string | null
           status?: string
           tenant_id?: string
           updated_at?: string

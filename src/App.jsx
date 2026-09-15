@@ -9,6 +9,7 @@ import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
+import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -309,6 +310,14 @@ function App() {
     localKey: localDbKey, schemaVersion: localDbSchemaVersion,
     onWarning: useCallback((error) => console.warn('[tenant-ui-state]', error), []),
     onError: useCallback(() => setAuthError('UI sazlamaları serverdə saxlanmadı.'), []),
+  });
+
+  useExpensesSync({
+    tenantId: activeTenantId,
+    ready: tenantStateReady,
+    expenses: state.expenses,
+    setState,
+    onError: useCallback((error) => console.error('[expenses-sync]', error), []),
   });
 
   useEffect(() => {
