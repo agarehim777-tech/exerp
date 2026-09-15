@@ -6,6 +6,7 @@ import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../
 import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
 import { AccountingPeriodPanel } from "../finance/components/AccountingPeriodPanel.jsx";
 import ConfirmActionDialog from "../../shared/components/ConfirmActionDialog.jsx";
+import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, Select, TableActions, Tabs, Toolbar } from "../../shared/ui/primitives.jsx";
 
 const TYPE_LABEL = { asset: "Aktiv", liability: "Öhdəlik", equity: "Kapital", revenue: "Gəlir", expense: "Xərc" };
 
@@ -16,14 +17,8 @@ export default function AccountingPage() {
   const [tab, setTab] = useState("coa");
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", gap: 8, borderBottom: "1px solid #e6dfc9", paddingBottom: 8 }}>
-        {[["coa","Hesablar planı"],["journal","Jurnal"],["tb","Trial Balance"]].map(([k,l]) => (
-          <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
-        ))}
-        <button onClick={() => setTab("reconciliation")} style={tabBtn(tab === "reconciliation")}>Kassa / bank uzlaşdırması</button>
-        <button onClick={() => setTab("periods")} style={tabBtn(tab === "periods")}>Period bağlanışı</button>
-      </div>
+    <PageStack>
+      <Tabs value={tab} onChange={setTab} items={[["coa", "Hesablar planı"], ["journal", "Jurnal"], ["tb", "Trial Balance"], ["reconciliation", "Kassa / bank uzlaşdırması"], ["periods", "Period bağlanışı"]]} />
       {tab === "coa" && <ChartOfAccountsPanel isAdmin={isAdmin} />}
       {tab === "journal" && <JournalPanel isAdmin={isAdmin} />}
       {tab === "tb" && <TrialBalancePanel tenantId={tenantId} />}
@@ -55,41 +50,21 @@ function ChartOfAccountsPanel({ isAdmin }) {
   };
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Hesablar planı ({accounts.length})</h3>
-        {isAdmin && accounts.length === 0 && (
-          <button onClick={doSeed} disabled={busy} style={primaryBtn}>Standart hesabları yüklə</button>
-        )}
-      </div>
-      {msg && <div style={msgBox}>{msg}</div>}
+    <Card title={`Hesablar planı (${accounts.length})`} actions={isAdmin && accounts.length === 0 && <Button onClick={doSeed} disabled={busy}>Standart hesabları yüklə</Button>}>
+      {msg && <Notice tone={msg.startsWith("Xəta") ? "danger" : "info"}>{msg}</Notice>}
       {isAdmin && (
-        <form onSubmit={doCreate} style={{ display: "grid", gridTemplateColumns: "100px 1fr 140px auto", gap: 8, marginBottom: 12 }}>
-          <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
-          <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={input}>
+        <FormGrid as="form" onSubmit={doCreate} className="ui-form-surface ui-spacer-top">
+          <Input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+          <Input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
             {Object.entries(TYPE_LABEL).map(([k,l]) => <option key={k} value={k}>{l}</option>)}
-          </select>
-          <button type="submit" disabled={busy} style={primaryBtn}>+ Əlavə et</button>
-        </form>
+          </Select>
+          <Button type="submit" disabled={busy}>+ Əlavə et</Button>
+        </FormGrid>
       )}
-      {loading ? <div>Yüklənir…</div> : (
-        <table style={table}>
-          <thead><tr><th style={th}>Kod</th><th style={th}>Ad</th><th style={th}>Tip</th>{isAdmin && <th style={th}></th>}</tr></thead>
-          <tbody>
-            {accounts.map((a) => (
-              <tr key={a.id}>
-                <td style={td}><b>{a.code}</b></td>
-                <td style={td}>{a.name}</td>
-                <td style={td}>{TYPE_LABEL[a.type]}</td>
-                {isAdmin && <td style={td}><button onClick={() => setPendingDelete(a)} style={delBtn}>Sil</button></td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Ad" }, { key: "type", label: "Tip" }, ...(isAdmin ? [{ key: "actions", label: "" }] : [])]} rows={loading ? [] : accounts} emptyText={loading ? "Yüklənir…" : "Hesab yoxdur."} renderCell={(account, column) => column.key === "code" ? <strong>{account.code}</strong> : column.key === "type" ? TYPE_LABEL[account.type] : column.key === "actions" ? <Button variant="danger" size="compact" onClick={() => setPendingDelete(account)}>Sil</Button> : account[column.key]} />
       <ConfirmActionDialog open={Boolean(pendingDelete)} title="Hesab silinsin?" description={`${pendingDelete?.code || ''} ${pendingDelete?.name || ''} hesabı yalnız istifadə edilməyibsə silinəcək.`} confirmLabel="Hesabı sil" destructive onCancel={() => setPendingDelete(null)} onConfirm={async () => { try { await remove(pendingDelete.id); setPendingDelete(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
-    </div>
+    </PageStack>
   );
 }
 
@@ -199,7 +174,7 @@ function JournalPanel({ isAdmin }) {
         </table>
       )}
       <ConfirmActionDialog open={Boolean(pendingAction)} title={pendingAction?.type === 'reverse' ? 'Əks jurnal yaradılsın?' : pendingAction?.type === 'post' ? 'Jurnal postlansın?' : 'Jurnal layihəsi silinsin?'} description={pendingAction?.type === 'reverse' ? 'Orijinal jurnal dəyişməyəcək; debet və kreditləri əks olan yeni jurnal yaradılacaq.' : pendingAction?.type === 'post' ? 'Postlandıqdan sonra jurnal dəyişdirilə və silinə bilməz.' : 'Yalnız post edilməmiş jurnal layihəsi silinəcək.'} confirmLabel={pendingAction?.type === 'reverse' ? 'Əks yazılış yarat' : pendingAction?.type === 'post' ? 'Postla' : 'Layihəni sil'} destructive={pendingAction?.type !== 'post'} reason={reason} onReasonChange={pendingAction?.type === 'reverse' ? setReason : undefined} reasonRequired={pendingAction?.type === 'reverse'} onCancel={() => setPendingAction(null)} onConfirm={async () => { try { if (pendingAction.type === 'post') await post(pendingAction.entry.id); else if (pendingAction.type === 'reverse') await reverse(pendingAction.entry.id, reason); else await remove(pendingAction.entry.id); setPendingAction(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
-    </div>
+    </Card>
   );
 }
 
