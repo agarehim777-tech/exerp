@@ -467,7 +467,7 @@ export function useOrders(tenantId) {
         .select('id').eq('tenant_id', tenantId).eq('currency', order.currency || 'AZN').eq('is_active', true).limit(1).maybeSingle();
       if (accountError) throw accountError;
       if (existingAccount) resolvedAccountId = existingAccount.id;
-      else throw new Error('Ödəniş üçün aktiv kassa hesabı yaradılmalıdır.');
+      else resolvedAccountId = (await resolveMainCashAccount(order.currency || 'AZN')).id;
     }
 
     const { error: paymentError } = await supabase.rpc('register_order_payment', {
