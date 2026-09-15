@@ -55,6 +55,8 @@ export function ExpenseOperationModal({ expense, onClose, onSubmit }) {
             <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
               <option>Təsdiq gözləyir</option>
               <option>Təsdiq edildi</option>
+              <option>Qəbul edildi</option>
+              <option>Ləğv edildi</option>
               <option>İmtina edildi</option>
             </select>
           </label>

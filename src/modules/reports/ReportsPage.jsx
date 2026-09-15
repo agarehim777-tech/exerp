@@ -50,6 +50,11 @@ function inSelectedPeriod(row, period, snapshotDate) {
   return date.getFullYear() === snapshot.getFullYear();
 }
 
+function isCancelledExpense(row) {
+  const status = normalize(row?.status);
+  return status.includes("imtina") || status.includes("ləğv") || status.includes("cancel");
+}
+
 function buildMonthlyTrend(orders, expenses, snapshotDate) {
   const snapshot = new Date(snapshotDate);
   return Array.from({ length: 6 }, (_, index) => {
@@ -61,7 +66,9 @@ function buildMonthlyTrend(orders, expenses, snapshotDate) {
     return {
       label: new Intl.DateTimeFormat("az-AZ", { month: "short" }).format(date),
       revenue: orders.filter(sameMonth).reduce((sum, row) => sum + Number(row.amount || 0), 0),
-      expense: expenses.filter(sameMonth).reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      expense: expenses
+        .filter((row) => sameMonth(row) && !isCancelledExpense(row))
+        .reduce((sum, row) => sum + Number(row.amount || 0), 0),
     };
   });
 }
@@ -194,7 +201,7 @@ export function ReportsPage({
     0,
   );
   const operatingExpense = filteredExpenses
-    .filter((row) => !normalize(row.status).includes("imtina"))
+    .filter((row) => !isCancelledExpense(row))
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const grossProfit = revenue - salesCost;
   const netResult = grossProfit - operatingExpense;
