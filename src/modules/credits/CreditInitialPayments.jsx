@@ -32,23 +32,17 @@ export function useCreditInitialPayments(creditId, orderId, orderNo) {
         .in("action", ["create_draft", "initial_payment"])
         .contains("payload", { credit_id: creditId })
         .order("created_at", { ascending: true });
-      const links = [
-        creditId ? `reference_id.eq.${creditId}` : "",
-        orderId ? `reference_id.eq.${orderId}` : "",
-        orderNo ? `reference.eq.${orderNo}` : "",
-      ].filter(Boolean);
-      const cashQuery = links.length
-        ? supabase
-            .from("cash_transactions")
-            .select("id,amount,category,description,occurred_at,created_at")
-            .eq("direction", "in")
-            .in("category", ["sales_payment", "credit_initial"])
-            .or(links.join(","))
-            .order("occurred_at", { ascending: true })
-        : Promise.resolve({ data: [], error: null });
+      // Yalnız kredit müqaviləsinə birbaşa bağlı ilkin ödəniş yazıları götürülür —
+      // sifarişə aid digər ödənişlər behin cəminə qarışmamalıdır.
+      const cashQuery = supabase
+        .from("cash_transactions")
+        .select("id,amount,category,description,occurred_at,created_at")
+        .eq("direction", "in")
+        .eq("category", "credit_initial")
+        .eq("reference_id", creditId)
+        .order("occurred_at", { ascending: true });
       const [auditResult, cashResult] = await Promise.all([auditQuery, cashQuery]);
       if (auditResult.error) throw auditResult.error;
-      if (cashResult.error) throw cashResult.error;
       const auditRows = (auditResult.data || [])
         .map((row) => {
           const payload = row.payload || {};
