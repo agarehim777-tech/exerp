@@ -4,7 +4,7 @@ import { authenticatedApi, hasLifecycleEnvironment, runId } from "./supabase-lif
 test.describe.configure({ mode: "serial" });
 test.skip(!hasLifecycleEnvironment, "Authenticated Supabase lifecycle environment is not configured");
 
-test("sales order → payment → cancellation stays cancelled after reload", async ({ request }) => {
+test("@lifecycle sales order → payment → cancellation stays cancelled after reload", async ({ request }) => {
   const { call, tenantId } = await authenticatedApi(request);
   const marker = runId("E2E-SALE");
   let orderId = "";

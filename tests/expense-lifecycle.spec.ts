@@ -4,7 +4,7 @@ import { authenticatedApi, hasLifecycleEnvironment, runId } from "./supabase-lif
 test.describe.configure({ mode: "serial" });
 test.skip(!hasLifecycleEnvironment, "Authenticated Supabase lifecycle environment is not configured");
 
-test("expense → approval → acceptance → cancellation restores cash balance", async ({ request }) => {
+test("@lifecycle expense → approval → acceptance → cancellation restores cash balance", async ({ request }) => {
   const { call, tenantId } = await authenticatedApi(request);
   const marker = runId("E2E-EXP");
   let accountId = "";
