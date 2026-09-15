@@ -126,7 +126,8 @@ import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
-import { withoutOperationalData } from "./shared/state/tenantPersistence.js";
+import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
+import { ensureMainCashAccount } from "./services/cashAccounts.js";
 
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
@@ -295,7 +296,7 @@ const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === "true
 
 function App() {
 
-  const [state, setState] = useState(() => hydrateState(withoutOperationalData(initialState)));
+  const [state, setState] = useState(() => hydrateState(withoutDbBackedData(initialState)));
   const [authError, setAuthError] = useState("");
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
@@ -5552,30 +5553,7 @@ function App() {
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
     try {
       if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
-        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
-        let { data: cashAccount, error: accountError } = await supabase
-          .from("cash_accounts")
-          .select("id")
-          .eq("tenant_id", activeTenantId)
-          .eq("account_no", mainCode)
-          .eq("is_active", true)
-          .limit(1)
-          .maybeSingle();
-        if (accountError) throw accountError;
-        if (!cashAccount) {
-          const byName = await supabase
-            .from("cash_accounts")
-            .select("id")
-            .eq("tenant_id", activeTenantId)
-            .ilike("name", "Əsas kassa")
-            .eq("is_active", true)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (byName.error) throw byName.error;
-          cashAccount = byName.data;
-        }
-        if (!cashAccount) throw new Error("Əsas kassa tapılmadı.");
+        const cashAccount = await ensureMainCashAccount(activeTenantId);
 
         await postCreditPayment({
           tenantId: activeTenantId,
@@ -5694,34 +5672,12 @@ function App() {
 
     try {
       if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
-        const mainCode = `MAIN-${String(activeTenantId).slice(0, 8).toUpperCase()}`;
-        let { data: cashAccount, error: accountError } = await supabase
-          .from("cash_accounts")
-          .select("id")
-          .eq("tenant_id", activeTenantId)
-          .eq("account_no", mainCode)
-          .eq("is_active", true)
-          .limit(1)
-          .maybeSingle();
-        if (accountError) throw accountError;
-        if (!cashAccount) {
-          const byName = await supabase
-            .from("cash_accounts")
-            .select("id")
-            .eq("tenant_id", activeTenantId)
-            .ilike("name", "Əsas kassa")
-            .eq("is_active", true)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (byName.error) throw byName.error;
-          cashAccount = byName.data;
-        }
+        const cashAccount = await ensureMainCashAccount(activeTenantId);
         const { error: rpcError } = await supabase.rpc("post_credit_initial_payment", {
           _tenant_id: activeTenantId,
           _credit_id: targetCredit.id,
           _amount: payment,
-          _cash_account_id: cashAccount?.id || null,
+          _cash_account_id: cashAccount.id,
           _note: "İlkin ödəniş (beh) qəbulu",
         });
         if (rpcError) throw rpcError;

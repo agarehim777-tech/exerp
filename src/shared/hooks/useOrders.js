@@ -85,6 +85,8 @@ export function useOrders(tenantId) {
       .from('orders')
       .select('*, customer:customers(id,name), items:order_items(*)')
       .eq('tenant_id', tenantId)
+      // Ləğv edilmiş satışlar siyahıya qayıtmamalıdır.
+      .neq('status', 'cancelled')
       .order('order_date', { ascending: false })
       .limit(limit + 1);
     if (error) setError(error);
