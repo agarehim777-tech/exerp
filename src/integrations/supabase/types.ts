@@ -4708,6 +4708,50 @@ export type Database = {
           },
         ]
       }
+      tenant_collection_records: {
+        Row: {
+          collection: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          position: number
+          record_key: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          collection: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          position?: number
+          record_key: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          collection?: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          position?: number
+          record_key?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_collection_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_invites: {
         Row: {
           accepted_at: string | null
