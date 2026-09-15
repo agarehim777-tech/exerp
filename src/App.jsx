@@ -10,6 +10,8 @@ import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
+import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
