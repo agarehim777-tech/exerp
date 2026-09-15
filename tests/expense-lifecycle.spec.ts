@@ -38,6 +38,7 @@ test("@lifecycle expense → approval → acceptance → cancellation restores c
     expect(ledger).toHaveLength(2);
     expect(ledger.reduce((sum: number, row: { direction: string; amount: number }) => sum + (row.direction === "in" ? Number(row.amount) : -Number(row.amount)), 0)).toBe(0);
   } finally {
+    if (expenseId) await call("delete", `cash_transactions?tenant_id=eq.${tenantId}&or=(reference.eq.${encodeURIComponent(`EXPENSE:${expenseId}`)},reference.eq.${encodeURIComponent(`EXPENSE-REVERSAL:${expenseId}`)})`).catch(() => null);
     if (expenseId) await call("delete", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}`).catch(() => null);
     if (accountId) await call("delete", `cash_accounts?id=eq.${accountId}&tenant_id=eq.${tenantId}`).catch(() => null);
   }
