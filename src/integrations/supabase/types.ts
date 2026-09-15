@@ -361,6 +361,7 @@ export type Database = {
           occurred_at: string
           reference: string | null
           reference_id: string | null
+          reference_type: string | null
           reversal_of: string | null
           tenant_id: string
           transaction_no: string | null
@@ -382,6 +383,7 @@ export type Database = {
           occurred_at?: string
           reference?: string | null
           reference_id?: string | null
+          reference_type?: string | null
           reversal_of?: string | null
           tenant_id: string
           transaction_no?: string | null
@@ -403,6 +405,7 @@ export type Database = {
           occurred_at?: string
           reference?: string | null
           reference_id?: string | null
+          reference_type?: string | null
           reversal_of?: string | null
           tenant_id?: string
           transaction_no?: string | null
