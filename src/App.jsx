@@ -312,6 +312,14 @@ function App() {
     onError: useCallback(() => setAuthError('UI sazlamaları serverdə saxlanmadı.'), []),
   });
 
+  useExpensesSync({
+    tenantId: activeTenantId,
+    ready: tenantStateReady,
+    expenses: state.expenses,
+    setState,
+    onError: useCallback((error) => console.error('[expenses-sync]', error), []),
+  });
+
   useEffect(() => {
     if (!ENABLE_LEGACY_WRITES) return;
     if (!activeTenantId || !dbOrders.length) return;
