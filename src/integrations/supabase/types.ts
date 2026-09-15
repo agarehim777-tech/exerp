@@ -1625,6 +1625,41 @@ export type Database = {
           },
         ]
       }
+      erp_reconciliation_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          critical_count: number
+          id: string
+          report: Json
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          critical_count?: number
+          id?: string
+          report?: Json
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          critical_count?: number
+          id?: string
+          report?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_reconciliation_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exchange_rates: {
         Row: {
           created_at: string
@@ -5406,6 +5441,23 @@ export type Database = {
         }
         Returns: Json
       }
+      create_sales_order_complete: {
+        Args: {
+          _account_id?: string
+          _bonus_allocations?: Json
+          _credit?: Json
+          _currency: string
+          _customer_id: string
+          _initial_payment?: number
+          _items: Json
+          _notes: string
+          _order_date: string
+          _order_no: string
+          _request_key: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       create_tenant: { Args: { _name: string; _slug: string }; Returns: string }
       create_tenant_invite: {
         Args: {
@@ -5452,6 +5504,7 @@ export type Database = {
         Returns: undefined
       }
       ensure_rls_helper_grants: { Args: never; Returns: Json }
+      erp_runtime_capabilities: { Args: never; Returns: Json }
       evaluate_invoice_match: {
         Args: {
           _invoice_id: string
@@ -5676,6 +5729,15 @@ export type Database = {
         Args: { _period_lock_id: string; _reason: string; _tenant_id: string }
         Returns: undefined
       }
+      repair_erp_integrity_issue: {
+        Args: {
+          _order_id: string
+          _reason: string
+          _request_key: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       reserve_stock: {
         Args: {
           _order_id: string
@@ -5699,10 +5761,20 @@ export type Database = {
         Args: { _order_id: string; _reason: string }
         Returns: Json
       }
+      reverse_sales_order_v3: {
+        Args: {
+          _order_id: string
+          _reason: string
+          _request_key: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: Json
       }
+      scan_erp_integrity: { Args: { _tenant_id: string }; Returns: Json }
       seed_default_coa: { Args: { _tenant: string }; Returns: undefined }
       seed_default_crm_pipeline: { Args: { _tenant: string }; Returns: string }
       set_order_bonus_assignments: {
