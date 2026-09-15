@@ -10,6 +10,8 @@ import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
+import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
@@ -65,7 +67,7 @@ import {
 import { pageMeta } from "./config/page-meta.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-import { AccessCheckPage, AccountingPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancePage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
+import { AccessCheckPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
   createRemoteCompany,
   createRemoteUser,
@@ -319,6 +321,15 @@ function App() {
     expenses: state.expenses,
     setState,
     onError: useCallback((error) => console.error('[expenses-sync]', error), []),
+  });
+
+  useCollectionSync({
+    tenantId: activeTenantId,
+    ready: tenantStateReady,
+    collections: syncedCollections,
+    state,
+    setState,
+    onError: useCallback((error) => console.error('[collection-sync]', error), []),
   });
 
   useEffect(() => {
@@ -6766,28 +6777,6 @@ function App() {
               warehouses={state.warehouses}
               warehouseStock={state.warehouseStock}
               onCompleteDelivery={completeWarehouseDelivery}
-            />
-          )}
-          {active === "finance" && (
-            <FinancePage
-              expenses={filtered.expenses}
-              cashEntries={filtered.cashEntries}
-              orders={filtered.orders}
-            credits={creditRecords}
-            currencyRows={filtered.currency}
-            setExpenseStatus={setExpenseStatus}
-            accounts={state.financeAccounts || []}
-            openingBalance={financeOpeningBalance}
-            onCreateAccount={() => setModal({ type: "financeAccount", mode: "create" })}
-            onEditAccount={(accountId) => setModal({ type: "financeAccount", mode: "edit", accountId })}
-            onEditExpense={openExpenseEditor}
-            onDeleteExpense={openExpenseDelete}
-            onOpenSalesOrder={openLinkedSalesOrder}
-            onOpenCredit={openLinkedCredit}
-            onOpenVendors={openVendorModule}
-            tenantId={activeTenantId}
-            canManagePeriods={can("finance.manage")}
-            notify={notify}
             />
           )}
           {active === "invoices" && (
