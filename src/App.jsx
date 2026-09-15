@@ -321,6 +321,15 @@ function App() {
     onError: useCallback((error) => console.error('[expenses-sync]', error), []),
   });
 
+  useCollectionSync({
+    tenantId: activeTenantId,
+    ready: tenantStateReady,
+    collections: syncedCollections,
+    state,
+    setState,
+    onError: useCallback((error) => console.error('[collection-sync]', error), []),
+  });
+
   useEffect(() => {
     if (!ENABLE_LEGACY_WRITES) return;
     if (!activeTenantId || !dbOrders.length) return;
