@@ -5360,6 +5360,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_manual_journal_entry: {
+        Args: {
+          _description: string
+          _entry_date: string
+          _lines: Json
+          _reference: string
+          _tenant: string
+        }
+        Returns: string
+      }
       create_sales_order: {
         Args: {
           _currency: string
@@ -5413,6 +5423,15 @@ export type Database = {
       customer_360_snapshot: {
         Args: { _customer_id: string; _tenant_id: string }
         Returns: Json
+      }
+      customer_sales_metrics: {
+        Args: { _tenant: string }
+        Returns: {
+          customer_id: string
+          order_count: number
+          paid_total: number
+          sales_total: number
+        }[]
       }
       delete_sales_order_safe: {
         Args: { _order_id: string }
@@ -5606,6 +5625,10 @@ export type Database = {
         Returns: string
       }
       post_invoice_to_gl: { Args: { _invoice_id: string }; Returns: string }
+      post_manual_journal_entry: {
+        Args: { _entry: string }
+        Returns: undefined
+      }
       post_payment_to_gl: { Args: { _payment_id: string }; Returns: string }
       preview_sales_order_reversal: {
         Args: { _order_id: string }
@@ -5656,6 +5679,10 @@ export type Database = {
       }
       reverse_cash_transaction: {
         Args: { _reason: string; _tenant_id: string; _transaction_id: string }
+        Returns: string
+      }
+      reverse_journal_entry: {
+        Args: { _entry: string; _reason: string }
         Returns: string
       }
       reverse_sales_order: {
