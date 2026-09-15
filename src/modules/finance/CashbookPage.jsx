@@ -238,7 +238,7 @@ function TransactionsPanel({ book, tenantId }) {
       return item.id === transaction.id || item.reversal_of === transaction.id || markerId === transaction.id;
     }).map(item => item.id);
     const next = new Set([...hiddenIds, transaction.id, ...pairIds]);
-    setHiddenIds(next);
+    persistHidden(next);
     setMsg("Ləğv edilmiş əməliyyat cədvəldən silindi. Audit məlumatı qorunur.");
   };
 
