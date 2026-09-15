@@ -324,4 +324,3 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
   );
 }
 
-// FinancePage moved to ./pages/FinancePage.jsx (lazy chunk)
