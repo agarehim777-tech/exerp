@@ -30,6 +30,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "e2e:lifecycle": "playwright test tests/sales-lifecycle.spec.ts tests/expense-lifecycle.spec.ts --workers=1",
     "verify:stock": "node scripts/verify-stock-lifecycle.mjs",
     "verify:credit": "node scripts/verify-credit-start.mjs",
     "verify:credit-payments": "node scripts/verify-credit-payments.mjs",
