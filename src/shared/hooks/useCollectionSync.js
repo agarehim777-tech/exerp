@@ -3,14 +3,14 @@ import { supabase } from "../../integrations/supabase/client";
 
 const TABLE = "tenant_collection_records";
 
-const recordKey = (item, index) => String(item?.id ?? item?.key ?? item?.code ?? `idx-${index}`);
+export const recordKey = (item, index) => String(item?.id ?? item?.key ?? item?.code ?? `idx-${index}`);
 
-function rowToApp(row) {
+export function rowToApp(row) {
   const data = row?.data && typeof row.data === "object" ? row.data : {};
   return { ...data, id: data.id ?? row.record_key };
 }
 
-function appToRow(item, index, tenantId, collection) {
+export function appToRow(item, index, tenantId, collection) {
   return {
     tenant_id: tenantId,
     collection,
