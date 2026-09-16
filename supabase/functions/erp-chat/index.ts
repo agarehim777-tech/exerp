@@ -1,7 +1,17 @@
 import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "npm:ai";
 import { z } from "npm:zod";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
+
+function createOpenAiProvider(apiKey: string) {
+  return createOpenAICompatible({
+    name: "openai",
+    baseURL: "https://api.openai.com/v1",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,9 +23,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) return json({ error: "LOVABLE_API_KEY not set" }, 500);
-
     const auth = req.headers.get("Authorization") || "";
     const token = auth.replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Not authenticated" }, 401);
@@ -34,6 +41,14 @@ Deno.serve(async (req) => {
       return json({ error: "Sessiya bitib. Yenidən daxil olun." }, 401);
     }
 
+    const key = Deno.env.get("OPENAI_API_KEY");
+    if (!key) {
+      return json({
+        error: "AI köməkçisi hələ konfiqurasiya edilməyib.",
+        code: "AI_PROVIDER_NOT_CONFIGURED",
+      }, 503);
+    }
+
     const { messages, tenantId }: { messages: UIMessage[]; tenantId?: string } = await req.json();
 
     // Strip PostgREST filter metacharacters so AI-supplied text cannot alter
@@ -41,7 +56,7 @@ Deno.serve(async (req) => {
     const sanitizeSearch = (value: string) =>
       value.replace(/[,()."'\\*%:]/g, " ").trim().slice(0, 80);
 
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createOpenAiProvider(key);
 
     const tools = {
       list_customers: tool({
@@ -134,14 +149,30 @@ Data lazım olduqda tools çağır. Sistemdə şirkət təcridi RLS ilə təmin 
 Nə cavab verə biləcəyin: müştəri/məhsul/sifariş axtarışı, statistika, az qalan məhsullar, satış xülasəsi.`;
 
     const result = streamText({
-      model: gateway("google/gemini-3.6-flash"),
+      model: gateway("gpt-5-mini"),
       system,
       messages: await convertToModelMessages(Array.isArray(messages) ? messages : []),
       tools,
       stopWhen: stepCountIs(8),
     });
 
-    return result.toUIMessageStreamResponse({ headers: corsHeaders });
+    return result.toUIMessageStreamResponse({
+      headers: corsHeaders,
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("erp-chat stream error", message);
+        if (/quota|billing|insufficient_quota/i.test(message)) {
+          return "OpenAI hesabında API balansı və ya billing aktiv deyil.";
+        }
+        if (/model|not found|access/i.test(message)) {
+          return "Seçilmiş OpenAI modeli bu layihə üçün əlçatan deyil.";
+        }
+        if (/rate.?limit|429/i.test(message)) {
+          return "AI sorğu limiti dolub. Bir qədər sonra yenidən cəhd edin.";
+        }
+        return "AI xidməti sorğunu tamamlaya bilmədi.";
+      },
+    });
   } catch (e) {
     console.error("erp-chat error", e);
     return json({ error: String(e?.message || e) }, 500);

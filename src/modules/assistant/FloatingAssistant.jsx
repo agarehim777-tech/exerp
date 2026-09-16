@@ -12,6 +12,20 @@ const SUGGESTIONS = [
   "Top 5 müştəri",
 ];
 
+function assistantErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/failed to fetch/i.test(message)) {
+    return "AI xidməti ilə əlaqə qurulmadı. Bir qədər sonra yenidən cəhd edin.";
+  }
+  if (/AI_PROVIDER_NOT_CONFIGURED|LOVABLE_API_KEY|konfiqurasiya edilməyib/i.test(message)) {
+    return "AI xidməti administrator tərəfindən konfiqurasiya edilməlidir.";
+  }
+  if (/401|sessiya/i.test(message)) {
+    return "Sessiya bitib. Yenidən daxil olun.";
+  }
+  return message || "AI sorğusu tamamlanmadı.";
+}
+
 export default function FloatingAssistant() {
   const { session, activeTenantId } = useAuth();
   const [input, setInput] = useState("");
@@ -98,7 +112,7 @@ export default function FloatingAssistant() {
             )}
 
             {error && (
-              <div className="floating-assistant-error">Xəta: {String(error.message || error)}</div>
+              <div className="floating-assistant-error">Xəta: {assistantErrorMessage(error)}</div>
             )}
           </div>
 
