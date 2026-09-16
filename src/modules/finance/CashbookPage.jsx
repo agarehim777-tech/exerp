@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
@@ -10,38 +10,13 @@ import {
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
 
-export default function CashbookPage({ legacyCashEntries = [] }) {
+export default function CashbookPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeMembership, isPlatformAdmin } = useAuth();
   const tenantId = activeMembership?.tenant_id;
   const canApproveExpenses = Boolean(isPlatformAdmin || ["owner", "admin", "audit", "auditor"].includes(activeMembership?.role));
   const book = useCashbook(tenantId);
   const [tab, setTab] = useState(() => searchParams.get("tab") || "accounts");
-  const [syncError, setSyncError] = useState("");
-  const syncedSignature = useRef("");
-  const legacyPaymentSignature = useMemo(
-    () => legacyCashEntries.map((entry) => `${entry.id}:${entry.amount}`).sort().join("|"),
-    [legacyCashEntries],
-  );
-
-  useEffect(() => {
-    if (!tenantId || book.loading) return;
-    const signature = `${tenantId}:${legacyPaymentSignature}`;
-    if (syncedSignature.current === signature) return;
-    syncedSignature.current = signature;
-    setSyncError("");
-    (async () => {
-      try {
-        await book.syncOrderPayments(legacyCashEntries);
-        await book.syncExpenseCashImpact();
-        setSyncError("");
-      } catch (error) {
-        syncedSignature.current = "";
-        setSyncError(error?.message || "Kassa sinxronizasiyası alınmadı.");
-        console.error("Kassa sinxronizasiyası alınmadı:", error);
-      }
-    })();
-  }, [tenantId, legacyPaymentSignature, book.loading]);
 
   const totals = useMemo(() => {
     const balance = book.accounts.reduce((sum, a) => sum + book.balanceOf(a.id), 0);
@@ -81,7 +56,6 @@ export default function CashbookPage({ legacyCashEntries = [] }) {
       </div>
 
       {book.error && <div style={msgBox}>Xəta: {book.error.message}</div>}
-      {syncError && <div style={msgBox}>Sinxronizasiya xətası: {syncError}</div>}
       {tab === "accounts" && <AccountsPanel book={book} />}
       {tab === "transactions" && <TransactionsPanel book={book} tenantId={tenantId} />}
       {tab === "expenses" && (

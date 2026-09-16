@@ -27,7 +27,7 @@ export async function authenticatedApi(request: APIRequestContext) {
   };
   const memberships = await call("get", "tenant_members?select=tenant_id,role&limit=1");
   if (!memberships?.[0]?.tenant_id) throw new Error("E2E istifadəçisinin aktiv şirkət üzvlüyü yoxdur.");
-  return { call, tenantId: memberships[0].tenant_id as string };
+  return { call, tenantId: memberships[0].tenant_id as string, accessToken: session.access_token as string };
 }
 
 export const runId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

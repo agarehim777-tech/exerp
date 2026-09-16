@@ -11,8 +11,9 @@ export const dbBackedCollections = Object.freeze([
   "accounting",
 ]);
 
-// Modules that still live in the tenant snapshot (stored in Supabase, table
-// `tenant_state_snapshots`) because they have no dedicated table binding yet.
+// Transitional modules are persisted as individual rows in
+// `tenant_collection_records`; they must never be copied into browser storage
+// or the last-write-wins tenant snapshot.
 export const snapshotBackedCollections = Object.freeze([
   "warehouseStock",
   "expenses",
@@ -32,9 +33,7 @@ export const operationalCollections = Object.freeze([
 ]);
 
 export function stripDbBackedCollections(state = {}) {
-  const next = { ...state };
-  dbBackedCollections.forEach((key) => delete next[key]);
-  return next;
+  return stripOperationalCollections(state);
 }
 
 export function stripOperationalCollections(state = {}) {
@@ -49,19 +48,12 @@ export function withoutOperationalData(state = {}) {
   return next;
 }
 
-// Hydration path: only the table-backed collections are reset, snapshot-backed
-// modules (HR, expenses, cash entries, credits…) survive a reload.
+// Hydration path: operational data always starts empty and is populated by the
+// relevant repository hook. A stale snapshot can therefore never resurrect it.
 export function withoutDbBackedData(state = {}) {
-  const next = stripDbBackedCollections(state);
-  dbBackedCollections.forEach((key) => { next[key] = []; });
-  if (!next.warehouseStock || typeof next.warehouseStock !== "object") next.warehouseStock = {};
-  snapshotBackedCollections.forEach((key) => {
-    if (key === "warehouseStock") return;
-    if (!Array.isArray(next[key])) next[key] = [];
-  });
-  return next;
+  return withoutOperationalData(state);
 }
 
 export function writeTenantUiCache(storage, key, state) {
-  storage.setItem(key, JSON.stringify(stripDbBackedCollections(state)));
+  storage.setItem(key, JSON.stringify(stripOperationalCollections(state)));
 }

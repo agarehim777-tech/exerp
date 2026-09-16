@@ -47,7 +47,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Browser and tenant-isolation tests
-        run: npm run e2e -- --grep-invert @lifecycle
+        run: npm run e2e -- --grep-invert "@lifecycle|@ai"
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -55,6 +55,16 @@ jobs:
           LOVABLE_BROWSER_SUPABASE_SESSION_JSON: ${{ secrets.LOVABLE_BROWSER_SUPABASE_SESSION_JSON }}
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
+      - name: Authenticated AI tool-call test
+        if: ${{ vars.AI_E2E_ENABLED == 'true' }}
+        run: npm run e2e -- tests/ai-assistant.spec.ts --workers=1
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+          AI_E2E_ENABLED: "true"
 
       - name: Sales and expense lifecycle tests
         run: npm run e2e:lifecycle
@@ -72,6 +82,15 @@ jobs:
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
           AUDIT_FLOW_TIMEOUT_MS: 90000
+
+      - name: Upload business lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-flow-audit
+          path: test-results/business-flow-audit.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload browser test diagnostics
         if: failure()

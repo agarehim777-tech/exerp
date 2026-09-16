@@ -27,6 +27,10 @@ const tables = [
   "accounting_period_locks",
 ];
 
+const expectedStatuses = {
+  operation_requests: [401, 403],
+};
+
 const checks = await Promise.all(
   tables.map(async (table) => {
     try {
@@ -36,7 +40,7 @@ const checks = await Promise.all(
       const body = response.ok ? "" : await response.text();
       return {
         table,
-        ok: response.ok || response.status === 401 || response.status === 403,
+        ok: (expectedStatuses[table] || [200, 206]).includes(response.status),
         status: response.status,
         reason: body.slice(0, 180),
       };

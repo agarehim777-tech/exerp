@@ -30,18 +30,15 @@ describe('tenant UI persistence boundary', () => {
     });
   });
 
-  it('keeps transitional modules in the Supabase tenant snapshot', () => {
+  it('removes transitional modules from the Supabase tenant snapshot', () => {
     expect(stripDbBackedCollections({
       orders: [{ id: 'db-order' }],
       employees: [{ id: 'snapshot-employee' }],
       settings: { theme: 'light' },
-    })).toEqual({
-      employees: [{ id: 'snapshot-employee' }],
-      settings: { theme: 'light' },
-    });
+    })).toEqual({ settings: { theme: 'light' } });
   });
 
-  it('hydrates snapshot-backed modules and resets table-backed ones', () => {
+  it('resets every operational module during snapshot hydration', () => {
     const result = withoutDbBackedData({
       orders: [{ id: 'db-order' }],
       customers: [{ id: 'db-customer' }],
@@ -54,10 +51,10 @@ describe('tenant UI persistence boundary', () => {
 
     expect(result.orders).toEqual([]);
     expect(result.customers).toEqual([]);
-    expect(result.employees).toEqual([{ id: 'emp-1' }]);
-    expect(result.expenses).toEqual([{ id: 'exp-1' }]);
-    expect(result.cashEntries).toEqual([{ id: 'cash-1' }]);
-    expect(result.credits).toEqual([{ id: 'credit-1' }]);
+    expect(result.employees).toEqual([]);
+    expect(result.expenses).toEqual([]);
+    expect(result.cashEntries).toEqual([]);
+    expect(result.credits).toEqual([]);
     expect(result.warehouseStock).toEqual({});
     expect(result.settings).toEqual({ theme: 'light' });
   });

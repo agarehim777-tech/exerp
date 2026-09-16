@@ -532,6 +532,6 @@ export function useCashbook(tenantId) {
 
   return {
     accounts, transactions, expenses, expenseCategories, customers, employees, loading, error, degraded, refresh: fetchAll,
-    createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, cancelExpense, acceptExpense, approveExpenseRefund, syncExpenseCashImpact, removeTransaction, syncOrderPayments, removeAccount, transfer, balanceOf,
+    createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, cancelExpense, acceptExpense, approveExpenseRefund, removeTransaction, removeAccount, transfer, balanceOf,
   };
 }

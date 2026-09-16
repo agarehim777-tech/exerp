@@ -52,26 +52,13 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
         byCollection.get(row.collection).push(rowToApp(row));
       });
 
-      const pendingRows = [];
       const next = {};
       names.forEach((name) => {
         const dbRows = byCollection.get(name) || [];
-        const local = Array.isArray(state?.[name]) ? state[name] : [];
-        if (!dbRows.length && local.length) {
-          // First run for this tenant: seed the table from the snapshot list.
-          local.forEach((item, index) => pendingRows.push(appToRow(item, index, tenantId, name)));
-          next[name] = local;
-        } else {
-          next[name] = dbRows;
-        }
+        // Browser/snapshot data is not an authoritative source. Legacy imports
+        // must go through an explicit, reviewed migration instead of hydration.
+        next[name] = dbRows;
       });
-
-      if (pendingRows.length) {
-        const { error: seedError } = await supabase
-          .from(TABLE)
-          .upsert(pendingRows, { onConflict: "tenant_id,collection,record_key" });
-        if (seedError) throw seedError;
-      }
 
       const signed = new Map();
       names.forEach((name) => {

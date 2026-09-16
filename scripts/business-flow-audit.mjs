@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 const storageKey = "erpaz.local.backend.v1";
@@ -1534,6 +1535,12 @@ for (const [name, run] of auditFlows) {
 
 await browser.close();
 auditServer?.kill();
+await mkdir("test-results", { recursive: true });
+await writeFile(
+  "test-results/business-flow-audit.json",
+  `${JSON.stringify({ ...report, generatedAt: new Date().toISOString() }, null, 2)}\n`,
+  "utf8",
+);
 console.log(JSON.stringify(report, null, 2));
 
 if (report.flows.length !== 21 || report.failures.length > 0) {
