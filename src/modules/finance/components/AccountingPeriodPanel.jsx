@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, LockKeyhole, RotateCcw, TriangleAlert } from "lucide-react";
 import { Panel, PanelHeader, StatusBadge } from "../../../components/ui.jsx";
+import { appPrompt } from "../../../shared/ui/dialogService.js";
 import {
   listAccountingPeriodLocks,
   lockAccountingPeriod,
@@ -75,7 +76,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
   }
 
   async function reopenPeriod(lock) {
-    const reopenReason = window.prompt("Periodun yenidən açılma səbəbini yazın:");
+    const reopenReason = await appPrompt("Periodun yenidən açılma səbəbini yazın:");
     if (!reopenReason || reopenReason.trim().length < 3) return;
     setLoading(true);
     setError("");

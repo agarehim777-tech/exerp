@@ -4,6 +4,7 @@ import { useProducts } from "../../shared/hooks/useProducts.js";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { card, input, primaryBtn, secondaryBtn, delBtn, table, th, td, msgBox, badge, azn } from "../../shared/ui/tokens.js";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const emptyProduct = { id: "", sku: "", name: "", description: "", unit: "ədəd", price: "", currency: "AZN", vat_rate: 18, is_active: true };
 const summaryCard = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: "15px 18px", display: "grid", gap: 5 };
@@ -98,7 +99,7 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
 
   const edit = (product) => setForm({ ...emptyProduct, ...product, price: product.price ?? "", vat_rate: product.vat_rate ?? 18 });
   const deleteProduct = async (product) => {
-    if (!window.confirm(`“${product.name}” məhsulu silinsin?`)) return;
+    if (!(await appConfirm(`“${product.name}” məhsulu silinsin?`, { danger: true }))) return;
     if (product._catalogSource !== "db") { setMsg("Bu köhnə məhsul stok məlumatından gəlir. Əvvəl redaktə edib canlı kataloqa köçürün."); return; }
     try { await remove(product.id); setMsg("Məhsul silindi."); }
     catch (nextError) { setMsg(`Məhsul silinmədi: ${nextError.message}`); }

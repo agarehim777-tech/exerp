@@ -4,6 +4,7 @@ import { useActivities } from '../../shared/hooks/useActivities.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import Avatar from './Avatar.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
+import { appConfirm } from '../../shared/ui/dialogService.js';
 
 export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder }) {
   const { activeTenantId } = useAuth();
@@ -158,7 +159,7 @@ function DocumentsTab({ documents, onUpload, onDownload, onRemove }) {
     <select value={type} onChange={event => setType(event.target.value)} style={drawerInput}><option>Şəxsiyyət sənədi</option><option>Müqavilə</option><option>Ödəniş sənədi</option><option>Servis sənədi</option><option>Digər</option></select>
     <input required type="file" onChange={event => setFile(event.target.files?.[0] || null)} style={drawerInput} />
     <button type="submit" style={actionButton}>Sənədi yüklə</button>{message && <small>{message}</small>}
-  </form>{documents.map(document => <div key={document.id} style={{ ...detailCard, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}><div><b>{document.title}</b><small style={{ display: 'block', color: '#64748b' }}>{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div style={{ display: 'flex', gap: 6 }}><button type="button" onClick={() => onDownload(document)} style={smallButton}>Aç</button><button type="button" onClick={() => window.confirm('Sənəd silinsin?') && onRemove(document)} style={{ ...smallButton, color: '#b91c1c' }}>Sil</button></div></div>)}{!documents.length && <div style={emptyBox}>Sənəd əlavə edilməyib.</div>}</div>;
+  </form>{documents.map(document => <div key={document.id} style={{ ...detailCard, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}><div><b>{document.title}</b><small style={{ display: 'block', color: '#64748b' }}>{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div style={{ display: 'flex', gap: 6 }}><button type="button" onClick={() => onDownload(document)} style={smallButton}>Aç</button><button type="button" onClick={async () => (await appConfirm('Sənəd silinsin?', { danger: true })) && onRemove(document)} style={{ ...smallButton, color: '#b91c1c' }}>Sil</button></div></div>)}{!documents.length && <div style={emptyBox}>Sənəd əlavə edilməyib.</div>}</div>;
 }
 
 const emptyBox = { padding: 28, textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', borderRadius: 8 };

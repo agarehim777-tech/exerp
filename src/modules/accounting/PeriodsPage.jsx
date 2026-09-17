@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAccountingPeriods } from "../../shared/hooks/useAccountingPeriods.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, StatCard, StatGrid, TableActions } from "../../shared/ui/primitives.jsx";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const STATUS_LABEL = { open: "Açıq", locked: "Bağlı", closed: "Yekunlaşıb" };
 const STATUS_TONE = { open: "green", locked: "amber", closed: "gray" };
@@ -96,7 +97,7 @@ export default function PeriodsPage() {
           end_date: new Date(period.end_date).toLocaleDateString("az-AZ"),
           status: <Badge tone={STATUS_TONE[period.status] === "green" ? "success" : STATUS_TONE[period.status] === "amber" ? "warning" : "neutral"}>{STATUS_LABEL[period.status] || period.status}</Badge>,
           locked_at: period.locked_at ? new Date(period.locked_at).toLocaleString("az-AZ") : "—",
-          actions: isAdmin && <TableActions><Button variant="secondary" size="compact" onClick={() => run(() => setStatus(period.id, period.status === "open" ? "locked" : "open"))}>{period.status === "open" ? "Bağla" : "Aç"}</Button><Button variant="danger" size="compact" onClick={() => window.confirm("Dövr silinsin?") && run(() => remove(period.id))}>Sil</Button></TableActions>,
+          actions: isAdmin && <TableActions><Button variant="secondary" size="compact" onClick={() => run(() => setStatus(period.id, period.status === "open" ? "locked" : "open"))}>{period.status === "open" ? "Bağla" : "Aç"}</Button><Button variant="danger" size="compact" onClick={async () => (await appConfirm("Dövr silinsin?", { danger: true })) && run(() => remove(period.id))}>Sil</Button></TableActions>,
         })[column.key]} />
       </Card>
     </PageStack>

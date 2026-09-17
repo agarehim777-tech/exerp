@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { navItems } from "../../data.js";
 import { normalizeUserModuleAccess } from "../../shared/lib/appDomain.jsx";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const ROLES = [
   { key: "owner", label: "Sahib", locked: true, hint: "Bütün icazələr avtomatik" },
@@ -232,7 +233,7 @@ export default function RolesPermissionsPage({
           <button
             type="button"
             disabled={!canManageUsers || !onApplyDefaultPermissions}
-            onClick={() => window.confirm("Bütün istifadəçilərin fərdi icazələri rol üzrə başlanğıc vəziyyətə qaytarılacaq. Davam edilsin?") && onApplyDefaultPermissions?.()}
+            onClick={async () => (await appConfirm("Bütün istifadəçilərin fərdi icazələri rol üzrə başlanğıc vəziyyətə qaytarılacaq. Davam edilsin?")) && onApplyDefaultPermissions?.()}
             style={secondaryButton}
           >
             Başlanğıc icazələri qur
@@ -466,7 +467,7 @@ export default function RolesPermissionsPage({
                 <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
                 <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
                 <td style={td}><button onClick={() => copyInviteLink(inv.id)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
-                <td style={td}><button onClick={() => confirm("Ləğv edilsin?") && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
+                <td style={td}><button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
               </tr>
             ))}
           </tbody>

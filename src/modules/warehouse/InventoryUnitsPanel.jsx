@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useInventoryUnits } from "../../shared/hooks/useInventoryUnits.js";
 import { money } from "../../services/format.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const emptyUnit = {
   warehouse_id: "", product_id: "", serial_no: "", imei: "", batch_no: "", expiry_date: "",
@@ -32,7 +33,7 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
   }
 
   async function removeUnit(unit) {
-    if (!window.confirm(`${unit.imei || unit.serial_no || unit.batch_no || "Stok vahidi"} silinsin?`)) return;
+    if (!(await appConfirm(`${unit.imei || unit.serial_no || unit.batch_no || "Stok vahidi"} silinsin?`, { danger: true }))) return;
     await remove(unit.id);
     setNotice("Stok vahidi silindi.");
   }

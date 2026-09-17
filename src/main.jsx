@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 import ProtectedRoute from "./auth/ProtectedRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import RouteMeta from "./components/RouteMeta.jsx";
+import AppDialogProvider from "./shared/ui/AppDialogProvider.jsx";
 import { initObservability } from "./lib/observability";
 import { instrumentSupabase } from "./lib/rpc";
 import "./styles.css";
@@ -81,8 +82,10 @@ createRoot(document.getElementById("root")).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBase}>
         <AuthProvider>
-          <RouteMeta />
-          <AppRoutes />
+          <AppDialogProvider>
+            <RouteMeta />
+            <AppRoutes />
+          </AppDialogProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

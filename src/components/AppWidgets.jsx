@@ -13,6 +13,7 @@ import {
 } from "../shared/lib/appDomain.jsx";
 import { addDays, creditTermOptions, getCreditSourceLabel } from "../shared/lib/credit.js";
 import { normalizeMessageThread, nextContractNumber } from "../shared/lib/appHelpers.jsx";
+import { appConfirm } from "../shared/ui/dialogService.js";
 
 const ExpenseOperationModal = lazy(() => import("./modals/OperationModals.jsx").then((module) => ({ default: module.ExpenseOperationModal })));
 const OperationDeleteModal = lazy(() => import("./modals/OperationModals.jsx").then((module) => ({ default: module.OperationDeleteModal })));
@@ -531,8 +532,8 @@ function MessagesPageV2({
                     </button>
                     <button
                       className="secondary-btn compact danger-soft"
-                      onClick={() => {
-                        if (window.confirm("Bu söhbət silinsin?")) onDeleteConversation?.(selected.id);
+                      onClick={async () => {
+                        if (await appConfirm("Bu söhbət silinsin?", { danger: true })) onDeleteConversation?.(selected.id);
                       }}
                       disabled={!canManage}
                     >

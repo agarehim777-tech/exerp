@@ -11,6 +11,8 @@ import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
 import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
+import { useDbReadBridge } from "./shared/hooks/useDbReadBridge.js";
+import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
@@ -421,83 +423,11 @@ function App() {
     return () => { active = false; };
   }, [activeTenantId, tenantStateReady, dbOrders, refreshDbOrders, state.orders]);
 
-  // Read-bridge: overlay DB data onto legacy state when present.
-  useEffect(() => {
-    if (!activeTenantId || !tenantStateReady) return;
-    if (
-      dbCustomers.length === 0 &&
-      dbProducts.length === 0 &&
-      dbOrders.length === 0 &&
-      dbInventory.warehouses.length === 0 &&
-      dbInventory.balances.length === 0
-    ) return;
-
-    const warehouseStock = dbInventory.balances.reduce((byWarehouse, balance) => {
-      const warehouseId = balance.warehouse_id || balance.warehouse?.id;
-      if (!warehouseId) return byWarehouse;
-      const rows = byWarehouse[warehouseId] || [];
-      rows.push({
-        id: balance.id || `${warehouseId}-${balance.product_id}`,
-        productId: balance.product_id,
-        product: balance.product?.name || balance.product?.sku || "Məhsul",
-        sku: balance.product?.sku || "",
-        total: Number(balance.qty ?? balance.on_hand ?? 0),
-        reserved: Number(balance.reserved || 0),
-        problemQty: Number(balance.problem_qty || 0),
-        reorderLevel: Number(balance.reorder_point ?? balance.minimum_level ?? 0),
-        costPrice: Number(balance.avg_cost || 0),
-        price: Number(balance.product?.price ?? balance.avg_cost ?? 0),
-      });
-      byWarehouse[warehouseId] = rows;
-      return byWarehouse;
-    }, {});
-
-    const aggregateStock = Object.values(warehouseStock)
-      .flat()
-      .reduce((byProduct, row) => {
-        const key = row.productId || row.sku || row.product;
-        const current = byProduct.get(key) || { ...row, total: 0, reserved: 0, problemQty: 0 };
-        current.total += row.total;
-        current.reserved += row.reserved;
-        current.problemQty += row.problemQty;
-        byProduct.set(key, current);
-        return byProduct;
-      }, new Map());
-
-    setState((prev) => ({
-      ...prev,
-      ...(dbCustomers.length ? { customers: dbCustomers.map(dbCustomerToLegacy) } : {}),
-      ...(dbProducts.length ? { products: dbProducts.map(dbProductToLegacy) } : {}),
-      ...(dbOrdersLoaded ? { orders: dbOrders.map(dbOrderToLegacy) } : {}),
-      ...(dbInventory.warehouses.length ? {
-        warehouses: dbInventory.warehouses.map((warehouse) => ({
-          id: warehouse.id,
-          code: warehouse.code,
-          name: warehouse.name,
-          address: warehouse.address || "—",
-          city: warehouse.address?.split(",")[0]?.trim() || "—",
-          manager: "Təyin edilməyib",
-          type: "Mərkəzi",
-          capacity: Math.max(
-            100,
-            (warehouseStock[warehouse.id] || []).reduce((sum, row) => sum + Number(row.total || 0), 0),
-          ),
-          status: warehouse.is_active === false ? "Passiv" : "Aktiv",
-        })),
-        warehouseStock,
-        stock: [...aggregateStock.values()],
-      } : {}),
-    }));
-  }, [
-    activeTenantId,
-    tenantStateReady,
-    dbCustomers,
-    dbProducts,
-    dbOrders,
-    dbOrdersLoaded,
-    dbInventory.warehouses,
-    dbInventory.balances,
-  ]);
+  useDbReadBridge({
+    tenantId: activeTenantId, ready: tenantStateReady,
+    customers: dbCustomers, products: dbProducts, orders: dbOrders,
+    ordersLoaded: dbOrdersLoaded, inventory: dbInventory, setState,
+  });
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -3239,7 +3169,7 @@ function App() {
 
       if (shortageLines.length > 0) {
         // Rezervasiya mümkün deyil — istifadəçidən açıq təsdiq alınmadan sifariş yaradılmır.
-        const confirmed = window.confirm(
+        const confirmed = await appConfirm(
           `Qalıq çatışmazlığı: ${shortageLines.join(", ")}.\n\n` +
             "Bu sətirlər rezerv edilə bilməyəcək və sifariş backorder (mənfi mövcud) kimi qeyd olunacaq.\n\n" +
             "Davam edilsin?",
@@ -4090,14 +4020,14 @@ function App() {
     notify(`${nextProduct.name} məhsul məlumatları yeniləndi.`);
   }
 
-  function deleteProduct(productId) {
+  async function deleteProduct(productId) {
     if (!requirePermission("warehouse.manage", "məhsul kataloqunu silmək")) return;
     const currentProduct = state.products.find((product) => product.id === productId);
     if (!currentProduct) {
       notify("Məhsul tapılmadı.", "warning");
       return;
     }
-    if (!window.confirm(`${currentProduct.name} məhsulunu silmək istədiyinizə əminsiniz?`)) return;
+    if (!(await appConfirm(`${currentProduct.name} məhsulunu silmək istədiyinizə əminsiniz?`, { danger: true }))) return;
 
     // Optimistic local removal + related stock cleanup
     setState((current) => {
@@ -4131,14 +4061,14 @@ function App() {
     notify(`${currentProduct.name} silindi.`);
   }
 
-  function deleteCustomer(fin) {
+  async function deleteCustomer(fin) {
     if (!requirePermission("crm.manage", "müştəri silmək")) return;
     const currentCustomer = (state.customers || []).find((c) => c.fin === fin);
     if (!currentCustomer) {
       notify("Müştəri tapılmadı.", "warning");
       return;
     }
-    if (!window.confirm(`${currentCustomer.name} müştərisini silmək istədiyinizə əminsiniz?`)) return;
+    if (!(await appConfirm(`${currentCustomer.name} müştərisini silmək istədiyinizə əminsiniz?`, { danger: true }))) return;
 
     setState((current) =>
       auditCurrentState(

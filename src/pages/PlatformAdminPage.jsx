@@ -4,6 +4,7 @@ import { supabase } from "../integrations/supabase/client";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCallback, useEffect, useState } from "react";
 import { PLATFORM_MODULE_CHOICES, PLATFORM_PLANS, dayInMs, slugifyPlatform } from "../shared/lib/appDomain.jsx";
+import { appConfirm } from "../shared/ui/dialogService.js";
 
 const platformModuleIds = new Set(PLATFORM_MODULE_CHOICES.map((module) => module.id));
 const normalizePlatformModules = (modules = []) => [...new Set(modules)].filter((id) => platformModuleIds.has(id));
@@ -142,14 +143,14 @@ export default function PlatformAdminPage() {
   }
 
   async function setStatus(t, status) {
-    if (status === "frozen" && !window.confirm(`${t.name} şirkəti dondurulsun?`)) return;
-    if (status === "active" && !window.confirm(`${t.name} şirkəti aktivləşdirilsin?`)) return;
+    if (status === "frozen" && !(await appConfirm(`${t.name} şirkəti dondurulsun?`))) return;
+    if (status === "active" && !(await appConfirm(`${t.name} şirkəti aktivləşdirilsin?`))) return;
     const { error: err } = await supabase.rpc("platform_set_tenant_status", { _tenant: t.id, _status: status });
     if (err) return setError(err.message);
     await refreshTenants();
   }
   async function deleteTenant(t) {
-    if (!window.confirm(`${t.name} şirkəti və bütün məlumatları silinsin? Bu əməliyyat geri qaytarılmır.`)) return;
+    if (!(await appConfirm(`${t.name} şirkəti və bütün məlumatları silinsin? Bu əməliyyat geri qaytarılmır.`, { danger: true }))) return;
     const { error: err } = await supabase.rpc("platform_delete_tenant", { _tenant: t.id });
     if (err) return setError(err.message);
     await refreshTenants();

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
+import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -126,7 +127,7 @@ function AccountsPanel({ book }) {
               <td style={td}>{a.currency}</td>
               <td style={{ ...td, fontWeight: 600 }}>{azn(book.balanceOf(a.id))}</td>
               <td style={{ ...td, textAlign: "right" }}>{a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <button type="button" style={delBtn} onClick={async () => {
-                if (!window.confirm(`${a.name} kassası silinsin?`)) return;
+                if (!(await appConfirm(`${a.name} kassası silinsin?`, { danger: true }))) return;
                 setMsg("");
                 try { await book.removeAccount(a); } catch (error) { setMsg(`Xəta: ${error.message}`); }
               }}>Sil</button>}</td>
@@ -194,7 +195,7 @@ function TransactionsPanel({ book, tenantId }) {
   })), [book.transactions]);
 
   const reverse = async transaction => {
-    const reason = window.prompt(`${transaction.transaction_no || "Əməliyyat"} üçün ləğv səbəbini yazın:`);
+    const reason = await appPrompt(`${transaction.transaction_no || "Əməliyyat"} üçün ləğv səbəbini yazın:`);
     if (reason === null) return;
     setMsg("");
     try {
@@ -205,8 +206,8 @@ function TransactionsPanel({ book, tenantId }) {
     }
   };
 
-  const hideCanceled = transaction => {
-    if (!window.confirm("Ləğv edilmiş əməliyyat gündəlik siyahıdan silinsin? Maliyyə auditində saxlanılacaq.")) return;
+  const hideCanceled = async transaction => {
+    if (!(await appConfirm("Ləğv edilmiş əməliyyat gündəlik siyahıdan silinsin? Maliyyə auditində saxlanılacaq."))) return;
     const pairIds = book.transactions.filter(item => {
       const markerId = String(item.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
       return item.id === transaction.id || item.reversal_of === transaction.id || markerId === transaction.id;
@@ -341,7 +342,7 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
           <button type="submit" style={primaryBtn}>{editingCategory ? "Yadda saxla" : "+ Kateqoriya"}</button>
           {editingCategory && <button type="button" style={delBtn} onClick={() => { setEditingCategory(null); setCategoryName(""); }}>Ləğv et</button>}
         </form>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{book.expenseCategories.map(category => <div key={category.id} style={{ display: "flex", gap: 5, alignItems: "center", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" }}><span>{category.name}</span><button type="button" className="text-btn" onClick={() => { setEditingCategory(category); setCategoryName(category.name); }}>Düzəlt</button><button type="button" style={delBtn} onClick={async () => { if (!window.confirm(`${category.name} kateqoriyası silinsin?`)) return; try { await book.removeExpenseCategory(category); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button></div>)}</div>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{book.expenseCategories.map(category => <div key={category.id} style={{ display: "flex", gap: 5, alignItems: "center", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" }}><span>{category.name}</span><button type="button" className="text-btn" onClick={() => { setEditingCategory(category); setCategoryName(category.name); }}>Düzəlt</button><button type="button" style={delBtn} onClick={async () => { if (!(await appConfirm(`${category.name} kateqoriyası silinsin?`, { danger: true }))) return; try { await book.removeExpenseCategory(category); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button></div>)}</div>
       </div>}
       {openCreate && <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 16, padding: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
         <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} style={input}>
@@ -403,11 +404,11 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                 {isPending && <>
                   <button style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setEditing({ original: e, values: { account_id: e.account_id || "", category: e.category, description: e.description || "", amount: e.amount, vat_amount: e.vat_amount || "", expense_date: e.expense_date } })}>Redaktə et</button>
-                  <button style={delBtn} onClick={async () => { if (!window.confirm("Xərc silinsin və məbləğ kassaya qaytarılsın?")) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc silindi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button>
+                  <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc silinsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc silindi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button>
                 </>}
                 {canApprove && isPending && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpense(e); setMsg("Xərc təsdiqləndi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Təsdiqlə</button>}
                 {canApprove && !isAccepted && !isCancelled && <button style={{ ...primaryBtn, background: "#0f766e" }} onClick={async () => { setMsg(""); try { await book.acceptExpense(e); setMsg("Xərc qəbul edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Qəbul et</button>}
-                {canApprove && !isCancelled && <button style={delBtn} onClick={async () => { if (!window.confirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?")) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
+                {canApprove && !isCancelled && <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
                 {canApprove && e.status === "refund_pending" && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpenseRefund(e); setMsg("Ləğv edilmiş məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Məbləği kassaya qaytar</button>}
                 </div>
               </td>

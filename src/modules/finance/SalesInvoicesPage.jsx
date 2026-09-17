@@ -8,6 +8,7 @@ import { useSalesInvoices } from "../../shared/hooks/useSalesInvoices.js";
 import { useCustomers } from "../../shared/hooks/useCustomers.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useBillingSources } from "../../shared/hooks/useBillingSources.js";
 import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, validateDraft } from "../../lib/invoiceDraft.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
@@ -286,7 +287,7 @@ function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
           <button style={secondaryBtn} title="PDF / çap" onClick={() => printInvoice(invoice, { company })}>PDF</button>
           <button style={secondaryBtn} title="E-faktura JSON" onClick={() => downloadEInvoice(invoice, company)}>E-faktura</button>
           {invoice.status !== "cancelled" && (
-            <button style={delBtn} onClick={() => window.confirm("Faktura ləğv edilsin?") && onCancel()}>Ləğv</button>
+            <button style={delBtn} onClick={async () => (await appConfirm("Faktura ləğv edilsin?", { danger: true })) && onCancel()}>Ləğv</button>
           )}
         </td>
       </tr>

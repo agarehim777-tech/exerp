@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useShipments } from '../../shared/hooks/useShipments.js';
 import StatusBadge from './StatusBadge.jsx';
+import { appConfirm } from '../../shared/ui/dialogService.js';
 
 const NEXT = { pending: 'packed', packed: 'shipped', shipped: 'delivered' };
 
@@ -36,7 +37,7 @@ export default function ShipmentsPage() {
                         → {NEXT[s.status]}
                       </button>
                     )}
-                    <button onClick={() => confirm('Sil?') && remove(s.id)}
+                    <button onClick={async () => (await appConfirm('Göndəriş silinsin?', { danger: true })) && remove(s.id)}
                       style={{ background: '#fff', color: '#ef4444', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>×</button>
                   </div>
                 </Td>

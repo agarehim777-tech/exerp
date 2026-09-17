@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthProvider.jsx";
 import { supabase } from "../integrations/supabase/client";
+import { appAlert, appConfirm } from "../shared/ui/dialogService.js";
 
 export default function TenantSwitcher() {
   const { memberships, activeTenantId, setActiveTenant, refresh } = useAuth();
@@ -17,14 +18,14 @@ export default function TenantSwitcher() {
 
   async function remove(id) {
     if (id === activeTenantId) {
-      alert("Aktiv şirkəti silmək olmaz. Əvvəl başqasına keçin.");
+      appAlert("Aktiv şirkəti silmək olmaz. Əvvəl başqasına keçin.");
       return;
     }
-    if (!confirm("Bu şirkəti silmək istədiyinizə əminsiniz?")) return;
+    if (!(await appConfirm("Bu şirkəti silmək istədiyinizə əminsiniz?", { danger: true }))) return;
     setBusy(id);
     const { error } = await supabase.from("tenants").delete().eq("id", id);
     setBusy(null);
-    if (error) return alert(error.message);
+    if (error) return appAlert(error.message);
     await refresh();
   }
 

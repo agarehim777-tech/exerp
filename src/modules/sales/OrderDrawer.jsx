@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
+import { appAlert } from '../../shared/ui/dialogService.js';
 
 const SALES_STATUS = {
   draft: { label: 'Təsdiqləndi' },
@@ -40,14 +41,14 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
 
   const saveChanges = async () => {
     if (!draft.items.length || draft.items.some(item => Number(item.qty) <= 0 || Number(item.unit_price) < 0)) {
-      alert('Ən azı bir məhsul və düzgün miqdar/qiymət daxil edin.');
+      appAlert('Ən azı bir məhsul və düzgün miqdar/qiymət daxil edin.');
       return;
     }
     setBusy(true);
     try {
       await onUpdate(order.id, { ...draft, notes: serializeOrderNotes(draft.notes, draft.internalNotes) });
       setEditing(false);
-    } catch (error) { alert(error.message || 'Satışı redaktə etmək mümkün olmadı.'); }
+    } catch (error) { appAlert(error.message || 'Satışı redaktə etmək mümkün olmadı.'); }
     finally { setBusy(false); }
   };
 
@@ -58,7 +59,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
     try {
       await onPayment(amount, cashAccountId);
       setPaidInput('');
-    } catch (error) { alert(error.message || 'Ödənişi qəbul etmək mümkün olmadı.'); }
+    } catch (error) { appAlert(error.message || 'Ödənişi qəbul etmək mümkün olmadı.'); }
     finally { setBusy(false); }
   };
 
@@ -67,7 +68,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
     try {
       await onStatus(order.id, status);
     } catch (error) {
-      alert(error?.message || 'Satış statusunu dəyişmək mümkün olmadı.');
+      appAlert(error?.message || 'Satış statusunu dəyişmək mümkün olmadı.');
     } finally {
       setBusy(false);
     }

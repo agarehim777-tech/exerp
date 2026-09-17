@@ -5,6 +5,7 @@ import Avatar from './Avatar.jsx';
 import CustomerDrawer from './CustomerDrawer.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
+import { appConfirm } from '../../shared/ui/dialogService.js';
 
 function timeAgo(iso) {
   if (!iso) return '—';
@@ -172,7 +173,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
                     </td>
                     <td style={{ padding: '12px 16px', color: '#64748b' }}>{timeAgo(c.last_activity_at)}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { if (confirm(`"${c.name}" silinsin?`)) remove(c.id); }}
+                      <button onClick={async () => { if (await appConfirm(`"${c.name}" silinsin?`, { danger: true })) remove(c.id); }}
                         style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Sil</button>
                     </td>
                   </tr>

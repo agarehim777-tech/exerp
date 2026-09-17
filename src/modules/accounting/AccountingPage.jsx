@@ -6,6 +6,7 @@ import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../
 import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
 import { AccountingPeriodPanel } from "../finance/components/AccountingPeriodPanel.jsx";
 import ConfirmActionDialog from "../../shared/components/ConfirmActionDialog.jsx";
+import { appAlert } from "../../shared/ui/dialogService.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, Select, TableActions, Tabs, Toolbar } from "../../shared/ui/primitives.jsx";
 
 const TYPE_LABEL = { asset: "Aktiv", liability: "Öhdəlik", equity: "Kapital", revenue: "Gəlir", expense: "Xərc" };
@@ -156,7 +157,7 @@ function TrialBalancePanel({ tenantId }) {
     if (!tenantId) return;
     setLoading(true);
     try { setRows(await fetchTrialBalance(tenantId, from, to)); }
-    catch (e) { alert(e.message); }
+    catch (e) { appAlert(e.message); }
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenantId]);

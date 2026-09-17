@@ -32,6 +32,7 @@ import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpri
 import "./procurement.css";
 import LandedCostPanel from "./LandedCostPanel.jsx";
 import { isMissingPoPaymentsTable } from "./procurementSchema.js";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -596,7 +597,7 @@ export default function ProcurementPage() {
       await load();
       return;
     }
-    if (!window.confirm(`${vendor.name} vendorunu silmək istəyirsiniz?`)) return;
+    if (!(await appConfirm(`${vendor.name} vendorunu silmək istəyirsiniz?`, { danger: true }))) return;
     setSaving(true);
     const { error: vendorError } = await supabase.from("vendors").delete().eq("id", vendor.id);
     if (vendorError) setError(getError(vendorError));
@@ -764,7 +765,7 @@ export default function ProcurementPage() {
       setError("Bu PO üzrə mədaxil və ya faktura var. Silmək əvəzinə ləğv edin/bağlayın.");
       return;
     }
-    if (!window.confirm(`${po.po_number} PO-sunu silmək istəyirsiniz?`)) return;
+    if (!(await appConfirm(`${po.po_number} PO-sunu silmək istəyirsiniz?`, { danger: true }))) return;
     setSaving(true);
     const { error: poError } = await supabase.from("purchase_orders").delete().eq("id", po.id);
     if (poError) setError(getError(poError));
@@ -834,7 +835,7 @@ export default function ProcurementPage() {
 
   async function deletePayment(payment) {
     if (!poPaymentsAvailable) return;
-    if (!window.confirm("Bu ödənişi silmək istəyirsiniz?")) return;
+    if (!(await appConfirm("Bu ödənişi silmək istəyirsiniz?", { danger: true }))) return;
     setSaving(true);
     const { error: paymentError } = await supabase.from("po_payments").delete().eq("id", payment.id);
     if (paymentError) setError(getError(paymentError));
@@ -956,7 +957,7 @@ export default function ProcurementPage() {
   }
 
   async function deleteReceipt(receipt) {
-    if (!window.confirm(`${receipt.grn_number} GRN qeydini silmək istəyirsiniz?`)) return;
+    if (!(await appConfirm(`${receipt.grn_number} GRN qeydini silmək istəyirsiniz?`, { danger: true }))) return;
     setSaving(true);
     const { error: receiptError } = await supabase.from("goods_receipts").delete().eq("id", receipt.id);
     if (receiptError) setError(getError(receiptError));
@@ -1103,7 +1104,7 @@ export default function ProcurementPage() {
       setError("Ödənilmiş fakturanı silmək olmaz. Lazımdırsa əvvəl ödəniş düzəlişi aparılmalıdır.");
       return;
     }
-    if (!window.confirm(`${invoice.invoice_number} fakturasını silmək istəyirsiniz?`)) return;
+    if (!(await appConfirm(`${invoice.invoice_number} fakturasını silmək istəyirsiniz?`, { danger: true }))) return;
     setSaving(true);
     const { error: invoiceError } = await supabase.from("vendor_invoices").delete().eq("id", invoice.id);
     if (invoiceError) setError(getError(invoiceError));

@@ -7,6 +7,7 @@ import { useProducts } from "../../shared/hooks/useProducts.js";
 import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
+import { appConfirm } from "../../shared/ui/dialogService.js";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -398,7 +399,7 @@ function WarehousesPanel({ stock, isAdmin }) {
   };
 
   const remove = async (warehouse) => {
-    if (!window.confirm(`“${warehouse.name}” anbarı silinsin?`)) return;
+    if (!(await appConfirm(`“${warehouse.name}” anbarı silinsin?`, { danger: true }))) return;
     setMsg("");
     try {
       await stock.removeWarehouse(warehouse.id);
