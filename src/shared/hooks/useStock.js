@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -18,6 +19,10 @@ export const normalizeBalance = (row) => ({
 const normalizeMovement = normalizeStockMovement;
 
 export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {}) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
+  const [loadedScope, setLoadedScope] = useState(null);
+  const [movementScope, setMovementScope] = useState(null);
+  const loaded = Boolean(tenantId && loadedScope === scope);
   const [warehouses, setWarehouses] = useState([]);
   const [balances, setBalances] = useState([]);
   const [movements, setMovements] = useState([]);
@@ -34,6 +39,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   // --- Server-side paginated movements ---------------------------------
   const fetchMovements = useCallback(async (page = 0) => {
     if (!tenantId) return;
+    const isCurrent = begin('movements');
     setMovementsLoading(true);
     const from = page * movementsPageSize;
     const { data, error: err, count } = await supabase
@@ -42,11 +48,15 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .range(from, from + movementsPageSize - 1);
+    if (!isCurrent()) return;
     if (err) setError(err);
-    setMovements((data || []).map(normalizeMovement));
-    setMovementsTotal(count ?? 0);
+    else {
+      setMovements((data || []).map(normalizeMovement));
+      setMovementsTotal(count ?? 0);
+      setMovementScope(scope);
+    }
     setMovementsLoading(false);
-  }, [tenantId, movementsPageSize]);
+  }, [tenantId, movementsPageSize, scope, begin]);
 
   useEffect(() => { fetchMovements(movementsPage); }, [fetchMovements, movementsPage]);
 
@@ -72,17 +82,22 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   // --- Warehouses + balances -------------------------------------------
   const fetchBase = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin('base');
     setLoading(true);
     const [wh, bal] = await Promise.all([
       supabase.from('warehouses').select('*').eq('tenant_id', tenantId).order('name'),
       supabase.from('stock_balances').select(BALANCE_SELECT).eq('tenant_id', tenantId),
     ]);
+    if (!isCurrent()) return;
     const firstError = wh.error || bal.error;
     setError(firstError || null);
-    setWarehouses(wh.data || []);
-    setBalances((bal.data || []).map(normalizeBalance));
+    if (!firstError) {
+      setWarehouses(wh.data || []);
+      setBalances((bal.data || []).map(normalizeBalance));
+      setLoadedScope(scope);
+    }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, scope, begin]);
 
   useEffect(() => { fetchBase(); }, [fetchBase]);
 
@@ -139,6 +154,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
           return;
         }
         const row = await hydrateMovement(payload.new?.id);
+        if (disposed) return;
         if (!row) { fallbackResync('movement-hydrate'); return; }
         if (payload.eventType === 'INSERT') {
           setMovementsTotal((prev) => prev + 1);
@@ -165,6 +181,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
           return;
         }
         const row = await hydrateBalance(payload.new?.id);
+        if (disposed) return;
         if (!row) { fallbackResync('balance-hydrate'); return; }
         setBalances((prev) => (prev.some((item) => item.id === row.id)
           ? prev.map((item) => (item.id === row.id ? row : item))
@@ -315,9 +332,10 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   };
 
   return {
-    warehouses,
-    balances,
-    movements,
+    loaded,
+    warehouses: loaded ? warehouses : EMPTY_ROWS,
+    balances: loaded ? balances : EMPTY_ROWS,
+    movements: movementScope === scope ? movements : EMPTY_ROWS,
     movementsPage,
     movementsPageSize,
     movementsTotal,
@@ -337,3 +355,5 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     setReorderPoint,
   };
 }
+
+const EMPTY_ROWS = Object.freeze([]);

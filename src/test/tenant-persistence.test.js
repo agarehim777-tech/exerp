@@ -4,9 +4,21 @@ import {
   stripOperationalCollections,
   withoutDbBackedData,
   withoutOperationalData,
+  writeTenantUiCache,
+  pickUiPreferences,
 } from '../shared/state/tenantPersistence.js';
 
 describe('tenant UI persistence boundary', () => {
+  it('uses an allowlist even for new or unknown financial collections', () => {
+    let saved;
+    writeTenantUiCache({ setItem: (_key, value) => { saved = JSON.parse(value); } }, 'tenant-A', {
+      theme: 'dark', density: 'compact', purchaseOrders: [{ amount: 100 }],
+      receivableClosures: [{}], productionPlans: [{}], futureLedger: [{}],
+      settings: { salary: 2000 }, notifications: [{ customer: 'private' }],
+    });
+    expect(saved).toEqual({ theme: 'dark', density: 'compact' });
+    expect(pickUiPreferences({ cashEntries: [{}] })).toEqual({});
+  });
   it('never hydrates operational collections from snapshots', () => {
     const result = withoutOperationalData({ customers: [{ id: 'c1' }], warehouseStock: { w1: [{}] }, theme: 'dark' });
     expect(result.customers).toEqual([]);

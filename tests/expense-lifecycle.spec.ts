@@ -16,11 +16,16 @@ test("@lifecycle expense → approval → acceptance → cancellation restores c
     }, { Prefer: "return=representation" });
     accountId = accounts[0].id;
 
-    const expenses = await call("post", "expenses?select=id,status", {
-      tenant_id: tenantId, expense_no: marker, category: "CI lifecycle", amount: 75, currency: "AZN",
-      status: "pending", expense_date: new Date().toISOString().slice(0, 10), description: marker, account_id: accountId,
-    }, { Prefer: "return=representation" });
-    expenseId = expenses[0].id;
+    const command = {
+      _tenant_id: tenantId, _request_key: marker,
+      _payload: { category: "CI lifecycle", amount: 75, currency: "AZN",
+        expense_date: new Date().toISOString().slice(0, 10), description: marker, account_id: accountId },
+    };
+    const created = await call("post", "rpc/create_cash_expense_atomic", command);
+    expenseId = created.expense_id;
+    expect(await call("post", "rpc/create_cash_expense_atomic", command)).toEqual(created);
+    const summary = await call("post", "rpc/cashbook_ledger_summary", { _tenant_id: tenantId });
+    expect(Number(summary.accounts.find((row: { id: string }) => row.id === accountId).balance)).toBe(425);
 
     await call("patch", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}`, { status: "approved" }, { Prefer: "return=minimal" });
     await call("post", "rpc/accept_expense", { _tenant_id: tenantId, _expense_id: expenseId });

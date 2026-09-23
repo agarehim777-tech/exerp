@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 const META_PREFIX = '__crm_meta__:';
 const readMeta = (notes) => { try { return String(notes || '').startsWith(META_PREFIX) ? JSON.parse(String(notes).slice(META_PREFIX.length)) : {}; } catch { return {}; } };
@@ -25,6 +26,9 @@ export const findCustomerDuplicates = (candidate, rows, excludedId = null) => ro
 ].some(([, left, right]) => left && right && left === right));
 
 export function useCustomers(tenantId) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
+  const [loadedScope, setLoadedScope] = useState(null);
+  const loaded = Boolean(tenantId && loadedScope === scope);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -34,14 +38,18 @@ export function useCustomers(tenantId) {
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
       supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit + 1),
       supabase.rpc('customer_sales_metrics', { _tenant: tenantId }),
       supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
-    if (customerResult.error) setError(customerResult.error);
+    if (!isCurrent()) return;
+    if (customerResult.error || orderResult.error || levelResult.error) setError(customerResult.error || orderResult.error || levelResult.error);
     else {
+      setError(null);
+      setLoadedScope(scope);
       if (levelResult.error) setError(levelResult.error);
       const nextLevels = levelResult.data ? { silver: Number(levelResult.data.silver_min), gold: Number(levelResult.data.gold_min), platinum: Number(levelResult.data.platinum_min) } : { silver: 1000, gold: 5000, platinum: 15000 };
       setLevels(nextLevels);
@@ -58,7 +66,9 @@ export function useCustomers(tenantId) {
       }));
     }
     setLoading(false);
-  }, [tenantId, limit]);
+  }, [tenantId, limit, scope, begin]);
+
+  useEffect(() => { setLimit(CUSTOMERS_PAGE_SIZE); setError(null); }, [scope]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -100,6 +110,8 @@ export function useCustomers(tenantId) {
     if (error) throw error;
   };
 
-  return { customers, levels, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
+  return { customers: loaded ? customers : EMPTY_ROWS, loaded, levels, loading, error, hasMore: loaded && hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
 }
+
+const EMPTY_ROWS = Object.freeze([]);
 

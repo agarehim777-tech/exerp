@@ -1,10 +1,10 @@
 name: Deploy GitHub Pages
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -17,6 +17,11 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'
     environment: production
     runs-on: ubuntu-latest
     env:
@@ -25,6 +30,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -54,7 +62,7 @@ jobs:
         env:
           VITE_SUPABASE_PROJECT_ID: tcqdhwtnjrwpfdxoijmv
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-          VITE_RELEASE_VERSION: ${{ github.sha }}
+          VITE_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
@@ -78,4 +86,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-# Keep push-triggered deployment active after source recovery.
+# Deployment is gated by CI for this exact commit, never a separate push build.

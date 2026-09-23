@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 import { supabase } from "../../integrations/supabase/client";
 
 const SELECT_COLUMNS =
-  "id,expense_no,description,category,amount,status,expense_date,note,source,currency";
+  "id,expense_no,description,category,amount,status,expense_date,note,source,currency,vat_amount";
 
 export function expenseRowToApp(row) {
   return {
@@ -10,6 +11,8 @@ export function expenseRowToApp(row) {
     description: row.description || "",
     category: row.category || "Digər",
     amount: Number(row.amount || 0),
+    currency: row.currency || "AZN",
+    vat_amount: Number(row.vat_amount || 0),
     status: row.status || "Təsdiq gözləyir",
     date: row.expense_date || null,
     note: row.note || "",
@@ -24,7 +27,7 @@ export function appExpenseToRow(expense, tenantId) {
     description: expense.description || "",
     category: expense.category || "Digər",
     amount: Number(expense.amount || 0),
-    vat_amount: 0,
+    vat_amount: Number(expense.vat_amount || 0),
     currency: expense.currency || "AZN",
     status: expense.status || "Təsdiq gözləyir",
     expense_date: expense.date || new Date().toISOString().slice(0, 10),
@@ -37,92 +40,100 @@ function signature(expense) {
   return JSON.stringify(appExpenseToRow(expense, "-"));
 }
 
-/**
- * Keeps `state.expenses` mirrored in the Supabase `expenses` table:
- * hydrates from the table on tenant load (backfilling any snapshot-only rows)
- * and pushes later inserts/updates/deletes straight to the database.
- */
 export function useExpensesSync({ tenantId, ready, expenses, setState, onError }) {
-  const syncedRef = useRef(new Map());
-  const hydratedTenantRef = useRef(null);
+  const { scope } = useTenantRequestScope(tenantId);
+  const latest = useRef(expenses);
+  latest.current = expenses;
+  const errorHandler = useRef(onError);
+  errorHandler.current = onError;
+  const sessionRef = useRef(null);
+  const [status, setStatus] = useState({ phase: "idle", error: null });
 
-  const hydrate = useCallback(async () => {
-    if (!tenantId || !ready) return;
+  const hydrate = useCallback(async (session) => {
+    if (!session?.alive || session.busy) return;
+    session.busy = true;
+    setStatus({ phase: "loading", error: null });
     try {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select(SELECT_COLUMNS)
-        .eq("tenant_id", tenantId)
-        .order("expense_date", { ascending: false })
-        .limit(2000);
-      if (error) throw error;
-
-      const dbRows = (data || []).map(expenseRowToApp);
-      const dbKeys = new Set(dbRows.map((row) => row.id));
-      const pending = (expenses || []).filter((expense) => expense?.id && !dbKeys.has(String(expense.id)));
-
-      if (pending.length) {
-        const { error: seedError } = await supabase
-          .from("expenses")
-          .upsert(pending.map((expense) => appExpenseToRow(expense, tenantId)), {
-            onConflict: "tenant_id,expense_no",
-          });
-        if (seedError) throw seedError;
-        pending.forEach((expense) => dbRows.push({ ...expense, id: String(expense.id) }));
+      const rows = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("expenses").select(SELECT_COLUMNS)
+          .eq("tenant_id", tenantId).order("expense_date", { ascending: false }).order("id").range(offset, offset + 499);
+        if (error) throw error;
+        if (!session.alive) return;
+        rows.push(...(data || []).map(expenseRowToApp));
+        if (!data || data.length < 500) break;
       }
-
-      syncedRef.current = new Map(dbRows.map((row) => [row.id, signature(row)]));
-      hydratedTenantRef.current = tenantId;
-      setState((current) => ({ ...current, expenses: dbRows }));
+      // Loading never inserts snapshot/browser rows back into the database.
+      session.baseline = new Map(rows.map(row => [String(row.id), signature(row)]));
+      session.hydrated = true;
+      latest.current = rows;
+      setState(current => session.alive ? { ...current, expenses: rows } : current);
+      setStatus({ phase: "saved", error: null });
     } catch (error) {
-      onError?.(error);
-    }
-  }, [expenses, onError, ready, setState, tenantId]);
+      if (session.alive) {
+        setStatus({ phase: "error", error });
+        errorHandler.current?.(error);
+      }
+    } finally { session.busy = false; }
+  }, [tenantId, setState]);
 
-  useEffect(() => {
-    if (!tenantId || !ready) {
-      hydratedTenantRef.current = null;
-      syncedRef.current = new Map();
-      return;
-    }
-    if (hydratedTenantRef.current === tenantId) return;
-    hydrate();
-  }, [hydrate, ready, tenantId]);
-
-  useEffect(() => {
-    if (!tenantId || !ready || hydratedTenantRef.current !== tenantId) return;
-    const rows = (expenses || []).filter((expense) => expense?.id);
-    const nextKeys = new Set(rows.map((expense) => String(expense.id)));
-    const changed = rows.filter((expense) => syncedRef.current.get(String(expense.id)) !== signature(expense));
-    const removed = [...syncedRef.current.keys()].filter((key) => !nextKeys.has(key));
-    if (!changed.length && !removed.length) return;
-
-    const nextSigned = new Map(rows.map((expense) => [String(expense.id), signature(expense)]));
-    syncedRef.current = nextSigned;
-
-    (async () => {
-      try {
+  const flush = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session?.alive || session.scope !== scope || !session.hydrated || session.busy) return;
+    session.busy = true;
+    setStatus({ phase: "saving", error: null });
+    try {
+      while (session.alive) {
+        const rows = (latest.current || []).filter(row => row?.id);
+        const keys = new Set(rows.map(row => String(row.id)));
+        const changed = rows.filter(row => session.baseline.get(String(row.id)) !== signature(row));
+        const removed = [...session.baseline.keys()].filter(key => !keys.has(key));
+        if (!changed.length && !removed.length) break;
         if (changed.length) {
-          const { error } = await supabase
-            .from("expenses")
-            .upsert(changed.map((expense) => appExpenseToRow(expense, tenantId)), {
-              onConflict: "tenant_id,expense_no",
-            });
+          const { error } = await supabase.from("expenses").upsert(changed.map(row => appExpenseToRow(row, tenantId)), { onConflict: "tenant_id,expense_no" });
           if (error) throw error;
+          if (!session.alive) return;
+          changed.forEach(row => session.baseline.set(String(row.id), signature(row)));
         }
         if (removed.length) {
-          const { error } = await supabase
-            .from("expenses")
-            .delete()
-            .eq("tenant_id", tenantId)
-            .in("expense_no", removed);
+          const { error } = await supabase.from("expenses").delete().eq("tenant_id", tenantId).in("expense_no", removed);
           if (error) throw error;
+          if (!session.alive) return;
+          removed.forEach(key => session.baseline.delete(key));
         }
-      } catch (error) {
-        onError?.(error);
       }
-    })();
-  }, [expenses, onError, ready, tenantId]);
+      if (session.alive) setStatus({ phase: "saved", error: null });
+    } catch (error) {
+      if (session.alive) {
+        setStatus({ phase: "error", error });
+        errorHandler.current?.(error);
+      }
+    } finally { session.busy = false; }
+  }, [scope, tenantId]);
 
-  return { refresh: hydrate };
+  useEffect(() => {
+    const session = { scope, alive: true, hydrated: false, busy: false, baseline: new Map() };
+    sessionRef.current = session;
+    if (tenantId && ready) hydrate(session);
+    return () => { session.alive = false; };
+  }, [tenantId, ready, scope, hydrate]);
+
+  useEffect(() => {
+    if (!ready || !sessionRef.current?.hydrated) return;
+    const timer = setTimeout(flush, 400);
+    return () => clearTimeout(timer);
+  }, [expenses, ready, flush]);
+
+  const retry = useCallback(() => {
+    const session = sessionRef.current;
+    if (!ready || !tenantId || session?.scope !== scope) return;
+    return session.hydrated ? flush() : hydrate(session);
+  }, [ready, tenantId, scope, flush, hydrate]);
+
+  useEffect(() => {
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [retry]);
+
+  return { ...status, retry, refresh: retry };
 }

@@ -2,6 +2,7 @@ import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage }
 import { z } from "npm:zod";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
+import { canReadTenant, isTenantId, tenantSelect } from "./tenant-data.js";
 
 function createOpenAiProvider(apiKey: string) {
   return createOpenAICompatible({
@@ -50,6 +51,10 @@ Deno.serve(async (req) => {
     }
 
     const { messages, tenantId }: { messages: UIMessage[]; tenantId?: string } = await req.json();
+    if (!isTenantId(tenantId)) return json({ error: "Aktiv şirkət seçilməyib.", code: "TENANT_REQUIRED" }, 400);
+    if (!await canReadTenant(supabase, tenantId, userRes.user.id)) {
+      return json({ error: "Bu şirkətə giriş icazəniz yoxdur.", code: "TENANT_FORBIDDEN" }, 403);
+    }
 
     // Strip PostgREST filter metacharacters so AI-supplied text cannot alter
     // the filter expression (only literal search text remains).
@@ -66,8 +71,7 @@ Deno.serve(async (req) => {
           limit: z.number().int().min(1).max(50).default(20),
         }),
         execute: async ({ search, limit }) => {
-          let q = supabase.from("customers")
-            .select("id,name,email,phone,segment,tax_id,last_activity_at")
+          let q = tenantSelect(supabase, tenantId, "customers", "id,name,email,phone,segment,tax_id,last_activity_at")
             .order("created_at", { ascending: false })
             .limit(limit);
           if (search) q = q.or(`name.ilike.%${sanitizeSearch(search)}%,email.ilike.%${sanitizeSearch(search)}%`);
@@ -83,8 +87,7 @@ Deno.serve(async (req) => {
           limit: z.number().int().min(1).max(50).default(20),
         }),
         execute: async ({ search, limit }) => {
-          let q = supabase.from("products")
-            .select("id,name,sku,price,currency,unit,vat_rate,is_active")
+          let q = tenantSelect(supabase, tenantId, "products", "id,name,sku,price,currency,unit,vat_rate,is_active")
             .limit(limit);
           if (search) q = q.or(`name.ilike.%${sanitizeSearch(search)}%,sku.ilike.%${sanitizeSearch(search)}%`);
           q = q.order("name", { ascending: true });
@@ -100,8 +103,7 @@ Deno.serve(async (req) => {
           limit: z.number().int().min(1).max(50).default(20),
         }),
         execute: async ({ status, limit }) => {
-          let q = supabase.from("orders")
-            .select("id,order_no,order_date,status,total,currency,payment_status,customer:customers(name)")
+          let q = tenantSelect(supabase, tenantId, "orders", "id,order_no,order_date,status,total,currency,payment_status,customer:customers(name)")
             .order("order_date", { ascending: false })
             .limit(limit);
           if (status) q = q.eq("status", status);
@@ -136,7 +138,7 @@ Deno.serve(async (req) => {
           table: z.enum(["customers", "products", "orders", "quotes", "employees", "projects"]),
         }),
         execute: async ({ table }) => {
-          const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
+          const { count, error } = await tenantSelect(supabase, tenantId, table, "*", { count: "exact", head: true });
           if (error) return { error: error.message };
           return { table, count: count ?? 0 };
         },

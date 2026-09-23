@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 const PRODUCTS_PAGE_SIZE = 500;
 const PRODUCT_IMAGES_BUCKET = 'product-images';
@@ -30,6 +31,9 @@ async function uploadProductFile(path, file) {
 }
 
 export function useProducts(tenantId) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
+  const [loadedScope, setLoadedScope] = useState(null);
+  const loaded = Boolean(tenantId && loadedScope === scope);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -38,6 +42,7 @@ export function useProducts(tenantId) {
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
@@ -45,14 +50,19 @@ export function useProducts(tenantId) {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(limit + 1);
+    if (!isCurrent()) return;
     if (error) setError(error);
     else {
+      setError(null);
+      setLoadedScope(scope);
       const rows = data || [];
       setHasMore(rows.length > limit);
       setProducts(rows.slice(0, limit).map(withImageUrl));
     }
     setLoading(false);
-  }, [tenantId, limit]);
+  }, [tenantId, limit, scope, begin]);
+
+  useEffect(() => { setLimit(PRODUCTS_PAGE_SIZE); setError(null); }, [scope]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -118,5 +128,7 @@ export function useProducts(tenantId) {
     setProducts((current) => current.filter((item) => item.id !== id));
   };
 
-  return { products, loading, error, hasMore, loadMore, refresh: fetchAll, create, update, remove, uploadImage, removeImage };
+  return { products: loaded ? products : EMPTY_ROWS, loaded, loading, error, hasMore: loaded && hasMore, loadMore, refresh: fetchAll, create, update, remove, uploadImage, removeImage };
 }
+
+const EMPTY_ROWS = Object.freeze([]);

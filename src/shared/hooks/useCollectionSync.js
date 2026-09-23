@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 
 const TABLE = "tenant_collection_records";
-
 export const recordKey = (item, index) => String(item?.id ?? item?.key ?? item?.code ?? `idx-${index}`);
 
 export function rowToApp(row) {
@@ -11,125 +11,128 @@ export function rowToApp(row) {
 }
 
 export function appToRow(item, index, tenantId, collection) {
+  return { tenant_id: tenantId, collection, record_key: recordKey(item, index), position: index, data: item };
+}
+
+const signature = (row) => JSON.stringify([row.position, row.data]);
+const identity = (row) => JSON.stringify([row.collection, row.record_key]);
+
+export function collectionRows(state, names, tenantId) {
+  return new Map(names.flatMap(name => (Array.isArray(state?.[name]) ? state[name] : [])
+    .map((item, index) => {
+      const row = appToRow(item, index, tenantId, name);
+      return [identity(row), row];
+    })));
+}
+
+export function collectionChanges(baseline, next) {
   return {
-    tenant_id: tenantId,
-    collection,
-    record_key: recordKey(item, index),
-    position: index,
-    data: item,
+    upserts: [...next].filter(([key, row]) => !baseline.has(key) || signature(row) !== signature(baseline.get(key))).map(([, row]) => row),
+    deletes: [...baseline].filter(([key]) => !next.has(key)).map(([, row]) => row),
   };
 }
 
-function signature(item, index) {
-  return `${index}:${JSON.stringify(item)}`;
-}
-
-/**
- * Mirrors a snapshot-backed list (HR, credits, cash entries, finance accounts…)
- * into the `tenant_collection_records` table: each list item becomes its own
- * row, so records survive reloads and are no longer last-write-wins blobs.
- */
 export function useCollectionSync({ tenantId, ready, collections, state, setState, onError }) {
+  const { scope } = useTenantRequestScope(tenantId);
   const names = useMemo(() => collections.slice().sort(), [collections]);
-  const syncedRef = useRef(new Map());
-  const hydratedRef = useRef(null);
+  const latest = useRef(state);
+  latest.current = state;
+  const errorHandler = useRef(onError);
+  errorHandler.current = onError;
+  const sessionRef = useRef(null);
+  const [status, setStatus] = useState({ phase: "idle", error: null });
 
-  const hydrate = useCallback(async () => {
-    if (!tenantId || !ready) return;
+  const flush = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session?.alive || session.scope !== scope || !session.hydrated || session.busy) return;
+    session.busy = true;
+    setStatus({ phase: "saving", error: null });
     try {
-      const { data, error } = await supabase
-        .from(TABLE)
-        .select("collection,record_key,position,data")
-        .eq("tenant_id", tenantId)
-        .in("collection", names)
-        .order("position", { ascending: true })
-        .limit(10000);
-      if (error) throw error;
-
-      const byCollection = new Map(names.map((name) => [name, []]));
-      (data || []).forEach((row) => {
-        if (!byCollection.has(row.collection)) return;
-        byCollection.get(row.collection).push(rowToApp(row));
-      });
-
-      const next = {};
-      names.forEach((name) => {
-        const dbRows = byCollection.get(name) || [];
-        // Browser/snapshot data is not an authoritative source. Legacy imports
-        // must go through an explicit, reviewed migration instead of hydration.
-        next[name] = dbRows;
-      });
-
-      const signed = new Map();
-      names.forEach((name) => {
-        signed.set(name, new Map((next[name] || []).map((item, index) => [recordKey(item, index), signature(item, index)])));
-      });
-      syncedRef.current = signed;
-      hydratedRef.current = tenantId;
-      setState((current) => ({ ...current, ...next }));
-    } catch (error) {
-      onError?.(error);
-    }
-  }, [names, onError, ready, setState, state, tenantId]);
-
-  useEffect(() => {
-    if (!tenantId || !ready) {
-      hydratedRef.current = null;
-      syncedRef.current = new Map();
-      return;
-    }
-    if (hydratedRef.current === tenantId) return;
-    hydrate();
-  }, [hydrate, ready, tenantId]);
-
-  useEffect(() => {
-    if (!tenantId || !ready || hydratedRef.current !== tenantId) return;
-
-    const upserts = [];
-    const deletes = [];
-    const nextSigned = new Map();
-
-    names.forEach((name) => {
-      const list = Array.isArray(state?.[name]) ? state[name] : [];
-      const previous = syncedRef.current.get(name) || new Map();
-      const current = new Map();
-      list.forEach((item, index) => {
-        const key = recordKey(item, index);
-        const sig = signature(item, index);
-        current.set(key, sig);
-        if (previous.get(key) !== sig) upserts.push(appToRow(item, index, tenantId, name));
-      });
-      [...previous.keys()].forEach((key) => {
-        if (!current.has(key)) deletes.push({ collection: name, record_key: key });
-      });
-      nextSigned.set(name, current);
-    });
-
-    if (!upserts.length && !deletes.length) return;
-    syncedRef.current = nextSigned;
-
-    (async () => {
-      try {
+      // A single writer drains newer edits; only acknowledged rows advance the baseline.
+      while (session.alive) {
+        const next = collectionRows(latest.current, names, tenantId);
+        const { upserts, deletes } = collectionChanges(session.baseline, next);
+        if (!upserts.length && !deletes.length) break;
         if (upserts.length) {
-          const { error } = await supabase
-            .from(TABLE)
-            .upsert(upserts, { onConflict: "tenant_id,collection,record_key" });
+          const { error } = await supabase.from(TABLE).upsert(upserts, { onConflict: "tenant_id,collection,record_key" });
           if (error) throw error;
+          if (!session.alive) return;
+          upserts.forEach(row => session.baseline.set(identity(row), row));
         }
-        for (const item of deletes) {
-          const { error } = await supabase
-            .from(TABLE)
-            .delete()
-            .eq("tenant_id", tenantId)
-            .eq("collection", item.collection)
-            .eq("record_key", item.record_key);
+        for (const row of deletes) {
+          if (!session.alive) return;
+          const { error } = await supabase.from(TABLE).delete()
+            .eq("tenant_id", tenantId).eq("collection", row.collection).eq("record_key", row.record_key);
           if (error) throw error;
+          session.baseline.delete(identity(row));
         }
-      } catch (error) {
-        onError?.(error);
       }
-    })();
-  }, [names, onError, ready, state, tenantId]);
+      if (session.alive) setStatus({ phase: "saved", error: null });
+    } catch (error) {
+      if (session.alive) {
+        setStatus({ phase: "error", error });
+        errorHandler.current?.(error);
+      }
+    } finally {
+      session.busy = false;
+    }
+  }, [scope, names, tenantId]);
 
-  return { refresh: hydrate };
+  const hydrate = useCallback(async (session) => {
+    if (!session?.alive || session.busy) return;
+    session.busy = true;
+    setStatus({ phase: "loading", error: null });
+    try {
+      const rows = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from(TABLE).select("collection,record_key,position,data")
+          .eq("tenant_id", tenantId).in("collection", names)
+          .order("collection").order("position").order("record_key").range(offset, offset + 499);
+        if (error) throw error;
+        if (!session.alive) return;
+        rows.push(...(data || []));
+        if (!data || data.length < 500) break;
+      }
+      const next = Object.fromEntries(names.map(name => [name, []]));
+      rows.forEach(row => { if (next[row.collection]) next[row.collection].push(rowToApp(row)); });
+      session.baseline = collectionRows(next, names, tenantId);
+      session.hydrated = true;
+      latest.current = { ...latest.current, ...next };
+      setState(current => session.alive ? { ...current, ...next } : current);
+      setStatus({ phase: "saved", error: null });
+    } catch (error) {
+      if (session.alive) {
+        setStatus({ phase: "error", error });
+        errorHandler.current?.(error);
+      }
+    } finally {
+      session.busy = false;
+    }
+  }, [names, tenantId, setState]);
+
+  useEffect(() => {
+    const session = { scope, alive: true, hydrated: false, busy: false, baseline: new Map() };
+    sessionRef.current = session;
+    if (tenantId && ready) hydrate(session);
+    return () => { session.alive = false; };
+  }, [scope, tenantId, ready, hydrate]);
+
+  useEffect(() => {
+    if (!ready || !sessionRef.current?.hydrated) return;
+    const timer = setTimeout(flush, 400);
+    return () => clearTimeout(timer);
+  }, [state, ready, flush]);
+
+  const retry = useCallback(() => {
+    const session = sessionRef.current;
+    if (!ready || !tenantId || session?.scope !== scope) return;
+    return session.hydrated ? flush() : hydrate(session);
+  }, [scope, ready, tenantId, flush, hydrate]);
+
+  useEffect(() => {
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [retry]);
+
+  return { ...status, retry, refresh: retry };
 }

@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { dbCustomerToLegacy, dbOrderToLegacy, dbProductToLegacy } from "../adapters/erpShape.js";
 
-export function useDbReadBridge({ tenantId, ready, customers, products, orders, ordersLoaded, inventory, setState }) {
+export function useDbReadBridge({ tenantId, ready, customers, customersLoaded, products, productsLoaded, orders, ordersLoaded, inventory, setState }) {
   useEffect(() => {
     if (!tenantId || !ready) return;
-    if (!customers.length && !products.length && !orders.length && !inventory.warehouses.length && !inventory.balances.length) return;
 
     const warehouseStock = inventory.balances.reduce((byWarehouse, balance) => {
       const warehouseId = balance.warehouse_id || balance.warehouse?.id;
@@ -38,10 +37,10 @@ export function useDbReadBridge({ tenantId, ready, customers, products, orders, 
 
     setState((current) => ({
       ...current,
-      ...(customers.length ? { customers: customers.map(dbCustomerToLegacy) } : {}),
-      ...(products.length ? { products: products.map(dbProductToLegacy) } : {}),
+      ...(customersLoaded ? { customers: customers.map(dbCustomerToLegacy) } : {}),
+      ...(productsLoaded ? { products: products.map(dbProductToLegacy) } : {}),
       ...(ordersLoaded ? { orders: orders.map(dbOrderToLegacy) } : {}),
-      ...(inventory.warehouses.length ? {
+      ...(inventory.loaded ? {
         warehouses: inventory.warehouses.map((warehouse) => ({
           id: warehouse.id, code: warehouse.code, name: warehouse.name,
           address: warehouse.address || "—",
@@ -54,5 +53,5 @@ export function useDbReadBridge({ tenantId, ready, customers, products, orders, 
         stock: [...aggregateStock.values()],
       } : {}),
     }));
-  }, [tenantId, ready, customers, products, orders, ordersLoaded, inventory.warehouses, inventory.balances, setState]);
+  }, [tenantId, ready, customers, customersLoaded, products, productsLoaded, orders, ordersLoaded, inventory.loaded, inventory.warehouses, inventory.balances, setState]);
 }

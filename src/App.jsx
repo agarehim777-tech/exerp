@@ -305,8 +305,8 @@ function App() {
   const [state, setState] = useState(() => hydrateState(withoutDbBackedData(initialState)));
   const [authError, setAuthError] = useState("");
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
-  const { customers: dbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
-  const { products: dbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
+  const { customers: dbCustomers, loaded: dbCustomersLoaded, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
+  const { products: dbProducts, loaded: dbProductsLoaded, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const { orders: dbOrders, loaded: dbOrdersLoaded, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
@@ -317,7 +317,7 @@ function App() {
     onError: useCallback(() => setAuthError('UI sazlamaları serverdə saxlanmadı.'), []),
   });
 
-  useExpensesSync({
+  const expenseSync = useExpensesSync({
     tenantId: activeTenantId,
     ready: tenantStateReady,
     expenses: state.expenses,
@@ -325,7 +325,7 @@ function App() {
     onError: useCallback((error) => console.error('[expenses-sync]', error), []),
   });
 
-  useCollectionSync({
+  const collectionSync = useCollectionSync({
     tenantId: activeTenantId,
     ready: tenantStateReady,
     collections: syncedCollections,
@@ -426,6 +426,7 @@ function App() {
   useDbReadBridge({
     tenantId: activeTenantId, ready: tenantStateReady,
     customers: dbCustomers, products: dbProducts, orders: dbOrders,
+    customersLoaded: dbCustomersLoaded, productsLoaded: dbProductsLoaded,
     ordersLoaded: dbOrdersLoaded, inventory: dbInventory, setState,
   });
 
@@ -6591,6 +6592,18 @@ function App() {
         />
 
         <main className="main">
+          {expenseSync.phase === "error" && (
+            <div role="alert" className="error-banner">
+              <span>Xərc məlumatları saxlanmadı: {expenseSync.error?.message || "Bağlantını yoxlayın."}</span>
+              <button type="button" className="secondary-btn" onClick={expenseSync.retry}>Yenidən cəhd et</button>
+            </div>
+          )}
+          {collectionSync.phase === "error" && (
+            <div role="alert" className="error-banner">
+              <span>Məlumat serverdə saxlanmadı: {collectionSync.error?.message || "Bağlantını yoxlayın."}</span>
+              <button type="button" className="secondary-btn" onClick={collectionSync.retry}>Yenidən cəhd et</button>
+            </div>
+          )}
           <PageHeader
             meta={meta}
             onAction={openAction}

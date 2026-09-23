@@ -1,4 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
+import { assertE2eTarget } from './e2e-target.mjs';
 
 export const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 export const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -8,6 +9,7 @@ const password = process.env.E2E_TEST_PASS || process.env.TEST_PASS || "";
 export const hasLifecycleEnvironment = Boolean(supabaseUrl && supabaseKey && email && password);
 
 export async function authenticatedApi(request: APIRequestContext) {
+  const tenantId = assertE2eTarget(process.env);
   const login = await request.post(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
     headers: { apikey: supabaseKey, "content-type": "application/json" },
     data: { email, password },
@@ -25,9 +27,10 @@ export async function authenticatedApi(request: APIRequestContext) {
     const text = await response.text();
     return text ? JSON.parse(text) : null;
   };
-  const memberships = await call("get", "tenant_members?select=tenant_id,role&limit=1");
-  if (!memberships?.[0]?.tenant_id) throw new Error("E2E istifadəçisinin aktiv şirkət üzvlüyü yoxdur.");
-  return { call, tenantId: memberships[0].tenant_id as string, accessToken: session.access_token as string };
+  const memberships = await call("get", `tenant_members?select=tenant_id,role&tenant_id=eq.${tenantId}&user_id=eq.${session.user.id}`);
+  if (memberships?.length !== 1 || memberships[0].tenant_id !== tenantId) throw new Error("E2E test şirkətinə üzvlük yoxdur.");
+  if (['owner', 'super_admin', 'platform_admin'].includes(memberships[0].role)) throw new Error('E2E requires a restricted test user.');
+  return { call, tenantId, accessToken: session.access_token as string };
 }
 
 export const runId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

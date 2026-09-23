@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session";
+import { authenticatedApi } from "./supabase-lifecycle";
 
 /**
  * Tenant izolyasiyası və giriş nəzarəti üzrə e2e yoxlamalar.
@@ -11,7 +12,6 @@ import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-const STORAGE_KEY = process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY || "";
 
 const TENANT_TABLES = [
   "customers",
@@ -37,7 +37,7 @@ test.describe("RLS — anonim giriş", () => {
         expect(await response.json()).toEqual([]);
       } else {
         // və ya birbaşa 401/403 verməlidir
-        expect([401, 403, 404]).toContain(response.status());
+        expect([401, 403]).toContain(response.status());
       }
     });
   }
@@ -64,30 +64,25 @@ test.describe("Sessiya ilə tenant izolyasiyası", () => {
 
     await restoreAuthenticatedSession(page);
     for (const path of ["/", "/anbar/mehsullar", "/maliyye/jurnal", "/kredit"]) {
-      await page.goto(path, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
+      await page.goto(path, { waitUntil: "domcontentloaded", timeout: 20_000 });
       await page.waitForTimeout(1500);
       await expect(page).not.toHaveURL(/\/login/);
     }
     expect(errors, `Runtime xətaları: ${errors.join(" | ")}`).toEqual([]);
   });
 
-  test("başqa tenant-ın məlumatı sorğuda görünmür", async ({ page }) => {
-    await restoreAuthenticatedSession(page);
-    await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    const result = await page.evaluate(
-      async ([url, key, storageKey]) => {
-        const raw = window.localStorage.getItem(storageKey as string);
-        const token = raw ? JSON.parse(raw).access_token : null;
-        const response = await fetch(`${url}/rest/v1/customers?select=tenant_id&limit=200`, {
-          headers: { apikey: key as string, Authorization: `Bearer ${token}` },
-        });
-        return response.ok ? await response.json() : [];
-      },
-      [SUPABASE_URL, SUPABASE_KEY, STORAGE_KEY || `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token`],
-    );
-    const tenants = new Set((result as Array<{ tenant_id: string }>).map((row) => row.tenant_id));
-    // İstifadəçi yalnız üzv olduğu şirkət(lər)in datasını görməlidir
-    expect(tenants.size).toBeLessThanOrEqual(1);
+  test("başqa tenant-ın məlumatı sorğuda görünmür", async ({ request }) => {
+    const api = await authenticatedApi(request);
+    const otherTenant = process.env.E2E_OTHER_TENANT_ID!;
+    const memberships = await api.call("get", "tenant_members?select=tenant_id");
+    expect(memberships.some((row: { tenant_id: string }) => row.tenant_id === otherTenant)).toBe(false);
+    const ownRows = await api.call("get", `customers?select=id,tenant_id&tenant_id=eq.${api.tenantId}&limit=200`);
+    expect(ownRows.length, "Seed at least one customer in the dedicated test tenant").toBeGreaterThan(0);
+    expect(ownRows.every((row: { tenant_id: string }) => row.tenant_id === api.tenantId)).toBe(true);
+    for (const table of TENANT_TABLES) {
+      // authenticatedApi throws on HTTP failures; a missing table is not a passing RLS test.
+      const foreignRows = await api.call("get", `${table}?select=id,tenant_id&tenant_id=eq.${otherTenant}&limit=5`);
+      expect(foreignRows, `Cross-tenant read: ${table}`).toEqual([]);
+    }
   });
 });

@@ -8,6 +8,9 @@ import {
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
 } from "../../shared/ui/tokens.js";
 
+const cashAmount = (value, currency = "AZN") => value == null ? "—"
+  : new Intl.NumberFormat("az-AZ", { style: "currency", currency }).format(Number(value));
+
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
 
@@ -19,35 +22,24 @@ export default function CashbookPage() {
   const book = useCashbook(tenantId);
   const [tab, setTab] = useState(() => searchParams.get("tab") || "accounts");
 
-  const totals = useMemo(() => {
-    const balance = book.accounts.reduce((sum, a) => sum + book.balanceOf(a.id), 0);
-    const reversedTransactionIds = new Set(book.transactions.flatMap(transaction => {
-      if (transaction.category !== "transaction_reversal" && !transaction.reversal_of) return [];
-      const markerId = String(transaction.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
-      return [transaction.reversal_of, markerId].filter(Boolean);
-    }));
-    const externalTransactions = book.transactions.filter(transaction =>
-      transaction.category !== "internal_transfer"
-      && transaction.category !== "transaction_reversal"
-      && !transaction.reversal_of
-      && !reversedTransactionIds.has(transaction.id));
-    const inflow = externalTransactions.filter((t) => t.direction === "in").reduce((s, t) => s + Number(t.amount), 0);
-    const outflow = externalTransactions.filter((t) => t.direction === "out").reduce((s, t) => s + Number(t.amount), 0);
-    const pending = book.expenses.filter((e) => ["pending", "draft"].includes(e.status)).length;
-    const refundPending = book.expenses.filter((e) => e.status === "refund_pending").reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    return { balance, inflow, outflow, pending, refundPending };
-  }, [book]);
+  const [currency, setCurrency] = useState("AZN");
+  const currencies = book.summary?.currencies || [];
+  const selectedCurrency = currencies.some(item => item.currency === currency) ? currency : currencies[0]?.currency || "AZN";
+  const totals = currencies.find(item => item.currency === selectedCurrency) || null;
 
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <select aria-label="Hesabat valyutası" value={selectedCurrency} onChange={event => setCurrency(event.target.value)} style={input} disabled={!book.ledgerReady}>
+        {(currencies.length ? currencies : [{ currency: "AZN" }]).map(item => <option key={item.currency}>{item.currency}</option>)}
+      </select>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={statTile}><div style={statLabel}>Cari qalıq</div><div style={statValue}>{azn(totals.balance)}</div></div>
-        <div style={statTile}><div style={statLabel}>Mədaxil</div><div style={statValue}>{azn(totals.inflow)}</div></div>
-        <div style={statTile}><div style={statLabel}>Məxaric</div><div style={{ ...statValue, color: "#b23a3a" }}>{azn(totals.outflow)}</div></div>
-        <div style={statTile}><div style={statLabel}>Təsdiq gözləyən xərc</div><div style={statValue}>{totals.pending}</div></div>
-        <div style={statTile}><div style={statLabel}>Geri qaytarılacaq</div><div style={{ ...statValue, color: totals.refundPending ? "#b45309" : undefined }}>{azn(totals.refundPending)}</div></div>
+        <div style={statTile}><div style={statLabel}>Cari qalıq</div><div style={statValue}>{cashAmount(totals?.balance ?? null, selectedCurrency)}</div></div>
+        <div style={statTile}><div style={statLabel}>Mədaxil</div><div style={statValue}>{cashAmount(totals?.inflow ?? null, selectedCurrency)}</div></div>
+        <div style={statTile}><div style={statLabel}>Məxaric</div><div style={{ ...statValue, color: "#b23a3a" }}>{cashAmount(totals?.outflow ?? null, selectedCurrency)}</div></div>
+        <div style={statTile}><div style={statLabel}>Təsdiq gözləyən xərc</div><div style={statValue}>{totals?.pending ?? "—"}</div></div>
+        <div style={statTile}><div style={statLabel}>Geri qaytarılacaq</div><div style={{ ...statValue, color: totals?.refundPending ? "#b45309" : undefined }}>{cashAmount(totals?.refundPending ?? null, selectedCurrency)}</div></div>
       </div>
 
       <div style={tabBar}>
@@ -110,7 +102,7 @@ function AccountsPanel({ book }) {
         try { await book.transfer(transfer); setTransfer(current => ({ ...current, amount: "", description: "" })); setOpenForm(""); setMsg("Transfer tamamlandı."); }
         catch (error) { setMsg(`Xəta: ${error.message}`); }
       }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, padding: 12, marginBottom: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <select required value={transfer.fromAccountId} onChange={event => setTransfer({ ...transfer, fromAccountId: event.target.value })} style={input}><option value="">Haradan</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {azn(book.balanceOf(account.id))}</option>)}</select>
+        <select required value={transfer.fromAccountId} onChange={event => setTransfer({ ...transfer, fromAccountId: event.target.value })} style={input}><option value="">Haradan</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</select>
         <select required value={transfer.toAccountId} onChange={event => setTransfer({ ...transfer, toAccountId: event.target.value })} style={input}><option value="">Haraya</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select>
         <input required type="number" min="0.01" step="0.01" placeholder="Məbləğ" value={transfer.amount} onChange={event => setTransfer({ ...transfer, amount: event.target.value })} style={input} />
         <input type="date" value={transfer.occurredAt} onChange={event => setTransfer({ ...transfer, occurredAt: event.target.value })} style={input} />
@@ -125,7 +117,7 @@ function AccountsPanel({ book }) {
               <td style={td}><b>{a.name}</b></td>
               <td style={td}>{ACCOUNT_TYPE[a.type]}</td>
               <td style={td}>{a.currency}</td>
-              <td style={{ ...td, fontWeight: 600 }}>{azn(book.balanceOf(a.id))}</td>
+              <td style={{ ...td, fontWeight: 600 }}>{cashAmount(book.balanceOf(a.id), a.currency)}</td>
               <td style={{ ...td, textAlign: "right" }}>{a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <button type="button" style={delBtn} onClick={async () => {
                 if (!(await appConfirm(`${a.name} kassası silinsin?`, { danger: true }))) return;
                 setMsg("");
@@ -347,7 +339,7 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
       {openCreate && <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 16, padding: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
         <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} style={input}>
           <option value="">Kassa seçin</option>
-          {book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {azn(book.balanceOf(account.id))}</option>)}
+          {book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}
         </select>
         <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input}>
           {categoryNames.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -363,7 +355,7 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
         try { await book.updateExpense(editing.original, editing.values); setEditing(null); setMsg("Xərc və kassa əməliyyatı yeniləndi."); }
         catch (error) { setMsg(`Xəta: ${error.message}`); }
       }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, padding: 12, marginBottom: 16, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <select required value={editing.values.account_id || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, account_id: event.target.value } }))} style={input}><option value="">Kassa seçin</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {azn(book.balanceOf(account.id))}</option>)}</select>
+        <select required value={editing.values.account_id || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, account_id: event.target.value } }))} style={input}><option value="">Kassa seçin</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</select>
         <select value={editing.values.category} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, category: event.target.value } }))} style={input}>{categoryNames.map(category => <option key={category}>{category}</option>)}</select>
         <input required value={editing.values.description || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, description: event.target.value } }))} style={input} placeholder="Təsvir" />
         <input required type="number" min="0.01" step="0.01" value={editing.values.amount} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, amount: event.target.value } }))} style={input} placeholder="Məbləğ" />

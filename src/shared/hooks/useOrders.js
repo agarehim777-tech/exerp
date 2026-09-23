@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
+import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
@@ -65,6 +66,8 @@ export function buildMissingCreditDraft(order) {
 }
 
 export function useOrders(tenantId) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
+  const [loadedScope, setLoadedScope] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -75,6 +78,7 @@ export function useOrders(tenantId) {
   const missingCreditRepairKeyRef = useRef('');
 
   const fetchAll = useCallback(async () => {
+    const isCurrent = begin();
     if (!tenantId) {
       setOrders([]);
       setLoaded(false);
@@ -89,8 +93,10 @@ export function useOrders(tenantId) {
       .neq('status', 'cancelled')
       .order('order_date', { ascending: false })
       .limit(limit + 1);
+    if (!isCurrent()) return;
     if (error) setError(error);
     else {
+      setError(null);
       const rows = data || [];
       const visibleRows = rows.slice(0, limit);
       const orderIds = visibleRows.map((row) => row.id).filter(Boolean);
@@ -113,6 +119,7 @@ export function useOrders(tenantId) {
             .select('id,order_id,warehouse_id,status,recipient_name,recipient_document,delivered_at,delivered_by,acceptance_name,acceptance_document_no,acceptance_signature,accepted_at,acceptance_note,warehouse_employee_name')
             .eq('tenant_id', tenantId).in('order_id', orderIds),
         ]);
+        if (!isCurrent()) return;
         const { data: credits, error: creditError } = creditResult;
         if (creditError) setError(creditError);
         else creditsByOrder = new Map((credits || []).map((credit) => [credit.order_id, credit]));
@@ -141,6 +148,8 @@ export function useOrders(tenantId) {
           }
         }
       }
+      if (!isCurrent()) return;
+      setLoadedScope(scope);
       setHasMore(rows.length > limit);
       setOrders(visibleRows.map((row) => ({
         ...row,
@@ -151,7 +160,7 @@ export function useOrders(tenantId) {
       setLoaded(true);
     }
     setLoading(false);
-  }, [tenantId, limit]);
+  }, [tenantId, limit, scope, begin]);
 
   useEffect(() => {
     setOrders([]);
@@ -548,6 +557,9 @@ export function useOrders(tenantId) {
     };
   };
 
-  return { orders, loading, loaded, error, hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
+  const current = Boolean(tenantId && loadedScope === scope && loaded);
+  return { orders: current ? orders : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
 }
+
+const EMPTY_ROWS = Object.freeze([]);
 

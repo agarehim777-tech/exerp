@@ -55,5 +55,11 @@ export function withoutDbBackedData(state = {}) {
 }
 
 export function writeTenantUiCache(storage, key, state) {
-  storage.setItem(key, JSON.stringify(stripOperationalCollections(state)));
+  storage.setItem(key, JSON.stringify(pickUiPreferences(state)));
+}
+
+const UI_KEYS = ["theme", "density", "locale", "sidebarCollapsed", "tablePreferences"];
+
+export function pickUiPreferences(state = {}) {
+  return Object.fromEntries(UI_KEYS.filter((key) => Object.hasOwn(state, key)).map((key) => [key, state[key]]));
 }

@@ -56,5 +56,26 @@ const checks = await Promise.all(
 );
 
 const missing = checks.filter((check) => !check.ok);
+for (const [name, payload] of [
+  ['cashbook_ledger_summary', { _tenant_id: '00000000-0000-0000-0000-000000000000' }],
+  ['create_cash_expense_atomic', { _tenant_id: '00000000-0000-0000-0000-000000000000', _request_key: 'anonymous-contract-probe', _payload: {} }],
+  ['transfer_cash_atomic', { _tenant_id: '00000000-0000-0000-0000-000000000000', _request_key: 'anonymous-contract-probe', _payload: {} }],
+  ['refund_cash_expense_atomic', { _tenant_id: '00000000-0000-0000-0000-000000000000', _request_key: 'anonymous-contract-probe', _payload: {} }],
+]) {
+  try {
+    // No bearer session: a deployed financial RPC must deny this probe before writing anything.
+    const response = await fetch(`${baseUrl}/rest/v1/rpc/${name}`, {
+      method: 'POST', headers: { apikey: apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
+    });
+    const check = { rpc: name, status: response.status, ok: [401, 403].includes(response.status) };
+    checks.push(check);
+    if (!check.ok) missing.push(check);
+  } catch (error) {
+    const check = { rpc: name, ok: false, reason: error.message };
+    checks.push(check);
+    missing.push(check);
+  }
+}
 console.log(JSON.stringify({ ok: missing.length === 0, checks }, null, 2));
 if (missing.length > 0) process.exit(1);

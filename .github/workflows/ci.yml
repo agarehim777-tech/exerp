@@ -13,7 +13,12 @@ concurrency:
 jobs:
   verify:
     name: Test & build
+    environment: staging
     runs-on: ubuntu-latest
+    env:
+      E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
+      E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
+      E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +44,9 @@ jobs:
         run: |
           test -n "$E2E_TEST_USER"
           test -n "$E2E_TEST_PASS"
+          node scripts/verify-e2e-target.mjs
         env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 

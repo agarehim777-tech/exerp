@@ -19,7 +19,7 @@ describe("expenses sync mapping", () => {
 
   it("maps a database row back to the app shape", () => {
     expect(expenseRowToApp({ id: "uuid", expense_no: "MX-2", description: "Yanacaq", category: "Nəqliyyat", amount: "40", status: "Təsdiq gözləyir", expense_date: "2026-09-02" }))
-      .toEqual({ id: "MX-2", description: "Yanacaq", category: "Nəqliyyat", amount: 40, status: "Təsdiq gözləyir", date: "2026-09-02", note: "", source: "" });
+      .toEqual({ id: "MX-2", description: "Yanacaq", category: "Nəqliyyat", amount: 40, currency: "AZN", vat_amount: 0, status: "Təsdiq gözləyir", date: "2026-09-02", note: "", source: "" });
   });
 
   it("falls back to defaults for incomplete rows", () => {

@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { stripOperationalCollections, withoutOperationalData, writeTenantUiCache } from '../state/tenantPersistence.js';
+import { pickUiPreferences, stripOperationalCollections, withoutOperationalData, writeTenantUiCache } from '../state/tenantPersistence.js';
+import { useTenantRequestScope } from './useTenantRequestScope.js';
 
 export function useTenantUiPersistence({ tenantId, userId, state, setState, hydrateState, localKey, schemaVersion, onWarning, onError }) {
-  const [ready, setReady] = useState(false);
+  const { scope } = useTenantRequestScope(tenantId);
+  const [loadedTenant, setLoadedTenant] = useState(null);
+  const ready = Boolean(tenantId && loadedTenant === scope);
   const snapshotUnavailable = useRef(false);
   const saveTimer = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
-    setReady(false);
+    setLoadedTenant(null);
+    setState(hydrateState(withoutOperationalData({})));
     if (!tenantId) return () => { cancelled = true; };
     supabase.from('tenant_state_snapshots').select('state,schema_version').eq('tenant_id', tenantId).maybeSingle()
       .then(({ data, error }) => {
@@ -17,17 +21,20 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
         snapshotUnavailable.current = Boolean(error);
         let snapshot = data?.state || {};
         if (error) {
-          try { snapshot = JSON.parse(window.localStorage.getItem(`${localKey}.${tenantId}`) || '{}'); } catch { snapshot = {}; }
+          try { snapshot = pickUiPreferences(JSON.parse(window.localStorage.getItem(`${localKey}.${tenantId}`) || '{}')); } catch { snapshot = {}; }
           onWarning?.(error);
         }
         setState(hydrateState(withoutOperationalData(snapshot)));
-        setReady(true);
+        setLoadedTenant(scope);
+      }).catch((error) => {
+        if (!cancelled) onError?.(error);
       });
     return () => { cancelled = true; };
-  }, [tenantId, hydrateState, localKey, onWarning, setState]);
+  }, [tenantId, scope, hydrateState, localKey, onWarning, onError, setState]);
 
   useEffect(() => {
-    try { writeTenantUiCache(window.localStorage, tenantId ? `${localKey}.${tenantId}` : localKey, state); }
+    if (!ready) return undefined;
+    try { writeTenantUiCache(window.localStorage, `${localKey}.${tenantId}`, state); }
     catch (error) { onWarning?.(error); }
     if (!tenantId || !userId || !ready || snapshotUnavailable.current) return undefined;
     window.clearTimeout(saveTimer.current);
