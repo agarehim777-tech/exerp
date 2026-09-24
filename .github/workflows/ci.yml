@@ -34,12 +34,6 @@ jobs:
       - name: Dependency security audit
         run: npm audit --audit-level=high
 
-      - name: Release gates
-        run: npm run verify:release
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-
       - name: Require authenticated E2E account
         run: |
           test -n "$E2E_TEST_USER"
@@ -49,6 +43,12 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
+      - name: Release gates
+        run: npm run verify:release
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -82,6 +82,7 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: All 21 business lifecycle flows
+        id: business_flows
         run: npm run audit:flows
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -91,7 +92,7 @@ jobs:
           AUDIT_FLOW_TIMEOUT_MS: 90000
 
       - name: Upload business lifecycle evidence
-        if: always()
+        if: ${{ always() && steps.business_flows.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: business-flow-audit
