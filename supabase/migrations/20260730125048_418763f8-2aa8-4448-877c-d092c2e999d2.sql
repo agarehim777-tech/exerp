@@ -1,3 +1,15 @@
+-- Fresh installs use the earlier canonical ledgers. Invoice definitions are
+-- replayed separately by 20260730130000_sales_invoices_compat.sql.
+DO $legacy_bootstrap$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'stock_movements'
+      AND column_name = 'movement_type'
+  ) THEN
+    RETURN;
+  END IF;
+  EXECUTE $legacy_ddl$
 -- ============================================================
 -- P0.1  tenant state snapshots (server-side blob storage)
 -- ============================================================
@@ -409,3 +421,6 @@ REVOKE ALL ON FUNCTION public.apply_stock_movement() FROM PUBLIC, anon, authenti
 REVOKE ALL ON FUNCTION public.sync_invoice_payment() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.post_invoice_to_gl(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.post_payment_to_gl(UUID) TO authenticated;
+$legacy_ddl$;
+END;
+$legacy_bootstrap$;

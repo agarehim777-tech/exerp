@@ -1,3 +1,11 @@
+-- Preserve the canonical quantity/movement_type implementation installed by
+-- the preceding migration instead of replacing it with legacy qty/move_type.
+DO $inventory_legacy_replay$
+BEGIN
+  IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '20260810150000') THEN
+    RETURN;
+  END IF;
+  EXECUTE $inventory_legacy_ddl$
 CREATE TABLE IF NOT EXISTS public.inventory_accounting_settings(
  tenant_id uuid PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
  valuation_method text NOT NULL DEFAULT 'weighted_average' CHECK(valuation_method IN('weighted_average','fifo')),
@@ -179,3 +187,6 @@ REVOKE ALL ON FUNCTION public.process_sales_order_status(uuid,text) FROM PUBLIC,
 REVOKE ALL ON FUNCTION public.register_order_payment(uuid,numeric,uuid) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.cancel_sales_invoice(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.process_sales_order_status(uuid,text),public.register_order_payment(uuid,numeric,uuid),public.post_invoice_to_gl(uuid),public.cancel_sales_invoice(uuid) TO authenticated,service_role;
+$inventory_legacy_ddl$;
+END;
+$inventory_legacy_replay$;

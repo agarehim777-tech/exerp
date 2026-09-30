@@ -71,6 +71,8 @@ DO $$ DECLARE item RECORD; BEGIN
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', item.table_name);
     EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO authenticated', item.table_name);
     EXECUTE format('GRANT ALL ON public.%I TO service_role', item.table_name);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', item.table_name || '_tenant_select', item.table_name);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', item.table_name || '_tenant_write', item.table_name);
     EXECUTE format('CREATE POLICY %I ON public.%I FOR SELECT TO authenticated USING (private.is_tenant_member(tenant_id, auth.uid()))', item.table_name || '_tenant_select', item.table_name);
     EXECUTE format('CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (private.has_module_access(tenant_id, %L, ''edit'')) WITH CHECK (private.has_module_access(tenant_id, %L, ''edit''))', item.table_name || '_tenant_write', item.table_name, item.module_name, item.module_name);
   END LOOP;

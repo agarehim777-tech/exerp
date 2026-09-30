@@ -1,5 +1,18 @@
 # ERP hardening progress - 2026-09-22
 
+## Staging update - 2026-09-30
+
+- Staging SQL access recovered. All 183 historical migrations plus four runtime fixes are applied (187 total, latest 20260929120046). History versions match repository filenames. Production was queried read-only; its 74 migration entries require separate schema reconciliation, not a blind replay.
+- Historical replay fixes preserve canonical implementations when duplicate legacy scripts reference absent columns, enums, seeders, or incompatible return types. These edits do not update already-migrated production databases.
+- Runtime fixes: unambiguous main cash account lookup with canonical required code support; complete sale request idempotency covering payment and bonuses; missing expense account/currency/VAT columns; credit initial-payment trigger reuses the same cash-account helper.
+- Verification: 227 unit tests across 43 files passed; production build, bundle budget, migration ordering, security (9), transaction hardening (54), and recovery (18) checks passed before the final credit-trigger addition. The final trigger was verified in the live staging credit flow.
+- Staging rollback-only SQL checks under authenticated role passed: sale create/replay/payment/cancel with zero final balance; expense create/replay/refund; credit initial-payment shortfall rejection, completion, activation, and cancellation. These are NOT browser E2E or multi-connection concurrency tests. Stock delivery and procurement remain unverified against the complete fresh schema; historical functions still contain legacy stock-column references.
+- Two fixtures created: primary e6e055c9-f9c8-4480-9070-4ef9d46a1d2d; isolated e421f104-bab3-4ec6-a53a-3f8e49b320fd. The existing test account has tenant-admin membership only in primary, no platform-admin membership. Authenticated customer SELECT returned only the primary fixture.
+- Manual reconciliation returned zero critical findings for both otherwise empty test tenants. pg_cron is absent, so automatic daily scheduling is NOT enabled.
+- Security advisor reported authenticated SECURITY DEFINER execution warnings and disabled leaked-password protection. RPC authorization review remains required: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+- Pending user configuration: GitHub staging variables E2E_TENANT_ID and E2E_OTHER_TENANT_ID must match the fixture IDs above; E2E_SUPABASE_PROJECT_REF must be cvjctwgdyzhijhzhhjqd. Test credentials remain private GitHub secrets.
+- Full browser E2E, 21 business flows, exact-commit CI, production snapshot preservation/migration and deployment remain pending. No production writes or deployment performed.
+
 ## Update - 2026-09-23
 
 - Expense synchronization follow-up: removed load-time backfill from stale local state, paginated reads, discarded old tenant responses, serialized writes with acknowledged baselines and explicit/online retry. Added visible expense-save errors. Currency and VAT survive mapping. This transitional writer still uses direct expense CRUD and is NOT yet a replacement for the remaining server lifecycle conversion.

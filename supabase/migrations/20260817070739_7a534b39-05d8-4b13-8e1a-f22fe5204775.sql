@@ -1,3 +1,11 @@
+-- Canonical-only installations have no legacy columns to synchronize.
+DO $legacy_stock_sync$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='stock_movements' AND column_name='move_type') THEN
+    RETURN;
+  END IF;
+  EXECUTE $legacy_stock_ddl$
 ALTER TABLE public.stock_movements
   ALTER COLUMN move_type SET DEFAULT 'adjust',
   ALTER COLUMN qty SET DEFAULT 0;
@@ -32,3 +40,6 @@ DROP TRIGGER IF EXISTS sync_stock_movement_legacy_columns ON public.stock_moveme
 CREATE TRIGGER sync_stock_movement_legacy_columns
 BEFORE INSERT ON public.stock_movements
 FOR EACH ROW EXECUTE FUNCTION public.sync_stock_movement_legacy_columns();
+$legacy_stock_ddl$;
+END;
+$legacy_stock_sync$;

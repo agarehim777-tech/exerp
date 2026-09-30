@@ -1,3 +1,12 @@
+-- The three earlier canonical migrations already perform this data backfill.
+-- Do not replay its legacy enum-based variant over the canonical text schema.
+DO $cash_backfill_replay$
+BEGIN
+  IF (SELECT count(*) FROM supabase_migrations.schema_migrations
+      WHERE version IN ('20260809170000', '20260809173000', '20260809180000')) = 3 THEN
+    RETURN;
+  END IF;
+  EXECUTE $cash_backfill_ddl$
 INSERT INTO public.cash_accounts (tenant_id, name, type, currency, opening_balance, is_active)
 SELECT DISTINCT
   o.tenant_id, 'Əsas kassa', 'cash'::cash_account_type, COALESCE(o.currency, 'AZN'), 0, true
@@ -104,3 +113,6 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+$cash_backfill_ddl$;
+END;
+$cash_backfill_replay$;

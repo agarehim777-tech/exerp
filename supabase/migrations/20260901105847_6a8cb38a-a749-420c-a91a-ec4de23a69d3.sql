@@ -1,3 +1,11 @@
+-- Do not replace the canonical JSON lifecycle with the older void wrapper.
+DO $legacy_reversal$
+BEGIN
+  IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
+    WHERE version = '20260827120000') THEN
+    RETURN;
+  END IF;
+  EXECUTE $legacy_reversal_ddl$
 CREATE OR REPLACE FUNCTION public.reverse_sales_order(_order_id uuid, _reason text DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
@@ -29,3 +37,6 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.reverse_sales_order(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reverse_sales_order(uuid, text) TO authenticated, service_role;
+$legacy_reversal_ddl$;
+END;
+$legacy_reversal$;

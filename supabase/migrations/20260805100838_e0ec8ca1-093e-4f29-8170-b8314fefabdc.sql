@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS public.credit_contracts (
   CHECK (initial_payment <= principal)
 );
 
+-- The canonical core migration may already have created credit_contracts.
+-- CREATE TABLE IF NOT EXISTS does not add these workflow columns to it.
+ALTER TABLE public.credit_contracts
+  ADD COLUMN IF NOT EXISTS daily_penalty_rate NUMERIC(8,6) NOT NULL DEFAULT 0 CHECK (daily_penalty_rate >= 0),
+  ADD COLUMN IF NOT EXISTS risk_score INTEGER NOT NULL DEFAULT 0 CHECK (risk_score BETWEEN 0 AND 100),
+  ADD COLUMN IF NOT EXISTS collection_stage TEXT NOT NULL DEFAULT 'current'
+    CHECK (collection_stage IN ('current','reminder','soft_collection','hard_collection','legal','restructured','closed')),
+  ADD COLUMN IF NOT EXISTS last_risk_calculated_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS public.credit_installments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,

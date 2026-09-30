@@ -1,3 +1,17 @@
+-- This file duplicates the earlier landed-cost migration, plus access grants.
+-- On a full replay retain the existing objects and apply only those grants.
+DO $landed_cost_replay$
+BEGIN
+  IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '20260809210000') THEN
+    GRANT ALL ON public.procurement_shipments, public.procurement_shipment_lines,
+      public.procurement_shipment_costs, public.procurement_cost_allocations,
+      public.procurement_landed_cost_lines, public.procurement_receipts,
+      public.procurement_receipt_lines TO service_role;
+    REVOKE ALL ON FUNCTION public.recalculate_shipment_landed_cost(uuid,boolean) FROM PUBLIC, anon;
+    REVOKE ALL ON FUNCTION public.receive_landed_cost_shipment(uuid,uuid,date) FROM PUBLIC, anon;
+    RETURN;
+  END IF;
+  EXECUTE $landed_cost_ddl$
 ALTER TABLE public.purchase_orders ADD COLUMN IF NOT EXISTS factory_name text;
 ALTER TABLE public.purchase_orders ADD COLUMN IF NOT EXISTS exchange_rate numeric(18,8) NOT NULL DEFAULT 1 CHECK (exchange_rate > 0);
 ALTER TABLE public.purchase_orders ADD COLUMN IF NOT EXISTS payment_terms text;
@@ -166,3 +180,6 @@ BEGIN INSERT INTO public.audit_events(id,tenant_id,actor_id,module,action,detail
 CREATE TRIGGER audit_procurement_shipments AFTER INSERT OR UPDATE OR DELETE ON public.procurement_shipments FOR EACH ROW EXECUTE FUNCTION public.audit_procurement_change();
 CREATE TRIGGER audit_procurement_costs AFTER INSERT OR UPDATE OR DELETE ON public.procurement_shipment_costs FOR EACH ROW EXECUTE FUNCTION public.audit_procurement_change();
 CREATE TRIGGER audit_procurement_receipts AFTER INSERT OR UPDATE OR DELETE ON public.procurement_receipts FOR EACH ROW EXECUTE FUNCTION public.audit_procurement_change();
+$landed_cost_ddl$;
+END;
+$landed_cost_replay$;

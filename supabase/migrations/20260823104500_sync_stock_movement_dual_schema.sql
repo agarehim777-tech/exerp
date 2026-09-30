@@ -1,5 +1,13 @@
 BEGIN;
 
+DO $legacy_stock_sync$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='stock_movements' AND column_name='move_type') THEN
+    RETURN;
+  END IF;
+  EXECUTE $legacy_stock_ddl$
+
 CREATE OR REPLACE FUNCTION public.sync_stock_movement_legacy_columns()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -55,5 +63,9 @@ WHERE movement_type IS NOT NULL
       ELSE 'adjust'::public.stock_move_type
     END
   );
+
+$legacy_stock_ddl$;
+END;
+$legacy_stock_sync$;
 
 COMMIT;
