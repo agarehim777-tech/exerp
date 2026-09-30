@@ -1,8 +1,8 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.110.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -111,6 +111,7 @@ function buildInsights(signals: any, dismissedKeys: Set<string>): Insight[] {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -125,12 +126,18 @@ Deno.serve(async (req) => {
       },
     );
 
-    const { data: userRes } = await supabase.auth.getUser();
+    const { data: userRes } = await supabase.auth.getUser(token);
     if (!userRes?.user) return json({ error: "Invalid session" }, 401);
 
     const body = await req.json().catch(() => ({}));
     const tenantId: string | undefined = body?.tenantId;
-    if (!tenantId) return json({ error: "Aktiv şirkət seçilməyib" }, 400);
+    if (typeof tenantId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+      return json({ error: "Aktiv şirkət seçilməyib" }, 400);
+    }
+    const { data: membership, error: membershipError } = await supabase.from("tenant_members")
+      .select("tenant_id").eq("tenant_id", tenantId).eq("user_id", userRes.user.id).maybeSingle();
+    if (membershipError) return json({ error: "Tenant access check failed" }, 500);
+    if (!membership) return json({ error: "Tenant access denied" }, 403);
 
     const today = new Date();
     const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -141,18 +148,26 @@ Deno.serve(async (req) => {
     const [balances, overdueInstallments, openOrders, openPos, invoices, dashboard] = await Promise.all([
       supabase.from("stock_balances")
         .select("on_hand,reserved,problem_qty,minimum_level,product:products(name,sku,price,minimum_stock)")
+        .eq("tenant_id", tenantId)
         .limit(500),
       supabase.from("credit_installments")
         .select("due_date,principal_due,principal_paid,penalty_due,penalty_paid,status,credit:credit_contracts(contract_no,customer:customers(name))")
+        .eq("tenant_id", tenantId)
         .lte("due_date", iso(today)).neq("status", "paid").order("due_date").limit(60),
       supabase.from("orders").select("order_no,order_date,status,total,payment_status,customer:customers(name)")
+        .eq("tenant_id", tenantId)
         .in("status", ["draft", "confirmed"]).order("order_date", { ascending: false }).limit(60),
       supabase.from("purchase_orders").select("po_number,order_date,status,vendor:vendors(name)")
+        .eq("tenant_id", tenantId)
         .in("status", ["draft", "approved", "partial"]).order("order_date", { ascending: false }).limit(60),
       supabase.from("sales_invoices").select("invoice_no,due_date,total,paid_amount,status,customer:customers(name)")
+        .eq("tenant_id", tenantId)
         .in("status", ["issued", "partial", "overdue"]).order("due_date").limit(60),
       supabase.rpc("sales_dashboard", { _tenant: tenantId, _from: iso(from), _to: iso(today) }),
     ]);
+    if ([balances, overdueInstallments, openOrders, openPos, invoices, dashboard].some((result) => result.error)) {
+      return json({ error: "ERP insight data could not be loaded", code: "INSIGHT_DATA_UNAVAILABLE" }, 500);
+    }
 
     const lowStock = (balances.data ?? [])
       .map((row: any) => ({
@@ -194,12 +209,13 @@ Deno.serve(async (req) => {
     };
 
     // ---- Özünüöyrənmə: keçmiş rəy (qəbul/rədd) modelə ötürülür ----
-    const { data: feedback } = await supabase
+    const { data: feedback, error: feedbackError } = await supabase
       .from("ai_insight_feedback")
       .select("insight_key,category,title,action,note,created_at")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(40);
+    if (feedbackError) return json({ error: "Insight feedback could not be loaded", code: "INSIGHT_DATA_UNAVAILABLE" }, 500);
 
     const dismissed = (feedback ?? []).filter((f) => f.action === "dismissed");
     const dismissedKeys = new Set(dismissed.map((row) => String(row.insight_key || "")));

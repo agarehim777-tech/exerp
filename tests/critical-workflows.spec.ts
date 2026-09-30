@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session";
+import { authenticatedApi, supabaseKey, supabaseUrl } from "./supabase-lifecycle";
 
 test.describe("Kritik ERP axınları", () => {
   test.skip(!hasAuthenticatedE2E, "E2E test istifadəçisi konfiqurasiya edilməyib");
@@ -66,5 +67,23 @@ test.describe("Kritik ERP axınları", () => {
     expect(Array.isArray(payload.insights)).toBe(true);
     expect(payload.insights.length).toBeGreaterThan(0);
     await expect(page.getByText("Failed to send a request to the Edge Function")).toHaveCount(0);
+  });
+
+  test("insights rejects unauthenticated requests", async ({ request }) => {
+    const response = await request.post(`${supabaseUrl}/functions/v1/erp-insights`, {
+      headers: { apikey: supabaseKey },
+      data: { tenantId: process.env.E2E_TENANT_ID },
+    });
+    expect(response.status()).toBe(401);
+  });
+
+  test("insights rejects a tenant without membership", async ({ request }) => {
+    const { accessToken } = await authenticatedApi(request);
+    const response = await request.post(`${supabaseUrl}/functions/v1/erp-insights`, {
+      headers: { apikey: supabaseKey, authorization: `Bearer ${accessToken}` },
+      data: { tenantId: process.env.E2E_OTHER_TENANT_ID },
+    });
+    expect(response.status()).toBe(403);
+    expect((await response.json()).insights).toBeUndefined();
   });
 });
