@@ -12,10 +12,12 @@ export function usePermissions() {
   const role = activeMembership?.role || null;
   const [matrix, setMatrix] = useState(null); // { [module]: { can_view, can_edit } }
   const [loading, setLoading] = useState(true);
+  const [loadedRole, setLoadedRole] = useState(null);
+  const permissionsLoading = loading || authLoading || loadedRole !== role;
 
   useEffect(() => {
     let cancelled = false;
-    if (!role) { setMatrix(null); setLoading(false); return; }
+    if (!role) { setMatrix(null); setLoadedRole(null); setLoading(false); return; }
     setLoading(true);
     supabase
       .from("role_permissions")
@@ -23,10 +25,11 @@ export function usePermissions() {
       .eq("role", role)
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error || !data) { setMatrix(null); setLoading(false); return; }
+        if (error || !data) { setMatrix(null); setLoadedRole(role); setLoading(false); return; }
         const m = {};
         for (const r of data) m[r.module] = { view: r.can_view, edit: r.can_edit };
         setMatrix(m);
+        setLoadedRole(role);
         setLoading(false);
       });
     return () => { cancelled = true; };
@@ -34,23 +37,23 @@ export function usePermissions() {
 
   const can = useCallback((module, action = "view") => {
     if (isPlatformAdmin) return true;
-    if (loading || authLoading || !role || !matrix) return false;
+    if (permissionsLoading || !role || !matrix) return false;
     const entry = matrix[module];
     if (!entry) return false;
     return action === "edit" ? !!entry.edit : !!entry.view;
-  }, [matrix, role, loading, authLoading, isPlatformAdmin]);
+  }, [matrix, role, permissionsLoading, isPlatformAdmin]);
 
   return useMemo(() => ({
     role,
     matrix,
-    loading: loading || authLoading,
+    loading: permissionsLoading,
     can,
     canView: (m) => can(m, "view"),
     canEdit: (m) => can(m, "edit"),
     isOwner: role === "owner",
     isAdmin: role === "owner" || role === "admin",
     isViewer: role === "viewer",
-  }), [role, matrix, loading, authLoading, can]);
+  }), [role, matrix, permissionsLoading, can]);
 }
 
 export function PermissionGate({ module, action = "view", fallback = null, children }) {
