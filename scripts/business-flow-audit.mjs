@@ -1,6 +1,8 @@
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
+import { assertE2eTarget } from '../tests/e2e-target.mjs';
+import { runBoundedFlow } from './audit-flow-runner.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 const storageKey = "erpaz.local.backend.v1";
@@ -89,6 +91,13 @@ async function createFlowPage(browser) {
       const authError = await page.locator(".xp-al.e, .form-error").first().innerText().catch(() => "");
       throw new Error(`E2E login did not reach the application${authError ? `: ${authError}` : ""}`);
     }
+  }
+  const state = await readState(page);
+  if (!state) {
+    await context.close();
+    const error = new Error('Legacy audit requires browser business storage; migrate these scenarios to Supabase before release.');
+    error.code = 'AUDIT_BACKEND_INCOMPATIBLE';
+    throw error;
   }
   return { context, page, errors };
 }
@@ -1481,6 +1490,7 @@ async function auditSupportMessaging(browser) {
   }
 }
 
+assertE2eTarget(process.env);
 const auditServer = await ensureAuditServer();
 const browser = await chromium.launch({
   headless: true,
@@ -1516,25 +1526,37 @@ const auditFlows = [
   ["support-messaging-linked-comments", auditSupportMessaging],
 ].filter(([name]) => !flowFilter || name.includes(flowFilter));
 
+const saveReport = async () => {
+  await mkdir('test-results', { recursive: true });
+  await writeFile('test-results/business-flow-audit.json',
+    `${JSON.stringify({ ...report, generatedAt: new Date().toISOString() }, null, 2)}\n`, 'utf8');
+};
+await saveReport();
+let incompatibleBackend = false;
+try {
 for (const [name, run] of auditFlows) {
+  if (incompatibleBackend) {
+    report.failures.push({ name, error: 'AUDIT_BACKEND_INCOMPATIBLE', blocked: true });
+    await saveReport();
+    continue;
+  }
   console.log(`[audit] ${name} started`);
   try {
-    const result = await Promise.race([
-      run(browser),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Flow exceeded ${flowTimeoutMs} ms`)), flowTimeoutMs),
-      ),
-    ]);
+    const result = await runBoundedFlow(() => run(browser), flowTimeoutMs,
+      () => Promise.all(browser.contexts().map((context) => context.close())));
     report.flows.push({ name, result });
     console.log(`[audit] ${name} passed`);
   } catch (error) {
+    incompatibleBackend = error.code === 'AUDIT_BACKEND_INCOMPATIBLE';
     report.failures.push({ name, error: error.message });
     console.error(`[audit] ${name} failed: ${error.message}`);
   }
+  await saveReport();
 }
-
-await browser.close();
-auditServer?.kill();
+} finally {
+  await browser.close();
+  auditServer?.kill();
+}
 await mkdir("test-results", { recursive: true });
 await writeFile(
   "test-results/business-flow-audit.json",
