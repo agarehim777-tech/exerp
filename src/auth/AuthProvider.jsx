@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "../integrations/supabase/client";
 import { logger } from "../lib/logger";
 import { setUser as setObsUser } from "../lib/observability";
@@ -12,42 +12,77 @@ export function AuthProvider({ children }) {
   const [memberships, setMemberships] = useState([]);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const requestScope = useRef({ uid: undefined, version: 0 });
 
   const refresh = useCallback(async (uid) => {
+    if (requestScope.current.uid !== uid) return;
+    const version = ++requestScope.current.version;
+    const isCurrent = () => requestScope.current.version === version && requestScope.current.uid === uid;
+    setLoading(true);
+    try {
     if (!uid) {
       setProfile(null);
       setMemberships([]);
       setIsPlatformAdmin(false);
       return;
     }
-    const [{ data: prof }, { data: mem }, { data: pa }] = await Promise.all([
+    const results = await Promise.all([
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
       supabase.from("tenant_members").select("id, tenant_id, role, tenants(id,name,slug)").eq("user_id", uid),
       supabase.from("platform_admins").select("user_id").eq("user_id", uid).maybeSingle(),
     ]);
+    if (!isCurrent()) return;
+    const failed = results.find((result) => result.error);
+    if (failed) throw failed.error;
+    const [{ data: prof }, { data: mem }, { data: pa }] = results;
     setProfile(prof ?? null);
     setMemberships(mem ?? []);
     setIsPlatformAdmin(!!pa);
+    } catch (error) {
+      if (!isCurrent()) return;
+      setProfile(null); setMemberships([]); setIsPlatformAdmin(false);
+      logger.error('Auth profile refresh failed', { error: error.message });
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
   }, []);
 
 
   useEffect(() => {
+    let sessionRevision = 0;
+    let disposed = false;
+    const adoptSession = (s) => {
+      requestScope.current = { uid: s?.user?.id, version: requestScope.current.version + 1 };
+      setSession(s);
+      setLoading(true);
+      setProfile(null); setMemberships([]); setIsPlatformAdmin(false);
+      setObsUser(s?.user ? { id: s.user.id, email: s.user.email } : null);
+    };
     // Register listener FIRST, then fetch initial session (recommended pattern)
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setObsUser(s?.user ? { id: s.user.id, email: s.user.email } : null);
+      sessionRevision++;
+      adoptSession(s);
       // Defer supabase calls to avoid deadlock
-      setTimeout(() => refresh(s?.user?.id), 0);
+      setTimeout(() => { if (!disposed) refresh(s?.user?.id); }, 0);
     });
 
+    const initialRevision = sessionRevision;
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setObsUser(data.session?.user ? { id: data.session.user.id, email: data.session.user.email } : null);
-      refresh(data.session?.user?.id).finally(() => setLoading(false));
+      if (disposed || sessionRevision !== initialRevision) return;
+      adoptSession(data.session);
+      refresh(data.session?.user?.id);
+    }).catch((error) => {
+      if (disposed || sessionRevision !== initialRevision) return;
+      logger.error('Initial auth session failed', { error: error.message });
+      setLoading(false);
     });
 
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      disposed = true;
+      requestScope.current.version++;
+      sub.subscription.unsubscribe();
+    };
   }, [refresh]);
 
   const setActiveTenant = useCallback(

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { useTenantRequestScope } from '../../shared/hooks/useTenantRequestScope';
 import { AlertTriangle, Brain, Check, Loader2, RefreshCw, ThumbsDown, Zap } from "lucide-react";
 
 const CATEGORY_LABELS = {
@@ -20,54 +21,84 @@ const PRIORITY_TONE = {
 
 export default function InsightsPage() {
   const { activeTenantId } = useAuth();
+  const { scope, begin } = useTenantRequestScope(activeTenantId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
+  const [storedData, setData] = useState(null);
+  const [dataScope, setDataScope] = useState(null);
+  const data = dataScope === scope ? storedData : null;
   const [feedback, setFeedback] = useState({});
-  const [history, setHistory] = useState([]);
+  const [storedHistory, setHistory] = useState([]);
+  const [historyScope, setHistoryScope] = useState(null);
+  const history = historyScope === scope ? storedHistory : [];
+  const [pendingFeedback, setPendingFeedback] = useState({});
+  useEffect(() => {
+    setData(null); setFeedback({}); setHistory([]); setError(null);
+    setLoading(false); setPendingFeedback({});
+  }, [scope]);
 
   const loadHistory = useCallback(async () => {
     if (!activeTenantId) return;
-    const { data: rows } = await supabase
+    const isCurrent = begin('history');
+    const { data: rows, error: historyError } = await supabase
       .from("ai_insight_feedback")
       .select("insight_key,title,action,created_at")
       .eq("tenant_id", activeTenantId)
       .order("created_at", { ascending: false })
       .limit(20);
+    if (!isCurrent()) return;
+    if (historyError) { setError(historyError.message); return; }
     setHistory(rows || []);
-  }, [activeTenantId]);
+    setHistoryScope(scope);
+  }, [activeTenantId, begin]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const generate = useCallback(async () => {
     if (!activeTenantId) return;
+    const isCurrent = begin('generate');
     setLoading(true);
     setError(null);
     try {
       const { data: result, error: fnError } = await supabase.functions.invoke("erp-insights", {
         body: { tenantId: activeTenantId },
       });
+      if (!isCurrent()) return;
       if (fnError) throw fnError;
       if (result?.error) throw new Error(result.error);
       setData(result);
+      setDataScope(scope);
       setFeedback({});
     } catch (nextError) {
+      if (!isCurrent()) return;
       setError(nextError.message || String(nextError));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [activeTenantId]);
+  }, [activeTenantId, begin]);
 
   const react = async (insight, action) => {
-    setFeedback((prev) => ({ ...prev, [insight.key]: action }));
-    await supabase.from("ai_insight_feedback").insert({
-      tenant_id: activeTenantId,
-      insight_key: insight.key || insight.title?.slice(0, 40) || "insight",
-      category: insight.category || "general",
-      title: insight.title || null,
-      action,
-    });
-    loadHistory();
+    if (!activeTenantId || pendingFeedback[insight.key]) return;
+    const isCurrent = begin(`feedback:${insight.key}`);
+    setPendingFeedback((prev) => ({ ...prev, [insight.key]: true }));
+    setError(null);
+    try {
+      const { error: writeError } = await supabase.from("ai_insight_feedback").insert({
+        tenant_id: activeTenantId,
+        insight_key: insight.key || insight.title?.slice(0, 40) || "insight",
+        category: insight.category || "general",
+        title: insight.title || null,
+        action,
+      });
+      if (!isCurrent()) return;
+      if (writeError) throw writeError;
+      setFeedback((prev) => ({ ...prev, [insight.key]: action }));
+      await loadHistory();
+    } catch (writeError) {
+      if (isCurrent()) setError(writeError.message || String(writeError));
+    } finally {
+      if (isCurrent()) setPendingFeedback((prev) => ({ ...prev, [insight.key]: false }));
+    }
   };
 
   const signals = data?.signals;
@@ -119,13 +150,13 @@ export default function InsightsPage() {
             <div style={S.cardDetail}>{insight.detail}</div>
             {insight.action && <div style={S.action}><strong>Addım:</strong> {insight.action}</div>}
             <div style={S.cardActions}>
-              <button onClick={() => react(insight, "accepted")} disabled={!!state} style={{ ...S.smallBtn, ...(state === "accepted" ? S.smallBtnOn : {}) }}>
+              <button onClick={() => react(insight, "accepted")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "accepted" ? S.smallBtnOn : {}) }}>
                 <Check size={14} /> Qəbul et
               </button>
-              <button onClick={() => react(insight, "done")} disabled={!!state} style={{ ...S.smallBtn, ...(state === "done" ? S.smallBtnOn : {}) }}>
+              <button onClick={() => react(insight, "done")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "done" ? S.smallBtnOn : {}) }}>
                 <Zap size={14} /> İcra olundu
               </button>
-              <button onClick={() => react(insight, "dismissed")} disabled={!!state} style={{ ...S.smallBtn, ...(state === "dismissed" ? S.smallBtnOff : {}) }}>
+              <button onClick={() => react(insight, "dismissed")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "dismissed" ? S.smallBtnOff : {}) }}>
                 <ThumbsDown size={14} /> Uyğun deyil
               </button>
               {state && <span style={{ fontSize: 12, color: "#64748b" }}>Rəy yadda saxlanıldı — növbəti təhlildə nəzərə alınacaq.</span>}
