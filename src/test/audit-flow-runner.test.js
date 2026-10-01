@@ -1,8 +1,13 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { runBoundedFlow } from '../../scripts/audit-flow-runner.mjs';
+import { legacyAuditCompatibilityError, runBoundedFlow } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
+it('rejects Supabase targets before legacy browser login or mutations', () => {
+  expect(legacyAuditCompatibilityError({ VITE_SUPABASE_URL: 'https://staging.supabase.co' }).code)
+    .toBe('AUDIT_BACKEND_INCOMPATIBLE');
+  expect(legacyAuditCompatibilityError({})).toBeNull();
+});
 it('clears the deadline and cleans up successful flows', async () => {
   vi.useFakeTimers();
   const cleanup = vi.fn();

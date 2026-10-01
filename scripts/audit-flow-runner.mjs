@@ -1,3 +1,10 @@
+export function legacyAuditCompatibilityError(env) {
+  if (!env.VITE_SUPABASE_URL?.trim()) return null;
+  const error = new Error('Legacy audit uses browser business storage. Supabase scenarios must replace it before release.');
+  error.code = 'AUDIT_BACKEND_INCOMPATIBLE';
+  return error;
+}
+
 export async function runBoundedFlow(run, timeoutMs, cleanup) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid audit timeout');
   let timer;

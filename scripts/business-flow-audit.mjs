@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { runBoundedFlow } from './audit-flow-runner.mjs';
+import { legacyAuditCompatibilityError, runBoundedFlow } from './audit-flow-runner.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 const storageKey = "erpaz.local.backend.v1";
@@ -1491,13 +1491,6 @@ async function auditSupportMessaging(browser) {
 }
 
 assertE2eTarget(process.env);
-const auditServer = await ensureAuditServer();
-const browser = await chromium.launch({
-  headless: true,
-  ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
-    ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
-    : {}),
-});
 const report = { flows: [], failures: [] };
 const flowFilter = process.env.AUDIT_FLOW_FILTER?.trim();
 const flowTimeoutMs = Number(process.env.AUDIT_FLOW_TIMEOUT_MS || 60000);
@@ -1532,8 +1525,23 @@ const saveReport = async () => {
     `${JSON.stringify({ ...report, generatedAt: new Date().toISOString() }, null, 2)}\n`, 'utf8');
 };
 await saveReport();
+const compatibilityError = legacyAuditCompatibilityError(process.env);
+if (compatibilityError) {
+  report.failures = auditFlows.map(([name]) => ({ name, error: compatibilityError.message,
+    code: compatibilityError.code, blocked: true }));
+  await saveReport();
+  console.error(`[audit] ${compatibilityError.code}: ${compatibilityError.message}`);
+} else {
+const auditServer = await ensureAuditServer();
+let browser;
 let incompatibleBackend = false;
 try {
+browser = await chromium.launch({
+  headless: true,
+  ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+    ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+    : {}),
+});
 for (const [name, run] of auditFlows) {
   if (incompatibleBackend) {
     report.failures.push({ name, error: 'AUDIT_BACKEND_INCOMPATIBLE', blocked: true });
@@ -1554,8 +1562,9 @@ for (const [name, run] of auditFlows) {
   await saveReport();
 }
 } finally {
-  await browser.close();
+  await browser?.close();
   auditServer?.kill();
+}
 }
 await mkdir("test-results", { recursive: true });
 await writeFile(
