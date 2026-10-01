@@ -97,6 +97,14 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
+      - name: Delivery and reversal lifecycle matrix
+        run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
       - name: All 21 business lifecycle flows
         id: business_flows
         run: npm run audit:flows
@@ -105,7 +113,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-          AUDIT_FLOW_TIMEOUT_MS: 90000
+          AUDIT_FLOW_TIMEOUT_MS: 45000
 
       - name: Upload business lifecycle evidence
         if: ${{ always() && steps.business_flows.outcome != 'skipped' }}

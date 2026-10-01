@@ -5,7 +5,7 @@ Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 ## Verified
 
 - Production initially had 74 migration history entries, latest `20260909121437`, and five orders.
-- Production initially lacked `create_sales_order_complete`, `reverse_sales_order_v3`, and `process_sales_order_status`. The complete-sale command is now installed; the other two remain missing.
+- Production initially lacked `create_sales_order_complete`, `reverse_sales_order_v3`, and `process_sales_order_status`. All three are now installed; delivery/reversal verification is detailed below.
 - Migration `20261001060540` preserved complete legacy snapshot rows in `private.legacy_snapshot_archive` without changing their source.
 - Production has two source snapshots and two exact archive copies; staging has one source snapshot and one exact archive copy. Missing archive copies: zero.
 - `authenticated` cannot SELECT the archive. RLS is enabled.
@@ -38,5 +38,32 @@ Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 - Applied this correction in staging and production. Both authenticated rollback tests verified requested deposit 200, exactly one cash payment to the selected account, unchanged retry result, target 2000, and later collection of the remaining 1800. Temporary business records were rolled back.
 - Staging additionally verified activation is rejected before the remaining deposit is collected, then succeeds with 12 installments totaling 18000 on principal 20000. Cancellation closed the linked credit and restored the selected cash account's net ledger to zero.
 - Migration `20261001065418` restored the missing production activation RPC and updated staging. It validates tenant/module access, linked-order status and recorded deposit, exact deposit completion, positive financed balance and term, and open accounting period. Same-date activation replay returns without replacing an existing valid schedule.
-- An authenticated rollback-only production test verified incomplete-deposit rejection, collection of the remaining 1800, activation, same-date activation retry, and 12 installments totaling 18000. Production cancellation is still pending because its canonical reversal RPC is missing.
+- An authenticated rollback-only production test verified incomplete-deposit rejection, collection of the remaining 1800, activation, same-date activation retry, and 12 installments totaling 18000. Canonical production cancellation is now installed and tested below.
 - PGlite regressions passed with and without the legacy collection trigger, including explicit-account collection, replay, mismatched input rejection, failed-payment rollback, activation shortfall/order mismatch, unchanged schedule IDs on replay, cancelled-order denial, and foreign-tenant denial.
+
+## Delivery And Cancellation Update
+
+- Applied `20261001134507` in staging and production. The status command, legacy handover command, and delivery-card command now share stock valuation and delivery accounting. Cancellation uses one idempotent reversal command.
+- Added cost-layer/allocation and order accounting-event tables missing from production. No historical costs were inferred or backfilled.
+- A cancelled order cannot regain active credits, reservations, deliveries, invoices, or linked cash receipts. Direct status cancellation is rejected while unreversed dependent operations remain. The incomplete core reversal helper is no longer directly executable by API roles.
+- Cash reversal matches structural IDs, or an exact legacy document number only when no structural ID exists. It no longer searches descriptions for a document-number substring.
+- Cancelled linked invoices do not reverse a shared delivery journal twice. Delivery journals are reversed from their original lines, not recomputed from later payments.
+- Rollback-only authenticated checks passed all six combinations of weighted-average/FIFO and status/legacy/card handover in both databases. Checks covered repeat delivery/reversal, correct card warehouse, stock and FIFO restoration, cancelled credit/reservation/card/invoice, preserved unrelated cash, balanced journals, reactivation denial, and payment denial.
+- Production still has five orders and total recorded paid amount 1000 after verification. Detection-only reconciliation found zero active credit/reservation/delivery/invoice or unreversed linked cash issues on its four cancelled orders.
+- Added the same six authenticated REST lifecycle scenarios to mandatory CI. SQL rollback checks passing does not substitute for their CI results.
+
+## Staging Restore Incident
+
+- Scheduled restore run `36848962043` dropped staging `public` in an autocommitted statement, then failed restoring the full schema because managed `auth` already existed. Production was unaffected.
+- Commit `b40f4e7` removes automatic restore scheduling, rejects both production and CI staging as targets, requires manual confirmation plus a third disposable project, and uses atomic custom-archive restore. Legacy archives without `application.dump` are rejected before mutation.
+- Recovered staging application DDL from successful production backup `36829019570`, retaining managed Auth, its existing test account, migration history, and the surviving private snapshot archive. No production business data was imported.
+- Restored the two staging tenant IDs, the test user's primary-tenant admin membership (not owner/platform admin), role configuration, archived staging snapshot, and tenant collections table. A clearly identified test customer was seeded for lifecycle prerequisites.
+- Recovery restored a production schema baseline, not proof that every historical staging-only migration remains installed. Missing staging-only contracts must still be checked explicitly; preserved history alone is not evidence of their schema presence.
+- The third disposable restore target and managed Auth dependencies for application-data restore still require setup/testing. No successful disaster-recovery drill is claimed.
+
+## 21-Scenario Audit Port Status
+
+- Replaced the runner's business-localStorage reader with authenticated Supabase snapshot/collection and canonical-table reads. Financial balances come from the server ledger summary. Canonical empty results replace obsolete snapshot business arrays.
+- Replaced positional navigation with explicit route mapping; removed modules such as production/projects/tax fail with `AUDIT_MODULE_UNAVAILABLE` instead of silently visiting the dashboard.
+- Preserved all 21 original scenario assertions and the strict all-21 release gate. Existing scenario-specific UI selectors and some legacy field expectations still need adaptation and live verification. This is not a claim that all 21 pass.
+- Application deployment remains blocked until that exact commit's complete release gates pass.

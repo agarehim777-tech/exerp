@@ -2,10 +2,11 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { legacyAuditCompatibilityError, runBoundedFlow } from './audit-flow-runner.mjs';
+import { runBoundedFlow } from './audit-flow-runner.mjs';
+import { auditModulePath, createAuditBackend } from './supabase-audit-backend.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
-const storageKey = "erpaz.local.backend.v1";
+let auditBackend;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -67,10 +68,12 @@ function collectErrors(page, errors) {
 async function createFlowPage(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, acceptDownloads: true });
   const page = await context.newPage();
+  page.setDefaultTimeout(8000);
   const errors = [];
   collectErrors(page, errors);
-  await page.addInitScript(() => localStorage.clear());
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)),
+    { key: auditBackend.storageKey, session: auditBackend.session });
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   const marketingLogin = page.locator(".xp-ghost").first();
   if (await marketingLogin.isVisible().catch(() => false)) {
     await marketingLogin.click();
@@ -86,7 +89,7 @@ async function createFlowPage(browser) {
     await passwordLogin.locator('input[type="password"]').fill(password);
     await passwordLogin.locator('button[type="submit"]').click();
     try {
-      await page.locator(".nav-item").first().waitFor({ state: "visible", timeout: 30000 });
+      await page.locator('a[href="/satis/sifarisler"]').first().waitFor({ state: "visible", timeout: 15000 });
     } catch {
       const authError = await page.locator(".xp-al.e, .form-error").first().innerText().catch(() => "");
       throw new Error(`E2E login did not reach the application${authError ? `: ${authError}` : ""}`);
@@ -95,7 +98,7 @@ async function createFlowPage(browser) {
   const state = await readState(page);
   if (!state) {
     await context.close();
-    const error = new Error('Legacy audit requires browser business storage; migrate these scenarios to Supabase before release.');
+    const error = new Error('Supabase audit state could not be loaded.');
     error.code = 'AUDIT_BACKEND_INCOMPATIBLE';
     throw error;
   }
@@ -103,20 +106,14 @@ async function createFlowPage(browser) {
 }
 
 async function selectModule(page, index) {
-  if ((await page.locator(".nav-item").count()) <= index) {
-    const diagnostic = {
-      url: page.url(),
-      title: await page.title().catch(() => ""),
-      text: (await page.locator("body").innerText().catch(() => "")).slice(0, 500),
-    };
-    throw new Error(`Navigation is unavailable: ${JSON.stringify(diagnostic)}`);
-  }
-  await page.locator(".nav-item").nth(index).click();
-  await page.locator(".page-header h1").waitFor();
+  const path = auditModulePath(index);
+  await page.goto(new URL(path, baseUrl).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('h1').first().waitFor();
 }
 
 async function readState(page) {
-  return page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
+  await page.waitForLoadState('networkidle');
+  return auditBackend.readState();
 }
 
 function stockTotal(state, warehouseId, product) {
@@ -1525,7 +1522,8 @@ const saveReport = async () => {
     `${JSON.stringify({ ...report, generatedAt: new Date().toISOString() }, null, 2)}\n`, 'utf8');
 };
 await saveReport();
-const compatibilityError = legacyAuditCompatibilityError(process.env);
+let compatibilityError;
+try { auditBackend = await createAuditBackend(process.env); } catch (error) { compatibilityError = error; }
 if (compatibilityError) {
   report.failures = auditFlows.map(([name]) => ({ name, error: compatibilityError.message,
     code: compatibilityError.code, blocked: true }));
