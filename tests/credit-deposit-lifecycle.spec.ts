@@ -44,9 +44,12 @@ test("@lifecycle credit deposit → cash once → shortfall guard → activation
     })).toBe(0);
     await call("post", "rpc/start_credit_contract", start);
     expect((await loadCredit())[0].status).toBe("active");
-    const installments = await call("get", `credit_installments?tenant_id=eq.${tenantId}&credit_id=eq.${creditId}&select=principal_due`);
+    const loadInstallments = () => call("get", `credit_installments?tenant_id=eq.${tenantId}&credit_id=eq.${creditId}&select=id,principal_due&order=installment_no.asc`);
+    const installments = await loadInstallments();
     expect(installments).toHaveLength(12);
     expect(installments.reduce((sum: number, row: { principal_due: number }) => sum + Number(row.principal_due), 0)).toBe(18000);
+    await call("post", "rpc/start_credit_contract", start);
+    expect(await loadInstallments()).toEqual(installments);
     await call("post", "rpc/reverse_sales_order_v3", {
       _tenant_id: tenantId, _order_id: orderId, _reason: marker, _request_key: `${marker}:reverse`,
     });
