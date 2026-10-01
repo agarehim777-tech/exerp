@@ -4,10 +4,11 @@ import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file) => readFile(resolve(root, file), "utf8");
-const [backup, restore, deployment] = await Promise.all([
+const [backup, restore, deployment, guard] = await Promise.all([
   read(".github/workflows/backup-supabase.yml"),
   read(".github/workflows/restore-drill.yml"),
   read("README_DEPLOYMENT.md"),
+  read("scripts/restore-target-guard.mjs"),
 ]);
 
 const checks = [
@@ -16,15 +17,17 @@ const checks = [
   [backup, "--data-only"],
   [backup, "postgresql-client-17"],
   [backup, "SHA256SUMS"],
-  [restore, "confirmation == 'RESTORE'"],
+  [guard, "confirmation == 'RESTORE'"],
   [restore, "RESTORE_DATABASE_URL"],
-  [restore, "Refuse production as restore target"],
-  [restore, "Refuse production project ref as restore target"],
-  [restore, "Unexpected restore target"],
-  [restore, "aws-0-ap-northeast-1.pooler.supabase.com"],
-  [restore, "Wait for staging database"],
+  [guard, "Refuse production as restore target"],
+  [guard, "cvjctwgdyzhijhzhhjqd"],
+  [guard, "tcqdhwtnjrwpfdxoijmv"],
+  [guard, "Unexpected restore target"],
+  [restore, "Wait for disposable database"],
   [restore, "attempt $attempt/15"],
-  [restore, "ON_ERROR_STOP=1"],
+  [restore, "--single-transaction"],
+  [restore, "--exit-on-error"],
+  [backup, "backup/application.dump"],
   [restore, "postgresql-client-17"],
   [restore, "RESTORE_OK"],
   [deployment, "RPO"],
@@ -32,6 +35,7 @@ const checks = [
 ];
 
 const failures = checks.filter(([content, token]) => !content.includes(token)).map(([, token]) => token);
+if (restore.includes('drop schema') || restore.includes('schedule:')) failures.push('unsafe automated destructive restore');
 const retentionDays = Number(backup.match(/retention-days:\s*(\d+)/)?.[1] ?? 0);
 if (retentionDays < 30) failures.push("backup retention of at least 30 days");
 if (failures.length) {

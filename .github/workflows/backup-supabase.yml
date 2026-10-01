@@ -45,8 +45,10 @@ jobs:
           pg_dump --schema-only --no-owner --no-privileges > backup/schema.sql
       - name: Export data
         run: pg_dump --data-only --format=custom --no-owner --no-privileges --file=backup/data.dump
+      - name: Export atomic application archive
+        run: pg_dump --format=custom --schema=public --schema=private --no-owner --no-privileges --file=backup/application.dump
       - name: Create integrity manifest
-        run: (cd backup && sha256sum roles.sql schema.sql data.dump > SHA256SUMS)
+        run: (cd backup && sha256sum roles.sql schema.sql data.dump application.dump > SHA256SUMS)
       - name: Upload encrypted-at-rest artifact
         uses: actions/upload-artifact@v4
         with:
