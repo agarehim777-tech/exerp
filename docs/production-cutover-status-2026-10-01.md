@@ -12,6 +12,14 @@ Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 - The archive is an in-database preservation copy, not an independent disaster-recovery backup.
 - The preservation regression test passed, including repeated migration and changed snapshot versions.
 
+## Finance Migration Update
+
+- Applied reviewed migrations `20260929115836` (expense ledger columns) and `20260922070837` (server cashbook commands) in production. At application time expenses had zero rows and all cash accounts were AZN; no legacy expense currency was inferred.
+- Existing permission and accounting-period guards were confirmed before application.
+- An authenticated, rollback-only production smoke test passed: create expense, replay identical request, transfer between two temporary accounts, refund expense twice, and verify source ledger balance of 90 from opening 100 after a net transfer of 10. All temporary business records were rolled back.
+- Security advisors reported zero ERROR findings. Existing SECURITY DEFINER execute and leaked-password-protection warnings remain.
+- This is a partial backend rollout, not completed application deployment or completed schema reconciliation.
+
 ## Release Blockers
 
 - CI run `36822784618` passed release gates but only 27 of 28 browser tests. The insights page heading was absent after a five-second wait. Its cause still needs diagnosis; tenant denial and anonymous denial tests passed.
