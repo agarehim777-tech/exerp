@@ -6,6 +6,57 @@ import { expect, it } from 'vitest';
 const tenant = '11111111-1111-4111-8111-111111111111';
 const migration = (name) => readFile(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8');
 
+it('reserves only available stock and releases exactly once', async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`CREATE SCHEMA auth; CREATE SCHEMA private; CREATE ROLE anon; CREATE ROLE authenticated;
+      CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT '${tenant}'::uuid $$;
+      CREATE FUNCTION private.has_module_access(uuid,text,text) RETURNS boolean LANGUAGE sql AS $$ SELECT $1='${tenant}'::uuid $$;
+      CREATE TABLE orders(id uuid,tenant_id uuid,status text);
+      CREATE TABLE products(id uuid,tenant_id uuid);
+      CREATE TABLE warehouses(id uuid,tenant_id uuid,is_active boolean);
+      CREATE TABLE order_items(id uuid,order_id uuid,tenant_id uuid,product_id uuid);
+      CREATE TABLE stock_balances(tenant_id uuid,warehouse_id uuid,product_id uuid,on_hand numeric,reserved numeric,problem_qty numeric,updated_at timestamptz);
+      CREATE TABLE stock_reservations(id uuid DEFAULT gen_random_uuid(),tenant_id uuid,warehouse_id uuid,product_id uuid,order_id uuid,order_item_id uuid,quantity numeric,status text,created_by uuid,updated_at timestamptz);
+      CREATE TABLE stock_movements(tenant_id uuid,warehouse_id uuid,product_id uuid,movement_type text,quantity numeric,reference_type text,reference_id uuid,note text,created_by uuid);
+      INSERT INTO orders VALUES ('${tenant}','${tenant}','confirmed');
+      INSERT INTO products VALUES ('${tenant}','${tenant}');
+      INSERT INTO warehouses VALUES ('${tenant}','${tenant}',true);
+      INSERT INTO stock_balances VALUES ('${tenant}','${tenant}','${tenant}',10,0,2,now());`);
+    await db.exec(await migration('20260930133535_harden_canonical_stock_reservations.sql'));
+    const reserve = (qty) => db.query(`SELECT reserve_stock('${tenant}','${tenant}','${tenant}','${tenant}',NULL,$1) id`, [qty]);
+    const id = (await reserve(6)).rows[0].id;
+    await expect(reserve(3)).rejects.toThrow('insufficient_available_stock');
+    await db.query(`SELECT release_stock_reservation('${tenant}',$1)`, [id]);
+    await db.query(`SELECT release_stock_reservation('${tenant}',$1)`, [id]);
+    expect((await db.query('SELECT reserved FROM stock_balances')).rows[0].reserved).toBe('0');
+    expect((await db.query("SELECT count(*)::int n FROM stock_movements WHERE movement_type='release'")).rows[0].n).toBe(1);
+    await db.exec("UPDATE orders SET status='cancelled'");
+    await expect(reserve(1)).rejects.toThrow('order_not_reservable');
+  } finally { await db.close(); }
+}, 30000);
+
+it('leaves canonical balance posting to commands without reading legacy columns', async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`CREATE TABLE stock_movements(movement_type text, quantity numeric);
+      CREATE TABLE stock_balances(on_hand numeric);
+      INSERT INTO stock_balances VALUES (10);
+      CREATE FUNCTION apply_stock_movement() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        UPDATE stock_balances SET on_hand=on_hand+NEW.qty;
+        RETURN NEW;
+      END $$;
+      CREATE TRIGGER stock_post AFTER INSERT OR DELETE ON stock_movements
+        FOR EACH ROW EXECUTE FUNCTION apply_stock_movement();`);
+    const sql = await migration('20260930125113_fix_canonical_stock_trigger_compatibility.sql');
+    await db.exec(sql);
+    await db.exec(sql);
+    await db.exec("INSERT INTO stock_movements VALUES ('receipt',10); DELETE FROM stock_movements;");
+    expect((await db.query('SELECT on_hand FROM stock_balances')).rows[0].on_hand).toBe('10');
+  } finally { await db.close(); }
+}, 30000);
+
 it.each([false, true])('creates and reuses main cash accounts with code column=%s', async (canonical) => {
   const db = new PGlite();
   try {

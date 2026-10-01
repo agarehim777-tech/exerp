@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
+import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
@@ -136,10 +137,13 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       if (err) throw err;
       return data ? normalizeMovement(data) : null;
     };
-    const hydrateBalance = async (id) => {
-      if (!id) return null;
+    const hydrateBalance = async (identity) => {
+      if (!stockBalanceKey(identity) || identity.tenant_id !== tenantId) return null;
       const { data, error: err } = await supabase
-        .from('stock_balances').select(BALANCE_SELECT).eq('id', id).maybeSingle();
+        .from('stock_balances').select(BALANCE_SELECT)
+        .eq('tenant_id', tenantId)
+        .eq('warehouse_id', identity.warehouse_id)
+        .eq('product_id', identity.product_id).maybeSingle();
       if (err) throw err;
       return data ? normalizeBalance(data) : null;
     };
@@ -175,16 +179,17 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     const onBalance = async (payload) => {
       try {
         if (payload.eventType === 'DELETE') {
-          const removedId = payload.old?.id;
-          if (!removedId) { fallbackResync('balance-delete'); return; }
-          setBalances((prev) => prev.filter((row) => row.id !== removedId));
+          const removedKey = stockBalanceKey(payload.old);
+          if (!removedKey) { fallbackResync('balance-delete'); return; }
+          setBalances((prev) => prev.filter((row) => stockBalanceKey(row) !== removedKey));
           return;
         }
-        const row = await hydrateBalance(payload.new?.id);
+        const row = await hydrateBalance(payload.new);
         if (disposed) return;
         if (!row) { fallbackResync('balance-hydrate'); return; }
-        setBalances((prev) => (prev.some((item) => item.id === row.id)
-          ? prev.map((item) => (item.id === row.id ? row : item))
+        const key = stockBalanceKey(row);
+        setBalances((prev) => (prev.some((item) => stockBalanceKey(item) === key)
+          ? prev.map((item) => (stockBalanceKey(item) === key ? row : item))
           : [...prev, row]));
       } catch {
         fallbackResync('balance-error');
