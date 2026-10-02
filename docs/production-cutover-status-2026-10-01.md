@@ -9,6 +9,10 @@
 - This does not configure a daily scheduler or complete the 21 legacy UI scenarios. Application deployment remains gated on CI evidence.
 - CI `36968985017` passed release gates and 27/28 browser tests, but AI insights navigation was denied because the recovered permissions matrix lacked that module. Migration `20261002053210` adds only missing admin/owner AI permissions without overwriting explicit denials, and restores the expense `note`/`source` columns required by the UI. Lifecycle/audit steps were skipped in this run.
 - Fixed audit Fetch error handling so HTTP failures retain their actual status/detail, covered by a regression test. The insights test now awaits the actual enabled action before registering its response timeout.
+- Exact commit `44fbb901` in CI `36969470690` passed 256 unit tests, all 28 browser/tenant tests, sales/expense lifecycle, both concurrency tests, credit deposit lifecycle, and all six delivery/reversal REST scenarios. The optional AI chat scenario remains skipped.
+- All 21 legacy audit scenarios failed. Most share the obsolete warehouse setup helper: `.page-header .primary-btn` opens the global sale form and `input.nth(3)` is now quantity, not a warehouse manager. Other failures include cashbook/settings/HR selectors and KPI expectations. These are not passing scenarios and the deploy gate remains closed.
+- The audit also exposed a real missing `customer_sales_metrics` RPC. Migration `20261002054124` restores only the CRM aggregate, with tenant membership/module authorization and cancelled-order exclusion; no legacy journal functions were overwritten. Production verification returned one active order, sales 20000, paid 1000; staging verified foreign-tenant denial. The metrics patch itself still needs fresh CI.
+- Next audit work: replace warehouse/customer fixture setup and positional form selectors, then adapt each scenario's current module contract. Production/project/tax routes are absent and must not be silently substituted or counted as passing.
 
 Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 
