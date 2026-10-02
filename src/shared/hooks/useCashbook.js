@@ -158,7 +158,8 @@ export function useCashbook(tenantId) {
 
   const approveExpense = async (expense, accountId) => {
     if (!['pending', 'draft'].includes(expense.status)) throw new Error('Bu xərc artıq emal edilib.');
-    const { error: expenseError } = await supabase.from('expenses').update({ status: 'approved' }).eq('id', expense.id).eq('tenant_id', tenantId);
+    const { error: expenseError } = await supabase.from('expenses').update({ status: 'approved' })
+      .eq('id', expense.id).eq('tenant_id', tenantId).in('status', ['pending', 'draft']).select('id').single();
     if (expenseError) throw expenseError;
     await fetchAll();
   };

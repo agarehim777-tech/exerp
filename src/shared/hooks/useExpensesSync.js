@@ -51,7 +51,8 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
   const [status, setStatus] = useState({ phase: "idle", error: null });
 
   const hydrate = useCallback(async (session) => {
-    if (!session?.alive || session.busy) return;
+    if (!session?.alive) return;
+    if (session.busy) { session.refreshQueued = true; return; }
     session.busy = true;
     setStatus({ phase: "loading", error: null });
     try {
@@ -75,7 +76,13 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
         setStatus({ phase: "error", error });
         errorHandler.current?.(error);
       }
-    } finally { session.busy = false; }
+    } finally {
+      session.busy = false;
+      if (session.refreshQueued && session.alive) {
+        session.refreshQueued = false;
+        await hydrate(session);
+      }
+    }
   }, [tenantId, setState]);
 
   const flush = useCallback(async () => {

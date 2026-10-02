@@ -82,3 +82,19 @@ it('does not write client-generated payroll and refreshes only from the server b
   expect(result.current.state.expenses[0]).toMatchObject({ id: 'EXP-server', amount: 20, currency: 'USD', vat_amount: 3, status: 'paid' });
   expect(mocks.save).not.toHaveBeenCalled();
 });
+
+it('queues realtime refreshes received during an in-flight load', async () => {
+  let finish;
+  mocks.load.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+    .mockResolvedValueOnce({ data: [{ id: 'new', amount: 25, status: 'paid' }], error: null });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ expenses: [] });
+    const sync = useExpensesSync({ tenantId: 'A', ready: true, expenses: state.expenses, setState });
+    return { state, sync };
+  });
+  await act(async () => { await result.current.sync.refresh(); await result.current.sync.refresh(); });
+  await act(async () => finish({ data: [{ id: 'old', amount: 10 }], error: null }));
+  await waitFor(() => expect(result.current.state.expenses[0]?.id).toBe('new'));
+  expect(mocks.load).toHaveBeenCalledTimes(2);
+  expect(mocks.save).not.toHaveBeenCalled();
+});
