@@ -1306,7 +1306,7 @@ async function auditHrStructure(browser) {
     await editModal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill('60');
     await editModal.locator('button[type="submit"]').click();
     await editModal.waitFor({ state: "hidden" });
-    const updatedState = await readState(page);
+    const updatedState = await waitForState(s => s.employees.some(e => e.name === specialistName && e.position === 'Senior B2B Specialist' && Number(e.salary) === 1750), 'Employee edit was not persisted');
     const updatedEmployee = updatedState.employees.find((employee) => employee.name === specialistName);
     assert(updatedEmployee?.position === "Senior B2B Specialist", "Employee edit did not persist the new position");
     assert(Number(updatedEmployee?.salary) === 1750, "Employee edit did not persist the new salary");
@@ -1320,7 +1320,7 @@ async function auditHrStructure(browser) {
     );
     await page.locator('[data-testid="hr-document-complete"]').click();
     await page.waitForTimeout(100);
-    const documentState = await readState(page);
+    const documentState = await waitForState(s => s.employees.some(e => e.name === specialistName && Number(e.documentsComplete) === 100), 'Document completion was not persisted');
     const documentedEmployee = documentState.employees.find((employee) => employee.name === specialistName);
     assert(
       Number(documentedEmployee?.documentsComplete) === 100 && documentedEmployee?.documentReviewRequired === false,
@@ -1337,7 +1337,7 @@ async function auditHrStructure(browser) {
     await managerEditModal.getByLabel('Ad Soyad', { exact: true }).fill(leadName);
     await managerEditModal.locator('button[type="submit"]').click();
     await managerEditModal.waitFor({ state: "hidden" });
-    const renamedState = await readState(page);
+    const renamedState = await waitForState(s => s.employees.some(e => e.name === leadName), 'Employee rename was not persisted');
     const renamedManager = renamedState.employees.find((employee) => employee.name === leadName);
     assert(
       renamedState.employees.find((employee) => employee.name === specialistName)?.managerName === leadName,
@@ -1383,7 +1383,7 @@ async function auditHrStructure(browser) {
     await hrTabs.nth(3).click();
     await page.locator(".hr-platform-section tbody tr").filter({ hasText: specialistName }).locator(".hr-payroll-actions .text-btn").click();
     await page.waitForTimeout(100);
-    const payrollState = await readState(page);
+    const payrollState = await waitForState(s => s.employees.some(e => e.name === specialistName && e.payrollStatus === 'Ödənildi'), 'Payroll status was not persisted');
     const payrollEmployee = payrollState.employees.find((employee) => employee.name === specialistName);
     assert(
       payrollEmployee?.payrollStatus === "Ödənildi" && payrollEmployee?.payrollPaidAt,
