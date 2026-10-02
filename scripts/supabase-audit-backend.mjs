@@ -28,7 +28,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
     const response = await fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(15000),
       headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
-    if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status()} ${await response.text()}`);
+    if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
     const text = await response.text();
     return text ? JSON.parse(text) : null;
   };

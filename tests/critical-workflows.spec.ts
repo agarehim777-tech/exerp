@@ -54,13 +54,14 @@ test.describe("Kritik ERP axınları", () => {
     await expect(page).toHaveURL(/\/ai-tovsiyeler(?:[/?#]|$)/);
     await expect(page.getByText("Ağıllı tövsiyələr", { exact: false }).first()).toBeVisible();
 
-    const responsePromise = page.waitForResponse(
+    const analyzeButton = page.getByRole("button", { name: "Təhlil et", exact: true });
+    await expect(analyzeButton).toBeVisible();
+    await expect(analyzeButton).toBeEnabled();
+    const [response] = await Promise.all([page.waitForResponse(
       (response) => response.url().includes("/functions/v1/erp-insights")
         && response.request().method() === "POST",
       { timeout: 20_000 },
-    );
-    await page.getByRole("button", { name: "Təhlil et", exact: true }).click();
-    const response = await responsePromise;
+    ), analyzeButton.click()]);
     expect(response.status()).toBe(200);
 
     const payload = await response.json();

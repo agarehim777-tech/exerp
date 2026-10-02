@@ -7,6 +7,8 @@
 - Authenticated rollback checks passed on staging and production: repeated acceptance creates one outgoing entry, repeated cancellation creates one reversal, and opening 500 is restored after expense 75. No test business records persisted.
 - Migration `20261001141748` restores reconciliation report storage, tenant-guarded detection, and admin-only repair of already-cancelled orders. Detection uses exact document or structural links, never description substring matching. Both databases returned zero critical issues without business mutations.
 - This does not configure a daily scheduler or complete the 21 legacy UI scenarios. Application deployment remains gated on CI evidence.
+- CI `36968985017` passed release gates and 27/28 browser tests, but AI insights navigation was denied because the recovered permissions matrix lacked that module. Migration `20261002053210` adds only missing admin/owner AI permissions without overwriting explicit denials, and restores the expense `note`/`source` columns required by the UI. Lifecycle/audit steps were skipped in this run.
+- Fixed audit Fetch error handling so HTTP failures retain their actual status/detail, covered by a regression test. The insights test now awaits the actual enabled action before registering its response timeout.
 
 Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 

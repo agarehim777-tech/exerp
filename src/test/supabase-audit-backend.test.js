@@ -39,3 +39,8 @@ it('uses stable routes and reports removed modules instead of navigating by DOM 
   expect(auditModulePath(14)).toBe('/hr/emekdaslar');
   expect(() => auditModulePath(13)).toThrow('production');
 });
+
+it('preserves the server error status and detail instead of masking it with a fetch API error', async () => {
+  await expect(createAuditBackend(env, async () => new Response('invalid_credentials', { status: 401 })))
+    .rejects.toThrow('POST auth/v1/token: 401 invalid_credentials');
+});
