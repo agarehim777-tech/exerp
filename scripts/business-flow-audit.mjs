@@ -180,7 +180,7 @@ async function createWarehouseWithStock(page) {
   await page.locator('.page-header').getByRole('heading', { name: 'Anbar idarəetməsi', exact: true }).waitFor();
   const suffix = crypto.randomUUID().slice(0, 8);
   const code = `WH-QA-${suffix}`;
-  const sku = `SKU-QA-${suffix}`;
+  const sku = `SKU-QA-${suffix}`.toUpperCase();
   const productName = `QA Device ${suffix}`;
   await page.getByRole('button', { name: '+ Yeni anbar', exact: true }).click();
   const warehouseForm = page.locator('form').filter({ has: page.getByPlaceholder('Kod', { exact: true }) });
@@ -1293,7 +1293,13 @@ async function auditHrStructure(browser) {
     await b2bNode.waitFor();
 
     const reportingPanel = page.locator(".hr-reporting-panel");
-    await reportingPanel.locator(".hr-employee-node").filter({ hasText: "QA B2B Specialist" }).click();
+    const managerNode = reportingPanel.locator('.hr-employee-node').filter({
+      has: page.getByText('QA Sales Manager', { exact: true }),
+    });
+    if (await managerNode.getAttribute('aria-expanded') === 'false') await managerNode.click();
+    await reportingPanel.locator('.hr-employee-node').filter({
+      has: page.getByText('QA B2B Specialist', { exact: true }),
+    }).click();
     await page.locator(".hr-profile-head").filter({ hasText: "QA B2B Specialist" }).waitFor();
     await page.locator(".hr-profile-edit").click();
     const editModal = page.locator('[role="dialog"]');
