@@ -27,7 +27,7 @@ const get = async (path) => {
 const [orders, credits, payments, reservations, balances, invoices, deliveries, accountingEvents] = await Promise.all([
   get(`orders?select=id,order_no,status&tenant_id=eq.${tenant}`),
   get(`credit_contracts?select=id,order_id,status&tenant_id=eq.${tenant}`),
-  get(`cash_transactions?select=id,category,reference_id,reference_type,reference,reversed_at,reversal_of&tenant_id=eq.${tenant}`),
+  get(`cash_transactions?select=id,category,reference_id,reference_type,reference,reversal_of&tenant_id=eq.${tenant}`),
   get(`stock_reservations?select=id,order_id,warehouse_id,product_id,quantity,status&tenant_id=eq.${tenant}`),
   get(`stock_balances?select=warehouse_id,product_id,reserved&tenant_id=eq.${tenant}`),
   get(`sales_invoices?select=id,invoice_no,order_id,status&tenant_id=eq.${tenant}`),

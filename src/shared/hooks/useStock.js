@@ -3,6 +3,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
 import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
+import { receiveStock } from '../../services/coreOperations.js';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -274,6 +275,21 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   };
 
   const addMovement = async (payload) => {
+    if (payload.move_type === 'in') {
+      await receiveStock({
+        tenantId,
+        warehouseId: payload.warehouse_id,
+        productId: payload.product_id,
+        quantity: payload.qty,
+        unitCost: payload.unit_cost,
+        referenceType: payload.doc_no || 'manual_receipt',
+        note: payload.note || null,
+      });
+      await fetchBase();
+      if (pageRef.current !== 0) setMovementsPage(0);
+      else await fetchMovements(0);
+      return;
+    }
     const { error: err } = await supabase.from('stock_movements').insert({
       ...payload,
       qty: Number(payload.qty) || 0,

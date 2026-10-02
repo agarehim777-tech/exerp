@@ -3,6 +3,8 @@ const number = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
 export function buildOperationalHealth({ orders = [], credits = [], cashTransactions = [], reservations = [], balances = [], invoices = [], deliveries = [], accountingEvents = [] } = {}) {
   const orderById = new Map(orders.map((order) => [String(order.id), order]));
+  const reversedCashIds = new Set(cashTransactions.filter(row => row.reversal_of)
+    .map(row => String(row.reversal_of)));
   const issues = [];
 
   for (const credit of credits) {
@@ -16,7 +18,7 @@ export function buildOperationalHealth({ orders = [], credits = [], cashTransact
 
   for (const payment of cashTransactions) {
     const isSalesPayment = ['sales_order', 'sales_payment'].includes(text(payment.reference_type)) || text(payment.category) === 'sales_payment';
-    if (!isSalesPayment || payment.reversed_at || payment.reversal_of) continue;
+    if (!isSalesPayment || payment.reversed_at || payment.reversal_of || reversedCashIds.has(String(payment.id))) continue;
     const order = orderById.get(String(payment.reference_id))
       || orders.find((row) => text(row.order_no) === text(payment.reference));
     if (!order || text(order.status) === 'cancelled') {

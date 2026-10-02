@@ -696,13 +696,18 @@ async function auditFinanceModuleIntegration(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     await selectModule(page, 5);
-    await page.locator(".finance-account-panel .secondary-btn").click();
-    let modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Main Cash");
-    await modal.locator("input").nth(1).fill(`QAC${Date.now().toString().slice(-5)}`);
-    await modal.locator("input").nth(2).fill("250");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
+    const accountName = `QA Main Cash ${crypto.randomUUID().slice(0, 8)}`;
+    await page.getByRole('button', { name: 'Hesablar', exact: true }).click();
+    await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
+    const accountForm = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
+    await accountForm.getByPlaceholder('Hesab adı', { exact: true }).fill(accountName);
+    await accountForm.locator('select').selectOption('cash');
+    await accountForm.getByPlaceholder('Hesab №', { exact: true }).fill(`QAC${crypto.randomUUID().slice(0, 8)}`);
+    await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('250');
+    await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
+    await waitForState(s => s.financeAccounts.some(a => a.name === accountName && a.openingBalance === 250),
+      'Finance account opening balance was not persisted');
+    let modal;
 
     const sale = await createCreditSale(page);
     await selectModule(page, 9);
@@ -751,7 +756,7 @@ async function auditFinanceModuleIntegration(browser) {
     const cashEntry = state.cashEntries?.find((entry) => entry.creditId === sale.credit.id);
     const poExpense = state.expenses?.find((expense) => expense.source === "Vendor PO" && expense.poId === po.id);
     const payrollExpense = state.expenses?.find((expense) => expense.source === "HR Payroll");
-    const account = state.financeAccounts?.find((item) => item.name === "QA Main Cash");
+    const account = state.financeAccounts?.find((item) => item.name === accountName);
 
     assert(account?.openingBalance === 250, "Finance account opening balance was not persisted");
     assert(cashEntry?.amount === 175 && cashEntry.penalty === 25, "Credit cash entry did not reach finance correctly");
@@ -1303,9 +1308,9 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-profile-head").filter({ hasText: "QA B2B Specialist" }).waitFor();
     await page.locator(".hr-profile-edit").click();
     const editModal = page.locator('[role="dialog"]');
-    await editModal.locator("input").nth(1).fill("Senior B2B Specialist");
-    await editModal.locator("input").nth(4).fill("1750");
-    await editModal.locator("input").nth(6).fill("60");
+    await editModal.getByLabel('Vəzifə', { exact: true }).fill('Senior B2B Specialist');
+    await editModal.getByLabel('Maaş', { exact: true }).fill('1750');
+    await editModal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill('60');
     await editModal.locator('button[type="submit"]').click();
     await editModal.waitFor({ state: "hidden" });
     const updatedState = await readState(page);
@@ -1336,7 +1341,7 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-profile-head").filter({ hasText: "QA Sales Manager" }).waitFor();
     await page.locator(".hr-profile-edit").click();
     const managerEditModal = page.locator('[role="dialog"]');
-    await managerEditModal.locator("input").nth(0).fill("QA Sales Lead");
+    await managerEditModal.getByLabel('Ad Soyad', { exact: true }).fill('QA Sales Lead');
     await managerEditModal.locator('button[type="submit"]').click();
     await managerEditModal.waitFor({ state: "hidden" });
     const renamedState = await readState(page);
@@ -1362,7 +1367,8 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-profile-head").filter({ hasText: "QA Sales Lead" }).waitFor();
     await page.locator(".hr-profile-delete").click();
     const deleteModal = page.locator('[role="dialog"]');
-    await deleteModal.locator(".hr-delete-reassignment select").selectOption({ index: 1 });
+    await deleteModal.locator('.hr-delete-reassignment select').selectOption(
+      employees.find(employee => employee.name === 'QA Director').id);
     await deleteModal.locator(".danger-outline").click();
     await deleteModal.waitFor({ state: "hidden" });
     const deletedState = await readState(page);
@@ -1398,7 +1404,7 @@ async function auditHrStructure(browser) {
     await hrTabs.nth(2).click();
     await page.locator(".hr-operation-toolbar .secondary-btn").click();
     const leaveModal = page.locator('[role="dialog"]');
-    await leaveModal.locator("select").first().selectOption({ index: 1 });
+    await leaveModal.getByLabel(/^Əməkdaş/).selectOption(updatedEmployee.id);
     await leaveModal.locator('button[type="submit"]').click();
     await leaveModal.waitFor({ state: "hidden" });
     const leaveState = await readState(page);
