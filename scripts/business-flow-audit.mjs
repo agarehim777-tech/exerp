@@ -67,6 +67,12 @@ function collectErrors(page, errors) {
     if (["error", "warning"].includes(message.type())) errors.push(`${message.type()}: ${message.text()}`);
   });
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on('response', async response => {
+    const path = new URL(response.url()).pathname;
+    if (response.ok() || !path.startsWith('/rest/v1/rpc/')) return;
+    const detail = await response.text().catch(() => 'Response body unavailable');
+    errors.push(`RPC ${path.split('/').at(-1)}: ${response.status()} ${detail.slice(0,1200)}`);
+  });
 }
 
 async function createFlowPage(browser) {
@@ -78,6 +84,7 @@ async function createFlowPage(browser) {
   context.close = async () => {
     if (closing) return;
     closing = true;
+    if (errors.length) console.warn(`[audit] ${evidenceName} browser diagnostics: ${errors.join(' | ')}`);
     try {
       if (!page.isClosed()) {
         await mkdir('test-results/audit-evidence', { recursive: true });

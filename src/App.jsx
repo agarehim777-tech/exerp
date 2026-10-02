@@ -305,8 +305,8 @@ function App() {
   const [state, setState] = useState(() => hydrateState(withoutDbBackedData(initialState)));
   const [authError, setAuthError] = useState("");
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
-  const { customers: dbCustomers, loaded: dbCustomersLoaded, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
-  const { products: dbProducts, loaded: dbProductsLoaded, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
+  const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
+  const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const { orders: dbOrders, loaded: dbOrdersLoaded, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
@@ -456,8 +456,12 @@ function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
   useEffect(() => {
-    if (modal?.type === 'sales' && activeTenantId) dbInventory.refresh();
-  }, [modal?.type, activeTenantId, dbInventory.refresh]);
+    if (modal?.type === 'sales' && activeTenantId) {
+      refreshDbCustomers();
+      refreshDbProducts();
+      dbInventory.refresh();
+    }
+  }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, dbInventory.refresh]);
   const [toasts, setToasts] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState("");
   const [selectedCreditId, setSelectedCreditId] = useState("");
