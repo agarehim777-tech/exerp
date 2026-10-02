@@ -34,7 +34,7 @@ function getNextBirthday(value) {
   return { date: next, days: Math.round((next - today) / 86400000) };
 }
 
-export default function CrmCustomersPage({ onOpenSalesOrder }) {
+export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
   const { activeTenantId } = useAuth();
   const { customers, levels, create, update, remove, saveLevels, hasMore, loadMore, loading: customersLoading } = useCustomers(activeTenantId);
   const [q, setQ] = useState('');
@@ -185,7 +185,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder }) {
         </div>
       )}
 
-      {openId && <CustomerDrawer customerId={openId} onClose={() => setOpenId(null)} onUpdate={(v) => update(openId, v)} onOpenSalesOrder={onOpenSalesOrder} />}
+      {openId && <CustomerDrawer customerId={openId} onClose={() => setOpenId(null)} onUpdate={(v) => update(openId, v)} onOpenSalesOrder={onOpenSalesOrder} onOpenCredit={onOpenCredit} />}
       {showNew && <NewCustomerModal onClose={() => setShowNew(false)} onCreate={async (v) => { await create(v); setShowNew(false); }} />}
       {showLevels && <LevelSettingsModal levels={levels} onClose={() => setShowLevels(false)} onSave={async (v) => { await saveLevels(v); setShowLevels(false); }} />}
     </div>

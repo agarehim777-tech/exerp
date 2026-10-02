@@ -6652,7 +6652,7 @@ function App() {
               }}
             />
           )}
-          {active === "crm" && <CrmCustomersPageV2 onOpenSalesOrder={openLinkedSalesOrder} />}
+          {active === "crm" && <CrmCustomersPageV2 onOpenSalesOrder={openLinkedSalesOrder} onOpenCredit={openLinkedCredit} />}
           {active === "crm-deals" && <CrmDealsPage />}
           {active === "crm-activities" && <CrmActivitiesPage />}
           {active === "crm-tasks" && <CrmTasksPage />}

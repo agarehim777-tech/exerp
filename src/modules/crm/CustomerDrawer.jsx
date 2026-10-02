@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import { useCustomer360 } from '../../shared/hooks/useCustomer360.js';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -6,7 +7,7 @@ import Avatar from './Avatar.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
 
-export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder }) {
+export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder, onOpenCredit }) {
   const { activeTenantId } = useAuth();
   const { data, loading, error, refresh, uploadDocument, downloadDocument, removeDocument } = useCustomer360(customerId);
   const { create: createActivity } = useActivities(activeTenantId, { customerId });
@@ -26,7 +27,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 90 }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)' }} />
-      <aside style={{
+      <aside role="dialog" aria-modal="true" aria-label="Müştəri kartı" style={{
         position: 'absolute', top: 0, right: 0, bottom: 0, width: 520, maxWidth: '95vw',
         background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
         display: 'flex', flexDirection: 'column', animation: 'slideIn 0.25s ease-out',
@@ -49,7 +50,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
                 <h2 style={{ margin: 0, fontSize: 20 }}>{c.name}</h2>
                 <div style={{ fontSize: 13, color: '#64748b' }}>{c.email || c.phone || '—'}</div>
               </div>
-              <button onClick={onClose} style={{ background: 'none', border: 0, fontSize: 24, cursor: 'pointer', color: '#94a3b8' }}>×</button>
+              <button onClick={onClose} aria-label="Müştəri kartını bağla" style={{ background: 'none', border: 0, fontSize: 24, cursor: 'pointer', color: '#94a3b8' }}>×</button>
             </header>
 
             <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -62,7 +63,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               <Stat label="Risk" value={data.analytics?.riskLabel || '—'} />
             </div>
 
-            <nav style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', padding: '0 20px' }}>
+            <nav style={{ display: 'flex', overflowX: 'auto', flexShrink: 0, borderBottom: '1px solid #e2e8f0', padding: '0 20px' }}>
               {[
                 ['overview', 'Ümumi'], ['deals', 'Sövdələşmələr'],
                 ['timeline', 'Timeline'], ['credits', 'Kreditlər'], ['devices', 'Cihazlar'],
@@ -70,7 +71,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               ].map(([k, l]) => (
                 <button key={k} onClick={() => setTab(k)}
                   style={{
-                    background: 'none', border: 0, padding: '12px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                    background: 'none', border: 0, padding: '12px 14px', whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: 600, fontSize: 13,
                     color: tab === k ? '#10b981' : '#64748b',
                     borderBottom: `2px solid ${tab === k ? '#10b981' : 'transparent'}`,
                   }}>{l}</button>
@@ -81,7 +82,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               {tab === 'overview' && <OverviewTab c={c} tags={data.tags} onUpdate={onUpdate} />}
               {tab === 'deals' && <DealsTab deals={data.open_deals || []} />}
               {tab === 'timeline' && <CustomerTimeline items={data.timeline || []} />}
-              {tab === 'credits' && <CreditsTab credits={data.credits || []} />}
+              {tab === 'credits' && <CreditsTab credits={data.credits || []} onOpenSalesOrder={onOpenSalesOrder} onOpenCredit={onOpenCredit} />}
               {tab === 'devices' && <DevicesTab orders={data.orders || []} serviceCases={data.serviceCases || []} />}
               {tab === 'documents' && <DocumentsTab documents={data.documents || []} onUpload={uploadDocument} onDownload={downloadDocument} onRemove={removeDocument} />}
               {tab === 'activity' && (
@@ -125,16 +126,30 @@ function CustomerTimeline({ items }) {
   </div>)}</div>;
 }
 
-function CreditsTab({ credits }) {
+export function CreditsTab({ credits, onOpenSalesOrder, onOpenCredit }) {
   if (!credits.length) return <div style={emptyBox}>Kredit müqaviləsi yoxdur.</div>;
   return <div style={{ display: 'grid', gap: 10 }}>{credits.map(credit => {
-    const paid = (credit.payments || []).reduce((sum, row) => sum + Number(row.principal_amount || 0), 0) + Number(credit.initial_payment || 0);
+    const paid = (credit.payments || []).filter(row => !row.reversed_at).reduce((sum, row) => sum + Number(row.principal_amount || 0), 0) + Number(credit.initial_payment || 0);
     const balance = Math.max(0, Number(credit.principal || 0) - paid);
     const overdue = (credit.installments || []).filter(row => row.status === 'overdue').length;
-    return <article key={credit.id} style={detailCard}>
+    return <article key={credit.id} aria-label={credit.contract_no} style={detailCard}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><b>{credit.contract_no}</b><span style={{ color: overdue ? '#b91c1c' : '#0b7a5c', fontWeight: 700 }}>{overdue ? `${overdue} gecikmə` : credit.status}</span></div>
       <div style={miniGrid}><Stat label="Məbləğ" value={`${Number(credit.principal || 0).toFixed(2)} ₼`} /><Stat label="Ödənilib" value={`${paid.toFixed(2)} ₼`} /><Stat label="Qalıq" value={`${balance.toFixed(2)} ₼`} /></div>
       <small style={{ color: '#64748b' }}>Risk {credit.risk_score || 0}/100 · Kolleksiya: {credit.collection_stage || 'current'} · {credit.term_months} ay</small>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+        {onOpenCredit && <button type="button" onClick={() => onOpenCredit(credit.id)} style={smallButton}><ArrowUpRight size={14} aria-hidden="true" /> Kreditə bax</button>}
+        {credit.order_id && onOpenSalesOrder && <button type="button" onClick={() => onOpenSalesOrder(credit.order_id)} style={smallButton}><ArrowUpRight size={14} aria-hidden="true" /> Sifarişə bax</button>}
+      </div>
+      <details style={{ marginTop: 12 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Ödəniş cədvəli</summary>
+        {credit.installments?.length ? <table style={{ width: '100%', fontSize: 12, marginTop: 8, borderCollapse: 'collapse' }}>
+          <thead><tr><th scope="col" style={{ textAlign: 'left' }}>Tarix</th><th scope="col" style={{ textAlign: 'right' }}>Plan</th><th scope="col" style={{ textAlign: 'right' }}>Qalıq</th></tr></thead>
+          <tbody>{[...credit.installments].sort((a, b) => a.installment_no - b.installment_no).map(row => <tr key={row.id ?? row.installment_no}>
+            <td style={{ padding: '6px 0' }}>{row.due_date}</td><td style={{ textAlign: 'right' }}>{Number(row.principal_due || 0).toFixed(2)} ₼</td>
+            <td style={{ textAlign: 'right' }}>{Math.max(0, Number(row.principal_due || 0) - Number(row.principal_paid || 0)).toFixed(2)} ₼</td>
+          </tr>)}</tbody>
+        </table> : <p style={{ color: '#64748b', fontSize: 12 }}>Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.</p>}
+      </details>
     </article>;
   })}</div>;
 }
@@ -167,7 +182,7 @@ const detailCard = { padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, 
 const miniGrid = { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, margin: '12px 0' };
 const drawerInput = { width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: 7 };
 const actionButton = { background: '#0b7a5c', color: '#fff', border: 0, borderRadius: 7, padding: '9px 12px', fontWeight: 700, cursor: 'pointer' };
-const smallButton = { background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, padding: '6px 9px', cursor: 'pointer' };
+const smallButton = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 32, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, padding: '6px 9px', cursor: 'pointer' };
 
 const Stat = ({ label, value }) => (
   <div style={{ textAlign: 'center' }}>

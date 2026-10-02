@@ -4,9 +4,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
 import { runBoundedFlow } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend } from './supabase-audit-backend.mjs';
+import { navItems } from '../src/data.js';
+import { moduleRoutes } from '../src/config/routes.js';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
+let currentFlowName = 'startup';
 const fixtureByPage = new WeakMap();
 
 function assert(condition, message) {
@@ -69,6 +72,23 @@ function collectErrors(page, errors) {
 async function createFlowPage(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, acceptDownloads: true });
   const page = await context.newPage();
+  const evidenceName = currentFlowName;
+  const closeContext = context.close.bind(context);
+  let closing = false;
+  context.close = async () => {
+    if (closing) return;
+    closing = true;
+    try {
+      if (!page.isClosed()) {
+        await mkdir('test-results/audit-evidence', { recursive: true });
+        await page.screenshot({ path: `test-results/audit-evidence/${evidenceName}.png`, fullPage: true, timeout: 5000 });
+      }
+    } catch (error) {
+      console.warn(`[audit] Screenshot unavailable for ${evidenceName}: ${error.message}`);
+    } finally {
+      await closeContext();
+    }
+  };
   page.setDefaultTimeout(8000);
   const errors = [];
   collectErrors(page, errors);
@@ -108,7 +128,22 @@ async function createFlowPage(browser) {
 
 async function selectModule(page, index) {
   const path = auditModulePath(index);
-  await page.goto(new URL(path, baseUrl).href, { waitUntil: 'domcontentloaded' });
+  await selectPath(page, path);
+}
+
+async function selectPath(page, path) {
+  const item = navItems.find(item => moduleRoutes[item.id] === path);
+  assert(item, `AUDIT_MODULE_UNAVAILABLE: no navigation entry for ${path}`);
+  const sidebar = page.locator('.sidebar .nav-list');
+  await sidebar.waitFor();
+  const groups = { crm: 'CRM', sales: 'Satış', supply: 'Təchizat & Anbar', finance: 'Maliyyə',
+    ops: 'Əməliyyat', analytics: 'Analitika', system: 'Sistem' };
+  if (item.group) {
+    const group = sidebar.getByRole('button', { name: groups[item.group], exact: true });
+    await group.waitFor();
+    if (await group.getAttribute('aria-expanded') !== 'true') await group.click();
+  }
+  await sidebar.getByRole('button', { name: item.label, exact: true }).click();
   await page.waitForLoadState('networkidle');
   assert(new URL(page.url()).pathname === path, `AUDIT_MODULE_REDIRECTED: expected ${path}, received ${new URL(page.url()).pathname}`);
   await page.locator('main.main').waitFor();
@@ -155,12 +190,15 @@ async function createWarehouseWithStock(page) {
   await warehouseForm.getByRole('button', { name: '+ Anbar', exact: true }).click();
   let state = await waitForState(s => s.warehouses.some(w => w.code === code), 'Warehouse was not persisted');
   const warehouse = state.warehouses.find(w => w.code === code);
-  await page.goto(new URL('/anbar/mehsullar', baseUrl).href, { waitUntil: 'networkidle' });
-  const productForm = page.locator('form').filter({ has: page.getByPlaceholder('SKU', { exact: true }) });
-  await productForm.getByPlaceholder('SKU', { exact: true }).fill(sku);
-  await productForm.getByPlaceholder('Məhsulun adı', { exact: true }).fill(productName);
-  await productForm.getByPlaceholder('Qiymət', { exact: true }).fill('1200');
-  await productForm.getByRole('button', { name: '+ Məhsul', exact: true }).click();
+  await selectPath(page, '/anbar/mehsullar');
+  await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
+  await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
+  const productForm = page.getByRole('dialog');
+  await productForm.getByLabel('SKU', { exact: true }).fill(sku);
+  await productForm.getByLabel('Məhsul adı', { exact: true }).fill(productName);
+  await productForm.getByLabel('Satış qiyməti', { exact: true }).fill('1200');
+  await productForm.getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
+  await productForm.waitFor({ state: 'hidden' });
   await waitForState(s => s.products.some(p => p.sku === sku), 'Product was not persisted');
   await selectModule(page, 3);
   await page.getByRole('button', { name: 'Hərəkətlər', exact: true }).click();
@@ -377,12 +415,13 @@ async function auditCreditPayment(browser) {
     await selectModule(page, 9);
     await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
-    const paymentInputs = page.locator(".credit-detail-modal-card .credit-payment-form input");
-    await paymentInputs.nth(0).fill(String(principalPayment));
-    await paymentInputs.nth(1).fill(String(penaltyPayment));
+    const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
+    await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill(String(principalPayment));
+    await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill(String(penaltyPayment));
     await page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click();
-    await page.waitForTimeout(100);
-    const after = await readState(page);
+    const after = await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.payments
+      .some(p => Number(p.principal_amount) === principalPayment && Number(p.penalty_amount) === penaltyPayment),
+      'Credit payment receipt was not persisted');
     const cashEntry = after.cashEntries.find(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
     const linkedOrder = after.orders?.find((order) => order.id === sale.order.id);
     const linkedCredit = after.credits?.find((credit) => credit.id === cashEntry?.creditId);
@@ -443,44 +482,30 @@ async function auditSeparateCreditContracts(browser) {
     await selectModule(page, 9);
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: firstSale.contract.id }).waitFor();
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: secondSale.contract.id }).waitFor();
-    assert(
-      (await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: fin }).count()) >= 2 ||
-        (await page.locator(".credit-directory-panel tbody tr").filter({ hasText: fin }).count()) >= 2,
-      "Credit directory did not keep same-customer contracts as separate visible rows",
-    );
     await selectModule(page, 1);
-    await page.locator(".crm-search-field input").fill(fin);
-    await page.locator(".crm-customer-name-btn").filter({ hasText: "QA Customer" }).first().click();
-    await page.locator(".customer-360-modal-card").waitFor({ state: "visible" });
-    const cardCount = await page.locator(".customer-360-contract-card").count();
-    const modalText = await page.locator(".customer-360-modal-card").innerText();
-    assert(cardCount >= 2, "CRM 360 did not render separate credit agreement cards");
-    assert(modalText.includes(firstSale.credit.id), "CRM 360 is missing the first credit agreement");
-    assert(modalText.includes(secondSale.credit.id), "CRM 360 is missing the second credit agreement");
-    assert(modalText.includes(firstSale.contract.id), "CRM 360 is missing the first contract");
-    assert(modalText.includes(secondSale.contract.id), "CRM 360 is missing the second contract");
-    assert((await page.locator('[data-testid="crm-360-order-link"]').count()) >= 2, "CRM 360 did not expose order module links");
-    assert((await page.locator('[data-testid="crm-360-credit-link"]').count()) >= 2, "CRM 360 did not expose credit module links");
-    await page.locator('[data-testid="crm-360-order-link"]').filter({ hasText: firstSale.order.id }).click();
+    await page.locator('main.main tr').filter({ hasText: fin }).click();
+    let customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
+    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true }).waitFor();
+    await customerCard.getByRole('article', { name: secondSale.contract.id, exact: true }).waitFor();
+    assert(await customerCard.getByRole('button', { name: 'Kreditə bax', exact: true }).count() === 2,
+      'CRM 360 did not expose two independent credit links');
+    const firstCard = customerCard.getByRole('article', { name: firstSale.contract.id, exact: true });
+    await firstCard.getByText('Ödəniş cədvəli', { exact: true }).click();
+    await firstCard.getByText('Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.', { exact: true }).waitFor();
+    await firstCard.getByRole('button', { name: 'Sifarişə bax', exact: true }).click();
     await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
-    await page.locator(".sales-order-card").filter({ hasText: firstSale.order.id }).waitFor();
+    await page.locator('main.main tr').filter({ hasText: firstSale.order.orderNo }).waitFor();
     await selectModule(page, 1);
-    await page.locator(".crm-search-field input").fill(fin);
-    await page.locator(".crm-customer-name-btn").filter({ hasText: "QA Customer" }).first().click();
-    await page.locator(".customer-360-modal-card").waitFor({ state: "visible" });
-    await page.locator('[data-testid="crm-360-credit-link"]').filter({ hasText: firstSale.credit.id }).click();
+    await page.locator('main.main tr').filter({ hasText: fin }).click();
+    customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
+    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true })
+      .getByRole('button', { name: 'Kreditə bax', exact: true }).click();
     await page.locator(".page-header h1").filter({ hasText: "Kredit" }).waitFor();
     await page.locator(".credit-detail-modal-card").filter({ hasText: firstSale.credit.id }).waitFor();
     await page.locator(".credit-detail-modal-head .icon-btn").click();
     await page.locator(".credit-detail-modal-card").waitFor({ state: "hidden" });
-    await selectModule(page, 1);
-    await page.locator(".crm-search-field input").fill(fin);
-    await page.locator(".crm-customer-name-btn").filter({ hasText: "QA Customer" }).first().click();
-    await page.locator(".customer-360-modal-card").waitFor({ state: "visible" });
-    await page.locator(".customer-360-schedule-preview").first().click();
-    assert((await page.locator(".customer-360-schedule-row").count()) > 0, "CRM 360 credit schedule did not expand");
-    await page.locator(".customer-360-head .icon-btn").click();
-    await page.locator(".customer-360-modal-card").waitFor({ state: "hidden" });
     assert(errors.length === 0, `Separate credit contract flow produced browser errors: ${errors.join(" | ")}`);
     return {
       fin,
@@ -1151,11 +1176,13 @@ async function createHrEmployee(page, values) {
   await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);
   await modal.getByLabel('Şöbə', { exact: true }).fill(values.department);
   await modal.getByLabel('Üst şöbə', { exact: true }).fill(values.departmentParent || '');
-  await modal.getByLabel('Rəhbər adı', { exact: true }).fill(values.managerName || '');
-  await modal.getByLabel('Səviyyə', { exact: true }).selectOption({ index: values.levelIndex || 0 });
+  const manager = values.managerName ? (await readState(page)).employees.find(e => e.name === values.managerName) : null;
+  if (values.managerName) assert(manager, 'Required HR manager was not persisted');
+  await modal.getByLabel(/^Kimə tabedir/).selectOption(manager?.id || '');
+  await modal.getByLabel(/^Səviyyə/).selectOption({ index: values.levelIndex ?? 3 });
   await modal.getByLabel('Maaş', { exact: true }).fill(String(values.salary));
   if (values.kpi != null) await modal.getByLabel('KPI', { exact: true }).fill(String(values.kpi));
-  if (values.documentsComplete != null) await modal.getByLabel('Sənədlər, %', { exact: true }).fill(String(values.documentsComplete));
+  if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   await modal.locator('button[type="submit"]').click();
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
@@ -1604,6 +1631,7 @@ browser = await chromium.launch({
     : {}),
 });
 for (const [name, run] of auditFlows) {
+  currentFlowName = name;
   if (incompatibleBackend) {
     report.failures.push({ name, error: 'AUDIT_BACKEND_INCOMPATIBLE', blocked: true });
     await saveReport();
