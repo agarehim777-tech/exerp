@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
 import { useTenantRequestScope } from './useTenantRequestScope.js';
-import { createExpenseCommand, createTransferCommand, createRefundCommand, financeRpcError } from '../../services/financeLedger.js';
+import { createExpenseCommand, createExpenseEditCommand, createTransferCommand, createRefundCommand, financeRpcError } from '../../services/financeLedger.js';
 
 
 const newAccountCode = type => `${type === 'bank' ? 'BNK' : type === 'card' ? 'KRT' : 'KAS'}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -14,6 +14,7 @@ export function useCashbook(tenantId) {
   const [loadedScope, setLoadedScope] = useState(null);
   const ledgerReady = Boolean(tenantId && summary && loadedScope === scope);
   const postExpense = useMemo(() => createExpenseCommand(tenantId), [tenantId]);
+  const postExpenseEdit = useMemo(() => createExpenseEditCommand(tenantId), [tenantId]);
   const postTransfer = useMemo(() => createTransferCommand(tenantId), [tenantId]);
   const postRefund = useMemo(() => createRefundCommand(tenantId), [tenantId]);
 
@@ -189,46 +190,16 @@ export function useCashbook(tenantId) {
   };
 
   const updateExpense = async (expense, payload) => {
-    if (!['pending', 'draft'].includes(expense.status)) throw new Error('Təsdiqlənmiş xərc redaktə edilə bilməz.');
-    const account = accounts.find(item => item.id === payload.account_id);
-    const amount = Number(payload.amount || 0);
-    if (!account) throw new Error('Xərc kassasını seçin.');
-    if (amount <= 0) throw new Error('Düzgün xərc məbləği daxil edin.');
-    const available = balanceOf(account.id) + (account.id === expense.account_id ? Number(expense.amount || 0) : 0);
-    if (amount > available) throw new Error('Seçilmiş kassada kifayət qədər vəsait yoxdur.');
-    const reference = `EXPENSE:${expense.id}`;
-    const { data: oldTransaction, error: transactionReadError } = await supabase.from('cash_transactions').select('*').eq('tenant_id', tenantId).eq('reference', reference).maybeSingle();
-    if (transactionReadError) throw transactionReadError;
-    const transactionPatch = {
-      account_id: account.id, amount, currency: payload.currency || expense.currency || account.currency || 'AZN',
-      description: payload.description || payload.category || 'Xərc', occurred_at: payload.expense_date || expense.expense_date,
-    };
-    if (oldTransaction) {
-      const { error: transactionError } = await supabase.from('cash_transactions').update(transactionPatch).eq('id', oldTransaction.id).eq('tenant_id', tenantId);
-      if (transactionError) throw transactionError;
-    } else {
-      const { error: transactionError } = await supabase.from('cash_transactions').insert({ tenant_id: tenantId, transaction_no: newTransactionNo('XRC'), direction: 'out', category: 'expense', reference, ...transactionPatch });
-      if (transactionError) throw transactionError;
-    }
-    const { error: expenseError } = await supabase.from('expenses').update({
-      account_id: account.id, category: payload.category, description: payload.description, amount,
-      vat_amount: Number(payload.vat_amount || 0), expense_date: payload.expense_date,
-    }).eq('id', expense.id).eq('tenant_id', tenantId).in('status', ['pending', 'draft']);
-    if (expenseError) {
-      if (oldTransaction) await supabase.from('cash_transactions').update({ account_id: oldTransaction.account_id, amount: oldTransaction.amount, currency: oldTransaction.currency, description: oldTransaction.description, occurred_at: oldTransaction.occurred_at }).eq('id', oldTransaction.id).eq('tenant_id', tenantId);
-      throw expenseError;
-    }
+    if (!ledgerReady) throw new Error('Kassa balansı serverdən yüklənməyib.');
+    const result = await postExpenseEdit({ expense, ...payload });
     await fetchAll();
+    return result;
   };
 
   const removeExpense = async (expense) => {
-    if (!['pending', 'draft'].includes(expense.status)) throw new Error('Təsdiqlənmiş xərc silinə bilməz.');
-    const reference = `EXPENSE:${expense.id}`;
-    const { error: cashError } = await supabase.from('cash_transactions').delete().eq('tenant_id', tenantId).eq('reference', reference);
-    if (cashError) throw cashError;
-    const { error: expenseError } = await supabase.from('expenses').delete().eq('id', expense.id).eq('tenant_id', tenantId).in('status', ['pending', 'draft']);
-    if (expenseError) throw expenseError;
+    const result = await postRefund({ expenseId: expense.id, reason: 'Expense removed from active queue' });
     await fetchAll();
+    return result;
   };
 
   const removeAccount = async (account) => {

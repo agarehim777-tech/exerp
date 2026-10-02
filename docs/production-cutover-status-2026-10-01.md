@@ -92,3 +92,9 @@ Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 - Replaced positional navigation with explicit route mapping; removed modules such as production/projects/tax fail with `AUDIT_MODULE_UNAVAILABLE` instead of silently visiting the dashboard.
 - Preserved all 21 original scenario assertions and the strict all-21 release gate. Existing scenario-specific UI selectors and some legacy field expectations still need adaptation and live verification. This is not a claim that all 21 pass.
 - Application deployment remains blocked until that exact commit's complete release gates pass.
+# Expense follow-up, 2026-10-02
+
+- Commit `840f24e2` passed 280 unit tests, 29 browser tests, two sales/expense lifecycle tests, two concurrency tests, one deposit lifecycle, and six delivery/reversal cases. The legacy audit suite failed during setup (0/21): `purchase_order_lines` inherits tenant ownership from `purchase_orders` and has no `tenant_id` column. The reader now uses an inner parent join with an explicit parent tenant filter, covered by a regression assertion.
+- Migration `20261002122938_atomic_expense_edit.sql` is installed in staging and production. Pending expense editing is one permission-checked, idempotent RPC; it locks the expense, posting and accounts, rejects stale edits and validates funds, currency and accounting periods. Cancellation preserves the expense and reverses its posting rather than deleting financial history.
+- Staging rollback verification passed create, edit, repeated request, stale-edit rejection and cancellation with a net-zero posting balance. PGlite tests also verify rollback when the expense update fails. This does not certify all 21 legacy UI scenarios or a completed production deploy.
+

@@ -49,3 +49,13 @@ export function createRefundCommand(tenantId, rpc) {
     expense_id: payload.expenseId, only_pending: Boolean(payload.onlyPending), reason: payload.reason || '',
   }), rpc);
 }
+
+export function createExpenseEditCommand(tenantId, rpc) {
+  return createFinanceCommand(tenantId, 'edit_cash_expense_atomic', ({ expense, ...payload }) => ({
+    expense_id: expense.id, account_id: payload.account_id, amount: Number(payload.amount),
+    vat_amount: Number(payload.vat_amount || 0), expense_date: payload.expense_date,
+    currency: payload.currency || expense.currency, category: payload.category || 'other', description: payload.description || '',
+    expected: { amount: Number(expense.amount), vat_amount: Number(expense.vat_amount || 0), account_id: expense.account_id,
+      category: expense.category, description: expense.description || '', expense_date: expense.expense_date },
+  }), rpc);
+}

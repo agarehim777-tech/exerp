@@ -26,7 +26,12 @@ it('uses canonical tenant-scoped rows even when a snapshot contains obsolete bus
   expect(state.financeAccounts[0].currentBalance).toBe(99);
   expect(state.financeAccounts[0]).toMatchObject({ name: 'QA Cash', openingBalance: 250 });
   for (const url of urls.filter((url) => url.includes('/rest/v1/') && !url.includes('/rpc/'))) {
-    expect(new URL(url).searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith('/purchase_order_lines')) {
+      expect(parsed.searchParams.get('purchase_orders.tenant_id')).toBe(`eq.${tenant}`);
+      expect(parsed.searchParams.get('select')).toContain('purchase_orders!inner(tenant_id)');
+      expect(parsed.searchParams.has('tenant_id')).toBe(false);
+    } else expect(parsed.searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
   }
 });
 

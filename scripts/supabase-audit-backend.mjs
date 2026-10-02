@@ -34,10 +34,10 @@ export async function createAuditBackend(env, fetcher = fetch) {
   };
   const session = await request('auth/v1/token?grant_type=password', { method: 'POST', data: { email, password } });
   const token = session.access_token;
-  const read = async (table, select = '*', filter = '') => {
+  const read = async (table, select = '*', filter = '', tenantColumn = 'tenant_id') => {
     const result = [];
     for (let offset = 0; ; offset += 500) {
-      const rows = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&tenant_id=eq.${tenantId}&limit=500&offset=${offset}${filter}`, { token });
+      const rows = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&${tenantColumn}=eq.${tenantId}&limit=500&offset=${offset}${filter}`, { token });
       result.push(...rows);
       if (rows.length < 500) return result;
     }
@@ -61,7 +61,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }),
         read('cash_accounts'),
         read('cash_transactions'), read('expenses'), read('vendors'), read('sales_invoices'), read('order_bonus_assignments'), read('audit_events'),
-        read('purchase_orders'), read('purchase_order_lines'),
+        read('purchase_orders'), read('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),
       ]);
       const state = { ...(snapshots[0]?.state ?? {}) };
       for (const name of ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts']) {
