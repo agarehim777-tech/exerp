@@ -1,4 +1,5 @@
 import { readEnvironment } from "./read-environment.mjs";
+import { probeBackend } from "./backend-probe.mjs";
 
 const env = readEnvironment();
 const baseUrl = env.VITE_SUPABASE_URL;
@@ -34,7 +35,7 @@ const expectedStatuses = {
 const checks = await Promise.all(
   tables.map(async (table) => {
     try {
-      const response = await fetch(`${baseUrl}/rest/v1/${table}?select=*&limit=0`, {
+      const response = await probeBackend(`${baseUrl}/rest/v1/${table}?select=*&limit=0`, {
         headers: { apikey: apiKey },
       });
       const body = response.ok ? "" : await response.text();
@@ -64,9 +65,8 @@ for (const [name, payload] of [
 ]) {
   try {
     // No bearer session: a deployed financial RPC must deny this probe before writing anything.
-    const response = await fetch(`${baseUrl}/rest/v1/rpc/${name}`, {
+    const response = await probeBackend(`${baseUrl}/rest/v1/rpc/${name}`, {
       method: 'POST', headers: { apikey: apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(15000),
     });
     const check = { rpc: name, status: response.status, ok: [401, 403].includes(response.status) };
     checks.push(check);
