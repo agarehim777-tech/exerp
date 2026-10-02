@@ -92,11 +92,17 @@ export async function createAuditBackend(env, fetcher = fetch) {
         initialPayment: Number(credit.required_initial), initialPaid: Number(credit.initial_payment),
         months: credit.term_months, startDate: credit.start_date,
         payments: payments.filter((p) => p.credit_id === credit.id && !p.reversed_at),
+        installments: installments.filter(i => i.credit_id === credit.id).sort((a, b) => a.installment_no - b.installment_no)
+          .map(i => ({ ...i, month: i.installment_no, due: i.due_date,
+            amount: Math.max(0, Number(i.principal_due) - Number(i.principal_paid)) })),
+        paidMonths: installments.filter(i => i.credit_id === credit.id && Number(i.principal_due) <= Number(i.principal_paid)).length,
         schedule: installments.filter((i) => i.credit_id === credit.id) }));
       state.contracts.push(...credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status,
         fin: dbCustomerToLegacy(customerById.get(c.customer_id))?.fin ?? '' })));
       state.financeAccounts = (accounts.accounts ?? []).map((a) => ({ ...a, openingBalance: Number(a.opening_balance), currentBalance: Number(a.balance) }));
       state.cashEntries = cash.map((tx) => ({ ...tx, amount: Number(tx.amount), date: tx.occurred_at?.slice(0, 10),
+        principal: Number(payments.find(p => p.id === tx.reference_id)?.principal_amount || 0),
+        penalty: Number(payments.find(p => p.id === tx.reference_id)?.penalty_amount || 0),
         orderId: orders.find((o) => o.id === tx.reference_id)?.id ?? null,
         creditId: credits.find((c) => c.id === tx.reference_id)?.id ?? payments.find((p) => p.id === tx.reference_id)?.credit_id ?? null }));
       state.expenses = expenses.map((e) => ({ ...e, amount: Number(e.amount), date: e.expense_date }));

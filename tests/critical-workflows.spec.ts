@@ -12,6 +12,7 @@ test.describe("Kritik ERP axınları", () => {
   for (const route of [
     "/satis/sifarisler",
     "/anbar/mehsullar",
+    "/anbar/qaliqlar",
     "/satinalma",
     "/maliyye/kassa",
     "/kredit",
@@ -21,10 +22,16 @@ test.describe("Kritik ERP axınları", () => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.goto(route, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(1200);
+      await page.waitForLoadState('networkidle');
       await expect(page).not.toHaveURL(/\/login/);
       await expect(page).toHaveURL(new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[/?#]|$)`));
       await expect(page.locator("main.main")).toBeVisible();
+      if (route === '/anbar/qaliqlar') {
+        await expect(page.getByRole('button', { name: '+ Yeni anbar', exact: true })).toBeVisible();
+      }
+      if (route === '/maliyye/kassa') {
+        await expect(page.getByRole('button', { name: '+ Yeni kassa', exact: true })).toBeVisible();
+      }
       expect(errors).toEqual([]);
     });
   }

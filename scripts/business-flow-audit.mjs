@@ -142,7 +142,7 @@ function stockReserved(state, warehouseId, product) {
 
 async function createWarehouseWithStock(page) {
   await selectModule(page, 3);
-  await page.getByRole('heading', { name: 'Anbar idarəetməsi', exact: true }).waitFor();
+  await page.locator('.page-header').getByRole('heading', { name: 'Anbar idarəetməsi', exact: true }).waitFor();
   const suffix = crypto.randomUUID().slice(0, 8);
   const code = `WH-QA-${suffix}`;
   const sku = `SKU-QA-${suffix}`;
@@ -345,6 +345,17 @@ async function auditCreditPayment(browser) {
   try {
     const sale = await createCreditSale(page);
     await selectModule(page, 9);
+    const creditRow = page.locator('.credit-directory-panel tr').filter({ hasText: sale.contract.id });
+    await creditRow.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    const startModal = page.getByRole('dialog', { name: 'Krediti başlat', exact: true });
+    assert(await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).isDisabled(),
+      'Credit activation was enabled before collecting the planned deposit');
+    await startModal.getByLabel('Qəbul ediləcək məbləğ', { exact: true }).fill('200');
+    await startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click();
+    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.initialPaid === 200, 'Deposit was not posted');
+    await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    await startModal.waitFor({ state: 'hidden' });
+    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.status === 'active', 'Credit was not activated');
     const before = await readState(page);
     const previousCredit = before.credits?.find((item) => item.id === sale.credit.id);
     const previousOrder = before.orders?.find((order) => order.id === sale.order.id);
@@ -362,7 +373,7 @@ async function auditCreditPayment(browser) {
     await page.locator('[data-testid="credit-balance-tile"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-order-link"]').click();
     await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
-    await page.locator(".sales-order-card").filter({ hasText: sale.order.id }).waitFor();
+    await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).waitFor();
     await selectModule(page, 9);
     await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
@@ -372,8 +383,8 @@ async function auditCreditPayment(browser) {
     await page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click();
     await page.waitForTimeout(100);
     const after = await readState(page);
-    const cashEntry = after.cashEntries?.[0];
-    const linkedOrder = after.orders?.find((order) => order.id === cashEntry?.orderId);
+    const cashEntry = after.cashEntries.find(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
+    const linkedOrder = after.orders?.find((order) => order.id === sale.order.id);
     const linkedCredit = after.credits?.find((credit) => credit.id === cashEntry?.creditId);
 
     assert(after.cashEntries.length === before.cashEntries.length + 1, "Credit payment did not create a cash entry");
@@ -386,10 +397,11 @@ async function auditCreditPayment(browser) {
       "Credit payment did not update the linked order principal",
     );
     assert(
-      Number(linkedOrder.creditBalance) === Number(previousCredit.balance) - principalPayment,
+      Number(linkedCredit.balance) === Number(previousCredit.balance) - principalPayment,
       "Penalty amount incorrectly affected the remaining principal debt",
     );
-    assert(linkedCredit?.payments?.[0]?.extraApplied === 50, "Overpayment was not carried into the next installment");
+    assert(linkedCredit?.payments?.some(p => Number(p.principal_amount) === principalPayment && Number(p.penalty_amount) === penaltyPayment),
+      "Credit payment receipt did not retain separate principal and penalty amounts");
     assert(Number(linkedCredit?.installments?.[previousPaidMonths]?.amount || 0) === 0, "Current installment was not closed");
     assert(
       Number(linkedCredit?.installments?.[previousPaidMonths + 1]?.amount || 0) === Math.max(0, nextDueBefore - 50),
@@ -486,20 +498,26 @@ async function auditWarehouseDelivery(browser) {
     const sale = await createCreditSale(page);
     const before = await readState(page);
     await selectModule(page, 4);
-    await page.locator(".delivery-search input").fill(sale.order.id);
+    await page.locator(".delivery-search input").fill(sale.order.orderNo);
     const deliveryRegistryText = await page.locator(".delivery-registry-panel").innerText();
-    assert(deliveryRegistryText.includes(sale.order.id), "Delivery registry search did not keep the created order visible");
+    assert(deliveryRegistryText.includes(sale.order.orderNo), "Delivery registry search did not keep the created order visible");
     const deliveryExport = await Promise.all([
       page.waitForEvent("download"),
       page.locator(".delivery-export-btn").click(),
     ]).then(([file]) => file);
     assert(deliveryExport.suggestedFilename().includes("tehvil-reyestri"), "Delivery registry export did not create the expected CSV file");
-    await selectModule(page, 3);
-    await page.locator(".warehouse-operations-drawer > summary").click();
-    const orderRow = page.locator("tr").filter({ hasText: sale.order.id });
-    await orderRow.locator("button.text-btn").click();
-    await page.waitForTimeout(100);
-    const after = await readState(page);
+    const csv = await readFile(await deliveryExport.path(), 'utf8');
+    assert(csv.includes(sale.order.orderNo), 'Delivery export omitted the selected order');
+    const orderRow = page.locator('.delivery-registry-panel tr').filter({ hasText: sale.order.orderNo });
+    await orderRow.getByRole('button', { name: 'Kartı aç', exact: true }).click();
+    const card = page.locator('#delivery-detail-card');
+    await card.getByLabel('Təhvil alanın ad-soyadı', { exact: true }).fill('QA Customer');
+    await card.getByLabel('Anbardan götürən əməkdaş', { exact: true }).fill('QA Audit Seller');
+    await card.getByLabel('Sənəd nömrəsi', { exact: true }).fill(`QA-${sale.order.orderNo}`);
+    await card.getByLabel('Təhvil alan şəxs elektron imzanı təsdiqlədi', { exact: true }).check();
+    await card.getByRole('button', { name: 'Təhvil verildi', exact: true }).click();
+    const after = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.status === 'Təhvil verilib',
+      'Delivery acceptance was not persisted');
     const deliveredOrder = after.orders?.find((item) => item.id === sale.order.id);
 
     assert(deliveredOrder?.status === "Təhvil verilib", "Warehouse delivery did not complete the order");
@@ -1133,11 +1151,11 @@ async function createHrEmployee(page, values) {
   await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);
   await modal.getByLabel('Şöbə', { exact: true }).fill(values.department);
   await modal.getByLabel('Üst şöbə', { exact: true }).fill(values.departmentParent || '');
-  await modal.getByLabel('Kimə tabedir', { exact: true }).selectOption({ index: values.managerIndex || 0 });
+  await modal.getByLabel('Rəhbər adı', { exact: true }).fill(values.managerName || '');
   await modal.getByLabel('Səviyyə', { exact: true }).selectOption({ index: values.levelIndex || 0 });
   await modal.getByLabel('Maaş', { exact: true }).fill(String(values.salary));
   if (values.kpi != null) await modal.getByLabel('KPI', { exact: true }).fill(String(values.kpi));
-  if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
+  if (values.documentsComplete != null) await modal.getByLabel('Sənədlər, %', { exact: true }).fill(String(values.documentsComplete));
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   await modal.locator('button[type="submit"]').click();
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
@@ -1210,7 +1228,7 @@ async function auditHrStructure(browser) {
       position: "Satış rəhbəri",
       department: "Satış",
       departmentParent: "İcraçı rəhbərlik",
-      managerIndex: 1,
+      managerName: 'QA Director',
       levelIndex: 1,
       salary: 2200,
     });
@@ -1219,14 +1237,14 @@ async function auditHrStructure(browser) {
       position: "B2B mütəxəssisi",
       department: "B2B satış",
       departmentParent: "Satış",
-      managerIndex: 1,
+      managerName: 'QA Sales Manager',
       levelIndex: 3,
       salary: 1300,
       leaveBalance: 14,
     });
 
     const state = await readState(page);
-    const employees = state.employees || [];
+    const employees = (state.employees || []).filter(e => ['QA Director', 'QA Sales Manager', 'QA B2B Specialist'].includes(e.name));
     assert(employees.length === 3, "HR employee creation did not persist all employees");
     assert(
       employees.every((employee) => employee.hrStatus === "Stabil" && Number(employee.documentsComplete) === 100),
