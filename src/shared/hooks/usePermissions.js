@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { permissionForScreen } from '../../config/permissionModules.js';
 
 /**
  * DB-based RBAC hook.
@@ -38,7 +39,7 @@ export function usePermissions() {
   const can = useCallback((module, action = "view") => {
     if (isPlatformAdmin) return true;
     if (permissionsLoading || !role || !matrix) return false;
-    const entry = matrix[module];
+    const entry = permissionForScreen(matrix, module);
     if (!entry) return false;
     return action === "edit" ? !!entry.edit : !!entry.view;
   }, [matrix, role, permissionsLoading, isPlatformAdmin]);

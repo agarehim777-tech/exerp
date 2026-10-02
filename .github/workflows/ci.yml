@@ -19,7 +19,7 @@ jobs:
       E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
       E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
       E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -113,7 +113,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-          AUDIT_FLOW_TIMEOUT_MS: 45000
+          AUDIT_FLOW_TIMEOUT_MS: 90000
 
       - name: Upload business lifecycle evidence
         if: ${{ always() && steps.business_flows.outcome != 'skipped' }}

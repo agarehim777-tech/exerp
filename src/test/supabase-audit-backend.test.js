@@ -44,3 +44,24 @@ it('preserves the server error status and detail instead of masking it with a fe
   await expect(createAuditBackend(env, async () => new Response('invalid_credentials', { status: 401 })))
     .rejects.toThrow('POST auth/v1/token: 401 invalid_credentials');
 });
+
+it('reads actual deposit and unreversed principal without subtracting penalties or reversed receipts', async () => {
+  const backend = await createAuditBackend(env, async url => {
+    const path = new URL(url).pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
+    if (path.endsWith('/customers')) return response([{ id: 'customer', name: 'QA', tax_id: 'Q123456' }]);
+    if (path.endsWith('/credit_contracts')) return response([{ id: 'credit', customer_id: 'customer', principal: 1200,
+      initial_payment: 200, required_initial: 200, contract_no: 'IN-QA', order_id: 'order' }]);
+    if (path.endsWith('/credit_payments')) return response([
+      { credit_id: 'credit', principal_amount: 100, penalty_amount: 17 },
+      { credit_id: 'credit', principal_amount: 500, reversed_at: '2026-10-01' },
+    ]);
+    return response([]);
+  });
+  const state = await backend.readState();
+  expect(state.credits[0]).toMatchObject({ balance: 900, initialPaid: 200, fin: 'Q123456', contractId: 'IN-QA' });
+  expect(state.contracts[0]).toMatchObject({ fin: 'Q123456', creditId: 'credit', orderId: 'order' });
+});

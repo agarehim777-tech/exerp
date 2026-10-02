@@ -1,12 +1,13 @@
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
 import { runBoundedFlow } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend } from './supabase-audit-backend.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
+const fixtureByPage = new WeakMap();
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -108,12 +109,23 @@ async function createFlowPage(browser) {
 async function selectModule(page, index) {
   const path = auditModulePath(index);
   await page.goto(new URL(path, baseUrl).href, { waitUntil: 'domcontentloaded' });
-  await page.locator('h1').first().waitFor();
+  await page.waitForLoadState('networkidle');
+  assert(new URL(page.url()).pathname === path, `AUDIT_MODULE_REDIRECTED: expected ${path}, received ${new URL(page.url()).pathname}`);
+  await page.locator('main.main').waitFor();
 }
 
 async function readState(page) {
-  await page.waitForLoadState('networkidle');
   return auditBackend.readState();
+}
+
+async function waitForState(predicate, message) {
+  const deadline = Date.now() + 15000;
+  do {
+    const state = await auditBackend.readState();
+    if (predicate(state)) return state;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  } while (Date.now() < deadline);
+  throw new Error(message);
 }
 
 function stockTotal(state, warehouseId, product) {
@@ -130,54 +142,84 @@ function stockReserved(state, warehouseId, product) {
 
 async function createWarehouseWithStock(page) {
   await selectModule(page, 3);
-  await page.locator(".page-header .primary-btn").click();
-  let modal = page.locator('[role="dialog"]');
-  const suffix = Date.now().toString().slice(-6);
-  await modal.locator("input").nth(0).fill(`WH-QA-${suffix}`);
-  await modal.locator("input").nth(1).fill("QA Warehouse");
-  await modal.locator("input").nth(2).fill("Baku");
-  await modal.locator("input").nth(3).fill("QA Admin");
-  await modal.locator("input").nth(4).fill("100");
-  await modal.locator("input").nth(5).fill("QA Address");
-  await modal.locator('button[type="submit"]').click();
-
-  await page.locator(".warehouse-action-menu .primary-btn").click();
-  await page.locator(".warehouse-action-menu-popover button").first().click();
-  modal = page.locator('[role="dialog"]');
-  await modal.locator("input").nth(0).fill("QA Device");
-  await modal.locator("input").nth(1).fill("5");
-  await modal.locator("input").nth(2).fill("1200");
-  await modal.locator('button[type="submit"]').click();
-
-  const state = await readState(page);
-  const warehouse = state.warehouses.find((item) => item.name === "QA Warehouse");
+  await page.getByRole('heading', { name: 'Anbar idarəetməsi', exact: true }).waitFor();
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const code = `WH-QA-${suffix}`;
+  const sku = `SKU-QA-${suffix}`;
+  const productName = `QA Device ${suffix}`;
+  await page.getByRole('button', { name: '+ Yeni anbar', exact: true }).click();
+  const warehouseForm = page.locator('form').filter({ has: page.getByPlaceholder('Kod', { exact: true }) });
+  await warehouseForm.getByPlaceholder('Kod', { exact: true }).fill(code);
+  await warehouseForm.getByPlaceholder('Ad', { exact: true }).fill(`QA Warehouse ${suffix}`);
+  await warehouseForm.getByPlaceholder('Ünvan', { exact: true }).fill('QA Address');
+  await warehouseForm.getByRole('button', { name: '+ Anbar', exact: true }).click();
+  let state = await waitForState(s => s.warehouses.some(w => w.code === code), 'Warehouse was not persisted');
+  const warehouse = state.warehouses.find(w => w.code === code);
+  await page.goto(new URL('/anbar/mehsullar', baseUrl).href, { waitUntil: 'networkidle' });
+  const productForm = page.locator('form').filter({ has: page.getByPlaceholder('SKU', { exact: true }) });
+  await productForm.getByPlaceholder('SKU', { exact: true }).fill(sku);
+  await productForm.getByPlaceholder('Məhsulun adı', { exact: true }).fill(productName);
+  await productForm.getByPlaceholder('Qiymət', { exact: true }).fill('1200');
+  await productForm.getByRole('button', { name: '+ Məhsul', exact: true }).click();
+  await waitForState(s => s.products.some(p => p.sku === sku), 'Product was not persisted');
+  await selectModule(page, 3);
+  await page.getByRole('button', { name: 'Hərəkətlər', exact: true }).click();
+  const intakeForm = page.locator('form').filter({ has: page.getByPlaceholder('Say', { exact: true }) });
+  await intakeForm.locator('select').filter({ has: page.locator('option', { hasText: 'Anbar seç' }) }).selectOption(warehouse.id);
+  await intakeForm.getByPlaceholder('Məhsul adı və ya SKU yazın', { exact: true }).fill(sku);
+  await intakeForm.getByRole('button', { name: `${productName} ${sku}`, exact: true }).click();
+  await intakeForm.getByPlaceholder('Say', { exact: true }).fill('5');
+  await intakeForm.getByPlaceholder('Maya dəyəri', { exact: true }).fill('1200');
+  await intakeForm.getByPlaceholder('Sənəd №', { exact: true }).fill(code);
+  await intakeForm.getByRole('button', { name: '+ Qeyd et', exact: true }).click();
+  state = await waitForState(s => stockTotal(s, warehouse.id, productName) === 5, 'Warehouse intake was not persisted');
   assert(warehouse, "Warehouse seed was not created");
-  assert(stockTotal(state, warehouse.id, "QA Device") === 5, "Warehouse intake did not create the seed stock");
-  assert(state.products?.some((item) => item.name === "QA Device"), "Warehouse intake did not create the product catalog record");
+  assert(stockTotal(state, warehouse.id, productName) === 5, "Warehouse intake did not create the seed stock");
+  assert(state.products?.some((item) => item.sku === sku), "Warehouse intake did not create the product catalog record");
+  fixtureByPage.set(page, { warehouse, productName, sku });
   return warehouse;
 }
 
 async function createCustomer(page) {
   await selectModule(page, 1);
-  await page.locator(".page-header .primary-btn").click();
-  const modal = page.locator('[role="dialog"]');
-  const fin = `QA${Date.now().toString().slice(-7)}`;
-  await modal.locator("input").nth(0).fill("QA Customer");
-  await modal.locator("input").nth(1).fill(fin);
-  await modal.locator("input").nth(2).fill("0500000000");
-  await modal.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: '+ Yeni müştəri', exact: true }).click();
+  const modal = page.getByRole('dialog', { name: 'Yeni müştəri', exact: true });
+  const fin = `Q${crypto.randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase()}`;
+  await modal.getByLabel('Ad və soyad / şirkət adı *', { exact: true }).fill(`QA Customer ${fin}`);
+  await modal.getByLabel('FİN kod', { exact: true }).fill(fin);
+  await modal.getByLabel('Telefon', { exact: true }).fill('0500000000');
+  await modal.getByRole('button', { name: 'Yarat', exact: true }).click();
+  await modal.waitFor({ state: 'hidden' });
+  await waitForState(s => s.customers.some(c => c.fin === fin), 'Customer was not persisted');
   return fin;
 }
 
 async function createCreditSaleFromCurrentData(page, expectedFin) {
+  const state = await readState(page);
+  if (!state.employees.some(e => e.name === 'QA Audit Seller')) {
+    await selectModule(page, 14);
+    await createHrEmployee(page, { name: 'QA Audit Seller', position: 'Satıcı', department: 'Satış', salary: 0 });
+  }
   await selectModule(page, 2);
   const before = await readState(page);
   await page.locator(".page-header .primary-btn").click();
   const modal = page.locator('[role="dialog"]');
-  await modal.locator("select").nth(1).selectOption({ index: 1 });
+  const fixture = fixtureByPage.get(page);
+  assert(fixture, 'Missing isolated warehouse fixture');
+  await modal.getByRole('combobox', { name: 'Müştəri axtar və seç', exact: true }).fill(expectedFin);
+  await modal.getByRole('option').filter({ hasText: expectedFin }).click();
+  await modal.getByRole('combobox', { name: 'Ödəniş tipi', exact: true }).selectOption('Kredit');
+  await modal.getByRole('combobox', { name: 'Rezerv anbarı', exact: true }).selectOption(fixture.warehouse.id);
+  await modal.getByRole('combobox', { name: 'Məhsul axtar və seç', exact: true }).fill(fixture.productName);
+  await modal.getByRole('option').filter({ hasText: fixture.productName }).click();
+  await modal.getByRole('spinbutton', { name: 'Qiymət', exact: true }).fill('1200');
+  await modal.getByRole('spinbutton', { name: 'İlkin ödəniş hədəfi', exact: true }).fill('200');
+  await modal.getByRole('spinbutton', { name: 'Beh məbləği', exact: true }).fill('0');
+  await modal.getByRole('combobox', { name: 'Satıcı axtar və seç', exact: true }).fill('QA Audit Seller');
+  await modal.getByRole('option').filter({ hasText: 'QA Audit Seller' }).first().click();
   await modal.locator(".order-modal-form button[type=submit]").click();
-  await page.waitForTimeout(100);
-  const after = await readState(page);
+  await modal.waitFor({ state: 'hidden' });
+  const after = await waitForState(s => s.orders.some(o => !before.orders.some(p => p.id === o.id)), 'Sale was not persisted');
   const order = after.orders?.find((item) => !before.orders?.some((previous) => previous.id === item.id));
   const credit = after.credits?.find((item) => item.id === order?.creditId);
   const contract = after.contracts?.find((item) => item.id === order?.contractId);
@@ -207,18 +249,21 @@ async function auditCreditSale(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const sale = await createCreditSale(page);
-    await page.locator(".sales-search-field input").fill(sale.order.id);
-    await page.locator(".sales-date-filter input").nth(0).fill(sale.order.date);
-    await page.locator(".sales-date-filter input").nth(1).fill(sale.order.date);
-    const registryText = await page.locator(".sales-registry-panel").innerText();
-    assert(registryText.includes(sale.order.id), "Sales registry search did not keep the created order visible");
-    assert(registryText.includes(sale.credit.id), "Sales registry does not show the linked credit id");
-    assert(registryText.includes(sale.contract.id), "Sales registry does not show the linked contract id");
+    await page.getByPlaceholder('Axtar...', { exact: true }).fill(sale.order.orderNo);
+    await page.getByLabel('Başlanğıc tarixi', { exact: true }).fill(sale.order.date);
+    await page.getByLabel('Son tarix', { exact: true }).fill(sale.order.date);
+    const registryText = await page.locator('main.main table').innerText();
+    assert(registryText.includes(sale.order.orderNo), "Sales registry search did not keep the created order visible");
     const download = await Promise.all([
       page.waitForEvent("download"),
-      page.locator(".sales-export-btn").click(),
+      page.getByRole('button', { name: 'CSV ixrac', exact: true }).click(),
     ]).then(([file]) => file);
     assert(download.suggestedFilename().includes("satis-reyestri"), "Sales registry export did not create the expected CSV file");
+    const csv = await readFile(await download.path(), 'utf8');
+    assert(csv.includes(sale.order.orderNo) && csv.includes(sale.contract.id), 'Sales export lost the order/contract link');
+    await selectModule(page, 9);
+    await page.locator('main.main tr').filter({ hasText: sale.contract.id }).waitFor();
+    assert(sale.credit.orderId === sale.order.id && sale.contract.creditId === sale.credit.id, 'Credit registry contract lost its structural order link');
     assert(errors.length === 0, `Credit sale produced browser errors: ${errors.join(" | ")}`);
     return { id: sale.order.id, creditId: sale.credit.id, contractId: sale.contract.id, product: sale.line.product };
   } finally {
@@ -1082,21 +1127,21 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
 }
 
 async function createHrEmployee(page, values) {
-  await page.locator(".page-header .primary-btn").click();
+  await page.getByRole('button', { name: 'Yeni əməkdaş', exact: true }).click();
   const modal = page.locator('[role="dialog"]');
-  const inputs = modal.locator("input");
-  await inputs.nth(0).fill(values.name);
-  await inputs.nth(1).fill(values.position);
-  await inputs.nth(2).fill(values.department);
-  await inputs.nth(3).fill(values.departmentParent || "");
-  await modal.locator("select").nth(0).selectOption({ index: values.managerIndex || 0 });
-  await modal.locator("select").nth(1).selectOption({ index: values.levelIndex || 0 });
-  await inputs.nth(4).fill(String(values.salary));
-  if (values.kpi != null) await inputs.nth(5).fill(String(values.kpi));
-  if (values.documentsComplete != null) await inputs.nth(6).fill(String(values.documentsComplete));
-  if (values.leaveBalance != null) await inputs.nth(9).fill(String(values.leaveBalance));
+  await modal.getByLabel('Ad Soyad', { exact: true }).fill(values.name);
+  await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);
+  await modal.getByLabel('Şöbə', { exact: true }).fill(values.department);
+  await modal.getByLabel('Üst şöbə', { exact: true }).fill(values.departmentParent || '');
+  await modal.getByLabel('Kimə tabedir', { exact: true }).selectOption({ index: values.managerIndex || 0 });
+  await modal.getByLabel('Səviyyə', { exact: true }).selectOption({ index: values.levelIndex || 0 });
+  await modal.getByLabel('Maaş', { exact: true }).fill(String(values.salary));
+  if (values.kpi != null) await modal.getByLabel('KPI', { exact: true }).fill(String(values.kpi));
+  if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
+  if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   await modal.locator('button[type="submit"]').click();
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
+  await waitForState(s => s.employees.some(e => e.name === values.name), 'Employee was not persisted');
 }
 
 async function auditKpiPeriodPayoutWorkflow(browser) {

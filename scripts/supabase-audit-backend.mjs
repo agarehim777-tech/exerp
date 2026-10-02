@@ -70,8 +70,9 @@ export async function createAuditBackend(env, fetcher = fetch) {
       const creditByOrder = new Map(credits.map((c) => [c.order_id, c]));
       state.customers = customers.map(dbCustomerToLegacy);
       state.products = products.map(dbProductToLegacy);
-      state.orders = orders.map((order) => dbOrderToLegacy({ ...order, credit: creditByOrder.get(order.id),
-        bonus_assignments: bonuses.filter((b) => b.order_id === order.id && !b.effective_to) }));
+      state.orders = orders.map((order) => ({ ...dbOrderToLegacy({ ...order, credit: creditByOrder.get(order.id),
+        bonus_assignments: bonuses.filter((b) => b.order_id === order.id && !b.effective_to) }),
+        fin: dbCustomerToLegacy(customerById.get(order.customer_id))?.fin ?? '' }));
       state.warehouses = warehouses.map((w) => ({ ...w, status: w.is_active ? 'Aktiv' : 'Passiv' }));
       state.warehouseStock = {};
       for (const balance of balances) {
@@ -83,11 +84,17 @@ export async function createAuditBackend(env, fetcher = fetch) {
       state.stock = Object.values(state.warehouseStock).flat();
       state.credits = credits.map((credit) => ({ ...credit, id: credit.id, orderId: credit.order_id,
         contractId: credit.contract_no, customer: customerById.get(credit.customer_id)?.name,
-        amount: Number(credit.principal), initialPayment: Number(credit.required_initial), initialPaid: Number(credit.initial_payment),
+        amount: Number(credit.principal), total: Number(credit.principal),
+        balance: Math.max(0, Number(credit.principal) - Number(credit.initial_payment) -
+          payments.filter((p) => p.credit_id === credit.id && !p.reversed_at)
+            .reduce((sum, p) => sum + Number(p.principal_amount || 0), 0)),
+        fin: dbCustomerToLegacy(customerById.get(credit.customer_id))?.fin ?? '',
+        initialPayment: Number(credit.required_initial), initialPaid: Number(credit.initial_payment),
         months: credit.term_months, startDate: credit.start_date,
         payments: payments.filter((p) => p.credit_id === credit.id && !p.reversed_at),
         schedule: installments.filter((i) => i.credit_id === credit.id) }));
-      state.contracts.push(...credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status })));
+      state.contracts.push(...credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status,
+        fin: dbCustomerToLegacy(customerById.get(c.customer_id))?.fin ?? '' })));
       state.financeAccounts = (accounts.accounts ?? []).map((a) => ({ ...a, openingBalance: Number(a.opening_balance), currentBalance: Number(a.balance) }));
       state.cashEntries = cash.map((tx) => ({ ...tx, amount: Number(tx.amount), date: tx.occurred_at?.slice(0, 10),
         orderId: orders.find((o) => o.id === tx.reference_id)?.id ?? null,

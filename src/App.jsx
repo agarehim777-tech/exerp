@@ -546,8 +546,7 @@ function App() {
       if (item.id === "platform") return isPlatformAdmin;
       if (item.id === "roles") return dbRole === "owner" || dbRole === "admin";
       const legacyOk = canAccessNavItem(state.settings, item.id);
-      const dbModule = item.id === "products" ? "warehouse" : item.id;
-      const dbOk = dbRole ? dbCan(dbModule, "view") : true;
+      const dbOk = dbRole ? dbCan(item.id, "view") : true;
       // Supabase owner/admin is authoritative. Legacy local settings must not
       // hide modules from a database administrator.
       if (isPlatformAdmin || dbRole === "owner" || dbRole === "admin") return dbOk;

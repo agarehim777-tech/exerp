@@ -213,7 +213,7 @@ function NewCustomerModal({ onClose, onCreate }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 100, padding: '20px 12px', overflowY: 'auto' }}>
+    <div role="dialog" aria-modal="true" aria-label="Yeni müştəri" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 100, padding: '20px 12px', overflowY: 'auto' }}>
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
         style={{ background: '#fff', borderRadius: 16, width: 500, maxWidth: '100%', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 55px rgba(15,23,42,.22)' }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>

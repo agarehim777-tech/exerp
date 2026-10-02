@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { AlertTriangle, CreditCard, PackageCheck, ReceiptText, X } from 'lucide-react';
+import { AlertTriangle, CreditCard, Download, PackageCheck, ReceiptText, X } from 'lucide-react';
+import { downloadReportCsv } from '../../shared/lib/reportDownload.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useOrders } from '../../shared/hooks/useOrders.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
@@ -21,6 +22,8 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
   const { products } = useProducts(activeTenantId);
   const [view, setView] = useState('table');
   const [q, setQ] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState(null);
   const [actionError, setActionError] = useState('');
   const [reversal, setReversal] = useState(null);
@@ -29,8 +32,18 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
 
   const filtered = useMemo(() => orders.filter(o =>
     o.status !== 'cancelled'
+    && (!fromDate || String(o.order_date || '').slice(0, 10) >= fromDate)
+    && (!toDate || String(o.order_date || '').slice(0, 10) <= toDate)
     && (!q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase()))
-  ), [orders, q]);
+  ), [orders, q, fromDate, toDate]);
+
+  const exportRegistry = () => downloadReportCsv({
+    title: 'Satis reyestri',
+    columns: ['Sifariş', 'Müştəri', 'Müqavilə', 'Məbləğ', 'Ödənilib', 'Qalıq', 'Valyuta', 'Tarix', 'Status'],
+    rows: filtered.map(o => [o.order_no, o.customer?.name || '', o.credit?.contract_no || '',
+      Number(o.total), Number(o.paid_amount || 0), Math.max(0, Number(o.total) - Number(o.paid_amount || 0)),
+      o.currency, o.order_date, o.status].map(value => typeof value === 'string' && /^[\s]*[=+@-]/.test(value) ? `'${value}` : value)),
+  });
 
   useEffect(() => {
     if (!selectedOrderId || !orders.length) return;
@@ -54,6 +67,9 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
           style={{ flex: 1, minWidth: 200, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8 }} />
+        <input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
+        <input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
+        <button type="button" onClick={exportRegistry} disabled={!filtered.length || ordersLoading} className="secondary-btn" title="Görünən satışları CSV formatında ixrac et"><Download size={16} /> CSV ixrac</button>
         <div style={{ display: 'flex', background: '#f1f5f9', padding: 3, borderRadius: 10 }}>
           {['table', 'kanban'].map(v => (
             <button key={v} onClick={() => setView(v)}
