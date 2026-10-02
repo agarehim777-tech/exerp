@@ -16,13 +16,15 @@ it('uses canonical tenant-scoped rows even when a snapshot contains obsolete bus
     if (path.includes('/auth/')) return response({ access_token: 'test-session', user: { id: tenant } });
     if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
     if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
-    if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [{ id: tenant, opening_balance: 10, balance: 99 }] });
+    if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [{ id: tenant, balance: 99 }] });
+    if (path.endsWith('/cash_accounts')) return response([{ id: tenant, name: 'QA Cash', opening_balance: 250, balance: 777 }]);
     if (path.endsWith('/tenant_state_snapshots')) return response([{ state: { orders: [{ id: 'deleted-sale' }], products: [{ id: 'stale' }] } }]);
     return response([]);
   });
   const state = await backend.readState();
   expect(state.orders).toEqual([]); expect(state.products).toEqual([]);
   expect(state.financeAccounts[0].currentBalance).toBe(99);
+  expect(state.financeAccounts[0]).toMatchObject({ name: 'QA Cash', openingBalance: 250 });
   for (const url of urls.filter((url) => url.includes('/rest/v1/') && !url.includes('/rpc/'))) {
     expect(new URL(url).searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
   }

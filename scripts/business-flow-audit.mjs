@@ -610,83 +610,60 @@ async function auditVendorLifecycle(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     await createWarehouseWithStock(page);
-    await selectModule(page, 11);
-
-    const suffix = Date.now().toString().slice(-6);
+    const fixture = fixtureByPage.get(page);
+    await selectPath(page, '/satinalma');
+    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
+    const suffix = crypto.randomUUID().slice(0, 8);
     const vendorName = `QA Vendor ${suffix}`;
     const updatedName = `QA Vendor Updated ${suffix}`;
+    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    const vendorForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
+    await vendorForm.getByLabel('Ad', { exact: true }).fill(vendorName);
+    await vendorForm.getByLabel('Telefon', { exact: true }).fill('0501112233');
+    await vendorForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
+    let state = await waitForState(s => s.vendors.some(v => v.name === vendorName), 'Vendor create did not persist');
+    const vendor = state.vendors.find(v => v.name === vendorName);
+    await page.locator('main.main tr').filter({ hasText: vendorName }).getByRole('button', { name: 'Edit', exact: true }).click();
+    await vendorForm.getByLabel('Ad', { exact: true }).fill(updatedName);
+    await vendorForm.getByLabel('Email', { exact: true }).fill(`qa-${suffix}@example.invalid`);
+    await vendorForm.getByRole('button', { name: 'Yadda saxla', exact: true }).click();
+    state = await waitForState(s => s.vendors.some(v => v.id === vendor.id && v.name === updatedName), 'Vendor edit did not persist');
+    assert(state.vendors.find(v => v.id === vendor.id)?.email === `qa-${suffix}@example.invalid`, 'Vendor contact edit did not persist');
+    assert(!state.vendors.some(v => v.name === vendorName), 'Vendor edit retained its old name');
 
-    await page.locator(".page-header .primary-btn").click();
-    let modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill(vendorName);
-    await modal.locator("input").nth(1).fill("Azerbaijan");
-    await modal.locator("input").nth(2).fill("3");
-    await modal.locator("input").nth(3).fill("120");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
+    await page.getByRole('button', { name: 'PO', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni PO yarat', exact: true }).click();
+    const poNumber = `PO-QA-${suffix.toUpperCase()}`;
+    const poForm = page.locator('form').filter({ has: page.getByLabel('PO nömrəsi', { exact: true }) });
+    await poForm.getByLabel(/^Vendor/).selectOption(vendor.id);
+    await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
+    await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
+    await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
+    await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('70');
+    await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
+    state = await waitForState(s => s.purchaseOrders.some(p => p.po_number === poNumber), 'Vendor PO was not persisted');
+    const po = state.purchaseOrders.find(p => p.po_number === poNumber);
+    assert(po.vendor_id === vendor.id && po.status === 'draft', 'PO lost the vendor foreign key or draft status');
+    assert(state.purchaseOrderLines.some(l => l.po_id === po.id && Number(l.qty_ordered) === 2), 'PO line did not persist');
+    await page.locator('main.main tr').filter({ hasText: poNumber }).getByRole('button', { name: 'Təsdiq', exact: true }).click();
+    await waitForState(s => s.purchaseOrders.some(p => p.id === po.id && p.status === 'approved'), 'Vendor PO approval did not persist');
 
-    let state = await readState(page);
-    assert(state.vendors?.some((vendor) => vendor.name === vendorName), "Vendor create did not persist");
+    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
+    await page.locator('main.main tr').filter({ hasText: updatedName }).getByRole('button', { name: 'Sil', exact: true }).click();
+    state = await waitForState(s => s.vendors.some(v => v.id === vendor.id && v.is_active === false), 'Historical vendor was not deactivated');
+    assert(state.purchaseOrders.some(p => p.id === po.id && p.vendor_id === vendor.id), 'Vendor deactivation broke PO history');
 
-    await page.locator(".vendor-registry-panel tr").filter({ hasText: vendorName }).locator(".vendor-row-actions .text-btn").first().click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill(updatedName);
-    await modal.locator("input").nth(5).fill("QA Procurement Lead");
-    await modal.locator("input").nth(6).fill("0501112233");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    const updatedVendor = state.vendors?.find((vendor) => vendor.name === updatedName);
-    assert(updatedVendor?.contact === "QA Procurement Lead", "Vendor edit did not persist contact data");
-    assert(!state.vendors?.some((vendor) => vendor.name === vendorName), "Vendor edit left the old vendor name active");
-
-    await page.locator(".vendor-command-actions .secondary-btn").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill(updatedName);
-    await modal.locator("input").nth(1).fill("2");
-    await modal.locator("input").nth(2).fill("70");
-    await modal.locator("input").nth(3).fill("130");
-    await modal.locator("input").nth(5).fill("QA vendor lifecycle PO");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    const createdPo = state.purchaseOrders?.[0];
-    assert(createdPo?.vendor === updatedName && createdPo.status === "Təsdiq gözləyir", "Vendor PO was not created as pending");
-
-    const vendorRow = page.locator(".vendor-registry-panel tr").filter({ hasText: updatedName });
-    const deleteButtonWithOpenPo = vendorRow.locator(".vendor-row-actions .text-btn.danger");
-    assert(await deleteButtonWithOpenPo.isDisabled(), "Vendor delete should be disabled while an open PO exists");
-
-    await page.locator(".po-action-panel button.text-btn").first().click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    const approvedPo = state.purchaseOrders?.find((po) => po.id === createdPo.id);
-    assert(approvedPo?.status === "Təsdiq edildi", "Vendor PO approval did not persist");
-
-    const deleteButtonAfterApproval = page
-      .locator(".vendor-registry-panel tr")
-      .filter({ hasText: updatedName })
-      .locator(".vendor-row-actions .text-btn.danger");
-    assert(!(await deleteButtonAfterApproval.isDisabled()), "Vendor delete stayed disabled after PO approval");
-    await deleteButtonAfterApproval.click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator(".danger-outline").click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    assert(!state.vendors?.some((vendor) => vendor.name === updatedName), "Vendor delete did not remove the vendor");
-    assert(state.purchaseOrders?.some((po) => po.id === createdPo.id), "Vendor delete should not remove approved PO history");
-    assert(
-      state.auditLog?.some((entry) => entry.action === "Vendor redaktə edildi") &&
-        state.auditLog?.some((entry) => entry.action === "Vendor silindi"),
-      "Vendor lifecycle did not write expected audit log entries",
-    );
-    assert(errors.length === 0, `Vendor lifecycle produced browser errors: ${errors.join(" | ")}`);
-
-    return { vendor: updatedName, poId: createdPo.id, poStatus: approvedPo.status };
+    const disposableName = `QA Disposable Vendor ${suffix}`;
+    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    const disposableForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
+    await disposableForm.getByLabel('Ad', { exact: true }).fill(disposableName);
+    await disposableForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
+    await waitForState(s => s.vendors.some(v => v.name === disposableName), 'Unlinked vendor was not created');
+    await page.locator('main.main tr').filter({ hasText: disposableName }).getByRole('button', { name: 'Sil', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
+    await waitForState(s => !s.vendors.some(v => v.name === disposableName), 'Unlinked vendor delete did not persist');
+    assert(errors.length === 0, `Vendor lifecycle produced browser errors: ${errors.join(' | ')}`);
+    return { vendorId: vendor.id, poId: po.id, historicalVendorPreserved: true };
   } finally {
     await context.close();
   }
@@ -1248,49 +1225,58 @@ async function auditKpiPeriodPayoutWorkflow(browser) {
 async function auditHrStructure(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const directorName = `QA Director ${suffix}`;
+    const managerName = `QA Sales Manager ${suffix}`;
+    const specialistName = `QA B2B Specialist ${suffix}`;
+    const leadName = `QA Sales Lead ${suffix}`;
+    const departmentName = `QA New Department ${suffix}`;
+    const executiveDepartment = `QA Executive ${suffix}`;
+    const salesDepartment = `QA Sales ${suffix}`;
+    const b2bDepartment = `QA B2B ${suffix}`;
     await selectModule(page, 14);
     await createHrEmployee(page, {
-      name: "QA Director",
+      name: directorName,
       position: "Direktor",
-      department: "İcraçı rəhbərlik",
+      department: executiveDepartment,
       salary: 3000,
     });
     await createHrEmployee(page, {
-      name: "QA Sales Manager",
+      name: managerName,
       position: "Satış rəhbəri",
-      department: "Satış",
-      departmentParent: "İcraçı rəhbərlik",
-      managerName: 'QA Director',
+      department: salesDepartment,
+      departmentParent: executiveDepartment,
+      managerName: directorName,
       levelIndex: 1,
       salary: 2200,
     });
     await createHrEmployee(page, {
-      name: "QA B2B Specialist",
+      name: specialistName,
       position: "B2B mütəxəssisi",
-      department: "B2B satış",
-      departmentParent: "Satış",
-      managerName: 'QA Sales Manager',
+      department: b2bDepartment,
+      departmentParent: salesDepartment,
+      managerName: managerName,
       levelIndex: 3,
       salary: 1300,
       leaveBalance: 14,
     });
 
     const state = await readState(page);
-    const employees = (state.employees || []).filter(e => ['QA Director', 'QA Sales Manager', 'QA B2B Specialist'].includes(e.name));
+    const employees = (state.employees || []).filter(e => [directorName, managerName, specialistName].includes(e.name));
     assert(employees.length === 3, "HR employee creation did not persist all employees");
     assert(
       employees.every((employee) => employee.hrStatus === "Stabil" && Number(employee.documentsComplete) === 100),
       "New employee was incorrectly marked as awaiting information",
     );
     assert(
-      employees.find((employee) => employee.name === "QA B2B Specialist")?.managerId ===
-        employees.find((employee) => employee.name === "QA Sales Manager")?.id,
+      employees.find((employee) => employee.name === specialistName)?.managerId ===
+        employees.find((employee) => employee.name === managerName)?.id,
       "Employee manager relationship was not stored by ID",
     );
 
-    const salesNode = page.locator(".hr-org-card").filter({ hasText: "QA Sales Manager" });
+    const salesNode = page.locator(".hr-org-card").filter({ hasText: managerName });
     await salesNode.waitFor();
-    const b2bNode = page.locator(".hr-org-card").filter({ hasText: "QA B2B Specialist" });
+    const b2bNode = page.locator(".hr-org-card").filter({ hasText: specialistName });
     await b2bNode.waitFor();
     await salesNode.click();
     await b2bNode.waitFor({ state: "hidden" });
@@ -1299,13 +1285,13 @@ async function auditHrStructure(browser) {
 
     const reportingPanel = page.locator(".hr-reporting-panel");
     const managerNode = reportingPanel.locator('.hr-employee-node').filter({
-      has: page.getByText('QA Sales Manager', { exact: true }),
+      has: page.getByText(managerName, { exact: true }),
     });
     if (await managerNode.getAttribute('aria-expanded') === 'false') await managerNode.click();
     await reportingPanel.locator('.hr-employee-node').filter({
-      has: page.getByText('QA B2B Specialist', { exact: true }),
+      has: page.getByText(specialistName, { exact: true }),
     }).click();
-    await page.locator(".hr-profile-head").filter({ hasText: "QA B2B Specialist" }).waitFor();
+    await page.locator(".hr-profile-head").filter({ hasText: specialistName }).waitFor();
     await page.locator(".hr-profile-edit").click();
     const editModal = page.locator('[role="dialog"]');
     await editModal.getByLabel('Vəzifə', { exact: true }).fill('Senior B2B Specialist');
@@ -1314,7 +1300,7 @@ async function auditHrStructure(browser) {
     await editModal.locator('button[type="submit"]').click();
     await editModal.waitFor({ state: "hidden" });
     const updatedState = await readState(page);
-    const updatedEmployee = updatedState.employees.find((employee) => employee.name === "QA B2B Specialist");
+    const updatedEmployee = updatedState.employees.find((employee) => employee.name === specialistName);
     assert(updatedEmployee?.position === "Senior B2B Specialist", "Employee edit did not persist the new position");
     assert(Number(updatedEmployee?.salary) === 1750, "Employee edit did not persist the new salary");
     assert(
@@ -1328,7 +1314,7 @@ async function auditHrStructure(browser) {
     await page.locator('[data-testid="hr-document-complete"]').click();
     await page.waitForTimeout(100);
     const documentState = await readState(page);
-    const documentedEmployee = documentState.employees.find((employee) => employee.name === "QA B2B Specialist");
+    const documentedEmployee = documentState.employees.find((employee) => employee.name === specialistName);
     assert(
       Number(documentedEmployee?.documentsComplete) === 100 && documentedEmployee?.documentReviewRequired === false,
       "Employee document completion action did not close document risk",
@@ -1337,44 +1323,44 @@ async function auditHrStructure(browser) {
       documentState.auditLog?.some((row) => row.action === "Əməkdaş sənədləri yeniləndi"),
       "Employee document completion did not create an audit log entry",
     );
-    await page.locator(".hr-person-row").filter({ hasText: "QA Sales Manager" }).click();
-    await page.locator(".hr-profile-head").filter({ hasText: "QA Sales Manager" }).waitFor();
+    await page.locator(".hr-person-row").filter({ hasText: managerName }).click();
+    await page.locator(".hr-profile-head").filter({ hasText: managerName }).waitFor();
     await page.locator(".hr-profile-edit").click();
     const managerEditModal = page.locator('[role="dialog"]');
-    await managerEditModal.getByLabel('Ad Soyad', { exact: true }).fill('QA Sales Lead');
+    await managerEditModal.getByLabel('Ad Soyad', { exact: true }).fill(leadName);
     await managerEditModal.locator('button[type="submit"]').click();
     await managerEditModal.waitFor({ state: "hidden" });
     const renamedState = await readState(page);
-    const renamedManager = renamedState.employees.find((employee) => employee.name === "QA Sales Lead");
+    const renamedManager = renamedState.employees.find((employee) => employee.name === leadName);
     assert(
-      renamedState.employees.find((employee) => employee.name === "QA B2B Specialist")?.managerName === "QA Sales Lead",
+      renamedState.employees.find((employee) => employee.name === specialistName)?.managerName === leadName,
       "Employee rename did not update direct reports' manager names",
     );
     await page.locator(".hr-structure-actions .secondary-btn").click();
     const departmentModal = page.locator('[role="dialog"]');
-    await departmentModal.locator("input").nth(0).fill("QA New Department");
+    await departmentModal.locator("input").nth(0).fill(departmentName);
     await departmentModal.locator("textarea").fill("QA department for hierarchy validation");
     await departmentModal.locator('button[type="submit"]').click();
     await departmentModal.waitFor({ state: "hidden" });
     const departmentState = await readState(page);
     assert(
-      departmentState.departments?.some((department) => department.name === "QA New Department"),
+      departmentState.departments?.some((department) => department.name === departmentName),
       "Department creation did not persist the new department",
     );
-    await page.locator(".hr-org-card").filter({ hasText: "QA New Department" }).waitFor();
+    await page.locator(".hr-org-card").filter({ hasText: departmentName }).waitFor();
 
-    await page.locator(".hr-person-row").filter({ hasText: "QA Sales Lead" }).click();
-    await page.locator(".hr-profile-head").filter({ hasText: "QA Sales Lead" }).waitFor();
+    await page.locator(".hr-person-row").filter({ hasText: leadName }).click();
+    await page.locator(".hr-profile-head").filter({ hasText: leadName }).waitFor();
     await page.locator(".hr-profile-delete").click();
     const deleteModal = page.locator('[role="dialog"]');
     await deleteModal.locator('.hr-delete-reassignment select').selectOption(
-      employees.find(employee => employee.name === 'QA Director').id);
+      employees.find(employee => employee.name === directorName).id);
     await deleteModal.locator(".danger-outline").click();
     await deleteModal.waitFor({ state: "hidden" });
     const deletedState = await readState(page);
-    assert(!deletedState.employees.some((employee) => employee.name === "QA Sales Lead"), "Employee delete did not remove the employee");
+    assert(!deletedState.employees.some((employee) => employee.name === leadName), "Employee delete did not remove the employee");
     assert(
-      deletedState.employees.find((employee) => employee.name === "QA B2B Specialist")?.managerName === "QA Director",
+      deletedState.employees.find((employee) => employee.name === specialistName)?.managerName === directorName,
       "Employee delete did not reassign direct reports",
     );
     assert(
@@ -1388,10 +1374,10 @@ async function auditHrStructure(browser) {
 
     const hrTabs = page.locator(".hr-platform-toolbar .tabs button");
     await hrTabs.nth(3).click();
-    await page.locator(".hr-platform-section tbody tr").filter({ hasText: "QA B2B Specialist" }).locator(".hr-payroll-actions .text-btn").click();
+    await page.locator(".hr-platform-section tbody tr").filter({ hasText: specialistName }).locator(".hr-payroll-actions .text-btn").click();
     await page.waitForTimeout(100);
     const payrollState = await readState(page);
-    const payrollEmployee = payrollState.employees.find((employee) => employee.name === "QA B2B Specialist");
+    const payrollEmployee = payrollState.employees.find((employee) => employee.name === specialistName);
     assert(
       payrollEmployee?.payrollStatus === "Ödənildi" && payrollEmployee?.payrollPaidAt,
       "Payroll paid status did not persist on employee record",
@@ -1425,7 +1411,7 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-operation-toolbar .secondary-btn").click();
     const vacancyModal = page.locator('[role="dialog"]');
     await vacancyModal.locator("input").nth(0).fill("QA Recruitment Role");
-    await vacancyModal.locator("input").nth(1).fill("QA New Department");
+    await vacancyModal.locator("input").nth(1).fill(departmentName);
     await vacancyModal.locator('button[type="submit"]').click();
     await vacancyModal.waitFor({ state: "hidden" });
     const vacancyState = await readState(page);
@@ -1444,7 +1430,7 @@ async function auditHrStructure(browser) {
     const payrollExpense = integrityState.expenses?.find((expense) => expense.source === "HR Payroll");
     assert(payrollExpense?.cashImpact === false, "HR payroll expense should not affect real cash balance");
     assert(errors.length === 0, `HR structure produced browser errors: ${errors.join(" | ")}`);
-    return { employees: employees.length, selectedEmployee: "QA B2B Specialist", updatedSalary: updatedEmployee.salary, department: "QA New Department" };
+    return { employees: employees.length, selectedEmployee: specialistName, updatedSalary: updatedEmployee.salary, department: departmentName };
   } finally {
     await context.close();
   }

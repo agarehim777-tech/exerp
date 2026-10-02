@@ -54,12 +54,14 @@ export async function createAuditBackend(env, fetcher = fetch) {
     session,
     async readState() {
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
-        balances, accounts, cash, expenses, vendors, invoices, bonuses, audit] = await Promise.all([
+        balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines] = await Promise.all([
         read('tenant_state_snapshots'), read('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
         read('customers'), read('products'), read('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*)', '&status=neq.cancelled'),
         read('credit_contracts'), read('credit_installments'), read('credit_payments'), read('warehouses'), read('stock_balances'),
         request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }),
+        read('cash_accounts'),
         read('cash_transactions'), read('expenses'), read('vendors'), read('sales_invoices'), read('order_bonus_assignments'), read('audit_events'),
+        read('purchase_orders'), read('purchase_order_lines'),
       ]);
       const state = { ...(snapshots[0]?.state ?? {}) };
       for (const name of ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts']) {
@@ -99,7 +101,9 @@ export async function createAuditBackend(env, fetcher = fetch) {
         schedule: installments.filter((i) => i.credit_id === credit.id) }));
       state.contracts.push(...credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status,
         fin: dbCustomerToLegacy(customerById.get(c.customer_id))?.fin ?? '' })));
-      state.financeAccounts = (accounts.accounts ?? []).map((a) => ({ ...a, openingBalance: Number(a.opening_balance), currentBalance: Number(a.balance) }));
+      const accountById = new Map(accountMetadata.map(a => [a.id, a]));
+      state.financeAccounts = (accounts.accounts ?? []).map(a => ({ ...accountById.get(a.id), ...a,
+        openingBalance: Number(accountById.get(a.id)?.opening_balance), currentBalance: Number(a.balance) }));
       state.cashEntries = cash.map((tx) => ({ ...tx, amount: Number(tx.amount), date: tx.occurred_at?.slice(0, 10),
         principal: Number(payments.find(p => p.id === tx.reference_id)?.principal_amount || 0),
         penalty: Number(payments.find(p => p.id === tx.reference_id)?.penalty_amount || 0),
@@ -107,6 +111,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
         creditId: credits.find((c) => c.id === tx.reference_id)?.id ?? payments.find((p) => p.id === tx.reference_id)?.credit_id ?? null }));
       state.expenses = expenses.map((e) => ({ ...e, amount: Number(e.amount), date: e.expense_date }));
       state.vendors = vendors; state.invoices = invoices;
+      state.purchaseOrders = purchaseOrders;
+      state.purchaseOrderLines = purchaseOrderLines;
       state.auditLog = [...(state.auditLog ?? []), ...audit];
       return state;
     },

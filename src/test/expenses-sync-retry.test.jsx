@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useExpensesSync } from '../shared/hooks/useExpensesSync';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), resync: vi.fn() }));
+vi.mock('../shared/hooks/useRealtimeResync', () => ({ useRealtimeResync: mocks.resync }));
 vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
   const query = { select: () => query, eq: () => query, order: () => query, range: mocks.load, upsert: mocks.save };
   return query;
@@ -10,6 +11,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
 beforeEach(() => {
   mocks.load.mockReset().mockResolvedValue({ data: [], error: null });
   mocks.save.mockReset();
+  mocks.resync.mockClear();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -28,7 +30,7 @@ it('retains failed writes for retry without resetting currency or VAT', async ()
   mocks.save.mockResolvedValueOnce({ error: new Error('offline') }).mockResolvedValue({ error: null });
   const { result } = renderHook(() => {
     const [state, setState] = useState({ expenses: [] });
-    const sync = useExpensesSync({ tenantId: 'A', ready: true, expenses: state.expenses, setState });
+    const sync = useExpensesSync({ tenantId: 'A', ready: true, expenses: state.expenses, setState, allowLegacyWrites: true });
     return { state, setState, sync };
   });
   await waitFor(() => expect(result.current.sync.phase).toBe('saved'));
@@ -57,4 +59,26 @@ it('ignores a late expense load after switching tenants', async () => {
   await waitFor(() => expect(result.current.sync.phase).toBe('saved'));
   await act(async () => finish({ data: [{ id: 'old-a', amount: 10 }], error: null }));
   expect(result.current.state.expenses).toEqual([]);
+});
+
+it('does not write client-generated payroll and refreshes only from the server by default', async () => {
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ expenses: [] });
+    const sync = useExpensesSync({ tenantId: 'A', ready: true, expenses: state.expenses, setState });
+    return { state, setState, sync };
+  });
+  await waitFor(() => expect(result.current.sync.phase).toBe('saved'));
+  vi.useFakeTimers();
+  act(() => result.current.setState({ expenses: [{ id: 'PAY-legacy', amount: 1500, status: 'Təsdiq gözləyir' }] }));
+  await act(async () => vi.advanceTimersByTimeAsync(450));
+  expect(mocks.save).not.toHaveBeenCalled();
+  mocks.load.mockResolvedValueOnce({ data: [{ id: 'server-id', expense_no: 'EXP-server', amount: 20,
+    currency: 'USD', vat_amount: 3, status: 'paid' }], error: null });
+  const [tenant, tables, refresh] = mocks.resync.mock.calls.at(-1);
+  expect(tenant).toBe('A');
+  expect(tables).toEqual(['expenses']);
+  await act(async () => refresh());
+  expect(result.current.state.expenses).toHaveLength(1);
+  expect(result.current.state.expenses[0]).toMatchObject({ id: 'EXP-server', amount: 20, currency: 'USD', vat_amount: 3, status: 'paid' });
+  expect(mocks.save).not.toHaveBeenCalled();
 });

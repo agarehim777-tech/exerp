@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTenantRequestScope } from "./useTenantRequestScope";
+import { useRealtimeResync } from "./useRealtimeResync";
 import { supabase } from "../../integrations/supabase/client";
 
 const SELECT_COLUMNS =
@@ -40,7 +41,7 @@ function signature(expense) {
   return JSON.stringify(appExpenseToRow(expense, "-"));
 }
 
-export function useExpensesSync({ tenantId, ready, expenses, setState, onError }) {
+export function useExpensesSync({ tenantId, ready, expenses, setState, onError, allowLegacyWrites = false }) {
   const { scope } = useTenantRequestScope(tenantId);
   const latest = useRef(expenses);
   latest.current = expenses;
@@ -78,6 +79,7 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError }
   }, [tenantId, setState]);
 
   const flush = useCallback(async () => {
+    if (!allowLegacyWrites) return;
     const session = sessionRef.current;
     if (!session?.alive || session.scope !== scope || !session.hydrated || session.busy) return;
     session.busy = true;
@@ -109,7 +111,7 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError }
         errorHandler.current?.(error);
       }
     } finally { session.busy = false; }
-  }, [scope, tenantId]);
+  }, [scope, tenantId, allowLegacyWrites]);
 
   useEffect(() => {
     const session = { scope, alive: true, hydrated: false, busy: false, baseline: new Map() };
@@ -119,21 +121,30 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError }
   }, [tenantId, ready, scope, hydrate]);
 
   useEffect(() => {
-    if (!ready || !sessionRef.current?.hydrated) return;
+    if (!allowLegacyWrites || !ready || !sessionRef.current?.hydrated) return;
     const timer = setTimeout(flush, 400);
     return () => clearTimeout(timer);
-  }, [expenses, ready, flush]);
+  }, [expenses, ready, flush, allowLegacyWrites]);
 
   const retry = useCallback(() => {
     const session = sessionRef.current;
     if (!ready || !tenantId || session?.scope !== scope) return;
-    return session.hydrated ? flush() : hydrate(session);
-  }, [ready, tenantId, scope, flush, hydrate]);
+    return allowLegacyWrites && session.hydrated ? flush() : hydrate(session);
+  }, [ready, tenantId, scope, flush, hydrate, allowLegacyWrites]);
+
+  const refresh = useCallback(() => {
+    const session = sessionRef.current;
+    if (!ready || !tenantId || session?.scope !== scope) return;
+    return hydrate(session);
+  }, [ready, tenantId, scope, hydrate]);
+
+  useRealtimeResync(ready && !allowLegacyWrites ? tenantId : null, ['expenses'], refresh,
+    { channelPrefix: 'expense-read' });
 
   useEffect(() => {
     window.addEventListener("online", retry);
     return () => window.removeEventListener("online", retry);
   }, [retry]);
 
-  return { ...status, retry, refresh: retry };
+  return { ...status, retry, refresh };
 }

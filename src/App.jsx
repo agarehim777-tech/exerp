@@ -319,6 +319,7 @@ function App() {
 
   const expenseSync = useExpensesSync({
     tenantId: activeTenantId,
+    allowLegacyWrites: ENABLE_LEGACY_WRITES,
     ready: tenantStateReady,
     expenses: state.expenses,
     setState,
@@ -454,6 +455,9 @@ function App() {
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
+  useEffect(() => {
+    if (modal?.type === 'sales' && activeTenantId) dbInventory.refresh();
+  }, [modal?.type, activeTenantId, dbInventory.refresh]);
   const [toasts, setToasts] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState("");
   const [selectedCreditId, setSelectedCreditId] = useState("");
@@ -961,7 +965,7 @@ function App() {
   }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name]);
 
   useEffect(() => {
-    if (state.employees.length === 0) return;
+    if (!ENABLE_LEGACY_WRITES || state.employees.length === 0) return;
 
     setState((current) => {
       const payrollExpense = buildPayrollExpense(current.employees);
