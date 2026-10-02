@@ -29,6 +29,7 @@ test("@lifecycle expense → approval → acceptance → cancellation restores c
 
     await call("patch", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}`, { status: "approved" }, { Prefer: "return=minimal" });
     await call("post", "rpc/accept_expense", { _tenant_id: tenantId, _expense_id: expenseId });
+    await call("post", "rpc/accept_expense", { _tenant_id: tenantId, _expense_id: expenseId });
     let loaded = await call("get", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}&select=id,status`);
     expect(loaded[0].status).toBe("paid");
 
@@ -36,6 +37,7 @@ test("@lifecycle expense → approval → acceptance → cancellation restores c
     expect(acceptedLedger).toHaveLength(1);
     expect(acceptedLedger[0].direction).toBe("out");
 
+    await call("post", "rpc/cancel_expense", { _tenant_id: tenantId, _expense_id: expenseId, _reason: "CI lifecycle cleanup" });
     await call("post", "rpc/cancel_expense", { _tenant_id: tenantId, _expense_id: expenseId, _reason: "CI lifecycle cleanup" });
     loaded = await call("get", `expenses?id=eq.${expenseId}&tenant_id=eq.${tenantId}&select=id,status`);
     expect(loaded[0].status).toBe("cancelled");

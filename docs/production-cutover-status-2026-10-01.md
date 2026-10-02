@@ -1,5 +1,13 @@
 # Production Cutover Status
 
+## October 2 Follow-Up
+
+- CI `36874846338` passed 255 unit tests, release checks, and all 28 browser/tenant tests; expense lifecycle failed because recovery had not restored `accept_expense`/`cancel_expense`. Later lifecycle and 21-flow audit steps were skipped, not passed.
+- Migration `20261002052217` restores guarded, row-locked expense acceptance/cancellation. Acceptance reuses the existing ledger entry; repeated acceptance/cancellation cannot duplicate postings. Duplicate legacy postings fail explicitly for reconciliation. No missing account is silently created.
+- Authenticated rollback checks passed on staging and production: repeated acceptance creates one outgoing entry, repeated cancellation creates one reversal, and opening 500 is restored after expense 75. No test business records persisted.
+- Migration `20261001141748` restores reconciliation report storage, tenant-guarded detection, and admin-only repair of already-cancelled orders. Detection uses exact document or structural links, never description substring matching. Both databases returned zero critical issues without business mutations.
+- This does not configure a daily scheduler or complete the 21 legacy UI scenarios. Application deployment remains gated on CI evidence.
+
 Production project: `tcqdhwtnjrwpfdxoijmv`. Staging: `cvjctwgdyzhijhzhhjqd`.
 
 ## Verified

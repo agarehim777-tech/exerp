@@ -13,3 +13,7 @@ work/
 .tmp-period-*.json
 .env.local
 .env.production
+.supabase/
+supabase/.temp/
+test-results/
+playwright-report/
