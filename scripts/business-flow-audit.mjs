@@ -308,6 +308,7 @@ async function auditCreditSale(browser) {
     const csv = await readFile(await download.path(), 'utf8');
     assert(csv.includes(sale.order.orderNo) && csv.includes(sale.contract.id), 'Sales export lost the order/contract link');
     await selectModule(page, 9);
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
     await page.locator('main.main tr').filter({ hasText: sale.contract.id }).waitFor();
     assert(sale.credit.orderId === sale.order.id && sale.contract.creditId === sale.credit.id, 'Credit registry contract lost its structural order link');
     assert(errors.length === 0, `Credit sale produced browser errors: ${errors.join(" | ")}`);
@@ -341,9 +342,9 @@ async function auditSalesAndExpenseMutations(browser) {
     const reversal = page.getByRole('dialog', { name: 'Satışın ləğv təsiri', exact: true });
     await reversal.getByRole('button', { name: 'Satışı ləğv et', exact: true }).click();
     state = await waitForState(s => !s.orders.some(o => o.id === sale.order.id)
-      && s.credits.find(c => c.id === sale.credit.id)?.status === 'closed', 'Sales cancellation did not close linked credit');
+      && s.credits.find(c => c.id === sale.credit.id)?.status === 'cancelled', 'Sales cancellation did not cancel linked credit');
     assert(!state.orders.some((item) => item.id === sale.order.id), "Sales delete did not remove order");
-    assert(state.credits.find(item => item.id === sale.credit.id)?.status === 'closed', 'Sales cancellation lost closed credit history');
+    assert(state.credits.find(item => item.id === sale.credit.id)?.status === 'cancelled', 'Sales cancellation lost cancelled credit history');
     assert(stockReserved(state, sale.warehouse.id, sale.line.product) === originalReserved, "Sales delete did not release reservation");
 
     await selectModule(page, 5);
@@ -400,6 +401,7 @@ async function auditCreditPayment(browser) {
   try {
     const sale = await createCreditSale(page);
     await selectModule(page, 9);
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
     const creditRow = page.locator('.credit-directory-panel tr').filter({ hasText: sale.contract.id });
     await creditRow.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
     const startModal = page.getByRole('dialog', { name: 'Krediti başlat', exact: true });
@@ -429,7 +431,11 @@ async function auditCreditPayment(browser) {
     await page.locator('[data-testid="credit-order-link"]').click();
     await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
     await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).waitFor();
+    const orderCard = page.getByRole('dialog', { name: 'Sifariş kartı', exact: true });
+    await orderCard.getByRole('button', { name: 'Sifariş kartını bağla', exact: true }).click();
+    await orderCard.waitFor({ state: 'hidden' });
     await selectModule(page, 9);
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
     await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
     const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
@@ -497,6 +503,7 @@ async function auditSeparateCreditContracts(browser) {
       "Separate credit contracts did not keep independent warehouse reservations",
     );
     await selectModule(page, 9);
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(fin);
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: firstSale.contract.id }).waitFor();
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: secondSale.contract.id }).waitFor();
     await selectModule(page, 1);

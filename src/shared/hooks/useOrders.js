@@ -3,10 +3,9 @@ import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
+import { ensureMainCashAccount } from '../../services/cashAccounts';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
-
-const mainCashCode = tenantId => `MAIN-${String(tenantId || '').slice(0, 8).toUpperCase()}`;
 
 function isMissingRpc(error) {
   return error?.code === 'PGRST202'
@@ -166,37 +165,7 @@ export function useOrders(tenantId) {
   useRealtimeResync(tenantId, ['orders', 'order_items'], fetchAll, { channelPrefix: 'orders' });
 
   const resolveMainCashAccount = async (currency = 'AZN') => {
-    const code = mainCashCode(tenantId);
-    let { data: account, error: accountError } = await supabase.from('cash_accounts')
-      .select('id').eq('tenant_id', tenantId).eq('account_no', code).eq('is_active', true)
-      .limit(1).maybeSingle();
-    if (accountError) throw accountError;
-    if (!account) {
-      const byName = await supabase.from('cash_accounts')
-        .select('id').eq('tenant_id', tenantId).ilike('name', 'Əsas kassa')
-        .eq('is_active', true).order('created_at', { ascending: true }).limit(1).maybeSingle();
-      if (byName.error) throw byName.error;
-      account = byName.data;
-    }
-    if (!account) {
-      const { data: inactiveAccount, error: inactiveError } = await supabase.from('cash_accounts')
-        .select('id').eq('tenant_id', tenantId).eq('account_no', code).maybeSingle();
-      if (inactiveError) throw inactiveError;
-      if (inactiveAccount) {
-        const { data: reactivated, error: reactivateError } = await supabase.from('cash_accounts')
-          .update({ is_active: true, name: 'Əsas kassa', type: 'cash', currency })
-          .eq('id', inactiveAccount.id).eq('tenant_id', tenantId).select('id').single();
-        if (reactivateError) throw reactivateError;
-        account = reactivated;
-      } else {
-        const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
-          tenant_id: tenantId, code, account_no: code, name: 'Əsas kassa', type: 'cash', currency, opening_balance: 0, is_active: true,
-        }).select('id').single();
-        if (createAccountError) throw createAccountError;
-        account = createdAccount;
-      }
-    }
-    return account;
+    return ensureMainCashAccount(tenantId, currency);
   };
 
   const registerInitialPayment = async (orderId, amount, currency = 'AZN') => {

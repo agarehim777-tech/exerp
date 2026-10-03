@@ -12,6 +12,8 @@ export function mainCashCode(tenantId) {
  */
 export async function ensureMainCashAccount(tenantId, currency = "AZN") {
   if (!tenantId) throw new Error("tenantId tələb olunur");
+  currency = String(currency || 'AZN').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error('Valyuta kodu düzgün deyil.');
   const code = mainCashCode(tenantId);
 
   const { data: byCode, error: byCodeError } = await supabase
@@ -19,6 +21,7 @@ export async function ensureMainCashAccount(tenantId, currency = "AZN") {
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("account_no", code)
+    .eq("currency", currency)
     .eq("is_active", true)
     .limit(1)
     .maybeSingle();
@@ -30,6 +33,7 @@ export async function ensureMainCashAccount(tenantId, currency = "AZN") {
     .select("id")
     .eq("tenant_id", tenantId)
     .ilike("name", MAIN_CASH_NAME)
+    .eq("currency", currency)
     .eq("is_active", true)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -42,6 +46,7 @@ export async function ensureMainCashAccount(tenantId, currency = "AZN") {
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("account_no", code)
+    .eq("currency", currency)
     .maybeSingle();
   if (inactiveError) throw inactiveError;
   if (inactive) {
@@ -60,6 +65,7 @@ export async function ensureMainCashAccount(tenantId, currency = "AZN") {
     .from("cash_accounts")
     .insert({
       tenant_id: tenantId,
+      code: `${code}-${currency}`,
       account_no: code,
       name: MAIN_CASH_NAME,
       type: "cash",
@@ -69,6 +75,13 @@ export async function ensureMainCashAccount(tenantId, currency = "AZN") {
     })
     .select("id")
     .single();
+  if (createError?.code === '23505') {
+    const retry = await supabase.from('cash_accounts').select('id')
+      .eq('tenant_id', tenantId).eq('account_no', code).eq('currency', currency)
+      .eq('is_active', true).limit(1).maybeSingle();
+    if (retry.error) throw retry.error;
+    if (retry.data) return retry.data;
+  }
   if (createError) throw createError;
   return created;
 }

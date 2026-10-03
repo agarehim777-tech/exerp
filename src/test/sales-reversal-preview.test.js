@@ -23,7 +23,7 @@ it('previews linked cash, deposits and stock without changing ledger rows', asyn
       CREATE TABLE stock_reservations(tenant_id uuid,order_id uuid,status text);
       CREATE TABLE deliveries(id uuid,tenant_id uuid,order_id uuid);
       CREATE TABLE stock_movements(id uuid,tenant_id uuid,quantity numeric,movement_type text,reference_type text,reference_id uuid,reversal_of uuid);
-      CREATE TABLE cash_transactions(id uuid DEFAULT gen_random_uuid(),tenant_id uuid,direction text,amount numeric,reference_id uuid,reference text,reversal_of uuid);
+      CREATE TABLE cash_transactions(id uuid DEFAULT gen_random_uuid(),tenant_id uuid,direction text,amount numeric,reference_id uuid,reference text,reversal_of uuid,category text DEFAULT 'sales_payment');
       INSERT INTO orders VALUES('${order}','${tenant}','SF-TEST','delivered'),('${other}','${other}','FOREIGN','confirmed');
       INSERT INTO credit_contracts VALUES('${credit}','${tenant}','${order}','active');
       INSERT INTO credit_payments VALUES('${payment}','${credit}');
@@ -35,10 +35,13 @@ it('previews linked cash, deposits and stock without changing ledger rows', asyn
         ('${tenant}','in',67,'${payment}',NULL),('${tenant}','in',50,NULL,'SF-TEST'),
         ('${other}','in',999,'${order}',NULL);`);
     await db.exec(await readFile(new URL('../../supabase/migrations/20261003053836_restore_sales_reversal_preview.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../../supabase/migrations/20261003060700_align_reversal_preview_cash_scope.sql', import.meta.url), 'utf8'));
+    await db.exec(`INSERT INTO cash_transactions(tenant_id,direction,amount,reference_id,category) VALUES
+      ('${tenant}','in',777,'${order}','manual_income'),('${tenant}','out',888,'${order}','sales_payment');`);
     const preview = async () => (await db.query('SELECT public.preview_sales_order_reversal($1) result', [order])).rows[0].result;
     expect(await preview()).toMatchObject({ order_no: 'SF-TEST', credit_count: 1, payment_amount: 417,
       reservation_count: 1, stock_return_count: 1, will_reverse_cash: true, will_restore_stock: true });
-    expect((await db.query('SELECT count(*)::int n FROM cash_transactions')).rows[0].n).toBe(5);
+    expect((await db.query('SELECT count(*)::int n FROM cash_transactions')).rows[0].n).toBe(7);
     await db.exec(`INSERT INTO cash_transactions(tenant_id,direction,amount,reversal_of)
       SELECT tenant_id,'out',amount,id FROM cash_transactions WHERE amount=200;
       INSERT INTO stock_movements VALUES('${other}','${tenant}',2,'receipt','sales_return','${order}','${movement}');
@@ -58,5 +61,5 @@ it('qualifies the expense account FK and creates canonical main-account codes', 
   const cashbook = await readFile(new URL('../shared/hooks/useCashbook.js', import.meta.url), 'utf8');
   const orders = await readFile(new URL('../shared/hooks/useOrders.js', import.meta.url), 'utf8');
   expect(cashbook).toContain('account:cash_accounts!expenses_account_id_fkey(id,name)');
-  expect(orders).toContain('tenant_id: tenantId, code, account_no: code');
+  expect(orders).toContain('return ensureMainCashAccount(tenantId, currency)');
 });
