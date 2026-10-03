@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
 import { appAlert } from '../../shared/ui/dialogService.js';
+import { createIdempotencyKey } from '../../services/coreOperations.js';
+
+const priceEditOnly = import.meta.env.VITE_ENABLE_LEGACY_WRITES !== 'true';
 
 const SALES_STATUS = {
   draft: { label: 'Təsdiqləndi' },
@@ -23,6 +26,8 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
     customer_id: order.customer_id || order.customer?.id || '',
     order_date: order.order_date || new Date().toISOString().slice(0, 10),
     currency: order.currency || 'AZN',
+    expected_updated_at: order.updated_at,
+    request_key: createIdempotencyKey(`sales-edit:${order.id}`),
     notes: parsedOrderNotes.general,
     internalNotes: parsedOrderNotes.internalNotes,
     items: (order.items || []).sort((a, b) => (a.line_no || 0) - (b.line_no || 0)).map(item => ({ ...item })),
@@ -101,7 +106,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
             {editing ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
               <select value={draft.customer_id} onChange={e => setDraft(current => ({ ...current, customer_id: e.target.value }))} style={inputStyle}><option value="">Müştəri seçin</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select>
               <input type="date" value={draft.order_date} onChange={e => setDraft(current => ({ ...current, order_date: e.target.value }))} style={inputStyle} />
-              <select value={draft.currency} onChange={e => setDraft(current => ({ ...current, currency: e.target.value }))} style={inputStyle}><option>AZN</option><option>USD</option><option>EUR</option></select>
+              <select value={draft.currency} disabled={priceEditOnly} onChange={e => setDraft(current => ({ ...current, currency: e.target.value }))} style={inputStyle}><option>AZN</option><option>USD</option><option>EUR</option></select>
             </div> : <><div style={{ fontWeight: 600 }}>{order.customer?.name || '—'}</div><div style={{ fontSize: 12, color: '#64748b' }}>Tarix: {new Date(order.order_date || order.created_at).toLocaleDateString('az-AZ')}</div></>}
           </Section>
 
@@ -127,14 +132,14 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                 const net = Number(it.qty || 0) * Number(it.unit_price || 0);
                 const lineTotal = net * (1 + Number(it.vat_rate || 0) / 100);
                 return <div key={it.id || `draft-${index}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, alignItems: 'end', padding: 12, background: '#fff', border: '1px solid #dbe4e1', borderRadius: 10 }}>
-                  <EditField label="Məhsul"><select value={it.product_id || ''} onChange={e => { const product = products.find(row => row.id === e.target.value); setDraft(current => ({ ...current, items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, product_id: e.target.value, description: product?.name || item.description, unit_price: product?.price ?? item.unit_price } : item) })); }} style={inputStyle}><option value="">Məhsul seçin</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></EditField>
-                  <EditField label="Miqdar"><input type="number" min="0.01" step="0.01" value={it.qty} onChange={e => changeItem(index, 'qty', e.target.value)} style={inputStyle} /></EditField>
+                  <EditField label="Məhsul"><select value={it.product_id || ''} disabled={priceEditOnly} onChange={e => { const product = products.find(row => row.id === e.target.value); setDraft(current => ({ ...current, items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, product_id: e.target.value, description: product?.name || item.description, unit_price: product?.price ?? item.unit_price } : item) })); }} style={inputStyle}><option value="">Məhsul seçin</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></EditField>
+                  <EditField label="Miqdar"><input type="number" min="0.01" step="0.01" value={it.qty} readOnly={priceEditOnly} onChange={e => changeItem(index, 'qty', e.target.value)} style={inputStyle} /></EditField>
                   <EditField label="Qiymət"><input type="number" min="0" step="0.01" value={it.unit_price} onChange={e => changeItem(index, 'unit_price', e.target.value)} style={inputStyle} /></EditField>
                   <EditField label="ƏDV"><select value={Number(it.vat_rate || 0)} onChange={e => changeItem(index, 'vat_rate', Number(e.target.value))} style={inputStyle}><option value="0">ƏDV yoxdur</option><option value="18">18% ƏDV</option></select></EditField>
-                  <div style={{ minWidth: 78, textAlign: 'right' }}><small style={{ display: 'block', color: '#64748b', marginBottom: 8 }}>{lineTotal.toFixed(2)} ₼</small><button onClick={() => removeItem(index)} style={{ border: '1px solid #fecaca', borderRadius: 7, padding: '7px 10px', background: '#fff', color: '#dc2626', cursor: 'pointer' }}>Sil</button></div>
+                  <div style={{ minWidth: 78, textAlign: 'right' }}><small style={{ display: 'block', color: '#64748b', marginBottom: 8 }}>{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <button onClick={() => removeItem(index)} style={{ border: '1px solid #fecaca', borderRadius: 7, padding: '7px 10px', background: '#fff', color: '#dc2626', cursor: 'pointer' }}>Sil</button>}</div>
                 </div>;
               })}
-              <button type="button" onClick={addItem} style={{ border: '1px dashed #0b7a5c', color: '#0b7a5c', background: '#fff', padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>+ Məhsul əlavə et</button>
+              {!priceEditOnly && <button type="button" onClick={addItem} style={{ border: '1px dashed #0b7a5c', color: '#0b7a5c', background: '#fff', padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>+ Məhsul əlavə et</button>}
             </div> : <Totals order={order} />}
           </Section>
 

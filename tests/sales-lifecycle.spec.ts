@@ -13,7 +13,7 @@ test("@lifecycle sales order → payment → cancellation stays cancelled after 
     const customers = await call("get", `customers?tenant_id=eq.${tenantId}&select=id&limit=1`);
     expect(customers?.[0]?.id, "Lifecycle tenant needs at least one customer").toBeTruthy();
 
-    const created = await call("post", "rpc/create_sales_order_complete", {
+    const command = {
       _tenant_id: tenantId,
       _request_key: `${marker}:create`,
       _order_no: marker,
@@ -23,12 +23,19 @@ test("@lifecycle sales order → payment → cancellation stays cancelled after 
       _notes: "CI lifecycle test",
       _items: [{ line_no: 1, description: "CI lifecycle item", qty: 1, unit_price: 100, discount_pct: 0, vat_rate: 0 }],
       _credit: null,
-      _bonus_allocations: [],
+      _bonus_allocations: [{ seller_name: `${marker} seller`, rate: 0 }],
       _initial_payment: 25,
       _account_id: null,
-    });
+    };
+    const created = await call("post", "rpc/create_sales_order_complete", command);
     orderId = created.order_id;
     expect(orderId).toBeTruthy();
+    expect(await call("post", "rpc/create_sales_order_complete", command)).toEqual(created);
+    const allocations = await call("get", `order_bonus_assignments?tenant_id=eq.${tenantId}&order_id=eq.${orderId}&select=seller_name,rate,position`);
+    expect(allocations).toHaveLength(1);
+    expect(allocations[0].seller_name).toBe(`${marker} seller`);
+    expect(Number(allocations[0].rate)).toBe(0);
+    expect(allocations[0].position).toBe(1);
 
     const paid = await call("get", `orders?id=eq.${orderId}&tenant_id=eq.${tenantId}&select=id,status,paid_amount,payment_status`);
     expect(Number(paid[0].paid_amount)).toBe(25);

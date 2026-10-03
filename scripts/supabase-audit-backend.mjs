@@ -56,7 +56,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
         balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines] = await Promise.all([
         read('tenant_state_snapshots'), read('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
-        read('customers'), read('products'), read('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*)', '&status=neq.cancelled'),
+        read('customers'), read('products'), read('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         read('credit_contracts'), read('credit_installments'), read('credit_payments'), read('warehouses'), read('stock_balances'),
         request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }),
         read('cash_accounts'),
@@ -99,8 +99,10 @@ export async function createAuditBackend(env, fetcher = fetch) {
             amount: Math.max(0, Number(i.principal_due) - Number(i.principal_paid)) })),
         paidMonths: installments.filter(i => i.credit_id === credit.id && Number(i.principal_due) <= Number(i.principal_paid)).length,
         schedule: installments.filter((i) => i.credit_id === credit.id) }));
-      state.contracts.push(...credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status,
-        fin: dbCustomerToLegacy(customerById.get(c.customer_id))?.fin ?? '' })));
+      const canonicalContracts = credits.map((c) => ({ id: c.contract_no, orderId: c.order_id, creditId: c.id, status: c.status,
+        fin: dbCustomerToLegacy(customerById.get(c.customer_id))?.fin ?? '' }));
+      const canonicalContractIds = new Set(canonicalContracts.map(c => c.id));
+      state.contracts = [...canonicalContracts, ...state.contracts.filter(c => !canonicalContractIds.has(c.id))];
       const accountById = new Map(accountMetadata.map(a => [a.id, a]));
       state.financeAccounts = (accounts.accounts ?? []).map(a => ({ ...accountById.get(a.id), ...a,
         openingBalance: Number(accountById.get(a.id)?.opening_balance), currentBalance: Number(a.balance) }));

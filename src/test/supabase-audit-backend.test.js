@@ -60,6 +60,9 @@ it('reads actual deposit and unreversed principal without subtracting penalties 
     if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
     if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
     if (path.endsWith('/customers')) return response([{ id: 'customer', name: 'QA', tax_id: 'Q123456' }]);
+    if (path.endsWith('/tenant_collection_records')) return response([{collection:'contracts',record_key:'obsolete',data:{id:'IN-QA',orderId:'old-order'}}]);
+    if (path.endsWith('/orders')) return response([{id:'order',customer_id:'customer',total:1200,items:[],
+      reservations:[{warehouse_id:'warehouse',status:'active'}]}]);
     if (path.endsWith('/credit_contracts')) return response([{ id: 'credit', customer_id: 'customer', principal: 1200,
       initial_payment: 200, required_initial: 200, contract_no: 'IN-QA', order_id: 'order' }]);
     if (path.endsWith('/credit_payments')) return response([
@@ -71,4 +74,6 @@ it('reads actual deposit and unreversed principal without subtracting penalties 
   const state = await backend.readState();
   expect(state.credits[0]).toMatchObject({ balance: 900, initialPaid: 200, fin: 'Q123456', contractId: 'IN-QA' });
   expect(state.contracts[0]).toMatchObject({ fin: 'Q123456', creditId: 'credit', orderId: 'order' });
+  expect(state.contracts).toHaveLength(1);
+  expect(state.orders[0]).toMatchObject({warehouseId:'warehouse',contractId:'IN-QA',creditId:'credit'});
 });

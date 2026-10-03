@@ -83,6 +83,7 @@ export function dbOrderToLegacy(o) {
     ? storedRequiredInitial || Math.max(paidInitial, Math.round(Number(credit.principal || amount) * 0.1))
     : 0;
   const delivery = Array.isArray(o.delivery) ? o.delivery[0] : o.delivery;
+  const reservation = o.reservations?.find(row => row.status === 'active');
   let acceptanceNote = delivery?.acceptance_note || "";
   let acceptanceMeta = {};
   try {
@@ -131,7 +132,7 @@ export function dbOrderToLegacy(o) {
     sellerBonuses,
     seller: sellerBonuses.map((row) => `${row.seller} ${row.bonus}%`).join(', ') || 'Təyin edilməyib',
     notes: o.notes || "",
-    warehouseId: delivery?.warehouse_id || o.warehouse_id || "",
+    warehouseId: delivery?.warehouse_id || reservation?.warehouse_id || o.warehouse_id || "",
     deliveredAt:
       delivery?.delivered_at ||
       delivery?.accepted_at ||

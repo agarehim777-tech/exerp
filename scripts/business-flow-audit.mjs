@@ -69,9 +69,9 @@ function collectErrors(page, errors) {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on('response', async response => {
     const path = new URL(response.url()).pathname;
-    if (response.ok() || !path.startsWith('/rest/v1/rpc/')) return;
+    if (response.ok() || !path.startsWith('/rest/v1/')) return;
     const detail = await response.text().catch(() => 'Response body unavailable');
-    errors.push(`RPC ${path.split('/').at(-1)}: ${response.status()} ${detail.slice(0,1200)}`);
+    errors.push(`Supabase ${path}: ${response.status()} ${detail.slice(0,1200)}`);
   });
 }
 
@@ -322,61 +322,66 @@ async function auditSalesAndExpenseMutations(browser) {
     const sale = await createCreditSale(page);
     const originalReserved = stockReserved(sale.before, sale.warehouse.id, sale.line.product);
 
-    await page.locator(".sales-order-card .operation-row-actions button").first().click();
-    let modal = page.locator('[role="dialog"]');
-    await modal.locator(".edit-order-total input").fill("1300");
-    await modal.locator(".credit-order-section input").fill("100");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    let state = await readState(page);
+    await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).click();
+    await page.getByRole('button', { name: 'Redaktə et', exact: true }).click();
+    await page.getByLabel('Qiymət', { exact: true }).fill('1300');
+    await page.getByRole('button', { name: 'Dəyişiklikləri yadda saxla', exact: true }).click();
+    let state = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.amount === 1300,
+      'Sales edit did not update order amount');
     let editedOrder = state.orders.find((item) => item.id === sale.order.id);
     let editedCredit = state.credits.find((item) => item.id === editedOrder?.creditId);
     assert(editedOrder?.amount === 1300, "Sales edit did not update order amount");
-    assert(editedOrder?.initialPayment === 100, "Sales edit did not update initial payment");
     assert(editedCredit?.total === 1300, "Sales edit did not sync credit total");
-    assert(editedCredit?.initialPayment === 100, "Sales edit did not sync credit initial payment");
-
-    await page.locator(".sales-order-card .operation-row-actions .danger-outline").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator(".danger-outline").click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
+    assert(editedCredit?.initialPayment === sale.credit.initialPayment && editedCredit?.initialPaid === sale.credit.initialPaid,
+      'Editing a sale silently changed its deposit target or collected deposit');
+    await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).click();
+    await page.getByRole('button', { name: 'Ləğv et', exact: true }).click();
+    const reversal = page.getByRole('dialog', { name: 'Satışın ləğv təsiri', exact: true });
+    await reversal.getByRole('button', { name: 'Satışı ləğv et', exact: true }).click();
+    state = await waitForState(s => !s.orders.some(o => o.id === sale.order.id)
+      && s.credits.find(c => c.id === sale.credit.id)?.status === 'closed', 'Sales cancellation did not close linked credit');
     assert(!state.orders.some((item) => item.id === sale.order.id), "Sales delete did not remove order");
-    assert(!state.credits.some((item) => item.id === sale.credit.id), "Sales delete did not remove linked credit");
+    assert(state.credits.find(item => item.id === sale.credit.id)?.status === 'closed', 'Sales cancellation lost closed credit history');
     assert(stockReserved(state, sale.warehouse.id, sale.line.product) === originalReserved, "Sales delete did not release reservation");
 
     await selectModule(page, 5);
-    await page.locator(".page-header .primary-btn").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Expense");
-    await modal.locator("input").nth(1).fill("QA Ops");
-    await modal.locator("input").nth(3).fill("300");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    const expense = state.expenses.find((item) => item.description === "QA Expense");
+    const marker = `QA Expense ${crypto.randomUUID().slice(0, 8)}`;
+    await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
+    const accountForm = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
+    await accountForm.getByPlaceholder('Hesab adı', { exact: true }).fill(marker);
+    await accountForm.getByPlaceholder('Hesab №', { exact: true }).fill(marker);
+    await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('600');
+    await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
+    state = await waitForState(s => s.financeAccounts.some(a => a.name === marker), 'Expense cash account was not persisted');
+    const account = state.financeAccounts.find(a => a.name === marker);
+    await page.getByRole('button', { name: 'Xərclər', exact: true }).click();
+    await page.getByRole('button', { name: '+ Yeni xərc', exact: true }).click();
+    const createForm = page.locator('form').filter({ has: page.getByRole('button', { name: '+ Xərc', exact: true }) });
+    await createForm.locator('select').first().selectOption(account.id);
+    await createForm.getByPlaceholder('Təsvir', { exact: true }).fill(marker);
+    await createForm.getByPlaceholder('Məbləğ', { exact: true }).fill('300');
+    await createForm.getByRole('button', { name: '+ Xərc', exact: true }).click();
+    state = await waitForState(s => s.expenses.some(e => e.description === marker), 'Expense create did not persist');
+    const expense = state.expenses.find((item) => item.description === marker);
     assert(expense, "Expense create did not add finance expense");
 
-    const expenseRow = page.locator(".finance-expense-queue-panel tr", { hasText: "QA Expense" }).first();
-    await expenseRow.getByText("Redaktə").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator('input[type="number"]').fill("450");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
+    assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 300, 'Expense create did not debit cash');
+    const expenseRow = page.locator('main.main tr').filter({ hasText: marker });
+    await expenseRow.getByRole('button', { name: 'Redaktə et', exact: true }).click();
+    const editForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Dəyişiklikləri saxla', exact: true }) });
+    await editForm.getByPlaceholder('Məbləğ', { exact: true }).fill('450');
+    await editForm.getByRole('button', { name: 'Dəyişiklikləri saxla', exact: true }).click();
+    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.amount === 450, 'Expense edit did not persist');
     assert(state.expenses.find((item) => item.id === expense.id)?.amount === 450, "Expense edit did not update amount");
 
-    await page.locator(".finance-expense-queue-panel tr", { hasText: "QA Expense" }).first().getByText("Sil").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator(".danger-outline").click();
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    assert(!state.expenses.some((item) => item.id === expense.id), "Expense delete did not remove expense");
+    assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not update its cash debit');
+    await expenseRow.getByRole('button', { name: 'Ləğv et', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
+    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.status === 'cancelled', 'Expense cancellation did not persist');
+    assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not restore opening balance');
+    const ledger = state.cashEntries.filter(tx => tx.reference === `EXPENSE:${expense.id}` || tx.reference === `EXPENSE-REVERSAL:${expense.id}`);
+    assert(ledger.length === 2 && ledger.reduce((sum, tx) => sum + (tx.direction === 'in' ? tx.amount : -tx.amount), 0) === 0,
+      'Expense cancellation did not preserve a balanced debit/reversal pair');
     assert(errors.length === 0, `Mutation flow produced browser errors: ${errors.join(" | ")}`);
 
     return { editedOrder: sale.order.id, editedCredit: sale.credit.id, expense: expense.id };

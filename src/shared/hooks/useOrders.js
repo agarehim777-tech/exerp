@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
-import { createIdempotencyKey, createSalesOrderComplete, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
+import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
 
@@ -87,7 +87,7 @@ export function useOrders(tenantId) {
     setLoading(true);
     const { data, error } = await supabase
       .from('orders')
-      .select('*, customer:customers(id,name), items:order_items(*)')
+      .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,order_item_id,status)')
       .eq('tenant_id', tenantId)
       // Ləğv edilmiş satışlar siyahıya qayıtmamalıdır.
       .neq('status', 'cancelled')
@@ -116,7 +116,7 @@ export function useOrders(tenantId) {
             .order('position', { ascending: true })
             .order('created_at', { ascending: true }),
           supabase.from('deliveries')
-            .select('id,order_id,warehouse_id,status,recipient_name,recipient_document,delivered_at,delivered_by,acceptance_name,acceptance_document_no,acceptance_signature,accepted_at,acceptance_note,warehouse_employee_name')
+            .select('*')
             .eq('tenant_id', tenantId).in('order_id', orderIds),
         ]);
         if (!isCurrent()) return;
@@ -133,19 +133,10 @@ export function useOrders(tenantId) {
         }
         if (!deliveryResult.error) {
           deliveriesByOrder = new Map((deliveryResult.data || []).map((delivery) => [delivery.order_id, delivery]));
-        } else if (!/warehouse_employee_name/i.test(deliveryResult.error.message || '')) {
+        } else {
           // Delivery history is supplementary. A role without delivery read
           // permission must not prevent the sales list from loading.
           console.warn('[orders] delivery history could not be loaded:', deliveryResult.error);
-        } else {
-          // Keep older databases usable until the delivery audit migration is
-          // applied; employee data is also recoverable from acceptance_note.
-          const legacyDeliveryResult = await supabase.from('deliveries')
-            .select('id,order_id,warehouse_id,status,recipient_name,recipient_document,delivered_at,delivered_by,acceptance_name,acceptance_document_no,acceptance_signature,accepted_at,acceptance_note')
-            .eq('tenant_id', tenantId).in('order_id', orderIds);
-          if (!legacyDeliveryResult.error) {
-            deliveriesByOrder = new Map((legacyDeliveryResult.data || []).map((delivery) => [delivery.order_id, delivery]));
-          }
         }
       }
       if (!isCurrent()) return;
@@ -514,7 +505,13 @@ export function useOrders(tenantId) {
     await fetchAll();
   };
 
-  const update = async (id, { items = [], ...header }) => {
+  const update = async (id, { items = [], expected_updated_at, request_key, ...header }) => {
+    if (!ENABLE_LEGACY_WRITES) {
+      await editSalesOrderAtomic({ tenantId, orderId: id, requestKey: request_key || createIdempotencyKey(`sales-edit:${id}`),
+        payload: { ...header, expected_updated_at, items } });
+      await fetchAll();
+      return;
+    }
     const rows = items.map((item, index) => lineValues(item, index, tenantId, id));
     const subtotal = rows.reduce((sum, item) => sum + item.qty * item.unit_price * (1 - item.discount_pct / 100), 0);
     const vatTotal = rows.reduce((sum, item) => {

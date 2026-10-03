@@ -90,6 +90,28 @@ export async function reverseSalesOrder({ tenantId, orderId, reason, requestKey 
   });
 }
 
+export async function editSalesOrderAtomic({ tenantId, orderId, requestKey, payload }) {
+  await requireErpSchema();
+  try {
+    return await callRpc('edit_sales_order_atomic', {
+      _tenant_id: requireValue(tenantId, 'tenantId'), _order_id: requireValue(orderId, 'orderId'),
+      _request_key: requireValue(requestKey, 'requestKey'), _payload: payload,
+    });
+  } catch (error) {
+    if (['PGRST202', '42883'].includes(error.code)) throw migrationRequiredError('satış redaktəsi', error);
+    const messages = {
+      stale_sales_edit: 'Satış başqa əməliyyatla dəyişib. Kartı yenidən açın.',
+      posted_sales_edit_requires_reversal: 'Ödəniş və ya təhvil olan satış redaktə edilə bilməz. Əvvəl ləğv axınından istifadə edin.',
+      active_credit_edit_requires_reversal: 'Aktiv kreditin məbləğini satış redaktəsi ilə dəyişmək olmaz.',
+      sales_lines_edit_requires_reversal: 'Məhsul və miqdar dəyişikliyi üçün satışı ləğv edib yenidən yaradın. Mövcud rezerv qorunur.',
+      sales_currency_edit_requires_reversal: 'Satışın valyutasını dəyişmək üçün ləğv axınından istifadə edin.',
+      sales_total_below_deposit_target: 'Satış məbləği planlaşdırılan ilkin ödənişdən böyük olmalıdır.',
+    };
+    if (messages[error.message]) { error.businessCode = error.message; error.message = messages[error.message]; }
+    throw error;
+  }
+}
+
 export function lockAccountingPeriod({ tenantId, periodStart, periodEnd, reason = null }) {
   return callRpc("lock_accounting_period", {
     _tenant_id: requireValue(tenantId, "tenantId"),
