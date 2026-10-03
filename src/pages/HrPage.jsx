@@ -4,6 +4,7 @@ import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wa
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
+import { getEmployeeKey } from "../shared/lib/appDomain.jsx";
 import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({
   employees,
@@ -23,12 +24,12 @@ export default function HrPage({
 }) {
   const structure = useMemo(() => buildHrStructure(allEmployees, departments), [allEmployees, departments]);
   const [hrView, setHrView] = useState("Komanda");
-  const [selectedEmployeeName, setSelectedEmployeeName] = useState(allEmployees[0]?.name || "");
+  const [selectedEmployeeKey, setSelectedEmployeeKey] = useState(allEmployees[0] ? getEmployeeKey(allEmployees[0]) : "");
   const [teamQuery, setTeamQuery] = useState("");
   const [teamDepartment, setTeamDepartment] = useState("Hamısı");
   const [teamStatus, setTeamStatus] = useState("Hamısı");
   const selectedEmployee =
-    allEmployees.find((employee) => employee.name === selectedEmployeeName) || allEmployees[0] || null;
+    allEmployees.find((employee) => getEmployeeKey(employee) === selectedEmployeeKey) || allEmployees[0] || null;
   const departmentCount = structure.length;
   const leaders = allEmployees.filter((employee) => isHrLeadershipLevel(getEmployeeLevel(employee)));
   const averageKpi = employees.length ? total(employees, "kpi") / employees.length : 0;
@@ -49,13 +50,13 @@ export default function HrPage({
       return matchesQuery && matchesDepartment && matchesStatus;
     });
   }, [hrEmployeeRecords, teamDepartment, teamQuery, teamStatus]);
-  const visibleEmployeeNames = useMemo(
-    () => new Set(visibleHrEmployeeRecords.map((record) => record.name)),
+  const visibleEmployeeKeys = useMemo(
+    () => new Set(visibleHrEmployeeRecords.map((record) => record.employeeKey)),
     [visibleHrEmployeeRecords],
   );
-  const visibleRegistryEmployees = employees.filter((employee) => visibleEmployeeNames.has(employee.name));
+  const visibleRegistryEmployees = employees.filter((employee) => visibleEmployeeKeys.has(getEmployeeKey(employee)));
   const selectedHrRecord =
-    visibleHrEmployeeRecords.find((record) => record.name === selectedEmployeeName) || visibleHrEmployeeRecords[0] || null;
+    visibleHrEmployeeRecords.find((record) => record.employeeKey === selectedEmployeeKey) || visibleHrEmployeeRecords[0] || null;
   const attendanceRows = useMemo(() => buildHrAttendanceRows(hrEmployeeRecords), [hrEmployeeRecords]);
   const leaveRows = useMemo(() => buildHrLeaveRows(hrEmployeeRecords, leaveRequests), [hrEmployeeRecords, leaveRequests]);
   const payrollRows = useMemo(() => buildHrPayrollRows(hrEmployeeRecords), [hrEmployeeRecords]);
@@ -121,7 +122,7 @@ export default function HrPage({
             <HrEmployeePlatform
               records={visibleHrEmployeeRecords}
               selectedRecord={selectedHrRecord}
-              onSelect={setSelectedEmployeeName}
+              onSelect={setSelectedEmployeeKey}
               onEdit={onEditEmployee}
               onDelete={onDeleteEmployee}
               onUpdateDocuments={onUpdateEmployeeDocuments}
@@ -180,11 +181,11 @@ export default function HrPage({
           <PanelHeader title="Struktur qurucusu" subtitle="Əməkdaşı seçin, rəhbər və şöbə əlaqəsini təyin edin" icon={UserCog} />
           {selectedEmployee ? (
             <HrStructureBuilder
-              key={selectedEmployee.name}
+              key={getEmployeeKey(selectedEmployee)}
               employees={allEmployees}
               departments={departments}
               selectedEmployee={selectedEmployee}
-              onSelectEmployee={setSelectedEmployeeName}
+              onSelectEmployee={setSelectedEmployeeKey}
               onUpdate={onUpdateEmployeeStructure}
             />
           ) : (
@@ -197,7 +198,7 @@ export default function HrPage({
           <div className="hr-structure-actions">
             <button className="secondary-btn" onClick={onCreateDepartment}><Plus size={16} /> Şöbə əlavə et</button>
           </div>
-          <HrStructureTree structure={structure} employees={allEmployees} onSelectEmployee={setSelectedEmployeeName} />
+          <HrStructureTree structure={structure} employees={allEmployees} onSelectEmployee={setSelectedEmployeeKey} />
         </Panel>
       </section>}
 
@@ -221,7 +222,7 @@ export default function HrPage({
         />
         <div className="hr-mobile-employee-list">
           {visibleRegistryEmployees.map((employee) => (
-            <div className="hr-mobile-employee-card" key={employee.name}>
+            <div className="hr-mobile-employee-card" key={getEmployeeKey(employee)}>
               <div className="hr-mobile-employee-head">
                 <AvatarLine initials={employee.initials} title={employee.name} subtitle={employee.position} />
                 <div className="hr-row-actions">

@@ -1,10 +1,11 @@
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
 import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../../modules/credits/CreditInitialPayments.jsx";
-import { lazy, useEffect, useMemo, useState } from "react";
+import { lazy, useEffect, useMemo, useRef, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { round2 } from "../utils/invoiceMath.js";
+import { createIdempotencyKey } from "../../services/coreOperations.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue } from "../../services/date.js";
 import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, isCreditStarted, roundMoney } from "./credit.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
@@ -936,9 +937,9 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
         </div>
         {records.map((record) => (
           <button
-            key={record.name}
-            className={`hr-person-row ${selectedRecord.name === record.name ? "active" : ""}`}
-            onClick={() => onSelect(record.name)}
+            key={record.employeeKey}
+            className={`hr-person-row ${selectedRecord.employeeKey === record.employeeKey ? "active" : ""}`}
+            onClick={() => onSelect(record.employeeKey)}
           >
             <AvatarLine initials={record.initials} title={record.name} subtitle={`${record.department} · ${record.position}`} />
             <div className="hr-person-status-stack">
@@ -1259,7 +1260,7 @@ export function HrStructureBuilder({ employees, departments: departmentRecords =
   ].filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, "az"),
   );
-  const managerOptions = employees.filter((employee) => employee.name !== selectedEmployee.name);
+  const managerOptions = employees.filter((employee) => getEmployeeKey(employee) !== getEmployeeKey(selectedEmployee));
 
   function updateDraft(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -1267,16 +1268,16 @@ export function HrStructureBuilder({ employees, departments: departmentRecords =
 
   function submit(event) {
     event.preventDefault();
-    onUpdate(selectedEmployee.name, draft);
+    onUpdate(getEmployeeKey(selectedEmployee), draft);
   }
 
   return (
     <form className="hr-builder-form" onSubmit={submit}>
       <label>
         <span>Əməkdaş</span>
-        <select value={selectedEmployee.name} onChange={(event) => onSelectEmployee(event.target.value)}>
+        <select value={getEmployeeKey(selectedEmployee)} onChange={(event) => onSelectEmployee(event.target.value)}>
           {employees.map((employee) => (
-            <option key={employee.name} value={employee.name}>
+            <option key={getEmployeeKey(employee)} value={getEmployeeKey(employee)}>
               {employee.name}
             </option>
           ))}
@@ -1315,10 +1316,13 @@ export function HrStructureBuilder({ employees, departments: departmentRecords =
       </label>
       <label>
         <span>Kimə tabedir</span>
-        <select value={draft.managerName} onChange={(event) => updateDraft("managerName", event.target.value)}>
+        <select value={draft.managerId} onChange={(event) => {
+          const manager = employees.find((employee) => getEmployeeKey(employee) === event.target.value);
+          setDraft((current) => ({ ...current, managerId: manager ? getEmployeeKey(manager) : "", managerName: manager?.name || "" }));
+        }}>
           <option value="">Birbaşa rəhbərlik</option>
           {managerOptions.map((employee) => (
-            <option key={employee.name} value={employee.name}>
+            <option key={getEmployeeKey(employee)} value={getEmployeeKey(employee)}>
               {employee.name}
             </option>
           ))}
@@ -1610,7 +1614,7 @@ export function HrEmployeeTreeNode({ employee, onSelectEmployee, depth = 0 }) {
         className={`hr-employee-node ${employee.isInScope ? "in-scope" : ""}`}
         aria-expanded={hasChildren ? expanded : undefined}
         onClick={() => {
-          onSelectEmployee(employee.name);
+          onSelectEmployee(employee.employeeKey);
           if (hasChildren) setExpanded((current) => !current);
         }}
       >
@@ -1647,6 +1651,7 @@ export function getHrDraft(employee, employees) {
     departmentParent: employee ? getDepartmentParentName(employee) : "",
     position: employee?.position || "",
     managerName: employee ? getEmployeeManagerName(employee, employees) : "",
+    managerId: employee && getEmployeeManager(employee, employees) ? getEmployeeKey(getEmployeeManager(employee, employees)) : "",
     level: employee ? getEmployeeLevel(employee) : "Komanda üzvü",
   };
 }
@@ -4282,23 +4287,47 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
   const currentPrincipal = Number(paymentState.nextInstallment?.amount || 0);
   const [principalAmount, setPrincipalAmount] = useState(currentPrincipal);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
+  const [pending, setPending] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const submitting = useRef(false);
+  const request = useRef(null);
   const principal = Math.max(0, round2(Number(principalAmount || 0)));
   const penalty = Math.max(0, round2(Number(penaltyAmount || 0)));
   const extraPrincipal = Math.max(0, principal - currentPrincipal);
   const cashIn = round2(principal + penalty);
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    onReceivePayment(credit.id, {
-      principalAmount: principal,
-      penaltyAmount: penalty,
-    });
-    setPrincipalAmount("");
-    setPenaltyAmount(0);
+    if (submitting.current || cashIn <= 0) return;
+    const signature = JSON.stringify([credit.id, principal, penalty]);
+    if (request.current?.signature !== signature) {
+      request.current = { signature, receiptNo: createIdempotencyKey("KRD") };
+    }
+    submitting.current = true;
+    setPending(true);
+    setPaymentError("");
+    try {
+      const saved = await onReceivePayment(credit.id, {
+        principalAmount: principal,
+        penaltyAmount: penalty,
+        receiptNo: request.current.receiptNo,
+      });
+      if (saved === true) {
+        request.current = null;
+        setPrincipalAmount("");
+        setPenaltyAmount(0);
+      }
+    } catch (error) {
+      setPaymentError(error.message || "Ödəniş qeydə alınmadı.");
+    } finally {
+      submitting.current = false;
+      setPending(false);
+    }
   }
 
   return (
     <form className="credit-payment-form" onSubmit={submit}>
+      {paymentError && <p role="alert" className="inline-alert danger">{paymentError}</p>}
       <div className="credit-payment-form-head">
         <div>
           <h3>Ödəniş qəbul et</h3>
@@ -4310,6 +4339,7 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
           <span>Əsas məbləğ</span>
           <input
             aria-label="Əsas məbləğ"
+            disabled={pending}
             type="number"
             min="0"
             step="0.01"
@@ -4321,6 +4351,7 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
           <span>Gecikmə faizi</span>
           <input
             aria-label="Gecikmə faizi"
+            disabled={pending}
             type="number"
             min="0"
             step="0.01"
@@ -4345,8 +4376,8 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
           </span>
         )}
       </div>
-      <button type="submit" className="primary-btn">
-        Ödənişi qəbul et
+      <button type="submit" className="primary-btn" disabled={pending || cashIn <= 0} aria-busy={pending}>
+        {pending ? "Qeydə alınır..." : "Ödənişi qəbul et"}
       </button>
     </form>
   );

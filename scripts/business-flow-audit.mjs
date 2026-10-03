@@ -447,9 +447,15 @@ async function auditCreditPayment(browser) {
     await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill(String(principalPayment));
     await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill(String(penaltyPayment));
     await page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click();
-    const after = await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.payments
-      .some(p => Number(p.principal_amount) === principalPayment && Number(p.penalty_amount) === penaltyPayment),
-      'Credit payment receipt was not persisted');
+    // Separate HTTP reads can straddle a transaction commit; require every linked effect.
+    const after = await waitForState(s => {
+      const credit = s.credits.find(c => c.id === sale.credit.id);
+      const order = s.orders.find(o => o.id === sale.order.id);
+      return credit?.payments.some(p => Number(p.principal_amount) === principalPayment && Number(p.penalty_amount) === penaltyPayment)
+        && Number(order?.paid) === round2(Number(previousOrder.paid) + principalPayment)
+        && Number(credit.balance) === round2(Number(previousCredit.balance) - principalPayment)
+        && s.cashEntries.some(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
+    }, 'Credit payment receipt, linked principal and cash effects did not converge');
     const cashEntry = after.cashEntries.find(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
     const linkedOrder = after.orders?.find((order) => order.id === sale.order.id);
     const linkedCredit = after.credits?.find((credit) => credit.id === cashEntry?.creditId);
@@ -458,7 +464,7 @@ async function auditCreditPayment(browser) {
     assert(cashEntry?.creditId && Number(cashEntry.amount) > 0, "Cash entry is missing credit payment data");
     assert(cashEntry.principal === principalPayment, "Credit payment did not split principal correctly");
     assert(cashEntry.penalty === penaltyPayment, "Credit payment did not store the penalty amount");
-    assert(cashEntry.amount === principalPayment + penaltyPayment, "Cash entry should contain principal plus penalty");
+    assert(cashEntry.amount === round2(principalPayment + penaltyPayment), "Cash entry should contain principal plus penalty");
     assert(
       linkedOrder && previousOrder && Number(linkedOrder.paid) === round2(Number(previousOrder.paid) + principalPayment),
       "Credit payment did not update the linked order principal",
@@ -578,6 +584,11 @@ async function auditWarehouseDelivery(browser) {
     const deliveredOrder = after.orders?.find((item) => item.id === sale.order.id);
 
     assert(deliveredOrder?.status === "Təhvil verilib", "Warehouse delivery did not complete the order");
+    assert(deliveredOrder.deliveryAcceptance?.recipientName === 'QA Customer' &&
+      deliveredOrder.deliveryAcceptance?.warehouseEmployeeName === 'QA Audit Seller' &&
+      deliveredOrder.deliveryAcceptance?.documentNo === `QA-${sale.order.orderNo}` &&
+      deliveredOrder.deliveryAcceptance?.signatureConfirmed === true && deliveredOrder.deliveryAcceptance?.acceptedAt,
+      'Delivery did not durably persist its signed acceptance alongside stock posting');
     assert(
       stockTotal(after, sale.warehouse.id, sale.line.product) === stockTotal(before, sale.warehouse.id, sale.line.product) - Number(sale.line.qty),
       "Warehouse delivery did not reduce physical stock",
@@ -1375,7 +1386,8 @@ async function auditHrStructure(browser) {
     await departmentModal.locator("textarea").fill("QA department for hierarchy validation");
     await departmentModal.locator('button[type="submit"]').click();
     await departmentModal.waitFor({ state: "hidden" });
-    const departmentState = await readState(page);
+    const departmentState = await waitForState(s => s.departments?.some(d => d.name === departmentName),
+      'HR department was not persisted');
     assert(
       departmentState.departments?.some((department) => department.name === departmentName),
       "Department creation did not persist the new department",
@@ -1390,7 +1402,8 @@ async function auditHrStructure(browser) {
       employees.find(employee => employee.name === directorName).id);
     await deleteModal.locator(".danger-outline").click();
     await deleteModal.waitFor({ state: "hidden" });
-    const deletedState = await readState(page);
+    const deletedState = await waitForState(s => !s.employees.some(e => e.id === renamedManager.id),
+      'HR manager deletion was not persisted');
     assert(!deletedState.employees.some((employee) => employee.name === leadName), "Employee delete did not remove the employee");
     assert(
       deletedState.employees.find((employee) => employee.name === specialistName)?.managerName === directorName,
@@ -1424,15 +1437,19 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-operation-toolbar .secondary-btn").click();
     const leaveModal = page.locator('[role="dialog"]');
     await leaveModal.getByLabel(/^Əməkdaş/).selectOption(updatedEmployee.id);
+    const previousLeaveIds = new Set((await readState()).leaveRequests?.map(request => request.id) || []);
     await leaveModal.locator('button[type="submit"]').click();
     await leaveModal.waitFor({ state: "hidden" });
-    const leaveState = await readState(page);
-    assert(leaveState.leaveRequests?.length === 1, "Leave request did not persist");
-    await page.locator(".hr-platform-section tbody tr").filter({ hasText: leaveState.leaveRequests[0].employeeName }).locator(".hr-leave-actions .text-btn").first().click();
+    const leaveState = await waitForState(s => s.leaveRequests?.some(request => !previousLeaveIds.has(request.id) && request.employeeId === updatedEmployee.id),
+      'New HR leave request was not persisted');
+    const leaveRequest = leaveState.leaveRequests.find(request => !previousLeaveIds.has(request.id) && request.employeeId === updatedEmployee.id);
+    assert(leaveRequest, "Leave request did not persist");
+    await page.locator(".hr-platform-section tbody tr").filter({ hasText: leaveRequest.employeeName }).locator(".hr-leave-actions .text-btn").first().click();
     await page.waitForTimeout(100);
-    const approvedLeaveState = await readState(page);
+    const approvedLeaveState = await waitForState(s => s.leaveRequests?.some(request => request.id === leaveRequest.id && request.status === 'Təsdiq edildi'),
+      'HR leave approval was not persisted');
     assert(
-      approvedLeaveState.leaveRequests?.[0]?.status === "Təsdiq edildi",
+      approvedLeaveState.leaveRequests?.find(request => request.id === leaveRequest.id)?.status === "Təsdiq edildi",
       "Leave approval did not persist the approved status",
     );
     assert(

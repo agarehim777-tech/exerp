@@ -4264,44 +4264,24 @@ function App() {
         notify("Təhvil ediləcək satış bazada tapılmadı.", "warning");
         return;
       }
-      const { error } = await supabase.rpc("mark_sales_order_delivered", { _order_id: dbOrder.id });
+      const warehouseId = targetOrder.warehouseId || state.warehouses?.[0]?.id;
+      const { error } = await supabase.rpc("complete_sales_delivery", {
+        _tenant_id: activeTenantId,
+        _order_id: dbOrder.id,
+        _warehouse_id: warehouseId,
+        _request_key: `delivery:${dbOrder.id}`,
+        _acceptance: {
+          recipientName: acceptance.recipientName || targetOrder.customer || "",
+          documentNo: acceptance.documentNo || "",
+          warehouseEmployeeName: acceptance.warehouseEmployeeName || "",
+          signatureConfirmed: Boolean(acceptance.signatureConfirmed),
+          note: acceptance.note || "",
+        },
+      });
       if (error) {
         console.error("[delivery] stock fulfillment failed:", error);
         notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
-      }
-      const warehouseId = targetOrder.warehouseId || state.warehouses?.[0]?.id;
-      const deliveryPayload = {
-        tenant_id: activeTenantId,
-        delivery_no: `TV-${dbOrder.order_no || dbOrder.id}`,
-        order_id: dbOrder.id,
-        warehouse_id: warehouseId,
-        status: "delivered",
-        recipient_name: acceptance.recipientName || targetOrder.customer || null,
-        recipient_document: acceptance.documentNo || null,
-        acceptance_name: acceptance.recipientName || targetOrder.customer || null,
-        acceptance_document_no: acceptance.documentNo || null,
-        acceptance_signature: acceptance.signatureConfirmed ? "confirmed" : null,
-        delivered_at: new Date().toISOString(),
-        accepted_at: new Date().toISOString(),
-        acceptance_note: JSON.stringify({
-          note: acceptance.note || "",
-          warehouseEmployeeName: acceptance.warehouseEmployeeName || "",
-        }),
-        warehouse_employee_name: acceptance.warehouseEmployeeName || null,
-      };
-      let acceptanceResult = await supabase.from("deliveries").upsert(deliveryPayload, {
-        onConflict: "tenant_id,order_id",
-      });
-      if (acceptanceResult.error && /warehouse_employee_name/i.test(acceptanceResult.error.message || "")) {
-        const { warehouse_employee_name: _unsupportedField, ...legacyDeliveryPayload } = deliveryPayload;
-        acceptanceResult = await supabase.from("deliveries").upsert(legacyDeliveryPayload, {
-          onConflict: "tenant_id,order_id",
-        });
-      }
-      if (acceptanceResult.error) {
-        console.error("[delivery] acceptance save failed:", acceptanceResult.error);
-        notify(`Təhvil tamamlandı, lakin təhvil aktı saxlanmadı: ${acceptanceResult.error.message}`, "warning");
       }
     }
 
@@ -4944,15 +4924,15 @@ function App() {
     notify(`${expenseId} xərc əməliyyatı silindi.`);
   }
 
-  function updateEmployeeStructure(employeeName, values) {
+  function updateEmployeeStructure(employeeId, values) {
     if (!requirePermission("hr.manage", "HR strukturunu dəyişmək")) return;
 
     setState((current) => {
-      const manager = current.employees.find((employee) => employee.name === values.managerName && employee.name !== employeeName);
+      const manager = current.employees.find((employee) => getEmployeeKey(employee) === values.managerId && getEmployeeKey(employee) !== employeeId);
       return {
         ...current,
         employees: current.employees.map((employee) =>
-          employee.name === employeeName
+          getEmployeeKey(employee) === employeeId
             ? {
                 ...employee,
                 department: values.department,
@@ -4966,11 +4946,11 @@ function App() {
         ),
       };
     });
-    notify(`${employeeName} struktur ağacında yeniləndi.`);
+    notify("Əməkdaş struktur ağacında yeniləndi.");
     auditOperation({
       module: "HR",
       action: "Struktur yeniləndi",
-      detail: employeeName,
+      detail: employeeId,
     });
   }
 
@@ -5499,7 +5479,7 @@ function App() {
   }
 
   async function receiveCreditPayment(creditId, values) {
-    if (!requirePermission("credits.manage", "kredit ödənişi qəbul etmək")) return;
+    if (!requirePermission("credits.manage", "kredit ödənişi qəbul etmək")) return false;
 
     const principalAmount = Math.max(0, round2(Number(values.principalAmount || 0)));
     const penaltyAmount = Math.max(0, round2(Number(values.penaltyAmount || 0)));
@@ -5507,30 +5487,33 @@ function App() {
 
     if (principalAmount <= 0 && penaltyAmount <= 0) {
       notify("Ödəniş məbləği daxil edin.", "warning");
-      return;
+      return false;
     }
 
     if (!targetCredit) {
       notify("Kredit tapılmadı.", "warning");
-      return;
+      return false;
     }
 
     if (!isCreditStarted(targetCredit)) {
       notify("Ödəniş qəbul etmək üçün əvvəlcə krediti başladın.", "warning");
-      return;
+      return false;
     }
-
+    if (!activeTenantId || !targetCredit.id || !values.receiptNo) {
+      notify("Server bağlantısı və qəbz açarı olmadan ödəniş qəbul edilmir.", "error");
+      return false;
+    }
 
     const paymentResult = applyCreditPrincipalPayment(targetCredit, principalAmount);
     const cashAmount = paymentResult.appliedPrincipal + penaltyAmount;
     try {
-      if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
+      if (activeTenantId && targetCredit.id) {
         const cashAccount = await ensureMainCashAccount(activeTenantId);
 
         await postCreditPayment({
           tenantId: activeTenantId,
           creditId: targetCredit.id,
-          receiptNo: `KRD-${Date.now()}`,
+          receiptNo: values.receiptNo,
           amount: cashAmount,
           penaltyAmount,
           cashAccountId: cashAccount.id,
@@ -5541,7 +5524,12 @@ function App() {
       }
     } catch (error) {
       notify(`Kredit ödənişi qeydə alınmadı: ${error.message}`, "error");
-      return;
+      return false;
+    }
+
+    if (!ENABLE_LEGACY_WRITES) {
+      notify(`${targetCredit.contractId || targetCredit.id}: ${money(cashAmount)} kassaya daxil oldu.`);
+      return true;
     }
 
     const cashEntry = {
@@ -5625,6 +5613,7 @@ function App() {
       action: "Kredit ödənişi qəbul edildi",
       detail: `${creditId}: əsas ${money(paymentResult.appliedPrincipal)}, gecikmə ${money(penaltyAmount)}`,
     });
+    return true;
   }
 
   async function payCreditInitial(creditId, amount) {

@@ -309,20 +309,20 @@ export function ReportsPage({
         <div><Filter size={17} /><strong>Hesabat filtrləri</strong></div>
         <label>
           <span>Dövr</span>
-          <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+          <select aria-label="Dövr" value={period} onChange={(event) => setPeriod(event.target.value)}>
             <option>Bu ay</option><option>Bu rüb</option><option>Bu il</option><option>Hamısı</option>
           </select>
         </label>
         <label>
           <span>Modul</span>
-          <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
+          <select aria-label="Modul" value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
             <option>Hamısı</option><option>Satış</option><option>Kredit</option><option>Anbar</option>
             <option>Vendor / PO</option><option>İstehsalat</option><option>Maliyyə</option><option>Faktura</option><option>HR</option>
           </select>
         </label>
         <label>
           <span>Anbar</span>
-          <select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
+          <select aria-label="Anbar" value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
             <option value="all">Bütün anbarlar</option>
             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
           </select>
