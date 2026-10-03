@@ -190,7 +190,7 @@ export function useOrders(tenantId) {
         account = reactivated;
       } else {
         const { data: createdAccount, error: createAccountError } = await supabase.from('cash_accounts').insert({
-          tenant_id: tenantId, account_no: code, name: 'Əsas kassa', type: 'cash', currency, opening_balance: 0, is_active: true,
+          tenant_id: tenantId, code, account_no: code, name: 'Əsas kassa', type: 'cash', currency, opening_balance: 0, is_active: true,
         }).select('id').single();
         if (createAccountError) throw createAccountError;
         account = createdAccount;
@@ -542,6 +542,7 @@ export function useOrders(tenantId) {
   const previewRemoval = async (id) => {
     const { data, error: previewError } = await supabase.rpc('preview_sales_order_reversal', { _order_id: id });
     if (!previewError) return data;
+    if (!ENABLE_LEGACY_WRITES && isMissingRpc(previewError)) throw migrationRequiredError('satış ləğvinin önizləməsi');
     if (!isMissingRpc(previewError)) throw previewError;
     const order = orders.find((row) => row.id === id);
     return {

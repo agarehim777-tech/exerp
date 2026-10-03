@@ -41,7 +41,7 @@ export function useCashbook(tenantId) {
         .limit(300),
       supabase
         .from('expenses')
-        .select('*, account:cash_accounts(id,name)')
+        .select('*, account:cash_accounts!expenses_account_id_fkey(id,name)')
         .eq('tenant_id', tenantId)
         .order('expense_date', { ascending: false })
         .limit(300),

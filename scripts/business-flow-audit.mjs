@@ -513,6 +513,9 @@ async function auditSeparateCreditContracts(browser) {
     await firstCard.getByRole('button', { name: 'Sifarişə bax', exact: true }).click();
     await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
     await page.locator('main.main tr').filter({ hasText: firstSale.order.orderNo }).waitFor();
+    const linkedOrderCard = page.getByRole('dialog', { name: 'Sifariş kartı', exact: true });
+    await linkedOrderCard.getByRole('button', { name: 'Sifariş kartını bağla', exact: true }).click();
+    await linkedOrderCard.waitFor({ state: 'hidden' });
     await selectModule(page, 1);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });

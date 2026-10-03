@@ -8,6 +8,27 @@ const env = { E2E_SUPABASE_PROJECT_REF: 'cvjctwgdyzhijhzhhjqd', VITE_SUPABASE_UR
   VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', E2E_USER_EMAIL: 'test@example.invalid', E2E_USER_PASSWORD: 'test-only' };
 const response = (value) => new Response(JSON.stringify(value), { status: 200 });
 
+it('bounds concurrent read requests without skipping failed reads or changing tenant filters', async () => {
+  let active = 0;
+  let peak = 0;
+  const backend = await createAuditBackend(env, async url => {
+    active += 1;
+    peak = Math.max(peak, active);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2));
+      const path = new URL(url).pathname;
+      if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+      if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+      if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+      if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
+      return response([]);
+    } finally { active -= 1; }
+  });
+  await Promise.all([backend.readState(), backend.readState()]);
+  expect(peak).toBe(4);
+  expect(active).toBe(0);
+});
+
 it('waits for coherent order, credit and contract links across independent REST snapshots', () => {
   const order = {id:'order',fin:'Q123456',creditId:'credit',contractId:'IN-QA'};
   const state = {orders:[order],credits:[],contracts:[]};

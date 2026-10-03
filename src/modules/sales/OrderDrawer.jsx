@@ -81,7 +81,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 100, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={e => e.stopPropagation()}
+      <div role="dialog" aria-modal="true" aria-label="Sifariş kartı" onClick={e => e.stopPropagation()}
         style={{ width: 820, maxWidth: '100vw', boxSizing: 'border-box', background: '#fff', height: '100%', overflowY: 'auto', overflowX: 'hidden', animation: 'slideInRight 0.25s ease' }}>
         <header style={{ padding: 20, borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 5 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -95,7 +95,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {canManageOrder && <button onClick={() => setEditing(value => !value)} style={{ background: editing ? '#f1f5f9' : '#0b7a5c', color: editing ? '#334155' : '#fff', border: 0, padding: '8px 13px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{editing ? 'Ləğv et' : 'Redaktə et'}</button>}
-              <button onClick={onClose} style={{ background: 'transparent', border: 0, fontSize: 24, cursor: 'pointer', color: '#64748b' }}>×</button>
+              <button onClick={onClose} aria-label="Sifariş kartını bağla" style={{ background: 'transparent', border: 0, fontSize: 24, cursor: 'pointer', color: '#64748b' }}>×</button>
             </div>
           </div>
         </header>

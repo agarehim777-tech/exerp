@@ -31,7 +31,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
 import "./procurement.css";
 import LandedCostPanel from "./LandedCostPanel.jsx";
-import { isMissingPoPaymentsTable } from "./procurementSchema.js";
+import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSchema.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const money = (value, currency = "AZN") =>
@@ -72,6 +72,7 @@ const emptyInvoice = { po_id: "", invoice_number: "", invoice_date: today(), due
 const emptyPoLine = { product_id: "", product_sku: "", description: "", qty_ordered: "1", unit: "ədəd", unit_price: "0" };
 const emptyRfq = { title: "", description: "", quantity: "1", due_at: "", vendor_ids: [] };
 const emptyPoPayment = { po_id: "", amount: "", payment_date: today(), payment_method: "bank", reference_no: "", notes: "" };
+const ENABLE_LEGACY_PAYMENTS = import.meta.env.VITE_ENABLE_LEGACY_WRITES === "true";
 
 
 function nextNumber(prefix) {
@@ -207,7 +208,7 @@ export default function ProcurementPage() {
   const [invoices, setInvoices] = useState([]);
   const [invoiceLines, setInvoiceLines] = useState([]);
   const [poPayments, setPoPayments] = useState([]);
-  const [poPaymentsAvailable, setPoPaymentsAvailable] = useState(true);
+  const [poPaymentsAvailable, setPoPaymentsAvailable] = useState(ENABLE_LEGACY_PAYMENTS);
   const [matchRows, setMatchRows] = useState({});
   const [rfqs, setRfqs] = useState([]);
   const [rfqForm, setRfqForm] = useState(emptyRfq);
@@ -244,7 +245,7 @@ export default function ProcurementPage() {
       supabase.from("goods_receipt_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
       supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("vendor_invoice_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
-      supabase.from("po_payments").select("*").eq("tenant_id", tenantId).order("payment_date", { ascending: false }),
+      readLegacyPoPayments(supabase, tenantId, ENABLE_LEGACY_PAYMENTS),
     ]);
 
     const coreResults = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes];
@@ -253,7 +254,7 @@ export default function ProcurementPage() {
     if (firstError) setError(getError(firstError));
 
     const paymentTableMissing = isMissingPoPaymentsTable(paymentRes.error);
-    setPoPaymentsAvailable(!paymentTableMissing);
+    setPoPaymentsAvailable(ENABLE_LEGACY_PAYMENTS && !paymentTableMissing && !paymentRes.error);
 
     setVendors(vendorRes.data || []);
     setProducts(productRes.data || []);
@@ -802,7 +803,7 @@ export default function ProcurementPage() {
   async function savePoPayment(event) {
     event.preventDefault();
     if (!poPaymentsAvailable) {
-      setError("PO ödənişləri bazada aktiv deyil. Database migration tətbiq edilməlidir.");
+      setError("Satınalma ödənişləri bağlıdır. Server ledger ödəniş komandası tətbiq edilməlidir.");
       return;
     }
     if (!paymentForm.po_id || toNumber(paymentForm.amount) <= 0) {
@@ -1171,6 +1172,12 @@ export default function ProcurementPage() {
           <button type="button" onClick={() => { setError(""); setNotice(""); }} style={styles.messageClose}>
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {!poPaymentsAvailable && !loading && (
+        <div role="status" style={{ ...styles.message, ...styles.messageError }}>
+          Satınalma ödənişləri bağlıdır: server ledger inteqrasiyası tamamlanmalıdır. PO təsdiqi kassa ödənişi deyil.
         </div>
       )}
 

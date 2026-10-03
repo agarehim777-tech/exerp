@@ -9,6 +9,7 @@ import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
+import './sales-reversal.css';
 
 const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
 const STATUS_LABELS = { draft: 'Təsdiqləndi', pending: 'Təsdiqləndi', confirmed: 'Təsdiqləndi', processing: 'Təsdiqləndi', shipped: 'Təsdiqləndi', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };

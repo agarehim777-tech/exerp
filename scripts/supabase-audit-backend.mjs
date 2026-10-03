@@ -32,13 +32,23 @@ export async function createAuditBackend(env, fetcher = fetch) {
   const email = env.E2E_USER_EMAIL || env.E2E_TEST_USER;
   const password = env.E2E_USER_PASSWORD || env.E2E_TEST_PASS;
   if (!apikey || !email || !password) throw new Error('Authenticated Supabase audit credentials are required');
+  let activeRequests = 0;
+  const waitingRequests = [];
   const request = async (path, { method = 'GET', data, token } = {}) => {
-    const response = await fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(15000),
-      headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
-    if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
-    const text = await response.text();
-    return text ? JSON.parse(text) : null;
+    if (activeRequests >= 4) await new Promise(resolve => waitingRequests.push(resolve));
+    else activeRequests += 1;
+    try {
+      const response = await fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(15000),
+        headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
+      if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    } finally {
+      const next = waitingRequests.shift();
+      if (next) next();
+      else activeRequests -= 1;
+    }
   };
   const session = await request('auth/v1/token?grant_type=password', { method: 'POST', data: { email, password } });
   const token = session.access_token;

@@ -33,6 +33,9 @@ beforeAll(async () => {
       SELECT '${tenant}', '${account}', 'in', 1, 'AZN', 'sale' FROM generate_series(1, 350);
   `);
   await db.exec(await readFile(new URL('../../supabase/migrations/20260922070837_server_cashbook_ledger.sql', import.meta.url), 'utf8'));
+  const oldSummary = (await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data;
+  await db.exec(await readFile(new URL('../../supabase/migrations/20261003054612_optimize_cashbook_ledger_read.sql', import.meta.url), 'utf8'));
+  expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
   await db.exec(await readFile(new URL('../../supabase/migrations/20261002122938_atomic_expense_edit.sql', import.meta.url), 'utf8'));
 }, 60000);
 afterAll(async () => { await db?.close(); });

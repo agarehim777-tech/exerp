@@ -581,7 +581,7 @@ export function exportDeliveryQueueCsv(rows) {
   const headers = ["Sifariş", "Müqavilə", "Kredit", "Müştəri", "FIN", "Məhsul", "Miqdar", "Anbar", "Ödəniş", "Qalıq", "Stok statusu", "Qeyd"];
   const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const csvRows = rows.map((order) => [
-    order.id,
+    order.orderNo || order.id,
     order.contractId || "",
     order.creditId || "",
     order.customer,
