@@ -424,10 +424,13 @@ async function auditCreditPayment(browser) {
 
     await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
-    await page.locator('[data-testid="credit-debt-formula"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-total-tile"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-paid-tile"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-balance-tile"]').waitFor({ state: "visible" });
+    const tileAmount = async id => Number((await page.locator(`[data-testid="${id}"] strong`).innerText()).replace(/[^0-9.-]/g, ''));
+    assert(await tileAmount('credit-total-tile') === Number(sale.credit.total), 'Credit detail total differs from its server principal');
+    assert(await tileAmount('credit-paid-tile') === Number(previousCredit.initialPaid), 'Credit detail does not show the collected deposit');
+    assert(await tileAmount('credit-balance-tile') === Number(previousCredit.balance), 'Credit detail debt differs from the server balance');
     await page.locator('[data-testid="credit-order-link"]').click();
     await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
     await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).waitFor();

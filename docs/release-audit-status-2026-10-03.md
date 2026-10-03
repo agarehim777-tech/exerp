@@ -7,8 +7,10 @@ Full deploy is not approved. Do not remove or weaken the all-21 business-flow ga
 - CI 37099812135, commit a34226ee: all 21 business audits failed. Earlier browser, tenant-isolation, sales/expense, concurrent-command, credit-deposit and delivery/reversal suites passed.
 - Fix commit 2b138ee9: the ambiguous expense account FK, missing main-cash code, missing server reversal preview, reversal overlay stacking, delivery CSV order number, closed-order drawer navigation and excessive audit-reader concurrency were corrected.
 - CI 37101744304, commit 2b138ee9: 2/21 passed (vendor lifecycle and help/onboarding). Earlier mandatory lifecycle suites passed; the all-21 gate failed and deployment remains blocked.
+- CI 37103099991, commit 8b0279ea: 4/21 passed. Sale/credit/reservation and sale/expense edit/cancellation now pass as well. Deployment is still blocked by the remaining 17 audits.
 - Follow-up: shared cash-account creation now supplies code and currency scope, including conflict recovery. Standard SF sale numbers are assigned under a tenant-scoped server transaction lock, including cancelled history. Staging rollback evidence: stale SF-1029 became SF-1030 without retaining a new sale. Cancellation asserts the canonical cancelled credit status; credit registry audits search explicitly instead of depending on the first ten rows.
-- 308 unit tests, migration ordering (208 files), security (9), transaction hardening (54), core backend, recovery (20), build and bundle budget passed locally. Initial local backend probes were blocked by sandbox networking; after permission was granted, the same probes passed.
+- Next correction restores missing CRM document/service tables and delivery acceptance columns in both databases. CRM tables use composite tenant foreign keys, read/edit RLS and no anonymous table grants. The credit audit checks actual rendered total/paid/balance tiles against server values instead of waiting for a removed duplicate formula component. A new full CI result is required.
+- 309 unit tests, migration ordering (209 files), security (9), transaction hardening (54), core backend, recovery (20), build and bundle budget passed locally. Deploy configuration verification passed 22 checks. Initial local backend probes were blocked by sandbox networking; after permission was granted, the same probes passed.
 - Desktop 1440px and mobile 375px overlay tests passed. These are isolated CSS/stacking tests, not authenticated cancellation tests.
 - Preview and ledger-read migrations were installed in staging and production with matching repository migration versions. Preview denies anonymous, foreign-tenant and null-permission access.
 - Follow-up preview scope and sales-number trigger were installed in both databases with matching migration versions. Existing production business records were not reset or rewritten. A new full CI run is required for the follow-up commit.
@@ -23,6 +25,7 @@ Full deploy is not approved. Do not remove or weaken the all-21 business-flow ga
 - Settings permission audit creates browser-only users and uses a simulated user switcher. Replace it with real Supabase identities, grants and permission-denial evidence.
 - API/Webhook `runApiAction` currently generates a response code and random latency without sending HTTP. `rotateApiSecret` updates metadata, not a real signing secret. A simulated 200 must not count as a successful live integration.
 - Notification dispatch, KPI payout, HR hierarchy and reporting/support persistence need authenticated, current-UI assertions and durable server results, not fixed sleeps or local-state success.
+- Delivery currently posts stock and then saves acceptance through a separate write. Restored acceptance columns remove schema errors, but an atomic delivery-plus-acceptance command is still required by the architecture plan.
 
 ## Operational residuals
 
