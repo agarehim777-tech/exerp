@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
 import { runBoundedFlow } from './audit-flow-runner.mjs';
-import { auditModulePath, createAuditBackend } from './supabase-audit-backend.mjs';
+import { auditModulePath, createAuditBackend, findNewLinkedCreditSale } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 
@@ -264,8 +264,9 @@ async function createCreditSaleFromCurrentData(page, expectedFin) {
   await modal.getByRole('option').filter({ hasText: 'QA Audit Seller' }).first().click();
   await modal.locator(".order-modal-form button[type=submit]").click();
   await modal.waitFor({ state: 'hidden' });
-  const after = await waitForState(s => s.orders.some(o => !before.orders.some(p => p.id === o.id)), 'Sale was not persisted');
-  const order = after.orders?.find((item) => !before.orders?.some((previous) => previous.id === item.id));
+  const after = await waitForState(s => Boolean(findNewLinkedCreditSale(s, before.orders, expectedFin)),
+    'Sale and its credit/contract links were not persisted');
+  const order = findNewLinkedCreditSale(after, before.orders, expectedFin);
   const credit = after.credits?.find((item) => item.id === order?.creditId);
   const contract = after.contracts?.find((item) => item.id === order?.contractId);
   const line = order?.productLines?.[0];
@@ -326,7 +327,8 @@ async function auditSalesAndExpenseMutations(browser) {
     await page.getByRole('button', { name: 'Redaktə et', exact: true }).click();
     await page.getByLabel('Qiymət', { exact: true }).fill('1300');
     await page.getByRole('button', { name: 'Dəyişiklikləri yadda saxla', exact: true }).click();
-    let state = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.amount === 1300,
+    let state = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.amount === 1300
+      && s.credits.find(c => c.id === sale.credit.id)?.total === 1300,
       'Sales edit did not update order amount');
     let editedOrder = state.orders.find((item) => item.id === sale.order.id);
     let editedCredit = state.credits.find((item) => item.id === editedOrder?.creditId);
@@ -361,7 +363,8 @@ async function auditSalesAndExpenseMutations(browser) {
     await createForm.getByPlaceholder('Təsvir', { exact: true }).fill(marker);
     await createForm.getByPlaceholder('Məbləğ', { exact: true }).fill('300');
     await createForm.getByRole('button', { name: '+ Xərc', exact: true }).click();
-    state = await waitForState(s => s.expenses.some(e => e.description === marker), 'Expense create did not persist');
+    state = await waitForState(s => s.expenses.some(e => e.description === marker)
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 300, 'Expense create did not persist its cash debit');
     const expense = state.expenses.find((item) => item.description === marker);
     assert(expense, "Expense create did not add finance expense");
 
@@ -371,13 +374,15 @@ async function auditSalesAndExpenseMutations(browser) {
     const editForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Dəyişiklikləri saxla', exact: true }) });
     await editForm.getByPlaceholder('Məbləğ', { exact: true }).fill('450');
     await editForm.getByRole('button', { name: 'Dəyişiklikləri saxla', exact: true }).click();
-    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.amount === 450, 'Expense edit did not persist');
+    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.amount === 450
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not persist its cash debit');
     assert(state.expenses.find((item) => item.id === expense.id)?.amount === 450, "Expense edit did not update amount");
 
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not update its cash debit');
     await expenseRow.getByRole('button', { name: 'Ləğv et', exact: true }).click();
     await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
-    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.status === 'cancelled', 'Expense cancellation did not persist');
+    state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.status === 'cancelled'
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not persist its cash reversal');
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not restore opening balance');
     const ledger = state.cashEntries.filter(tx => tx.reference === `EXPENSE:${expense.id}` || tx.reference === `EXPENSE-REVERSAL:${expense.id}`);
     assert(ledger.length === 2 && ledger.reduce((sum, tx) => sum + (tx.direction === 'in' ? tx.amount : -tx.amount), 0) === 0,

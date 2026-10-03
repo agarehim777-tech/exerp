@@ -1,12 +1,25 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
-import { auditModulePath, createAuditBackend } from '../../scripts/supabase-audit-backend.mjs';
+import { auditModulePath, createAuditBackend, findNewLinkedCreditSale } from '../../scripts/supabase-audit-backend.mjs';
 
 const tenant = '11111111-1111-4111-8111-111111111111';
 const env = { E2E_SUPABASE_PROJECT_REF: 'cvjctwgdyzhijhzhhjqd', VITE_SUPABASE_URL: 'https://cvjctwgdyzhijhzhhjqd.supabase.co',
   E2E_TENANT_ID: tenant, E2E_OTHER_TENANT_ID: '22222222-2222-4222-8222-222222222222',
   VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', E2E_USER_EMAIL: 'test@example.invalid', E2E_USER_PASSWORD: 'test-only' };
 const response = (value) => new Response(JSON.stringify(value), { status: 200 });
+
+it('waits for coherent order, credit and contract links across independent REST snapshots', () => {
+  const order = {id:'order',fin:'Q123456',creditId:'credit',contractId:'IN-QA'};
+  const state = {orders:[order],credits:[],contracts:[]};
+  expect(findNewLinkedCreditSale(state,[],order.fin)).toBeUndefined();
+  state.credits.push({id:'credit',orderId:'order'});
+  state.contracts.push({id:'IN-QA',orderId:'stale-order',creditId:'credit'});
+  expect(findNewLinkedCreditSale(state,[],order.fin)).toBeUndefined();
+  state.contracts[0].orderId='order';
+  expect(findNewLinkedCreditSale(state,[],order.fin)).toBe(order);
+  expect(findNewLinkedCreditSale(state,[order],order.fin)).toBeUndefined();
+  expect(findNewLinkedCreditSale(state,[],'OTHER-CUSTOMER')).toBeUndefined();
+});
 
 it('uses canonical tenant-scoped rows even when a snapshot contains obsolete business state', async () => {
   const urls = [];

@@ -17,6 +17,14 @@ export function auditModulePath(index) {
   return moduleRoutes[module];
 }
 
+export function findNewLinkedCreditSale(state, previousOrders, expectedFin) {
+  const previousIds = new Set(previousOrders.map(order => order.id));
+  return state.orders.find(order => !previousIds.has(order.id) && (!expectedFin || order.fin === expectedFin)
+    && order.creditId && order.contractId
+    && state.credits.some(credit => credit.id === order.creditId && credit.orderId === order.id)
+    && state.contracts.some(contract => contract.id === order.contractId && contract.orderId === order.id && contract.creditId === order.creditId));
+}
+
 export async function createAuditBackend(env, fetcher = fetch) {
   const tenantId = assertE2eTarget(env);
   const url = env.VITE_SUPABASE_URL.replace(/\/$/, '');
