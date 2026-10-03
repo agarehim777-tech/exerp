@@ -1,5 +1,6 @@
 import { addMonths, formatDateInput, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { normalize } from "../../services/format.js";
+import { round2 } from "../utils/invoiceMath.js";
 
 export const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
 export const currentBusinessDate = formatDateInput(new Date());
@@ -321,7 +322,7 @@ export function getCreditManagementStatus(item) {
 
 export function applyCreditPrincipalPayment(credit, principalAmount) {
   const plan = getCreditDisplayPlan(credit);
-  const requestedPrincipal = Math.max(0, Math.round(Number(principalAmount || 0)));
+  const requestedPrincipal = Math.max(0, round2(Number(principalAmount || 0)));
   const appliedPrincipal = Math.min(requestedPrincipal, plan.balance);
   let remainingPrincipal = appliedPrincipal;
   const startIndex = Math.min(Number(credit.paidMonths || 0), Math.max(0, plan.installments.length - 1));
@@ -336,15 +337,15 @@ export function applyCreditPrincipalPayment(credit, principalAmount) {
     const appliedToMonth = Math.min(dueAmount, remainingPrincipal);
     installments[index] = {
       ...installments[index],
-      amount: Math.max(0, dueAmount - appliedToMonth),
+      amount: Math.max(0, round2(dueAmount - appliedToMonth)),
     };
-    remainingPrincipal -= appliedToMonth;
+    remainingPrincipal = round2(remainingPrincipal - appliedToMonth);
   }
 
   const nextIndex = installments.findIndex((installment) => Number(installment.amount || 0) > 0);
   const nextInstallment = nextIndex >= 0 ? installments[nextIndex] : null;
-  const nextBalance = Math.max(0, plan.balance - appliedPrincipal);
-  const extraPrincipal = Math.max(0, appliedPrincipal - currentDueBefore);
+  const nextBalance = Math.max(0, round2(plan.balance - appliedPrincipal));
+  const extraPrincipal = Math.max(0, round2(appliedPrincipal - currentDueBefore));
 
   return {
     appliedPrincipal,

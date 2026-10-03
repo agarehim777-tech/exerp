@@ -20,6 +20,7 @@ export default function MessagesPage({
           {conversations.map((conversation) => (
             <button
               key={conversation.id}
+              data-conversation-id={conversation.id}
               className={`conversation-row ${conversation.id === selected?.id ? "active" : ""}`}
               onClick={() => setConversationId(conversation.id)}
             >

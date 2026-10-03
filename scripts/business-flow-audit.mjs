@@ -3,9 +3,10 @@ import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
 import { runBoundedFlow } from './audit-flow-runner.mjs';
-import { auditModulePath, createAuditBackend, findNewLinkedCreditSale } from './supabase-audit-backend.mjs';
+import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
+import { round2 } from '../src/shared/utils/invoiceMath.js';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
@@ -418,8 +419,9 @@ async function auditCreditPayment(browser) {
     const previousOrder = before.orders?.find((order) => order.id === sale.order.id);
     const previousPaidMonths = Number(previousCredit?.paidMonths || 0);
     const currentDue = Number(previousCredit?.installments?.[previousPaidMonths]?.amount || previousCredit?.monthly || 0);
+    assert(currentDue > 0 && previousCredit.installments.length === Number(previousCredit.months), 'Activated credit has no complete server installment schedule');
     const nextDueBefore = Number(previousCredit?.installments?.[previousPaidMonths + 1]?.amount || 0);
-    const principalPayment = currentDue + 50;
+    const principalPayment = round2(currentDue + 50);
     const penaltyPayment = 17;
 
     await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
@@ -458,18 +460,18 @@ async function auditCreditPayment(browser) {
     assert(cashEntry.penalty === penaltyPayment, "Credit payment did not store the penalty amount");
     assert(cashEntry.amount === principalPayment + penaltyPayment, "Cash entry should contain principal plus penalty");
     assert(
-      linkedOrder && previousOrder && Number(linkedOrder.paid) === Number(previousOrder.paid) + principalPayment,
+      linkedOrder && previousOrder && Number(linkedOrder.paid) === round2(Number(previousOrder.paid) + principalPayment),
       "Credit payment did not update the linked order principal",
     );
     assert(
-      Number(linkedCredit.balance) === Number(previousCredit.balance) - principalPayment,
+      Number(linkedCredit.balance) === round2(Number(previousCredit.balance) - principalPayment),
       "Penalty amount incorrectly affected the remaining principal debt",
     );
     assert(linkedCredit?.payments?.some(p => Number(p.principal_amount) === principalPayment && Number(p.penalty_amount) === penaltyPayment),
       "Credit payment receipt did not retain separate principal and penalty amounts");
     assert(Number(linkedCredit?.installments?.[previousPaidMonths]?.amount || 0) === 0, "Current installment was not closed");
     assert(
-      Number(linkedCredit?.installments?.[previousPaidMonths + 1]?.amount || 0) === Math.max(0, nextDueBefore - 50),
+      Number(linkedCredit?.installments?.[previousPaidMonths + 1]?.amount || 0) === Math.max(0, round2(nextDueBefore - 50)),
       "Overpayment did not reduce the next installment",
     );
     assert(errors.length === 0, `Credit payment produced browser errors: ${errors.join(" | ")}`);
@@ -1341,6 +1343,7 @@ async function auditHrStructure(browser) {
       updatedState.auditLog?.some((row) => row.action === "Əməkdaş redaktə edildi"),
       "Employee edit did not create an audit log entry",
     );
+    await page.locator('.hr-profile-tabs').getByRole('button', { name: /^Sənədlər/ }).click();
     await page.locator('[data-testid="hr-document-complete"]').click();
     await page.waitForTimeout(100);
     const documentState = await waitForState(s => s.employees.some(e => e.name === specialistName && Number(e.documentsComplete) === 100), 'Document completion was not persisted');
@@ -1466,65 +1469,12 @@ async function auditHrStructure(browser) {
   }
 }
 
-async function auditSettingsPermissions(browser) {
-  const { context, page, errors } = await createFlowPage(browser);
-  try {
-    await selectModule(page, 24);
-    const form = page.locator(".user-create-form");
-    const userName = `QA Permission User ${Date.now().toString().slice(-5)}`;
-    const userEmail = `qa-permission-${Date.now().toString().slice(-5)}@example.com`;
-    await form.locator("input").nth(0).fill(userName);
-    await form.locator("input").nth(1).fill(userEmail);
-    await form.locator("select").first().selectOption({ label: "Anbar İşçisi" });
-    await form.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    let state = await readState(page);
-    const user = state.settings.users.find((item) => item.email === userEmail);
-    assert(user?.role === "Anbar İşçisi", "Settings did not create the permission test user");
-    assert(user.moduleAccess?.includes("warehouse"), "Role module access did not include warehouse");
-    assert(!user.moduleAccess?.includes("sales"), "Role module access incorrectly included sales");
-    const effectiveCell = page.locator("tr").filter({ hasText: userEmail }).locator(".permission-effective-cell");
-    await effectiveCell.waitFor();
-    const effectiveText = await effectiveCell.innerText();
-    assert(effectiveText.includes("aktiv permission"), "Settings UI did not show effective permission summary");
-
-    await page.locator('[data-testid="production-hardening-check"]').click();
-    await page.waitForTimeout(120);
-    state = await readState(page);
-    assert(state.productionHardeningSnapshot?.score >= 0, "Production hardening check did not persist a snapshot");
-    assert(
-      state.auditLog?.some((entry) => entry.action === "Production hardening yoxlandı"),
-      "Production hardening check was not written to audit log",
-    );
-
-    await page.locator(".user-switcher select").selectOption(user.id);
-    await page.waitForTimeout(150);
-    await page.locator(".page-header h1").filter({ hasText: "İdarəetmə Paneli" }).waitFor();
-    assert((await page.locator(".nav-item").filter({ hasText: "Ayarlar" }).count()) === 0, "Restricted user should not see Settings nav");
-    assert((await page.locator(".nav-item").filter({ hasText: "Satış" }).count()) === 0, "Restricted user should not see Sales nav");
-
-    await page.locator(".nav-item").filter({ hasText: "Hesabatlar" }).click();
-    const reportButton = page.locator(".page-header .primary-btn");
-    await reportButton.waitFor();
-    assert(await reportButton.isDisabled(), "Reports export button should be disabled without reports.export");
-
-    await page.locator(".nav-item").filter({ hasText: "Anbar" }).click();
-    const warehouseButton = page.locator(".page-header .primary-btn");
-    await warehouseButton.waitFor();
-    assert(!(await warehouseButton.isDisabled()), "Warehouse action should be enabled for warehouse role");
-
-    state = await readState(page);
-    assert(
-      state.auditLog?.some((entry) => entry.action === "Giriş edildi" && entry.detail.includes(userName)),
-      "Switching to restricted user did not write login audit",
-    );
-    assert(errors.length === 0, `Settings permission flow produced browser errors: ${errors.join(" | ")}`);
-
-    return { user: userEmail, role: user.role, modules: user.moduleAccess.length };
-  } finally {
-    await context.close();
-  }
+async function auditSettingsPermissions() {
+  const before = await readState();
+  const evidence = await verifyRestrictedRoleAudit(process.env, auditBackend.session.user.id);
+  const after = await readState();
+  assert(after.orders.length === before.orders.length, 'Denied role command created a sale');
+  return evidence;
 }
 
 async function auditReportsAnalytics(browser) {
@@ -1536,14 +1486,16 @@ async function auditReportsAnalytics(browser) {
     await page.locator('[data-testid="report-module-panel"]').waitFor();
     await page.locator('[data-testid="report-risk-panel"]').waitFor();
 
+    await page.locator('.reports-filter-bar').getByLabel('Dövr', { exact: true }).selectOption('Hamısı');
     const controlText = await page.locator('[data-testid="reports-control-panel"]').innerText();
-    assert(controlText.includes("Dövr"), "Reports control panel does not show the reporting period");
-    assert(controlText.includes("Data həcmi"), "Reports control panel does not show the data package size");
+    assert(controlText.includes("snapshot"), "Reports control panel does not show its snapshot date");
+    assert(await page.locator('[data-testid="report-module-panel"] tbody tr').count() >= 6,
+      "Reports module panel does not show the underlying module data volumes");
 
+    const previousExportId = (await readState()).reportExports?.[0]?.id;
     await page.locator('[data-testid="report-template-export"]').first().click();
-    await page.waitForTimeout(150);
-
-    const state = await readState(page);
+    const state = await waitForState(s => s.reportExports?.[0]?.id !== previousExportId && s.reportExports?.[0]?.snapshot,
+      'New report export snapshot was not persisted');
     const exportRow = state.reportExports?.[0];
     assert(exportRow?.snapshot, "Report export did not persist a snapshot");
     assert(exportRow?.format, "Report export did not persist the selected format");
@@ -1563,36 +1515,37 @@ async function auditReportsAnalytics(browser) {
 
 async function auditSupportMessaging(browser) {
   const { context, page, errors } = await createFlowPage(browser);
+  const commentText = `QA support ${crypto.randomUUID()}`;
+  const replyText = `QA reply ${crypto.randomUUID()}`;
   try {
     await createCreditSale(page);
     await selectModule(page, 18);
     await page.locator(".page-header .primary-btn").click();
     await page.locator('[data-testid="support-task-panel"]').waitFor();
-    await page.locator('[data-testid="support-comment-input"]').fill("QA bağlı support comment");
+    await page.locator('[data-testid="support-comment-input"]').fill(commentText);
     await page.locator('[data-testid="support-comment-submit"]').click();
-    await page.waitForTimeout(150);
-
-    let state = await readState(page);
-    let ticket = state.supportTickets?.[0];
+    let state = await waitForState(s => s.supportTickets?.some(t => t.comments?.some(c => c.text === commentText)),
+      'Support comment was not persisted');
+    let ticket = state.supportTickets?.find(t => t.comments?.some(c => c.text === commentText));
     assert(ticket?.id, "Support action did not create a task");
     assert(ticket.orderId || ticket.creditId || ticket.fin, "Support task was not linked to an order, credit, or customer");
-    assert(ticket.comments?.some((comment) => comment.text.includes("QA bağlı support comment")), "Support comment was not saved on the task");
+    assert(ticket.comments?.some((comment) => comment.text === commentText), "Support comment was not saved on the task");
     let conversation = state.conversations?.find((item) => item.ticketId === ticket.id);
-    assert(conversation?.messages?.some((message) => message.text.includes("QA bağlı support comment")), "Support comment was not mirrored to messages");
+    assert(conversation?.messages?.some((message) => message.text === commentText), "Support comment was not mirrored to messages");
 
     await selectModule(page, 21);
+    await page.locator(`.conversation-row[data-conversation-id="${conversation.id}"]`).click();
     await page.locator(".chat-panel").waitFor();
     const chatText = await page.locator(".chat-panel").innerText();
     assert(chatText.includes(ticket.id), "Message thread does not show the linked support task");
-    await page.locator(".composer input").fill("QA mesajdan task cavabı");
+    await page.locator(".composer input").fill(replyText);
     await page.locator(".composer button").click();
-    await page.waitForTimeout(150);
-
-    state = await readState(page);
+    state = await waitForState(s => s.supportTickets?.some(t => t.id === ticket.id && t.comments?.some(c => c.text === replyText)),
+      'Message reply was not persisted on its support task');
     ticket = state.supportTickets?.find((item) => item.id === ticket.id);
     conversation = state.conversations?.find((item) => item.ticketId === ticket.id);
-    assert(ticket?.comments?.some((comment) => comment.text.includes("QA mesajdan task cavabı")), "Message reply was not written back to the support task");
-    assert(conversation?.messages?.some((message) => message.text.includes("QA mesajdan task cavabı")), "Message reply was not saved on the thread");
+    assert(ticket?.comments?.some((comment) => comment.text === replyText), "Message reply was not written back to the support task");
+    assert(conversation?.messages?.some((message) => message.text === replyText), "Message reply was not saved on the thread");
     assert(
       state.auditLog?.some((entry) => entry.action === "Task comment əlavə edildi") &&
         state.auditLog?.some((entry) => entry.action === "Bağlı task-a mesaj yazıldı"),

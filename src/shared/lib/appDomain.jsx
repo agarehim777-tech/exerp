@@ -4,6 +4,7 @@ import { CreditInitialPaymentsHistory } from "../../modules/credits/CreditInitia
 import { lazy, useEffect, useMemo, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
+import { round2 } from "../utils/invoiceMath.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue } from "../../services/date.js";
 import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, isCreditStarted, roundMoney } from "./credit.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
@@ -4281,10 +4282,10 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
   const currentPrincipal = Number(paymentState.nextInstallment?.amount || 0);
   const [principalAmount, setPrincipalAmount] = useState(currentPrincipal);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
-  const principal = Math.max(0, Math.round(Number(principalAmount || 0)));
-  const penalty = Math.max(0, Math.round(Number(penaltyAmount || 0)));
+  const principal = Math.max(0, round2(Number(principalAmount || 0)));
+  const penalty = Math.max(0, round2(Number(penaltyAmount || 0)));
   const extraPrincipal = Math.max(0, principal - currentPrincipal);
-  const cashIn = principal + penalty;
+  const cashIn = round2(principal + penalty);
 
   function submit(event) {
     event.preventDefault();
@@ -4311,6 +4312,7 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
             aria-label="Əsas məbləğ"
             type="number"
             min="0"
+            step="0.01"
             value={principalAmount}
             onChange={(event) => setPrincipalAmount(event.target.value)}
           />
@@ -4321,6 +4323,7 @@ export function CreditPaymentForm({ credit, paymentState, onReceivePayment }) {
             aria-label="Gecikmə faizi"
             type="number"
             min="0"
+            step="0.01"
             value={penaltyAmount}
             onChange={(event) => setPenaltyAmount(event.target.value)}
           />

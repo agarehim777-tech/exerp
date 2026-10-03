@@ -25,6 +25,36 @@ export function findNewLinkedCreditSale(state, previousOrders, expectedFin) {
     && state.contracts.some(contract => contract.id === order.contractId && contract.orderId === order.id && contract.creditId === order.creditId));
 }
 
+export async function verifyRestrictedRoleAudit(env, primaryUserId, fetcher = fetch) {
+  const tenantId = assertE2eTarget(env);
+  const email = env.E2E_READONLY_USER;
+  const password = env.E2E_READONLY_PASS;
+  if (!email || !password) throw new Error('AUDIT_ROLE_ACCOUNT_REQUIRED: configure E2E_READONLY_USER and E2E_READONLY_PASS in staging secrets');
+  const url = env.VITE_SUPABASE_URL.replace(/\/$/, '');
+  const apikey = env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const login = await fetcher(`${url}/auth/v1/token?grant_type=password`, { method: 'POST',
+    signal: AbortSignal.timeout(15000), headers: { apikey, 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password }) });
+  if (!login.ok) throw new Error(`ROLE_AUDIT_LOGIN_FAILED: ${login.status}`);
+  const session = await login.json();
+  if (!session.access_token || !session.user?.id || session.user.id === primaryUserId) throw new Error('ROLE_AUDIT_REQUIRES_DISTINCT_IDENTITY');
+  const headers = { apikey, 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` };
+  const membershipResponse = await fetcher(`${url}/rest/v1/tenant_members?select=user_id,role&tenant_id=eq.${tenantId}&user_id=eq.${session.user.id}`, { headers, signal: AbortSignal.timeout(15000) });
+  if (!membershipResponse.ok) throw new Error(`ROLE_AUDIT_MEMBERSHIP_FAILED: ${membershipResponse.status}`);
+  const members = await membershipResponse.json();
+  if (members.length !== 1 || ['admin', 'owner', 'super_admin', 'platform_admin'].includes(members[0].role)) throw new Error('ROLE_AUDIT_REQUIRES_RESTRICTED_MEMBERSHIP');
+  // Authorization must reject before validation or any operation-request insert.
+  const command = await fetcher(`${url}/rest/v1/rpc/create_sales_order_complete`, { method: 'POST', headers,
+    signal: AbortSignal.timeout(15000), body: JSON.stringify({ _tenant_id: tenantId,
+      _request_key: `role-denial:${crypto.randomUUID()}`, _order_no: 'QA-ROLE-DENIAL',
+      _customer_id: null, _order_date: null, _currency: 'AZN', _notes: null, _items: [] }) });
+  const denial = await command.json();
+  if (command.ok || denial.code !== 'P0001' || denial.message !== 'permission_denied') throw new Error('ROLE_AUDIT_COMMAND_NOT_DENIED_BY_AUTHORIZATION');
+  const foreign = await fetcher(`${url}/rest/v1/customers?select=id&tenant_id=eq.${env.E2E_OTHER_TENANT_ID}&limit=1`, { headers, signal: AbortSignal.timeout(15000) });
+  if (!foreign.ok || (await foreign.json()).length !== 0) throw new Error('ROLE_AUDIT_FOREIGN_TENANT_VISIBLE');
+  return { userId: session.user.id, role: members[0].role, tenantId, commandDenied: true, foreignRows: 0 };
+}
+
 export async function createAuditBackend(env, fetcher = fetch) {
   const tenantId = assertE2eTarget(env);
   const url = env.VITE_SUPABASE_URL.replace(/\/$/, '');

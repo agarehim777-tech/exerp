@@ -15,6 +15,7 @@ import { useDbReadBridge } from "./shared/hooks/useDbReadBridge.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
+import { round2 } from "./shared/utils/invoiceMath.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -5500,8 +5501,8 @@ function App() {
   async function receiveCreditPayment(creditId, values) {
     if (!requirePermission("credits.manage", "kredit ödənişi qəbul etmək")) return;
 
-    const principalAmount = Math.max(0, Math.round(Number(values.principalAmount || 0)));
-    const penaltyAmount = Math.max(0, Math.round(Number(values.penaltyAmount || 0)));
+    const principalAmount = Math.max(0, round2(Number(values.principalAmount || 0)));
+    const penaltyAmount = Math.max(0, round2(Number(values.penaltyAmount || 0)));
     const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
 
     if (principalAmount <= 0 && penaltyAmount <= 0) {
