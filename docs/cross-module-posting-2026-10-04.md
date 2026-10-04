@@ -18,7 +18,8 @@
 
 ## Remaining Release Evidence And Scope
 
-- Successful signed HTTP delivery and actual temporary Auth provisioning still require the new CI run with configured staging credentials and Management API permissions.
+- CI run 37195585565 passed release gates but temporary Auth provisioning failed before user creation: the configured Management API token returned HTTP 401. Replace the staging SUPABASE_ACCESS_TOKEN, or configure an existing separate viewer account using E2E_READONLY_USER and E2E_READONLY_PASS. Never place credentials in source or chat.
+- Successful signed HTTP delivery still requires authenticated CI verification. An early gate now requires a persisted receiver receipt and verifies that replay does not send another attempt.
 - Production installation and the complete 21-flow release gate are not yet claimed complete.
 - Invoice settlement currently requires AZN; cross-currency settlement fails explicitly rather than inventing an exchange posting.
 - Production costs currently include consumed materials only. Labor/overhead allocation and reusable BOM master data are separate extensions.

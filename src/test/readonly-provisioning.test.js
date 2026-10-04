@@ -45,3 +45,23 @@ it('reuses explicitly configured credentials without acquiring an admin key', as
   expect(fetcher).not.toHaveBeenCalled();
   expect(exportEnv).toHaveBeenCalledWith({ E2E_READONLY_USER: 'viewer@example.invalid', E2E_READONLY_PASS: 'test-password' });
 });
+
+it('reports a rejected Management token without creating any user or revealing credentials', async () => {
+  const fetcher = vi.fn().mockResolvedValue(new Response('Unauthorized', { status: 401 }));
+  await expect(provisionReadonlyAudit(env, { fetcher })).rejects.toThrow('MANAGEMENT_TOKEN_REJECTED');
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it('deletes a newly created user if its viewer membership fails', async () => {
+  const exported = {};
+  const fetcher = vi.fn().mockResolvedValueOnce(json([{ type: 'secret', api_key: 'test-server-key' }]))
+    .mockResolvedValueOnce(json({ id: user }))
+    .mockResolvedValueOnce(new Response('Rejected', { status: 403 }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  await expect(provisionReadonlyAudit(env, { fetcher, exportEnv: async values => Object.assign(exported, values) }))
+    .rejects.toThrow('HTTP 403');
+  expect(fetcher.mock.calls[3][0]).toContain('/auth/v1/admin/users/' + user);
+  expect(fetcher.mock.calls[3][1].method).toBe('DELETE');
+  expect(exported.E2E_EPHEMERAL_USER_ID).toBe('');
+  expect(exported.E2E_READONLY_PASS).toBeUndefined();
+});

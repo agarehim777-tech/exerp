@@ -104,6 +104,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
     tenantId,
     readCanonical: read,
     command: (name, data) => request(`rest/v1/rpc/${name}`, { method: 'POST', data, token }),
+    invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
     storageKey: `sb-${new URL(url).hostname.split('.')[0]}-auth-token`,
     session,
     async readState() {

@@ -14,8 +14,19 @@ export async function provisionReadonlyAudit(env, { fetcher = fetch, exportEnv, 
   };
   async function adminHeaders() {
     if (!env.SUPABASE_ACCESS_TOKEN) throw new Error('AUDIT_ACCOUNT_PROVISION_TOKEN_REQUIRED');
-    const keys = await request(`https://api.supabase.com/v1/projects/${env.E2E_SUPABASE_PROJECT_REF}/api-keys?reveal=true`,
-      { headers: { authorization: `Bearer ${env.SUPABASE_ACCESS_TOKEN}` } });
+    let keys;
+    try {
+      keys = await request(`https://api.supabase.com/v1/projects/${env.E2E_SUPABASE_PROJECT_REF}/api-keys?reveal=true`,
+        { headers: { authorization: `Bearer ${env.SUPABASE_ACCESS_TOKEN}` } });
+    } catch (error) {
+      if (error.message.endsWith('HTTP 401')) {
+        throw new Error('AUDIT_ACCOUNT_MANAGEMENT_TOKEN_REJECTED: update staging SUPABASE_ACCESS_TOKEN or configure E2E_READONLY_USER and E2E_READONLY_PASS');
+      }
+      if (error.message.endsWith('HTTP 403')) {
+        throw new Error('AUDIT_ACCOUNT_MANAGEMENT_SCOPE_REQUIRED: token needs staging project API-key and key-secret read permissions');
+      }
+      throw error;
+    }
     const key = keys.find(item => item.type === 'secret' && item.api_key)
       || keys.find(item => item.name === 'service_role' && item.api_key);
     if (!key) throw new Error('AUDIT_ACCOUNT_ADMIN_KEY_UNAVAILABLE');
@@ -52,8 +63,8 @@ export async function provisionReadonlyAudit(env, { fetcher = fetch, exportEnv, 
       app_metadata: { audit_run: env.GITHUB_RUN_ID, audit_tenant: tenantId } }) });
   if (!user.id) throw new Error('AUDIT_ACCOUNT_USER_NOT_CREATED');
   // Export ownership before membership so even a later step failure can clean up safely.
-  await exportEnv({ E2E_EPHEMERAL_USER_ID: user.id });
   try {
+    await exportEnv({ E2E_EPHEMERAL_USER_ID: user.id });
     await request(`${url}/rest/v1/tenant_members`, { method: 'POST', headers,
       body: JSON.stringify({ tenant_id: tenantId, user_id: user.id, role: 'viewer' }) });
     await exportEnv({ E2E_READONLY_USER: email, E2E_READONLY_PASS: password });
