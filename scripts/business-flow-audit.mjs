@@ -1000,43 +1000,47 @@ async function auditProductionCosting(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const warehouse = await createWarehouseWithStock(page);
-    let state = await readState(page);
-    const rawBefore = stockTotal(state, warehouse.id, "QA Device");
-
+    const fixture = fixtureByPage.get(page);
+    const before = await readState(page);
+    const raw = before.products.find(product => product.name === fixture.productName);
+    const finishedSku = ('FIN-QA-' + crypto.randomUUID().slice(0, 8)).toUpperCase();
+    await selectPath(page, '/anbar/mehsullar');
+    await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
+    await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
+    const productForm = page.getByRole('dialog');
+    await productForm.getByLabel('SKU', { exact: true }).fill(finishedSku);
+    await productForm.getByLabel('Məhsul adı', { exact: true }).fill('QA Finished ' + finishedSku);
+    await productForm.getByLabel('Satış qiyməti', { exact: true }).fill('5000');
+    await productForm.getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
+    await productForm.waitFor({ state: 'hidden' });
+    const prepared = await waitForState(state => state.products.some(product => product.sku === finishedSku), 'Finished product was not persisted');
+    const finished = prepared.products.find(product => product.sku === finishedSku);
+    const oldBatches = await auditBackend.readCanonical('production_batches');
     await selectModule(page, 13);
-    await page.locator(".page-header .primary-btn").click();
-    await page.locator('[data-testid="production-control-panel"]').waitFor();
-    await page.locator('[data-testid="production-complete-plan"]').first().click();
-    await page.waitForTimeout(150);
-
-    state = await readState(page);
-    const plan = state.productionPlans?.find((item) => item.product === "Yeni satış komplekti");
-    assert(plan, "Production action did not create a BOM plan");
-    assert(plan.status === "İstehsal edildi", "Production completion did not mark the plan as produced");
-    assert(plan.receipt?.warehouseId === warehouse.id, "Finished goods were not received into the source warehouse");
-    assert(Number(plan.actualUnitCost || 0) > 0, "Production did not calculate an actual unit cost");
-    const rawAfter = stockTotal(state, warehouse.id, "QA Device");
-    const finishedAfter = stockTotal(state, warehouse.id, plan.product);
-    const issuedQty = (plan.issuedMaterials || []).find((item) => item.product === "QA Device")?.qty || 0;
-    assert(rawAfter === rawBefore - issuedQty, "Production did not reduce raw material stock");
-    assert(finishedAfter >= Number(plan.producedQty || 0), "Production did not increase finished goods stock");
-    const finishedProduct = state.products?.find((item) => item.name === plan.product);
-    assert(finishedProduct?.costPrice === plan.actualUnitCost, "Finished product catalog did not receive the actual unit cost");
-    assert(
-      state.auditLog?.some((entry) => entry.action === "Xammal çıxışı və hazır məhsul mədaxili"),
-      "Production warehouse movement was not written to the audit log",
-    );
-    assert(errors.length === 0, `Production costing flow produced browser errors: ${errors.join(" | ")}`);
-    return {
-      planId: plan.id,
-      rawIssued: issuedQty,
-      producedQty: plan.producedQty,
-      unitCost: plan.actualUnitCost,
-      warehouseId: warehouse.id,
-    };
-  } finally {
-    await context.close();
-  }
+    const form = page.getByTestId('production-command');
+    await form.getByLabel('Hazır məhsul', { exact: true }).selectOption(finished.id);
+    await form.getByLabel('Anbar', { exact: true }).selectOption(warehouse.id);
+    await form.getByLabel('Hazır məhsul miqdarı', { exact: true }).fill('2');
+    await form.getByLabel('Xammal', { exact: true }).selectOption(raw.id);
+    await form.getByLabel('Xammal miqdarı', { exact: true }).fill('4');
+    await form.getByRole('button', { name: 'İstehsalı tamamla', exact: true }).click();
+    await page.locator('tr[data-batch-id]').filter({ hasText: finished.name }).waitFor();
+    const batches = await auditBackend.readCanonical('production_batches');
+    const batch = batches.find(item => item.product_id === finished.id && !oldBatches.some(old => old.id === item.id));
+    assert(batch && batch.warehouse_id === warehouse.id, 'Production batch was not persisted in its source warehouse');
+    assert(Number(batch.quantity) === 2 && Number(batch.total_cost) === 4800 && Number(batch.unit_cost) === 2400, 'Material cost differs from actual consumed valuation');
+    const after = await waitForState(state => stockTotal(state, warehouse.id, raw.name) === 1 && stockTotal(state, warehouse.id, finished.name) === 2, 'Production stock postings did not converge');
+    const balance = after.warehouseStock[warehouse.id].find(item => item.productId === finished.id);
+    assert(Number(balance.costPrice) === 2400, 'Finished stock valuation differs from posted material cost');
+    const materials = await auditBackend.readCanonical('production_batch_materials', '*,production_batches!inner(tenant_id)', '&batch_id=eq.' + batch.id, 'production_batches.tenant_id');
+    assert(materials.length === 1 && materials[0].product_id === raw.id && Number(materials[0].quantity) === 4, 'Canonical BOM consumption is missing');
+    const journals = await auditBackend.readCanonical('journal_entries', '*', '&id=eq.' + batch.journal_entry_id);
+    const lines = await auditBackend.readCanonical('journal_lines', '*,journal_entries!inner(tenant_id)', '&entry_id=eq.' + batch.journal_entry_id, 'journal_entries.tenant_id');
+    assert(journals[0]?.posted && lines.length === 2 && lines.reduce((sum, line) => sum + Number(line.debit) - Number(line.credit), 0) === 0, 'Production accounting was not balanced and posted');
+    assert(after.auditLog.some(entry => entry.action === 'batch_posted' && entry.payload?.batch_id === batch.id), 'Production audit event is missing');
+    assert(errors.length === 0, 'Production browser errors: ' + errors.join(' | '));
+    return { batchId: batch.id, rawIssued: 4, producedQty: 2, unitCost: Number(batch.unit_cost), warehouseId: warehouse.id };
+  } finally { await context.close(); }
 }
 
 async function auditProjectRoiWorkflow(browser) {
@@ -1160,38 +1164,32 @@ async function auditNotificationProviderDispatch(browser) {
 async function auditApiWebhookIntegrationWorkflow(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
+    const before = await auditBackend.readCanonical('webhook_dispatches');
     await selectModule(page, 23);
-    await page.locator('[data-testid="api-console-panel"]').waitFor({ state: "visible" });
-    await page.locator('[data-testid="api-endpoint-panel"]').waitFor({ state: "visible" });
-    await page.locator('[data-testid="api-secret-panel"]').waitFor({ state: "visible" });
-
-    const endpointText = await page.locator('[data-testid="api-endpoint-panel"]').innerText();
-    const secretText = await page.locator('[data-testid="api-secret-panel"]').innerText();
-    assert(endpointText.includes("credit.overdue") && endpointText.includes("product.low_stock"), "API endpoint map does not expose default webhook events");
-    assert(secretText.includes("ERP_WEBHOOK_SIGNING_SECRET"), "API secret vault does not expose the signing secret");
-
-    await page.locator('[data-testid="api-secret-rotate"]').first().click();
-    await page.waitForTimeout(120);
-    await page.locator('[data-testid="api-run-webhook-test"]').click();
-    await page.waitForTimeout(150);
-
-    const state = await readState(page);
-    const log = state.apiWebhookLogs?.[0];
-    const rotatedSecret = state.apiSecrets?.find((secret) => secret.key === "ERP_WEBHOOK_SIGNING_SECRET");
-    assert((state.apiWebhooks || []).length >= 5, "API webhook defaults were not hydrated");
-    assert(log?.responseCode === 200 && log.result === "Uğurlu", "API webhook test did not persist a successful result");
-    assert(state.apiIntegrationSnapshot?.result === "Uğurlu", "API integration snapshot was not updated");
-    assert(Number(rotatedSecret?.version || 0) >= 2 && rotatedSecret?.lastRotatedBy, "API secret rotation did not persist version metadata");
-    assert(
-      state.auditLog?.some((entry) => entry.action === "Webhook test nəticəsi") &&
-        state.auditLog?.some((entry) => entry.action === "API secret rotasiya edildi"),
-      "API webhook test/secret rotation actions were not written to audit log",
-    );
-    assert(errors.length === 0, `API webhook integration flow produced browser errors: ${errors.join(" | ")}`);
-    return { webhookId: log.webhookId, responseCode: log.responseCode, secretVersion: rotatedSecret.version };
-  } finally {
-    await context.close();
-  }
+    await page.getByTestId('webhook-http-test').click();
+    const register = page.getByTestId('webhook-dispatch-register');
+    await register.locator('tr[data-dispatch-id]').filter({ hasText: 'delivered' }).first().waitFor();
+    const dispatches = await auditBackend.readCanonical('webhook_dispatches');
+    const dispatch = dispatches.find(item => item.status === 'delivered' && !before.some(old => old.id === item.id));
+    assert(dispatch?.response_code === 200 && Number(dispatch.latency_ms) >= 0, 'Real signed HTTP delivery did not complete');
+    const receipts = await auditBackend.readCanonical('webhook_receipts', '*', '&dispatch_id=eq.' + dispatch.id);
+    assert(receipts.length === 1 && /^[a-f0-9]{64}$/.test(receipts[0].payload_hash), 'HTTP delivery has no durable receiver receipt');
+    const endpointBefore = (await auditBackend.readCanonical('webhook_endpoints')).find(item => item.id === dispatch.endpoint_id);
+    await page.getByRole('button', { name: 'Açarı yenilə', exact: true }).click();
+    await page.getByText(endpointBefore.name + ' · v' + (Number(endpointBefore.key_version) + 1), { exact: true }).waitFor();
+    const endpointAfter = (await auditBackend.readCanonical('webhook_endpoints')).find(item => item.id === dispatch.endpoint_id);
+    assert(endpointAfter.key_version === endpointBefore.key_version + 1, 'Server signing key version did not rotate');
+    await page.getByTestId('webhook-http-test').click();
+    await register.locator('tr[data-dispatch-id]').filter({ hasText: 'delivered' }).nth(1).waitFor();
+    const after = await auditBackend.readCanonical('webhook_dispatches');
+    assert(after.filter(item => item.status === 'delivered' && !before.some(old => old.id === item.id)).length === 2, 'Rotated signing key did not complete a second real delivery');
+    const audit = await auditBackend.readCanonical('audit_events');
+    assert(audit.some(item => item.action === 'signing_key_rotated' && item.payload?.endpoint_id === endpointAfter.id)
+      && audit.some(item => item.action === 'http_dispatch_finished' && item.payload?.dispatch_id === dispatch.id && item.payload.delivered),
+      'HTTP delivery and rotation audit events are missing');
+    assert(errors.length === 0, 'HTTP integration browser errors: ' + errors.join(' | '));
+    return { dispatchId: dispatch.id, responseCode: dispatch.response_code, secretVersion: endpointAfter.key_version };
+  } finally { await context.close(); }
 }
 
 async function createHrEmployee(page, values) {

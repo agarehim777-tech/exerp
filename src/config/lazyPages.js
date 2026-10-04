@@ -11,6 +11,7 @@
  * existing <Suspense> boundary.
  */
 import { lazy } from "react";
+export const ProductionLedgerPage = lazy(() => import('../modules/production/ProductionLedgerPage.jsx'));
 
 const named = (loader, exportName) => lazy(() => loader().then((m) => ({ default: m[exportName] })));
 
@@ -72,4 +73,4 @@ export const AccessCheckPage = lazy(() => import("../modules/settings/AccessChec
 export const AuditLogPage = lazy(() => import("../modules/settings/AuditLogPage.jsx"));
 export const DataReconciliationPage = lazy(() => import("../modules/admin/DataReconciliationPage.jsx"));
 export const PlatformAdminPage = lazy(() => import("../pages/PlatformAdminPage.jsx"));
-export const ApiPage = lazy(() => import("../pages/ApiPage.jsx"));
+export const ApiPage = lazy(() => import("../modules/integrations/IntegrationLedgerPage.jsx"));

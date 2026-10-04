@@ -118,7 +118,7 @@ export const pageActionPermissionByType = {
   messages: "messages.send",
 };
 
-export const pageActionlessModules = new Set(["deliveries", "messages"]);
+export const pageActionlessModules = new Set(["deliveries", "messages", "production", "api"]);
 
 export const navPermissionByType = {
   ...createPermissionByType,

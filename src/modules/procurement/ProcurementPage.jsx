@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -189,6 +189,9 @@ function ProductAutocomplete({ products, value, onSelect }) {
 export default function ProcurementPage() {
   const { profile, user, activeTenantId } = useAuth();
   const tenantId = activeTenantId || profile?.active_tenant_id;
+  const currentTenant = useRef(tenantId);
+  currentTenant.current = tenantId;
+  const invoiceAttempt = useRef(null);
 
   const [tab, setTab] = useState("dashboard");
   const [query, setQuery] = useState("");
@@ -218,6 +221,9 @@ export default function ProcurementPage() {
   const [paymentPoId, setPaymentPoId] = useState(null);
   const [paymentForm, setPaymentForm] = useState(emptyPoPayment);
   const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const [payingInvoice, setPayingInvoice] = useState(null);
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  const [invoiceAccountId, setInvoiceAccountId] = useState("");
 
   const [vendorForm, setVendorForm] = useState(emptyVendor);
   const [editingVendorId, setEditingVendorId] = useState(null);
@@ -270,6 +276,8 @@ export default function ProcurementPage() {
 
 
   useEffect(() => {
+    setPayingInvoice(null); setPaymentAccounts([]); setInvoiceAccountId("");
+    invoiceAttempt.current = null;
     load();
   }, [load]);
 
@@ -1090,6 +1098,7 @@ export default function ProcurementPage() {
   }
 
   async function updateInvoiceStatus(invoiceId, status) {
+    if (status === "paid") throw new Error("Invoice payment requires the server command");
     setSaving(true);
     const { error: invoiceError } = await supabase.from("vendor_invoices").update({ status }).eq("id", invoiceId);
     if (invoiceError) setError(getError(invoiceError));
@@ -1098,6 +1107,37 @@ export default function ProcurementPage() {
       await load();
     }
     setSaving(false);
+  }
+
+  async function openInvoicePayment(invoice) {
+    const { data, error: accountError } = await supabase.from("cash_accounts").select("id,name,currency")
+      .eq("tenant_id", tenantId).eq("is_active", true).eq("currency", invoice.currency);
+    if (tenantId !== currentTenant.current) return;
+    if (accountError) { setError(getError(accountError)); return; }
+    setPaymentAccounts(data || []);
+    setInvoiceAccountId(data?.[0]?.id || "");
+    setPayingInvoice(invoice);
+  }
+
+  async function payInvoice(event) {
+    event.preventDefault();
+    if (saving || !invoiceAccountId) return;
+    setSaving(true); setError("");
+    try {
+        if (invoiceAttempt.current?.invoice_id !== payingInvoice.id || invoiceAttempt.current?.account_id !== invoiceAccountId) {
+          invoiceAttempt.current = { invoice_id: payingInvoice.id, account_id: invoiceAccountId, payment_date: today() };
+        }
+      const { error: paymentError } = await supabase.rpc("pay_vendor_invoice_atomic", {
+        _tenant_id: tenantId, _request_key: `invoice-payment:${payingInvoice.id}`,
+        _payload: invoiceAttempt.current,
+      });
+      if (paymentError) throw paymentError;
+        if (tenantId !== currentTenant.current) return;
+        invoiceAttempt.current = null;
+      setNotice("Faktura ödənişi kassaya və mühasibat jurnalına yazıldı.");
+      setPayingInvoice(null); await load();
+      } catch (paymentError) { if (tenantId === currentTenant.current) setError(getError(paymentError)); }
+    finally { setSaving(false); }
   }
 
   async function deleteInvoice(invoice) {
@@ -1329,13 +1369,29 @@ export default function ProcurementPage() {
               onDelete={deleteInvoice}
               onMatch={(invoice) => runMatch(invoice.id)}
               onApprove={(invoice) => updateInvoiceStatus(invoice.id, "approved")}
-              onPaid={(invoice) => updateInvoiceStatus(invoice.id, "paid")}
+              onPaid={openInvoicePayment}
               onCancelInvoice={(invoice) => updateInvoiceStatus(invoice.id, "cancelled")}
               saving={saving}
             />
           )}
         </>
       )}
+      {payingInvoice && <section role="dialog" aria-modal="true" aria-label="Vendor fakturasının ödənişi" className="modal-backdrop">
+        <form className="modal-card" onSubmit={payInvoice}>
+          <h2>{payingInvoice.invoice_number}</h2>
+          <strong>{money(invoiceTotals.get(payingInvoice.id), payingInvoice.currency)}</strong>
+          <label>Ödəniş hesabı<select aria-label="Ödəniş hesabı" value={invoiceAccountId} disabled={saving}
+            onChange={event => setInvoiceAccountId(event.target.value)} required>
+            <option value="">Hesab seçin</option>
+            {paymentAccounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
+          </select></label>
+          <div className="modal-actions">
+            <button type="button" className="secondary-btn" disabled={saving} onClick={() => setPayingInvoice(null)}>Ləğv et</button>
+            <button type="submit" className="primary-btn" disabled={saving || !invoiceAccountId}>{saving ? "Qeydə alınır..." : "Ödənişi təsdiq et"}</button>
+          </div>
+          {error && <p role="alert">{error}</p>}
+        </form>
+      </section>}
     </main>
   );
 }
@@ -1967,7 +2023,7 @@ function InvoicesTab({
                 <IconButton icon={RefreshCw} label="Match" onClick={() => onMatch(invoice)} />
                 <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(invoice)} disabled={invoice.status === "paid"} />
                 {invoice.status === "matched" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(invoice)} tone="success" />}
-                {["matched", "approved"].includes(invoice.status) && <IconButton icon={WalletCards} label="Ödəndi" onClick={() => onPaid(invoice)} tone="success" />}
+                {["matched", "approved"].includes(invoice.status) && <IconButton icon={WalletCards} label="Ödəniş et" onClick={() => onPaid(invoice)} tone="success" />}
                 {!["paid", "cancelled"].includes(invoice.status) && <IconButton icon={XCircle} label="Ləğv" onClick={() => onCancelInvoice(invoice)} tone="danger" />}
                 {invoice.status !== "paid" && <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(invoice)} tone="danger" />}
               </div>,

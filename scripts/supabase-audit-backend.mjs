@@ -42,7 +42,7 @@ export async function verifyRestrictedRoleAudit(env, primaryUserId, fetcher = fe
   const membershipResponse = await fetcher(`${url}/rest/v1/tenant_members?select=user_id,role&tenant_id=eq.${tenantId}&user_id=eq.${session.user.id}`, { headers, signal: AbortSignal.timeout(15000) });
   if (!membershipResponse.ok) throw new Error(`ROLE_AUDIT_MEMBERSHIP_FAILED: ${membershipResponse.status}`);
   const members = await membershipResponse.json();
-  if (members.length !== 1 || ['admin', 'owner', 'super_admin', 'platform_admin'].includes(members[0].role)) throw new Error('ROLE_AUDIT_REQUIRES_RESTRICTED_MEMBERSHIP');
+  if (members.length !== 1 || members[0].role !== 'viewer') throw new Error('ROLE_AUDIT_REQUIRES_RESTRICTED_MEMBERSHIP');
   // Authorization must reject before validation or any operation-request insert.
   const command = await fetcher(`${url}/rest/v1/rpc/create_sales_order_complete`, { method: 'POST', headers,
     signal: AbortSignal.timeout(15000), body: JSON.stringify({ _tenant_id: tenantId,
@@ -50,9 +50,13 @@ export async function verifyRestrictedRoleAudit(env, primaryUserId, fetcher = fe
       _customer_id: null, _order_date: null, _currency: 'AZN', _notes: null, _items: [] }) });
   const denial = await command.json();
   if (command.ok || denial.code !== 'P0001' || denial.message !== 'permission_denied') throw new Error('ROLE_AUDIT_COMMAND_NOT_DENIED_BY_AUTHORIZATION');
+  const directWrite = await fetcher(`${url}/rest/v1/customers`, { method: 'POST', headers,
+    signal: AbortSignal.timeout(15000), body: JSON.stringify({ tenant_id: tenantId, name: 'QA readonly denial' }) });
+  const directDenial = await directWrite.json();
+  if (directWrite.ok || directDenial.code !== '42501') throw new Error('ROLE_AUDIT_DIRECT_WRITE_NOT_DENIED');
   const foreign = await fetcher(`${url}/rest/v1/customers?select=id&tenant_id=eq.${env.E2E_OTHER_TENANT_ID}&limit=1`, { headers, signal: AbortSignal.timeout(15000) });
   if (!foreign.ok || (await foreign.json()).length !== 0) throw new Error('ROLE_AUDIT_FOREIGN_TENANT_VISIBLE');
-  return { userId: session.user.id, role: members[0].role, tenantId, commandDenied: true, foreignRows: 0 };
+  return { userId: session.user.id, role: members[0].role, tenantId, commandDenied: true, directWriteDenied: true, foreignRows: 0 };
 }
 
 export async function createAuditBackend(env, fetcher = fetch) {
@@ -98,6 +102,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
   if (Number(capabilities?.schema_version) < 3) throw new Error('ERP_SCHEMA_MIGRATION_REQUIRED');
   return {
     tenantId,
+    readCanonical: read,
+    command: (name, data) => request(`rest/v1/rpc/${name}`, { method: 'POST', data, token }),
     storageKey: `sb-${new URL(url).hostname.split('.')[0]}-auth-token`,
     session,
     async readState() {

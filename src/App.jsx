@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
 import { resolveModalKind } from "./config/modal-registry.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
+import { ProductionLedgerPage } from './config/lazyPages.js';
 import { supabase } from "./integrations/supabase/client";
 import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
@@ -6802,6 +6803,7 @@ function App() {
             />
           )}
           {active === "bonuses" && <BonusesPage salesBonuses={salesBonusRows} />}
+          {active === "production" && <ProductionLedgerPage />}
           {active === "contracts" && (
             <ContractsPage
               contracts={filtered.contracts}

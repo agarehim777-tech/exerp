@@ -78,7 +78,8 @@ it('rejects production and elevated audit accounts', async () => {
 it('uses stable routes and reports removed modules instead of navigating by DOM index', () => {
   expect(auditModulePath(9)).toBe('/kredit');
   expect(auditModulePath(14)).toBe('/hr/emekdaslar');
-  expect(() => auditModulePath(13)).toThrow('production');
+  expect(auditModulePath(13)).toBe('/istehsal');
+  expect(() => auditModulePath(8)).toThrow('tax');
 });
 
 it('preserves the server error status and detail instead of masking it with a fetch API error', async () => {

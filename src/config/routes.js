@@ -22,6 +22,7 @@ export const moduleRoutes = {
   receivables: "/borclar",
   vendors: "/vendor",
   procurement: "/satinalma",
+  production: "/istehsal",
   hr: "/hr/emekdaslar",
   kpi: "/kpi",
   bonuses: "/bonuslar",

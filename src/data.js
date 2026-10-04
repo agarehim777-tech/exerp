@@ -24,6 +24,7 @@ export const navItems = [
 
   // Təchizat & Anbar
   { id: "procurement", label: "Satınalma", group: "supply" },
+  { id: "production", label: "İstehsalat", group: "supply" },
   { id: "stock", label: "Anbar idarəetməsi", group: "supply" },
   { id: "products", label: "Məhsullar", group: "supply" },
   { id: "deliveries", label: "Təhvil-təslim", group: "supply" },

@@ -1,0 +1,11 @@
+.production-fields { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 12px; }
+.production-command, .production-register { padding: 16px 0; border-bottom: 1px solid var(--border-color, #dce4e4); }
+.production-fields label { display: grid; gap: 6px; min-width: 0; }
+.production-ledger select, .production-ledger input { height: 38px; width: 100%; min-width: 0; }
+.production-material { display: grid; grid-template-columns: minmax(0, 3fr) minmax(100px, 1fr) 38px; gap: 12px; margin-bottom: 8px; }
+.production-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.production-register .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.production-register .table-scroll { overflow-x: auto; }
+.production-register table { width: 100%; }
+.production-register td, .production-register th { padding: 10px; white-space: nowrap; text-align: left; }
+@media (max-width: 768px) { .production-fields { grid-template-columns: 1fr; } .production-material { grid-template-columns: minmax(0, 2fr) 90px 38px; gap: 8px; } }

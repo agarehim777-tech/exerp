@@ -53,6 +53,23 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Provision restricted staging audit identity
+        id: readonly_identity
+        run: node scripts/provision-readonly-audit.mjs
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          E2E_READONLY_USER: ${{ secrets.E2E_READONLY_USER }}
+          E2E_READONLY_PASS: ${{ secrets.E2E_READONLY_PASS }}
+
+      - name: Restricted identity authorization gate
+        run: node scripts/verify-readonly-audit.mjs
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
       - name: Browser and tenant-isolation tests
         run: npm run e2e -- --grep-invert "@lifecycle|@ai"
         env:
@@ -113,9 +130,15 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-          E2E_READONLY_USER: ${{ secrets.E2E_READONLY_USER }}
-          E2E_READONLY_PASS: ${{ secrets.E2E_READONLY_PASS }}
           AUDIT_FLOW_TIMEOUT_MS: 90000
+
+      - name: Remove ephemeral restricted audit identity
+        if: ${{ always() && env.E2E_EPHEMERAL_USER_ID != '' }}
+        run: node scripts/provision-readonly-audit.mjs
+        env:
+          AUDIT_ACCOUNT_ACTION: cleanup
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Upload business lifecycle evidence
         if: ${{ always() && steps.business_flows.outcome != 'skipped' }}
