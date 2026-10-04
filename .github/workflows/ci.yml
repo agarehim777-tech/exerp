@@ -45,12 +45,14 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: Release gates
+        id: release_gates
         run: npm run verify:release
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Install Playwright Chromium
+        id: browser_runtime
         run: npx playwright install --with-deps chromium
 
       - name: Provision restricted staging audit identity
@@ -63,6 +65,7 @@ jobs:
           E2E_READONLY_PASS: ${{ secrets.E2E_READONLY_PASS }}
 
       - name: Restricted identity authorization gate
+        if: ${{ !cancelled() && steps.readonly_identity.outcome == 'success' }}
         run: node scripts/verify-readonly-audit.mjs
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -70,7 +73,17 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
+      - name: Signed HTTP delivery and replay gate
+        if: ${{ !cancelled() && steps.release_gates.outcome == 'success' }}
+        run: node scripts/verify-signed-http.mjs
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
+
       - name: Browser and tenant-isolation tests
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run e2e -- --grep-invert "@lifecycle|@ai"
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -81,7 +94,7 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: Authenticated AI tool-call test
-        if: ${{ vars.AI_E2E_ENABLED == 'true' }}
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' && vars.AI_E2E_ENABLED == 'true' }}
         run: npm run e2e -- tests/ai-assistant.spec.ts --workers=1
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -91,6 +104,7 @@ jobs:
           AI_E2E_ENABLED: "true"
 
       - name: Sales and expense lifecycle tests
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run e2e:lifecycle
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -99,6 +113,7 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: Concurrent server lifecycle tests
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run e2e -- tests/concurrent-lifecycle.spec.ts --workers=1
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -107,6 +122,7 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: Credit deposit lifecycle
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run e2e -- tests/credit-deposit-lifecycle.spec.ts --workers=1
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -115,6 +131,7 @@ jobs:
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
       - name: Delivery and reversal lifecycle matrix
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -124,6 +141,7 @@ jobs:
 
       - name: All 21 business lifecycle flows
         id: business_flows
+        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run audit:flows
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
