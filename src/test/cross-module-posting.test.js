@@ -36,7 +36,7 @@ async function database() {
     CREATE FUNCTION public.evaluate_invoice_match(i uuid,numeric,numeric) RETURNS TABLE(status text) LANGUAGE sql AS $$
       SELECT CASE WHEN l.unit_price=p.unit_price THEN 'matched' ELSE 'price_exception' END FROM public.vendor_invoice_lines l JOIN public.purchase_order_lines p ON p.id=l.po_line_id WHERE l.invoice_id=i $$;
     CREATE TABLE chart_of_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,code text,UNIQUE(tenant_id,code));
-    CREATE TABLE cash_accounts(id uuid PRIMARY KEY,tenant_id uuid,currency text,type text,is_active boolean,opening_balance numeric,gl_account_id uuid);
+    CREATE TABLE cash_accounts(id uuid PRIMARY KEY,tenant_id uuid,currency text,type text,is_active boolean,opening_balance numeric);
     CREATE TABLE cash_transactions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,account_id uuid,direction text,amount numeric,currency text,category text,reference_type text,reference_id uuid,reference text,vendor_id uuid,description text,occurred_at timestamptz,created_by uuid);
     CREATE TABLE journal_entries(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,entry_date date,reference text,description text,source_type text,source_id uuid,created_by uuid,posted boolean DEFAULT false);
     CREATE TABLE journal_lines(entry_id uuid REFERENCES journal_entries(id),account_id uuid,debit numeric,credit numeric,memo text,line_no int);
@@ -71,7 +71,7 @@ async function database() {
     INSERT INTO goods_receipt_lines VALUES('${poLine}',2,0);
     INSERT INTO vendor_invoices VALUES('${invoice}','${tenant}','${vendor}','${po}','matched','AZN','QA-INV',now());
     INSERT INTO vendor_invoice_lines(invoice_id,po_line_id,qty_invoiced,unit_price,tax_rate) VALUES('${invoice}','${poLine}',2,50,0);
-    INSERT INTO cash_accounts VALUES('${account}','${tenant}','AZN','cash',true,500,null);
+    INSERT INTO cash_accounts VALUES('${account}','${tenant}','AZN','cash',true,500);
     INSERT INTO procurement_receipts VALUES('${po}','${tenant}');
     INSERT INTO procurement_receipt_lines VALUES('${po}','${poLine}',2);
     INSERT INTO journal_entries(tenant_id,source_type,source_id,posted) VALUES('${tenant}','procurement_receipt','${po}',true);
@@ -80,7 +80,7 @@ async function database() {
     INSERT INTO stock_balances VALUES('${tenant}','${warehouse}','${raw}',10,0,0,25,now());
     INSERT INTO inventory_cost_layers(tenant_id,warehouse_id,product_id,remaining_qty,unit_cost) VALUES('${tenant}','${warehouse}','${raw}',10,25);
   `);
-  for (const name of ['20261003135641_atomic_vendor_invoice_payment','20261003140457_viewer_write_boundary','20261003140739_atomic_material_production','20261003141250_durable_webhook_dispatch']) {
+  for (const name of ['20261003135641_atomic_vendor_invoice_payment','20261003140457_viewer_write_boundary','20261003140739_atomic_material_production','20261003141250_durable_webhook_dispatch','20261004123950_restore_cash_account_gl_mapping','20261004124345_guard_unaccrued_invoice_vat']) {
     await db.exec(await readFile(new URL(`../../supabase/migrations/${name}.sql`, import.meta.url), 'utf8'));
   }
   return db;
@@ -106,6 +106,36 @@ it('atomically settles a matched vendor invoice and rejects unbacked paid status
     await expect(db.exec(`UPDATE vendor_invoices SET status='matched' WHERE id='${invoice}'`)).rejects.toThrow('immutable');
     await expect(db.exec(`UPDATE vendor_invoice_lines SET unit_price=1 WHERE invoice_id='${invoice}'`)).rejects.toThrow('immutable');
     await expect(db.exec(`DELETE FROM vendor_invoice_lines WHERE invoice_id='${invoice}'`)).rejects.toThrow('immutable');
+  } finally { await db.close(); }
+}, 30000);
+
+it('restores the missing cash GL reference and rejects a foreign-tenant mapping before payment', async () => {
+  const db = await database();
+  try {
+    const foreign = '99999999-9999-4999-8999-999999999999';
+    await db.exec(`INSERT INTO chart_of_accounts(id,tenant_id,code) VALUES('${foreign}','${foreign}','1000');
+      UPDATE cash_accounts SET gl_account_id='${foreign}' WHERE id='${account}'`);
+    await expect(db.query('select public.pay_vendor_invoice_atomic($1,$2,$3)', [tenant, 'foreign-gl', {
+      invoice_id: invoice, account_id: account, payment_date: '2026-10-04',
+    }])).rejects.toThrow('invalid_cash_gl_scope');
+    expect((await db.query('select count(*)::int n from cash_transactions')).rows[0].n).toBe(0);
+    await expect(db.exec(`UPDATE cash_accounts SET gl_account_id='${viewer}' WHERE id='${account}'`))
+      .rejects.toThrow('foreign key');
+  } finally { await db.close(); }
+}, 30000);
+
+it('rejects VAT settlement without leaving cash, payment, journal or request records', async () => {
+  const db = await database();
+  try {
+    await db.exec(`UPDATE vendor_invoice_lines SET tax_rate=18 WHERE invoice_id='${invoice}'`);
+    await expect(db.query('select public.pay_vendor_invoice_atomic($1,$2,$3)', [tenant, 'unaccrued-vat', {
+      invoice_id: invoice, account_id: account, payment_date: '2026-10-04',
+    }])).rejects.toThrow('invoice_vat_posting_required');
+    for (const table of ['cash_transactions', 'vendor_invoice_payments', 'operation_requests']) {
+      expect((await db.query(`select count(*)::int n from ${table}`)).rows[0].n).toBe(0);
+    }
+    expect((await db.query("select count(*)::int n from journal_entries where source_type='vendor_invoice_payment'")).rows[0].n).toBe(0);
+    expect((await db.query(`select status from vendor_invoices where id='${invoice}'`)).rows[0].status).toBe('matched');
   } finally { await db.close(); }
 }, 30000);
 

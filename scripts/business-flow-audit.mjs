@@ -171,6 +171,16 @@ async function waitForState(predicate, message) {
   throw new Error(message);
 }
 
+async function waitForCanonical(readRows, predicate, message) {
+  const deadline = Date.now() + 15000;
+  do {
+    const rows = await readRows();
+    if (predicate(rows)) return rows;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  } while (Date.now() < deadline);
+  throw new Error(message);
+}
+
 function stockTotal(state, warehouseId, product) {
   return (state.warehouseStock?.[warehouseId] || [])
     .filter((item) => item.product === product)
@@ -608,42 +618,92 @@ async function auditPurchaseOrder(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const warehouse = await createWarehouseWithStock(page);
-    await selectModule(page, 11);
-    await page.locator(".page-header .primary-btn").click();
-    const vendorModal = page.locator('[role="dialog"]');
-    await vendorModal.locator("input").nth(0).fill("QA Vendor");
-    await vendorModal.locator("input").nth(1).fill("Azerbaijan");
-    await vendorModal.locator("input").nth(2).fill("1");
-    await vendorModal.locator("input").nth(3).fill("100");
-    await vendorModal.locator('button[type="submit"]').click();
+    const fixture = fixtureByPage.get(page);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const marker = `QA Purchase ${suffix}`;
+    const read = (table, filter) => auditBackend.readCanonical(table, '*', filter);
+    await selectModule(page, 5);
+    await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
+    const accountForm = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
+    await accountForm.getByPlaceholder('Hesab adı', { exact: true }).fill(marker);
+    await accountForm.getByPlaceholder('Hesab №', { exact: true }).fill(marker);
+    await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('500');
+    await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
+    const [account] = await waitForCanonical(() => read('cash_accounts', '&name=eq.' + encodeURIComponent(marker)), rows => rows.length === 1, 'Purchase payment account was not persisted');
 
+    await selectPath(page, '/satinalma');
+    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    const vendorForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
+    await vendorForm.getByLabel('Ad', { exact: true }).fill(marker);
+    await vendorForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
+    const [vendor] = await waitForCanonical(() => read('vendors', '&name=eq.' + encodeURIComponent(marker)), rows => rows.length === 1, 'Purchase vendor was not persisted');
+
+    await page.getByRole('button', { name: 'PO', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni PO yarat', exact: true }).click();
+    const poNumber = 'PO-QA-' + suffix;
+    const poForm = page.locator('form').filter({ has: page.getByLabel('PO nömrəsi', { exact: true }) });
+    await poForm.getByLabel(/^Vendor/).selectOption(vendor.id);
+    await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
+    await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
+    await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
+    await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('50');
+    await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
+    const [po] = await waitForCanonical(() => read('purchase_orders', '&po_number=eq.' + poNumber), rows => rows.length === 1, 'Purchase PO was not persisted');
+    await page.locator('main.main tr').filter({ hasText: poNumber }).getByRole('button', { name: 'Təsdiq', exact: true }).click();
+    await waitForCanonical(() => read('purchase_orders', '&id=eq.' + po.id), rows => rows[0]?.status === 'approved', 'Purchase PO was not approved');
+
+    await page.locator('main.main nav').getByRole('button', { name: 'Mədaxil', exact: true }).click();
+    const receiptForm = page.locator('form').filter({ has: page.getByLabel('GRN nömrəsi', { exact: true }) });
+    const grnNumber = 'GRN-QA-' + suffix;
+    await receiptForm.getByLabel('PO', { exact: true }).selectOption(po.id);
+    await receiptForm.getByLabel('GRN nömrəsi', { exact: true }).fill(grnNumber);
+    await receiptForm.getByPlaceholder('Qəbul edildi', { exact: true }).fill('2');
+    await receiptForm.getByPlaceholder('Vahid həcm, m³', { exact: true }).fill('1');
+    await receiptForm.getByRole('button', { name: 'Mədaxil et', exact: true }).click();
+    const [grn] = await waitForCanonical(() => read('goods_receipts', '&grn_number=eq.' + grnNumber), rows => rows.length === 1, 'Purchase GRN was not persisted');
+    const [shipment] = await waitForCanonical(() => read('procurement_shipments', '&source_grn_id=eq.' + grn.id), rows => rows.length === 1, 'GRN did not create the canonical shipment');
     const before = await readState(page);
-    await page.getByRole("button", { name: "Zavod sifarişi" }).click();
-    const poModal = page.locator('[role="dialog"]');
-    await poModal.locator("input").nth(0).fill("QA Vendor");
-    await poModal.locator("input").nth(1).fill("6");
-    await poModal.locator("input").nth(2).fill("50");
-    await poModal.locator("input").nth(3).fill("120");
-    await poModal.locator("input").nth(5).fill("QA factory audit order");
-    await poModal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(75);
-    const created = await readState(page);
-    const po = created.purchaseOrders?.[0];
-    assert(po?.status === "Təsdiq gözləyir", "Purchase order was not created as pending");
+    assert(stockTotal(before, warehouse.id, fixture.productName) === 5, 'PO approval or GRN changed physical stock before warehouse receipt');
 
-    await page.locator(".po-action-panel button.text-btn").first().click();
-    await page.waitForTimeout(100);
-    const after = await readState(page);
-    const approvedPo = after.purchaseOrders?.find((item) => item.id === po.id);
+    await page.getByRole('button', { name: 'Göndəriş və maya', exact: true }).click();
+    await page.locator('.landed-list button').filter({ has: page.getByText(shipment.shipment_no, { exact: true }) }).click();
+    await page.getByLabel('Qəbul anbarı', { exact: true }).selectOption(warehouse.id);
+    await page.getByRole('button', { name: 'Mayanı təsdiqlə', exact: true }).click();
+    await waitForCanonical(() => read('procurement_shipments', '&id=eq.' + shipment.id), rows => rows[0]?.status === 'costed', 'Shipment costing was not approved');
+    await page.getByRole('button', { name: 'Anbara qəbul et', exact: true }).click();
+    const [receipt] = await waitForCanonical(() => read('procurement_receipts', '&shipment_id=eq.' + shipment.id), rows => rows.length === 1, 'Warehouse receipt was not posted');
+    const journals = await read('journal_entries', '&source_type=eq.procurement_receipt&source_id=eq.' + receipt.id);
+    assert(journals.length === 1 && journals[0].posted, 'Warehouse receipt has no posted accounting journal');
+    await waitForState(s => stockTotal(s, warehouse.id, fixture.productName) === 7, 'Purchase receipt did not increase physical stock');
 
-    assert(approvedPo?.status === "Təsdiq edildi", "Purchase order was not approved");
-    assert(
-      stockTotal(after, po.warehouseId, po.product) === stockTotal(before, po.warehouseId, po.product) + Number(po.qty),
-      "Approved purchase order did not increase warehouse stock",
-    );
-    assert(after.expenses.length === before.expenses.length + 1, "Approved purchase order did not create a finance expense");
-    assert(errors.length === 0, `Purchase order produced browser errors: ${errors.join(" | ")}`);
-    return { poId: po.id, product: po.product, qty: po.qty, warehouseId: warehouse.id };
+    await page.getByRole('button', { name: 'Fakturalar', exact: true }).click();
+    const invoiceNumber = 'INV-QA-' + suffix;
+    const invoiceForm = page.locator('form').filter({ has: page.getByLabel('Faktura nömrəsi', { exact: true }) });
+    await invoiceForm.getByLabel('PO', { exact: true }).selectOption(po.id);
+    await invoiceForm.getByLabel('Faktura nömrəsi', { exact: true }).fill(invoiceNumber);
+    await invoiceForm.getByRole('button', { name: 'Faktura yarat', exact: true }).click();
+    const [invoice] = await waitForCanonical(() => read('vendor_invoices', '&invoice_number=eq.' + invoiceNumber), rows => rows.length === 1 && rows[0].status === 'matched', 'Invoice did not pass three-way matching');
+    await page.locator('main.main tr').filter({ hasText: invoiceNumber }).getByRole('button', { name: 'Ödəniş et', exact: true }).click();
+    const payment = page.getByRole('dialog', { name: 'Vendor fakturasının ödənişi', exact: true });
+    await payment.getByLabel('Ödəniş hesabı', { exact: true }).selectOption(account.id);
+    const responsePromise = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/pay_vendor_invoice_atomic'));
+    await payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click();
+    const response = await responsePromise;
+    assert(response.ok(), 'Purchase payment RPC failed: ' + await response.text());
+    const first = await response.json();
+    const replay = await auditBackend.command('pay_vendor_invoice_atomic', response.request().postDataJSON());
+    assert(first.payment_id === replay.payment_id && Number(first.amount) === 100, 'Purchase payment replay was not idempotent');
+    const cash = await read('cash_transactions', '&reference_type=eq.vendor_invoice&reference_id=eq.' + invoice.id);
+    assert(cash.length === 1 && cash[0].direction === 'out' && Number(cash[0].amount) === 100 && cash[0].account_id === account.id, 'Purchase payment did not debit cash once');
+    const state = await waitForState(s => s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 400, 'Purchase payment did not update the server cash balance');
+    assert(stockTotal(state, warehouse.id, fixture.productName) === 7, 'Invoice payment changed warehouse stock');
+    const [paidInvoice] = await read('vendor_invoices', '&id=eq.' + invoice.id);
+    assert(paidInvoice.status === 'paid', 'Invoice did not become paid');
+    const paymentJournal = await read('journal_entries', '&id=eq.' + first.journal_entry_id);
+    assert(paymentJournal.length === 1 && paymentJournal[0].posted, 'Purchase payment has no posted journal');
+    assert(errors.length === 0, 'Purchase browser errors: ' + errors.join(' | '));
+    return { poId: po.id, receiptId: receipt.id, invoiceId: invoice.id, paymentId: first.payment_id, warehouseId: warehouse.id, cashBalance: 400, replayVerified: true };
   } finally {
     await context.close();
   }
@@ -1166,9 +1226,12 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
   try {
     const before = await auditBackend.readCanonical('webhook_dispatches');
     await selectModule(page, 23);
+    const firstResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'), { timeout: 15000 });
     await page.getByTestId('webhook-http-test').click();
+    const firstResult = await (await firstResponse).json();
+    assert(firstResult.delivered && firstResult.dispatch_id, 'HTTP command did not return a successful dispatch');
     const register = page.getByTestId('webhook-dispatch-register');
-    await register.locator('tr[data-dispatch-id]').filter({ hasText: 'delivered' }).first().waitFor();
+    await register.locator(`tr[data-dispatch-id="${firstResult.dispatch_id}"]`).filter({ hasText: 'delivered' }).waitFor();
     const dispatches = await auditBackend.readCanonical('webhook_dispatches');
     const dispatch = dispatches.find(item => item.status === 'delivered' && !before.some(old => old.id === item.id));
     assert(dispatch?.response_code === 200 && Number(dispatch.latency_ms) >= 0, 'Real signed HTTP delivery did not complete');
@@ -1179,8 +1242,11 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
     await page.getByText(endpointBefore.name + ' · v' + (Number(endpointBefore.key_version) + 1), { exact: true }).waitFor();
     const endpointAfter = (await auditBackend.readCanonical('webhook_endpoints')).find(item => item.id === dispatch.endpoint_id);
     assert(endpointAfter.key_version === endpointBefore.key_version + 1, 'Server signing key version did not rotate');
+    const secondResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'), { timeout: 15000 });
     await page.getByTestId('webhook-http-test').click();
-    await register.locator('tr[data-dispatch-id]').filter({ hasText: 'delivered' }).nth(1).waitFor();
+    const secondResult = await (await secondResponse).json();
+    assert(secondResult.delivered && secondResult.dispatch_id !== firstResult.dispatch_id, 'Rotated key did not deliver a distinct dispatch');
+    await register.locator(`tr[data-dispatch-id="${secondResult.dispatch_id}"]`).filter({ hasText: 'delivered' }).waitFor();
     const after = await auditBackend.readCanonical('webhook_dispatches');
     assert(after.filter(item => item.status === 'delivered' && !before.some(old => old.id === item.id)).length === 2, 'Rotated signing key did not complete a second real delivery');
     const audit = await auditBackend.readCanonical('audit_events');

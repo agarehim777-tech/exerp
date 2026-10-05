@@ -33,6 +33,7 @@ import "./procurement.css";
 import LandedCostPanel from "./LandedCostPanel.jsx";
 import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSchema.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
+import { vendorInvoiceLineGross, vendorInvoiceTotal } from "./procurementMath.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -82,6 +83,9 @@ function nextNumber(prefix) {
 }
 
 function getError(error, fallback = "Əməliyyat tamamlanmadı") {
+  if (error?.message?.includes("invoice_vat_posting_required")) {
+    return "ƏDV üzrə mühasibat qeydi tamamlanmadan bu fakturanı ödəmək olmaz.";
+  }
   return error?.message || fallback;
 }
 
@@ -407,7 +411,7 @@ export default function ProcurementPage() {
     const map = new Map();
     invoices.forEach((invoice) => {
       const lines = invoiceLinesByInvoice.get(invoice.id) || [];
-      map.set(invoice.id, lines.reduce((sum, line) => sum + toNumber(line.qty_invoiced) * toNumber(line.unit_price), 0));
+      map.set(invoice.id, vendorInvoiceTotal(lines));
     });
     return map;
   }, [invoices, invoiceLinesByInvoice]);
@@ -419,6 +423,7 @@ export default function ProcurementPage() {
       const amount = invoiceTotals.get(invoice.id) || 0;
       const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
       current.billed += amount;
+      if (invoice.status === "paid") current.paid += amount;
       map.set(invoice.po_id, current);
     });
     poPayments.forEach((payment) => {
@@ -1217,7 +1222,7 @@ export default function ProcurementPage() {
 
       {!poPaymentsAvailable && !loading && (
         <div role="status" style={{ ...styles.message, ...styles.messageError }}>
-          Satınalma ödənişləri bağlıdır: server ledger inteqrasiyası tamamlanmalıdır. PO təsdiqi kassa ödənişi deyil.
+          Birbaşa PO ödənişi bağlıdır. Ödəniş üçün uyğun vendor fakturası tələb olunur.
         </div>
       )}
 
@@ -1228,6 +1233,7 @@ export default function ProcurementPage() {
           ["po", ShoppingCart, "PO"],
           ["grn", PackageCheck, "Mədaxil"],
           ["landed", Ship, "Göndəriş və maya"],
+          ["invoices", Receipt, "Fakturalar"],
         ].map(([id, Icon, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} style={{ ...styles.tabButton, ...(tab === id ? styles.tabActive : {}) }}>
             <Icon size={16} />
@@ -2081,7 +2087,7 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
   return (
     <div style={styles.stackSmall}>
       <DataTable
-        columns={["SKU", "Faktura miqdarı", "Faktura qiyməti", "Cəm"]}
+        columns={["SKU", "Faktura miqdarı", "Faktura qiyməti", "ƏDV %", "ƏDV daxil cəm"]}
         empty="Faktura sətri yoxdur."
         rows={lines.map((line) => {
           const poLine = poLines.find((item) => item.id === line.po_line_id);
@@ -2089,7 +2095,8 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
             poLine?.product_sku || "SKU yoxdur",
             qty(line.qty_invoiced),
             money(line.unit_price, currency),
-            money(toNumber(line.qty_invoiced) * toNumber(line.unit_price), currency),
+            qty(line.tax_rate),
+            money(vendorInvoiceLineGross(line), currency),
           ];
         })}
       />
