@@ -101,6 +101,8 @@ import {
 } from "./components/ui.jsx";
 import { money, normalize, percent } from "./services/format.js";
 import { queueNotification, saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
+import { loadReportData } from './services/reportData.js';
+import { useTenantRequestScope } from './shared/hooks/useTenantRequestScope.js';
 import { createIdempotencyKey, postCreditPayment, startCreditContract } from "./services/coreOperations.js";
 import {
   addMonths,
@@ -307,6 +309,7 @@ function App() {
   const [state, setState] = useState(() => hydrateState(withoutDbBackedData(initialState)));
   const [authError, setAuthError] = useState("");
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
+  const { begin: beginTenantRequest } = useTenantRequestScope(activeTenantId);
   const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const { orders: dbOrders, loaded: dbOrdersLoaded, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
@@ -1931,68 +1934,70 @@ function App() {
     notify(`${targetRow.party} üzrə borc bağlanış workflow-u tamamlandı.`, "success");
   }
 
-  function exportReport(title = "PDF export", format = "PDF") {
-    if (!requirePermission("reports.export", "hesabat export etmək")) return;
+  async function exportReport(title = "PDF export", format = "PDF", displayedSnapshot) {
+    if (!requirePermission("reports.export", "hesabat export etmək")) return null;
+    const isCurrent = beginTenantRequest('report-export');
+    try {
+      const liveData = displayedSnapshot ? null : await loadReportData(activeTenantId);
+      if (!isCurrent()) return null;
 
-    const stamp = getActionStamp();
-    const reportPackage = buildReportPackage({
-      orders: state.orders,
-      credits: creditRecords,
-      vendors: state.vendors,
-      employees: state.employees,
-      expenses: state.expenses,
-      warehouseStock: state.warehouseStock,
-      products: state.products || [],
-      purchaseOrders: state.purchaseOrders || [],
-      productionPlans: productionRows,
-      invoices: invoiceRows,
-      cashEntries: state.cashEntries || [],
-    });
-    const exportRow = {
-      id: `RPT-${Date.now().toString().slice(-6)}`,
-      title,
-      format,
-      at: stamp,
-      period: reportPackage.period,
-      rows: reportPackage.rows,
-      sections: reportPackage.sections,
-      score: reportPackage.score,
-      riskCount: reportPackage.riskCount,
-      criticalCount: reportPackage.criticalCount,
-      owner: activeRoleInfo?.name || "System",
-      status: "Hazır",
-      snapshot: reportPackage,
-    };
+      const stamp = getActionStamp();
+      const reportPackage = displayedSnapshot || buildReportPackage({
+        orders: state.orders,
+        credits: creditRecords,
+        vendors: liveData.vendors,
+        employees: state.employees,
+        expenses: liveData.expenses,
+        warehouseStock: state.warehouseStock,
+        products: state.products || [],
+        purchaseOrders: liveData.purchaseOrders,
+        productionPlans: liveData.productionPlans,
+        invoices: liveData.invoices,
+        cashEntries: liveData.cashEntries,
+      });
+      const exportRow = {
+        id: `RPT-${crypto.randomUUID()}`,
+        title,
+        format,
+        at: stamp,
+        period: reportPackage.period,
+        rows: reportPackage.rows,
+        sections: reportPackage.sections,
+        score: reportPackage.score,
+        riskCount: reportPackage.riskCount,
+        criticalCount: reportPackage.criticalCount,
+        owner: activeRoleInfo?.name || "System",
+        status: "Hazır",
+        snapshot: reportPackage,
+      };
 
-    setState((current) =>
-      auditCurrentState(
-        {
-          ...current,
-          reportExports: [exportRow, ...(current.reportExports || [])].slice(0, 12),
-        },
-        {
-          module: "Hesabat",
-          action: "Export hazırlandı",
-          detail: `${title} · ${format} · ${exportRow.rows} sətir · score ${reportPackage.score}`,
-        },
-      ),
-    );
-    notify(`${title} ${format} export siyahısına əlavə edildi.`);
-    queueMicrotask(() => {
-      if (!activeTenantId) return;
-      void saveWorkflowRecord({
+      await saveWorkflowRecord({
         tenantId: activeTenantId,
         module: "reports",
-        record: {
-          record_type: "report_export",
-          record_no: exportRow.id,
-          status: "completed",
-          title: exportRow.title,
-          completed_at: new Date().toISOString(),
-          payload: exportRow,
-        },
-      }).catch((error) => notify(`Hesabat exportu sinxronlaşmadı: ${error.message}`, "warning"));
-    });
+        record: { record_type: "report_export", record_no: exportRow.id, status: "completed",
+          title: exportRow.title, completed_at: new Date().toISOString(), payload: exportRow },
+      });
+      if (!isCurrent()) return null;
+
+      setState((current) =>
+        auditCurrentState(
+          {
+            ...current,
+            reportExports: [exportRow, ...(current.reportExports || [])].slice(0, 12),
+          },
+          {
+            module: "Hesabat",
+            action: "Export hazırlandı",
+            detail: `${title} · ${format} · ${exportRow.rows} sətir · score ${reportPackage.score}`,
+          },
+        ),
+      );
+      notify(`${title} ${format} export siyahısına əlavə edildi.`);
+      return exportRow;
+    } catch (error) {
+      if (isCurrent()) notify(`Hesabat exportu saxlanmadı: ${error.message}`, "warning");
+      return null;
+    }
   }
 
   function runProjectsExportAction() {

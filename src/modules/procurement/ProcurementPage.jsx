@@ -34,6 +34,7 @@ import LandedCostPanel from "./LandedCostPanel.jsx";
 import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSchema.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { vendorInvoiceLineGross, vendorInvoiceTotal } from "./procurementMath.js";
+import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -193,8 +194,11 @@ function ProductAutocomplete({ products, value, onSelect }) {
 export default function ProcurementPage() {
   const { profile, user, activeTenantId } = useAuth();
   const tenantId = activeTenantId || profile?.active_tenant_id;
-  const currentTenant = useRef(tenantId);
-  currentTenant.current = tenantId;
+  return <ProcurementWorkspace key={tenantId || 'no-tenant'} tenantId={tenantId} user={user} />;
+}
+
+function ProcurementWorkspace({ tenantId, user }) {
+  const { begin } = useTenantRequestScope(tenantId);
   const invoiceAttempt = useRef(null);
 
   const [tab, setTab] = useState("dashboard");
@@ -228,6 +232,9 @@ export default function ProcurementPage() {
   const [payingInvoice, setPayingInvoice] = useState(null);
   const [paymentAccounts, setPaymentAccounts] = useState([]);
   const [invoiceAccountId, setInvoiceAccountId] = useState("");
+  const [taxAccounts, setTaxAccounts] = useState([]);
+  const [invoiceTaxAccountId, setInvoiceTaxAccountId] = useState('');
+  const [recoverableTax, setRecoverableTax] = useState(false);
 
   const [vendorForm, setVendorForm] = useState(emptyVendor);
   const [editingVendorId, setEditingVendorId] = useState(null);
@@ -243,56 +250,66 @@ export default function ProcurementPage() {
 
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId) { setLoading(false); return; }
+    const isCurrent = begin('registry');
     setLoading(true);
     setError("");
-    const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
-      supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-      supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }),
-      supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-      supabase.from("purchase_order_lines").select("*").order("line_no", { ascending: true }),
-      supabase.from("goods_receipts").select("*, purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-      supabase.from("goods_receipt_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
-      supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-      supabase.from("vendor_invoice_lines").select("*, purchase_order_lines(po_id, product_sku, line_no)").order("created_at", { ascending: false }),
-      readLegacyPoPayments(supabase, tenantId, ENABLE_LEGACY_PAYMENTS),
-    ]);
+    try {
+      const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
+        supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }),
+        supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        supabase.from("purchase_order_lines").select("*, purchase_orders!inner(tenant_id)").eq("purchase_orders.tenant_id", tenantId).order("line_no", { ascending: true }),
+        supabase.from("goods_receipts").select("*, purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        supabase.from("goods_receipt_lines").select("*, goods_receipts!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("goods_receipts.tenant_id", tenantId).order("created_at", { ascending: false }),
+        supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        supabase.from("vendor_invoice_lines").select("*, vendor_invoices!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("vendor_invoices.tenant_id", tenantId).order("created_at", { ascending: false }),
+        readLegacyPoPayments(supabase, tenantId, ENABLE_LEGACY_PAYMENTS),
+      ]);
+      if (!isCurrent()) return;
 
-    const coreResults = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes];
-    const firstError = coreResults.find((result) => result.error)?.error
-      || (paymentRes.error && !isMissingPoPaymentsTable(paymentRes.error) ? paymentRes.error : null);
-    if (firstError) setError(getError(firstError));
+      const coreResults = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes];
+      const firstError = coreResults.find((result) => result.error)?.error
+        || (paymentRes.error && !isMissingPoPaymentsTable(paymentRes.error) ? paymentRes.error : null);
+      if (firstError) throw firstError;
 
-    const paymentTableMissing = isMissingPoPaymentsTable(paymentRes.error);
-    setPoPaymentsAvailable(ENABLE_LEGACY_PAYMENTS && !paymentTableMissing && !paymentRes.error);
+      const paymentTableMissing = isMissingPoPaymentsTable(paymentRes.error);
+      setPoPaymentsAvailable(ENABLE_LEGACY_PAYMENTS && !paymentTableMissing && !paymentRes.error);
 
-    setVendors(vendorRes.data || []);
-    setProducts(productRes.data || []);
-    setPurchaseOrders(poRes.data || []);
-    setPoLines(lineRes.data || []);
-    setGoodsReceipts(grnRes.data || []);
-    setReceiptLines(grnLineRes.data || []);
-    setInvoices(invoiceRes.data || []);
-    setInvoiceLines(invoiceLineRes.data || []);
-    setPoPayments(paymentTableMissing ? [] : (paymentRes.data || []));
-    setLoading(false);
-  }, [tenantId]);
+      setVendors(vendorRes.data || []);
+      setProducts(productRes.data || []);
+      setPurchaseOrders(poRes.data || []);
+      setPoLines(lineRes.data || []);
+      setGoodsReceipts(grnRes.data || []);
+      setReceiptLines(grnLineRes.data || []);
+      setInvoices(invoiceRes.data || []);
+      setInvoiceLines(invoiceLineRes.data || []);
+      setPoPayments(paymentTableMissing ? [] : (paymentRes.data || []));
+    } catch (loadError) {
+      if (isCurrent()) setError(getError(loadError));
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  }, [tenantId, begin]);
 
 
   useEffect(() => {
     setPayingInvoice(null); setPaymentAccounts([]); setInvoiceAccountId("");
+    setTaxAccounts([]); setInvoiceTaxAccountId(''); setRecoverableTax(false);
     invoiceAttempt.current = null;
     load();
   }, [load]);
 
   const loadRfqs = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin('rfq');
     try {
-      setRfqs(await listWorkflowRecords({ tenantId, module: "procurement", recordType: "rfq" }));
+      const rows = await listWorkflowRecords({ tenantId, module: "procurement", recordType: "rfq" });
+      if (isCurrent()) setRfqs(rows);
     } catch (rfqError) {
-      if (!String(rfqError?.message || "").includes("workflow_records")) setError(getError(rfqError));
+      if (isCurrent()) setError(getError(rfqError));
     }
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { loadRfqs(); }, [loadRfqs]);
 
@@ -1115,34 +1132,46 @@ export default function ProcurementPage() {
   }
 
   async function openInvoicePayment(invoice) {
-    const { data, error: accountError } = await supabase.from("cash_accounts").select("id,name,currency")
-      .eq("tenant_id", tenantId).eq("is_active", true).eq("currency", invoice.currency);
-    if (tenantId !== currentTenant.current) return;
-    if (accountError) { setError(getError(accountError)); return; }
-    setPaymentAccounts(data || []);
-    setInvoiceAccountId(data?.[0]?.id || "");
-    setPayingInvoice(invoice);
+    const isCurrent = begin('invoice-payment-dialog');
+    const hasTax = (invoiceLinesByInvoice.get(invoice.id) || []).some(line => toNumber(line.tax_rate) > 0);
+    const [accounts, tax] = await Promise.all([
+      supabase.from("cash_accounts").select("id,name,currency,gl_account_id")
+        .eq("tenant_id", tenantId).eq("is_active", true).eq("currency", invoice.currency),
+      hasTax ? supabase.from('chart_of_accounts').select('id,code,name').eq('tenant_id', tenantId)
+        .eq('type', 'asset').eq('is_active', true).eq('currency', invoice.currency).order('code') : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (!isCurrent()) return;
+    if (accounts.error || tax.error) { setError(getError(accounts.error || tax.error)); return; }
+    setPaymentAccounts(accounts.data || []);
+    setInvoiceAccountId(accounts.data?.[0]?.id || "");
+    setTaxAccounts((tax.data || []).filter(row => !['1000', '1010', '1200', '2050'].includes(row.code)
+      && !accounts.data?.some(account => account.gl_account_id === row.id)));
+    setInvoiceTaxAccountId(''); setRecoverableTax(false);
+    setPayingInvoice({ ...invoice, hasTax });
   }
 
   async function payInvoice(event) {
     event.preventDefault();
-    if (saving || !invoiceAccountId) return;
+    if (saving || !invoiceAccountId || (payingInvoice.hasTax && (!invoiceTaxAccountId || !recoverableTax))) return;
     setSaving(true); setError("");
+    const isCurrent = begin('invoice-payment');
     try {
-        if (invoiceAttempt.current?.invoice_id !== payingInvoice.id || invoiceAttempt.current?.account_id !== invoiceAccountId) {
-          invoiceAttempt.current = { invoice_id: payingInvoice.id, account_id: invoiceAccountId, payment_date: today() };
+        if (invoiceAttempt.current?.invoice_id !== payingInvoice.id || invoiceAttempt.current?.account_id !== invoiceAccountId
+          || invoiceAttempt.current?.tax_account_id !== (payingInvoice.hasTax ? invoiceTaxAccountId : undefined)) {
+          invoiceAttempt.current = { invoice_id: payingInvoice.id, account_id: invoiceAccountId, payment_date: today(),
+            ...(payingInvoice.hasTax ? { tax_account_id: invoiceTaxAccountId, tax_treatment: 'recoverable' } : {}) };
         }
-      const { error: paymentError } = await supabase.rpc("pay_vendor_invoice_atomic", {
+      const { error: paymentError } = await supabase.rpc(payingInvoice.hasTax ? 'pay_vendor_invoice_with_tax_atomic' : "pay_vendor_invoice_atomic", {
         _tenant_id: tenantId, _request_key: `invoice-payment:${payingInvoice.id}`,
         _payload: invoiceAttempt.current,
       });
       if (paymentError) throw paymentError;
-        if (tenantId !== currentTenant.current) return;
+        if (!isCurrent()) return;
         invoiceAttempt.current = null;
       setNotice("Faktura ödənişi kassaya və mühasibat jurnalına yazıldı.");
       setPayingInvoice(null); await load();
-      } catch (paymentError) { if (tenantId === currentTenant.current) setError(getError(paymentError)); }
-    finally { setSaving(false); }
+      } catch (paymentError) { if (isCurrent()) setError(getError(paymentError)); }
+    finally { if (isCurrent()) setSaving(false); }
   }
 
   async function deleteInvoice(invoice) {
@@ -1391,9 +1420,18 @@ export default function ProcurementPage() {
             <option value="">Hesab seçin</option>
             {paymentAccounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
           </select></label>
+          {payingInvoice.hasTax && <>
+            <label>ƏDV uçot hesabı<select aria-label="ƏDV uçot hesabı" value={invoiceTaxAccountId} disabled={saving}
+              onChange={event => setInvoiceTaxAccountId(event.target.value)} required>
+              <option value="">Hesab seçin</option>
+              {taxAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}
+            </select></label>
+            <label><input type="checkbox" checked={recoverableTax} disabled={saving}
+              onChange={event => setRecoverableTax(event.target.checked)} /> Əvəzləşdirilən ƏDV kimi təsdiqləyirəm</label>
+          </>}
           <div className="modal-actions">
             <button type="button" className="secondary-btn" disabled={saving} onClick={() => setPayingInvoice(null)}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={saving || !invoiceAccountId}>{saving ? "Qeydə alınır..." : "Ödənişi təsdiq et"}</button>
+            <button type="submit" className="primary-btn" disabled={saving || !invoiceAccountId || (payingInvoice.hasTax && (!invoiceTaxAccountId || !recoverableTax))}>{saving ? "Qeydə alınır..." : "Ödənişi təsdiq et"}</button>
           </div>
           {error && <p role="alert">{error}</p>}
         </form>
@@ -1866,7 +1904,7 @@ function ReceiptsTab({
         <form onSubmit={onSubmit} style={styles.form}>
           <label style={styles.field}>
             <span>PO</span>
-            <select value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
+            <select aria-label="PO" style={styles.input} value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
                 <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>
@@ -1969,7 +2007,7 @@ function InvoicesTab({
         <form onSubmit={onSubmit} style={styles.form}>
           <label style={styles.field}>
             <span>PO</span>
-            <select value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
+            <select aria-label="PO" style={styles.input} value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
                 <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>

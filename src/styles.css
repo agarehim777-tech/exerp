@@ -5808,17 +5808,23 @@ tr:hover td {
 
 .hr-tree {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 16px;
 }
 
 .hr-org-chart-scroll {
+  min-width: 0;
+  width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 4px 2px 12px;
 }
 
 .hr-org-chart-canvas {
-  min-width: 900px;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;

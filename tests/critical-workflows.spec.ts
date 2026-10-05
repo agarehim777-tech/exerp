@@ -38,9 +38,12 @@ test.describe("Kritik ERP axınları", () => {
 
   test("HR əməkdaş forması ayrıca dialog kimi açılır", async ({ page }) => {
     await page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/hr\/emekdaslar(?:[/?#]|$)/);
     await expect(page.getByRole("heading", { name: "İnsan Resursları" })).toBeVisible();
-    await page.getByRole("button", { name: "Yeni əməkdaş", exact: true }).click();
+    const createButton = page.getByRole("button", { name: "Yeni əməkdaş", exact: true });
+    await expect(createButton).toBeEnabled();
+    await createButton.click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Yeni əməkdaş" })).toBeVisible();
     await page.getByRole("button", { name: "Ləğv et", exact: true }).click();

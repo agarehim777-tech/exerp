@@ -309,6 +309,7 @@ async function auditCreditSale(browser) {
     await page.getByPlaceholder('Axtar...', { exact: true }).fill(sale.order.orderNo);
     await page.getByLabel('Başlanğıc tarixi', { exact: true }).fill(sale.order.date);
     await page.getByLabel('Son tarix', { exact: true }).fill(sale.order.date);
+    await page.locator('main.main table tbody tr').filter({ hasText: sale.order.orderNo }).waitFor({ state: 'visible' });
     const registryText = await page.locator('main.main table').innerText();
     assert(registryText.includes(sale.order.orderNo), "Sales registry search did not keep the created order visible");
     const download = await Promise.all([
@@ -1561,7 +1562,7 @@ async function auditSettingsPermissions() {
 async function auditReportsAnalytics(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
-    await createCreditSale(page);
+    const sale = await createCreditSale(page);
     await selectModule(page, 17);
     await page.locator('[data-testid="reports-control-panel"]').waitFor();
     await page.locator('[data-testid="report-module-panel"]').waitFor();
@@ -1574,7 +1575,13 @@ async function auditReportsAnalytics(browser) {
       "Reports module panel does not show the underlying module data volumes");
 
     const previousExportId = (await readState()).reportExports?.[0]?.id;
-    await page.locator('[data-testid="report-template-export"]').first().click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('[data-testid="report-template-export"]').first().click(),
+    ]);
+    assert(download.suggestedFilename().endsWith('.csv'), 'Report export did not download a CSV file');
+    const exportedCsv = await readFile(await download.path(), 'utf8');
+    assert(exportedCsv.includes(sale.order.orderNo), 'Downloaded report did not contain the created sale');
     const state = await waitForState(s => s.reportExports?.[0]?.id !== previousExportId && s.reportExports?.[0]?.snapshot,
       'New report export snapshot was not persisted');
     const exportRow = state.reportExports?.[0];

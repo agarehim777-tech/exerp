@@ -84,7 +84,7 @@ jobs:
 
       - name: Browser and tenant-isolation tests
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- --grep-invert "@lifecycle|@ai"
+        run: npm run e2e -- --grep-invert "@lifecycle|@ai" --output=test-results/browser
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Authenticated AI tool-call test
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' && vars.AI_E2E_ENABLED == 'true' }}
-        run: npm run e2e -- tests/ai-assistant.spec.ts --workers=1
+        run: npm run e2e -- tests/ai-assistant.spec.ts --workers=1 --output=test-results/ai
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -105,7 +105,7 @@ jobs:
 
       - name: Sales and expense lifecycle tests
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e:lifecycle
+        run: npm run e2e:lifecycle -- --output=test-results/sales-expense
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -114,7 +114,7 @@ jobs:
 
       - name: Concurrent server lifecycle tests
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/concurrent-lifecycle.spec.ts --workers=1
+        run: npm run e2e -- tests/concurrent-lifecycle.spec.ts --workers=1 --output=test-results/concurrency
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -123,7 +123,7 @@ jobs:
 
       - name: Credit deposit lifecycle
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/credit-deposit-lifecycle.spec.ts --workers=1
+        run: npm run e2e -- tests/credit-deposit-lifecycle.spec.ts --workers=1 --output=test-results/credit-deposit
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -132,7 +132,7 @@ jobs:
 
       - name: Delivery and reversal lifecycle matrix
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1
+        run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1 --output=test-results/delivery-reversal
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}

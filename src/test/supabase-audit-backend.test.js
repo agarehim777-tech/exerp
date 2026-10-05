@@ -75,6 +75,25 @@ it('rejects production and elevated audit accounts', async () => {
     ? { access_token: 'test', user: { id: tenant } } : [{ user_id: tenant, role: 'owner' }]))).rejects.toThrow('restricted');
 });
 
+it('verifies persisted workflow report exports instead of relying only on the UI snapshot', async () => {
+  const backend = await createAuditBackend(env, async url => {
+    const path = new URL(url).pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
+    if (path.endsWith('/tenant_state_snapshots')) return response([{ state: { reportExports: [{ id: 'report', score: 0 }, { id: 'historic' }] } }]);
+    if (path.endsWith('/workflow_records')) {
+      expect(new URL(url).searchParams.get('module')).toBe('eq.reports');
+      expect(new URL(url).searchParams.get('record_type')).toBe('eq.report_export');
+      return response([{ id: 'workflow', record_no: 'report', payload: { score: 75, snapshot: { rows: 5 } } }]);
+    }
+    return response([]);
+  });
+  const state = await backend.readState();
+  expect(state.reportExports).toEqual([{ id: 'report', workflowId: 'workflow', score: 75, snapshot: { rows: 5 } }, { id: 'historic' }]);
+});
+
 it('uses stable routes and reports removed modules instead of navigating by DOM index', () => {
   expect(auditModulePath(9)).toBe('/kredit');
   expect(auditModulePath(14)).toBe('/hr/emekdaslar');

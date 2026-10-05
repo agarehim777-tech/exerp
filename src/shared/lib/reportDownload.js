@@ -8,8 +8,9 @@ const pdfText = (value) => String(value ?? "—")
   .replace(/[əƏ]/g, "e").replace(/[ıİ]/g, "i").replace(/[şŞ]/g, "s")
   .replace(/[çÇ]/g, "c").replace(/[öÖ]/g, "o").replace(/[üÜ]/g, "u").replace(/[ğĞ]/g, "g");
 
-export async function downloadReportPdf({ title, period, summary = [], columns = [], rows = [] }) {
+export async function downloadReportPdf({ title, period, summary = [], columns = [], rows = [] }, { isCurrent = () => true } = {}) {
   const { jsPDF } = await import("jspdf");
+  if (!isCurrent()) return false;
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: columns.length > 5 ? "landscape" : "portrait" });
   const width = doc.internal.pageSize.getWidth();
   const height = doc.internal.pageSize.getHeight();
@@ -74,7 +75,9 @@ export async function downloadReportPdf({ title, period, summary = [], columns =
   }
 
   doc.setProperties({ title, subject: `${period} ExERP hesabatı`, creator: "ExERP" });
+  if (!isCurrent()) return false;
   doc.save(`${safeFileName(title)}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  return true;
 }
 
 export function downloadReportCsv({ title, columns = [], rows = [] }) {

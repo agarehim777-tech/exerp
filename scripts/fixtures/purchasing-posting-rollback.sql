@@ -3,7 +3,7 @@ DO $$
 DECLARE
   t uuid := nullif(current_setting('erp.audit_tenant',true),'')::uuid;
   w uuid; p uuid; v uuid; po uuid; pol uuid; grn uuid;
-  shipment uuid; receipt uuid; inv uuid; account uuid;
+  shipment uuid; receipt uuid; inv uuid; account uuid; tax_inv uuid; tax_account uuid;
   result jsonb; replay jsonb; pay_payload jsonb;
 BEGIN
   IF t IS NULL OR auth.uid() IS NULL OR NOT public.is_tenant_member(t,auth.uid()) THEN
@@ -31,7 +31,7 @@ BEGIN
   INSERT INTO public.vendor_invoices(tenant_id,vendor_id,po_id,invoice_number)
     VALUES(t,v,po,'QA-INV-'||gen_random_uuid()) RETURNING id INTO inv;
   INSERT INTO public.vendor_invoice_lines(invoice_id,po_line_id,qty_invoiced,unit_price,tax_rate)
-    VALUES(inv,pol,2,50,0);
+    VALUES(inv,pol,1,50,0);
   PERFORM public.apply_invoice_match(inv,0,0.02);
   INSERT INTO public.cash_accounts(tenant_id,code,name,type,currency,opening_balance)
     VALUES(t,'QA-CASH-'||gen_random_uuid(),'QA rollback payment cash','cash','AZN',500) RETURNING id INTO account;
@@ -50,7 +50,7 @@ BEGIN
   UPDATE public.vendor_invoice_lines SET tax_rate=0 WHERE invoice_id=inv;
   result := public.pay_vendor_invoice_atomic(t,'qa-rollback-vendor-payment',pay_payload);
   replay := public.pay_vendor_invoice_atomic(t,'qa-rollback-vendor-payment',pay_payload);
-  IF result IS DISTINCT FROM replay OR (result->>'amount')::numeric IS DISTINCT FROM 100
+  IF result IS DISTINCT FROM replay OR (result->>'amount')::numeric IS DISTINCT FROM 50
     OR (SELECT count(*) FROM public.cash_transactions WHERE reference_type='vendor_invoice' AND reference_id=inv)<>1 THEN
     RAISE EXCEPTION 'live_invoice_payment_validation_failed';
   END IF;
@@ -64,7 +64,7 @@ BEGIN
     RAISE EXCEPTION 'live_payment_journal_validation_failed';
   END IF;
   IF (SELECT opening_balance FROM public.cash_accounts WHERE id=account)
-    +(SELECT sum(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM public.cash_transactions WHERE account_id=account) IS DISTINCT FROM 400 THEN
+    +(SELECT sum(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM public.cash_transactions WHERE account_id=account) IS DISTINCT FROM 450 THEN
     RAISE EXCEPTION 'live_cash_balance_validation_failed';
   END IF;
   BEGIN
@@ -73,5 +73,43 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM<>'paid_invoice_is_immutable' THEN RAISE; END IF;
   END;
+  INSERT INTO public.vendor_invoices(tenant_id,vendor_id,po_id,invoice_number)
+    VALUES(t,v,po,'QA-VAT-INV-'||gen_random_uuid()) RETURNING id INTO tax_inv;
+  INSERT INTO public.vendor_invoice_lines(invoice_id,po_line_id,qty_invoiced,unit_price,tax_rate)
+    VALUES(tax_inv,pol,1,50,18);
+  PERFORM public.apply_invoice_match(tax_inv,0,0.02);
+  INSERT INTO public.chart_of_accounts(tenant_id,code,name,type,currency)
+    VALUES(t,'QA-VAT-'||gen_random_uuid(),'QA rollback input VAT','asset','AZN') RETURNING id INTO tax_account;
+  pay_payload := jsonb_build_object('invoice_id',tax_inv,'account_id',account,'payment_date',current_date,
+    'tax_account_id',tax_account,'tax_treatment','recoverable');
+  UPDATE public.cash_accounts SET opening_balance=50 WHERE id=account;
+  BEGIN
+    PERFORM public.pay_vendor_invoice_with_tax_atomic(t,'qa-rollback-vat-settlement',pay_payload);
+    RAISE EXCEPTION 'unfunded_vat_payment_was_allowed';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'insufficient_funds' THEN RAISE; END IF;
+  END;
+  IF EXISTS(SELECT 1 FROM public.vendor_invoice_tax_postings WHERE invoice_id=tax_inv)
+    OR EXISTS(SELECT 1 FROM public.journal_entries WHERE source_type='vendor_invoice_tax' AND source_id=tax_inv) THEN
+    RAISE EXCEPTION 'live_tax_atomic_rollback_validation_failed';
+  END IF;
+  UPDATE public.cash_accounts SET opening_balance=500 WHERE id=account;
+  result := public.pay_vendor_invoice_with_tax_atomic(t,'qa-rollback-vat-settlement',pay_payload);
+  replay := public.pay_vendor_invoice_with_tax_atomic(t,'qa-rollback-vat-settlement',pay_payload);
+  IF result IS DISTINCT FROM replay OR (result->>'amount')::numeric IS DISTINCT FROM 59
+    OR (SELECT count(*) FROM public.vendor_invoice_tax_postings WHERE invoice_id=tax_inv AND tax_amount=9)<>1
+    OR (SELECT count(*) FROM public.cash_transactions WHERE reference_type='vendor_invoice' AND reference_id=tax_inv)<>1 THEN
+    RAISE EXCEPTION 'live_vat_payment_replay_validation_failed';
+  END IF;
+  IF (SELECT opening_balance FROM public.cash_accounts WHERE id=account)
+    +(SELECT sum(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM public.cash_transactions WHERE account_id=account) IS DISTINCT FROM 391 THEN
+    RAISE EXCEPTION 'live_vat_cash_balance_validation_failed';
+  END IF;
+  IF (SELECT sum(l.credit-l.debit) FROM public.journal_lines l JOIN public.journal_entries j ON j.id=l.entry_id
+      JOIN public.chart_of_accounts a ON a.id=l.account_id
+      WHERE a.code='2200' AND (j.source_id=receipt OR j.source_id=tax_inv
+        OR j.id IN (SELECT journal_entry_id FROM public.vendor_invoice_payments WHERE invoice_id IN (inv,tax_inv)))) IS DISTINCT FROM 0 THEN
+    RAISE EXCEPTION 'live_vat_payable_balance_validation_failed';
+  END IF;
 END $$;
 SELECT 'purchase_posting_rollback_passed' AS audit_result;

@@ -25,6 +25,7 @@ import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
+import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
 
 function sumRows(rows, key) {
@@ -76,16 +77,10 @@ function buildMonthlyTrend(orders, expenses, snapshotDate) {
 export function ReportsPage({
   orders = [],
   credits = [],
-  vendors = [],
   employees = [],
-  expenses = [],
   warehouseStock = {},
   warehouses = [],
   products = [],
-  purchaseOrders = [],
-  productionPlans = [],
-  invoices = [],
-  cashEntries = [],
   exports = [],
   onExport,
   canExport = true,
@@ -94,18 +89,22 @@ export function ReportsPage({
   buildReportPackage,
 }) {
   const { activeTenantId } = useAuth();
+  const { scope, begin } = useTenantRequestScope(activeTenantId);
   const live = useLiveReportData(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
   const [moduleFilter, setModuleFilter] = useState("Hamısı");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
-  const [exporting, setExporting] = useState("");
-  const [exportError, setExportError] = useState("");
-  const reportExpenses = live.loaded ? live.expenses : expenses;
-  const reportVendors = live.loaded ? live.vendors : vendors;
-  const reportPurchaseOrders = live.loaded ? live.purchaseOrders : purchaseOrders;
-  const reportInvoices = live.loaded ? live.invoices : invoices;
-  const reportCashEntries = live.loaded ? live.cashEntries : cashEntries;
+  const [exportState, setExportState] = useState(null);
+  const exporting = exportState?.scope === scope ? exportState.key : '';
+  const exportError = exportState?.scope === scope ? exportState.error : '';
+  const reportExpenses = live.expenses;
+  const reportVendors = live.vendors;
+  const reportPurchaseOrders = live.purchaseOrders;
+  const reportInvoices = live.invoices;
+  const reportCashEntries = live.cashEntries;
+  const reportProduction = live.productionPlans;
+  const exportReady = canExport && live.loaded && !live.loading && !live.error;
 
   const filteredOrders = useMemo(
     () =>
@@ -131,12 +130,12 @@ export function ReportsPage({
   );
   const filteredProduction = useMemo(
     () =>
-      productionPlans.filter(
+      reportProduction.filter(
         (row) =>
           inSelectedPeriod(row, period, snapshotDate) &&
           (warehouseFilter === "all" || row.warehouseId === warehouseFilter),
       ),
-    [productionPlans, period, snapshotDate, warehouseFilter],
+    [reportProduction, period, snapshotDate, warehouseFilter],
   );
   const filteredWarehouseStock = useMemo(() => {
     if (warehouseFilter === "all") return warehouseStock;
@@ -227,7 +226,7 @@ export function ReportsPage({
       count: `${filteredProduction.length} plan`,
       signal: filteredProduction.some((row) => normalize(row.status).includes("risk"))
         ? "Xammal riski var"
-        : `${filteredProduction.filter((row) => normalize(row.status).includes("istehsal edildi")).length} tamamlanıb`,
+        : `${filteredProduction.filter((row) => /istehsal edildi|tamamlandı/.test(normalize(row.status))).length} tamamlanıb`,
       status: filteredProduction.some((row) => normalize(row.status).includes("risk")) ? "Risk" : "Hazır",
     });
     return moduleFilter === "Hamısı" ? rows : rows.filter((row) => row.module === moduleFilter);
@@ -281,6 +280,8 @@ export function ReportsPage({
         ["Aciq borc", money(reportPackage.creditBalance + reportPackage.invoiceBalance)],
       ],
     };
+    if (title.startsWith('İdarəetmə paketi')) return { ...common, columns: ['Modul', 'Göstərici', 'Say', 'Siqnal', 'Status'],
+      rows: moduleRows.map(row => [row.module, row.metric, row.count, row.signal, row.status]) };
     if (title === "Aylıq satış hesabatı") return { ...common, columns: ["Sifaris", "Musteri", "Tarix", "Mehsul", "Mebleg"], rows: filteredOrders.map((row) => [row.orderNo || row.id, row.customer, row.date, row.products, money(row.amount)]) };
     if (title === "Maliyyə mənfəət/zərər") return { ...common, columns: ["Tarix", "Kateqoriya", "Tesvir", "Status", "Mebleg"], rows: filteredExpenses.map((row) => [row.date, row.category, row.description, row.status, money(row.amount)]) };
     if (title === "Anbar hərəkəti") return { ...common, columns: ["Mehsul", "SKU", "Qaliq", "Rezerv", "Maya", "Deyer"], rows: stockRows.map((row) => [row.product, row.sku, row.total, row.reserved, money(row.costPrice || row.price), money(Number(row.total || 0) * Number(row.costPrice || row.price || 0))]) };
@@ -288,18 +289,21 @@ export function ReportsPage({
   };
 
   const runDownload = async (report, format) => {
+    if (!exportReady || exporting) return;
+    const isCurrent = begin('download');
     const key = `${report.title}:${format}`;
-    setExporting(key);
-    setExportError("");
+    setExportState({ scope, key, error: '' });
     try {
       const payload = reportPayload(report.title);
-      if (format === "PDF") await downloadReportPdf(payload);
+      if (format === "PDF") await downloadReportPdf(payload, { isCurrent });
       else downloadReportCsv(payload);
-      onExport(report.title, format);
+      if (!isCurrent()) return;
+      const saved = await onExport(report.title, format, { ...reportPackage, period, moduleRows, riskRows: allRiskRows });
+      if (saved === null) throw new Error('Audit qeydi serverdə saxlanmadı.');
     } catch (error) {
-      setExportError(`Fayl yaradılmadı: ${error.message || error}`);
+      if (isCurrent()) setExportState({ scope, key: '', error: `Export tamamlanmadı: ${error.message || error}` });
     } finally {
-      setExporting("");
+      if (isCurrent()) setExportState(current => ({ ...current, key: '' }));
     }
   };
 
@@ -327,7 +331,7 @@ export function ReportsPage({
             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
           </select>
         </label>
-        <button className="primary-btn" disabled={!canExport} onClick={() => onExport(`İdarəetmə paketi · ${period}`, "Excel")}>
+        <button className="primary-btn" disabled={!exportReady || Boolean(exporting)} onClick={() => runDownload({ title: `İdarəetmə paketi · ${period}` }, "Excel")}>
           <Download size={16} /> Excel
         </button>
         <button className="secondary-btn" type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
@@ -335,7 +339,8 @@ export function ReportsPage({
         </button>
       </section>
 
-      {(live.error || live.degraded) && <div className="inline-alert warning">Canlı hesabat bağlantısı zəifləyib. Son uğurlu data göstərilir; «Yenilə» ilə təkrar yoxlayın.</div>}
+      {live.error && <div role="alert" className="inline-alert danger">Hesabat məlumatları yüklənmədi. Export dayandırılıb. {live.error.message}</div>}
+      {live.degraded && !live.error && <div className="inline-alert warning">Canlı hesabat bağlantısı zəifləyib. «Yenilə» ilə təkrar yoxlayın.</div>}
       {exportError && <div className="inline-alert danger">{exportError}</div>}
 
       <section className="metric-grid four">
@@ -426,8 +431,8 @@ export function ReportsPage({
                 <div><strong>{report.title}</strong><span>{report.desc}</span><small>{report.cadence} · {reportPackage.rows} data sətri</small></div>
                 <StatusBadge status={report.cadence} />
                 <div className="report-actions">
-                  <button className="secondary-btn compact" onClick={() => runDownload(report, "PDF")} disabled={!canExport || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</button>
-                  <button className="primary-btn compact" onClick={() => runDownload(report, "Excel")} disabled={!canExport || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</button>
+                  <button className="secondary-btn compact" onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</button>
+                  <button className="primary-btn compact" data-testid="report-template-export" onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</button>
                 </div>
               </article>
             ))}

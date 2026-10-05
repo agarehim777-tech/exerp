@@ -35,7 +35,7 @@ async function database() {
     CREATE TABLE vendor_invoice_lines(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),invoice_id uuid REFERENCES vendor_invoices(id),po_line_id uuid,qty_invoiced numeric,unit_price numeric,tax_rate numeric);
     CREATE FUNCTION public.evaluate_invoice_match(i uuid,numeric,numeric) RETURNS TABLE(status text) LANGUAGE sql AS $$
       SELECT CASE WHEN l.unit_price=p.unit_price THEN 'matched' ELSE 'price_exception' END FROM public.vendor_invoice_lines l JOIN public.purchase_order_lines p ON p.id=l.po_line_id WHERE l.invoice_id=i $$;
-    CREATE TABLE chart_of_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,code text,UNIQUE(tenant_id,code));
+    CREATE TABLE chart_of_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,code text,type text DEFAULT 'asset',currency text DEFAULT 'AZN',is_active boolean DEFAULT true,UNIQUE(tenant_id,code));
     CREATE TABLE cash_accounts(id uuid PRIMARY KEY,tenant_id uuid,currency text,type text,is_active boolean,opening_balance numeric);
     CREATE TABLE cash_transactions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,account_id uuid,direction text,amount numeric,currency text,category text,reference_type text,reference_id uuid,reference text,vendor_id uuid,description text,occurred_at timestamptz,created_by uuid);
     CREATE TABLE journal_entries(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid,entry_date date,reference text,description text,source_type text,source_id uuid,created_by uuid,posted boolean DEFAULT false);
@@ -80,7 +80,7 @@ async function database() {
     INSERT INTO stock_balances VALUES('${tenant}','${warehouse}','${raw}',10,0,0,25,now());
     INSERT INTO inventory_cost_layers(tenant_id,warehouse_id,product_id,remaining_qty,unit_cost) VALUES('${tenant}','${warehouse}','${raw}',10,25);
   `);
-  for (const name of ['20261003135641_atomic_vendor_invoice_payment','20261003140457_viewer_write_boundary','20261003140739_atomic_material_production','20261003141250_durable_webhook_dispatch','20261004123950_restore_cash_account_gl_mapping','20261004124345_guard_unaccrued_invoice_vat']) {
+  for (const name of ['20261003135641_atomic_vendor_invoice_payment','20261003140457_viewer_write_boundary','20261003140739_atomic_material_production','20261003141250_durable_webhook_dispatch','20261004123950_restore_cash_account_gl_mapping','20261004124345_guard_unaccrued_invoice_vat','20261005060835_vendor_invoice_tax_accrual']) {
     await db.exec(await readFile(new URL(`../../supabase/migrations/${name}.sql`, import.meta.url), 'utf8'));
   }
   return db;
@@ -159,6 +159,59 @@ it('posts BOM material stock, finished goods, balanced costing and replay exactl
       expect((await db.query('select count(*)::int n from production_batches')).rows[0].n).toBe(1);
     } finally { await db.close(); }
   }
+}, 30000);
+
+it('posts explicitly approved recoverable VAT and gross cash payment atomically with balanced AP and replay', async () => {
+  const db = await database();
+  try {
+    const taxAccount = '77777777-7777-4777-8777-777777777777';
+    await db.exec(`UPDATE vendor_invoice_lines SET tax_rate=18 WHERE invoice_id='${invoice}';
+      INSERT INTO chart_of_accounts(id,tenant_id,code) VALUES('${taxAccount}','${tenant}','1530');
+      SELECT public.ensure_inventory_accounts('${tenant}');
+      INSERT INTO journal_lines(entry_id,account_id,debit,credit,line_no)
+        SELECT j.id,a.id,CASE WHEN a.code='2050' THEN 100 ELSE 0 END,CASE WHEN a.code='2200' THEN 100 ELSE 0 END,1
+        FROM journal_entries j JOIN chart_of_accounts a ON a.tenant_id=j.tenant_id AND a.code IN ('2050','2200') WHERE j.source_type='procurement_receipt';`);
+    const payload = { invoice_id: invoice, account_id: account, payment_date: '2026-10-05', tax_account_id: taxAccount, tax_treatment: 'recoverable' };
+    const pay = (key, data = payload) => db.query('select public.pay_vendor_invoice_with_tax_atomic($1,$2,$3) result', [tenant, key, data]);
+    await expect(pay('no-policy', { ...payload, tax_treatment: 'automatic' })).rejects.toThrow('invoice_tax_policy_required');
+    await db.exec(`UPDATE cash_accounts SET opening_balance=100 WHERE id='${account}'`);
+    await expect(pay('no-cash')).rejects.toThrow('insufficient_funds');
+    expect((await db.query('select count(*)::int n from vendor_invoice_tax_postings')).rows[0].n).toBe(0);
+    expect((await db.query("select count(*)::int n from journal_entries where source_type='vendor_invoice_tax'")).rows[0].n).toBe(0);
+    await db.exec(`UPDATE cash_accounts SET opening_balance=500 WHERE id='${account}'`);
+    const first = await pay('tax-payment');
+    expect((await pay('tax-payment')).rows).toEqual(first.rows);
+    expect(first.rows[0].result.amount).toBe(118);
+    const posting = (await db.query('select * from vendor_invoice_tax_postings')).rows;
+    expect(posting).toHaveLength(1);
+    expect(Number(posting[0].tax_amount)).toBe(18);
+    expect((await db.query('select count(*)::int n from cash_transactions')).rows[0].n).toBe(1);
+    expect(Number((await db.query("select sum(l.credit-l.debit) balance from journal_lines l join chart_of_accounts a on a.id=l.account_id where a.code='2200'")).rows[0].balance)).toBe(0);
+    expect(Number((await db.query('select sum(debit-credit) balance from journal_lines')).rows[0].balance)).toBe(0);
+    await expect(db.exec('DELETE FROM vendor_invoice_tax_postings')).rejects.toThrow('immutable');
+    await expect(pay('tax-payment', { ...payload, tax_account_id: account })).rejects.toThrow('payload_mismatch');
+  } finally { await db.close(); }
+}, 30000);
+
+it('rejects VAT account scope, receipt and restricted-role failures without committing posting records', async () => {
+  const db = await database();
+  try {
+    const taxAccount = '77777777-7777-4777-8777-777777777777';
+    const foreign = '88888888-8888-4888-8888-888888888888';
+    await db.exec(`UPDATE vendor_invoice_lines SET tax_rate=18 WHERE invoice_id='${invoice}';
+      INSERT INTO chart_of_accounts(id,tenant_id,code) VALUES('${taxAccount}','${tenant}','1530'),('${foreign}','${foreign}','1530');`);
+    const payload = { invoice_id: invoice, account_id: account, payment_date: '2026-10-05', tax_account_id: taxAccount, tax_treatment: 'recoverable' };
+    const pay = data => db.query('select public.pay_vendor_invoice_with_tax_atomic($1,$2,$3)', [tenant, 'tax-denial', data]);
+    await expect(pay({ ...payload, tax_account_id: foreign })).rejects.toThrow('invalid_invoice_tax_account');
+    await db.exec(`UPDATE chart_of_accounts SET type='expense' WHERE id='${taxAccount}'`);
+    await expect(pay(payload)).rejects.toThrow('invalid_invoice_tax_account');
+    await db.exec(`UPDATE chart_of_accounts SET type='asset' WHERE id='${taxAccount}'; UPDATE journal_entries SET posted=false`);
+    await expect(pay(payload)).rejects.toThrow('posted_inventory_receipt_required');
+    expect((await db.query('select count(*)::int n from vendor_invoice_tax_postings')).rows[0].n).toBe(0);
+    expect((await db.query('select count(*)::int n from operation_requests')).rows[0].n).toBe(0);
+    await db.exec(`SELECT set_config('test.uid','${viewer}',false)`);
+    await expect(pay(payload)).rejects.toThrow('permission_denied');
+  } finally { await db.close(); }
 }, 30000);
 
 it('enforces viewer writes on tenant rows and child rows even through SECURITY DEFINER', async () => {

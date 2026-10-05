@@ -109,7 +109,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
     session,
     async readState() {
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
-        balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines] = await Promise.all([
+        balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines, reportExports] = await Promise.all([
         read('tenant_state_snapshots'), read('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
         read('customers'), read('products'), read('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         read('credit_contracts'), read('credit_installments'), read('credit_payments'), read('warehouses'), read('stock_balances'),
@@ -117,6 +117,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         read('cash_accounts'),
         read('cash_transactions'), read('expenses'), read('vendors'), read('sales_invoices'), read('order_bonus_assignments'), read('audit_events'),
         read('purchase_orders'), read('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),
+        read('workflow_records', '*', '&module=eq.reports&record_type=eq.report_export&order=created_at.desc,id.desc'),
       ]);
       const state = { ...(snapshots[0]?.state ?? {}) };
       for (const name of ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts']) {
@@ -170,6 +171,9 @@ export async function createAuditBackend(env, fetcher = fetch) {
       state.vendors = vendors; state.invoices = invoices;
       state.purchaseOrders = purchaseOrders;
       state.purchaseOrderLines = purchaseOrderLines;
+      const savedExports = reportExports.map(row => ({ ...row.payload, id: row.record_no, workflowId: row.id }));
+      const savedExportIds = new Set(savedExports.map(row => row.id));
+      state.reportExports = [...savedExports, ...(state.reportExports || []).filter(row => !savedExportIds.has(row.id))];
       state.auditLog = [...(state.auditLog ?? []), ...audit];
       return state;
     },
