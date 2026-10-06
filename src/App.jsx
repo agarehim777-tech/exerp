@@ -6619,7 +6619,7 @@ function App() {
             />
           )}
           {active === "cashbook" && <CashbookPage legacyCashEntries={state.cashEntries || []} />}
-          {active === "ar-invoices" && <SalesInvoicesPage />}
+          {active === "ar-invoices" && <SalesInvoicesPage onOpenSalesOrder={openLinkedSalesOrder} />}
           {active === "warehouse" && (
             <WarehousePage
               warehouses={state.warehouses}

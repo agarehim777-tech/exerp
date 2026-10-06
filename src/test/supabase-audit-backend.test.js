@@ -8,6 +8,37 @@ const env = { E2E_SUPABASE_PROJECT_REF: 'cvjctwgdyzhijhzhhjqd', VITE_SUPABASE_UR
   VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', E2E_USER_EMAIL: 'test@example.invalid', E2E_USER_PASSWORD: 'test-only' };
 const response = (value) => new Response(JSON.stringify(value), { status: 200 });
 
+it('reads durable webhook receipts with their actual primary key rather than a nonexistent id',async () => {
+  const urls=[];
+  const backend = await createAuditBackend(env,async url => {
+    const parsed=new URL(url); urls.push(parsed);
+    if (parsed.pathname.includes('/auth/')) return response({ access_token:'test',user:{ id:tenant } });
+    if (parsed.pathname.endsWith('/tenant_members')) return response([{ user_id:tenant,role:'admin' }]);
+    if (parsed.pathname.endsWith('/erp_runtime_capabilities')) return response({ schema_version:3 });
+    if (parsed.pathname.endsWith('/webhook_receipts')) return response([{ dispatch_id:'dispatch-a',payload_hash:'a'.repeat(64) }]);
+    return response([]);
+  });
+  const receipts=await backend.readCanonical('webhook_receipts','*','&dispatch_id=eq.dispatch-a');
+  expect(receipts).toHaveLength(1);
+  expect(urls.find(url => url.pathname.endsWith('/webhook_receipts')).searchParams.get('order')).toBe('dispatch_id.asc');
+});
+
+it('uses exact REST counts and actual row offsets when the server caps a 500-row request at 100',async () => {
+  const offsets=[];
+  const backend=await createAuditBackend(env,async (url,options) => {
+    const parsed=new URL(url);
+    if (parsed.pathname.includes('/auth/')) return response({ access_token:'test',user:{ id:tenant } });
+    if (parsed.pathname.endsWith('/tenant_members')) return response([{ user_id:tenant,role:'admin' }]);
+    if (parsed.pathname.endsWith('/erp_runtime_capabilities')) return response({ schema_version:3 });
+    const offset=Number(parsed.searchParams.get('offset')); offsets.push(offset);
+    expect(options.headers.prefer).toBe('count=exact');
+    const rows=Array.from({ length:Math.min(100,225-offset) },(_,i) => ({ id:offset+i }));
+    return new Response(JSON.stringify(rows),{ status:200,headers:{ 'content-range':`${offset}-${offset+rows.length-1}/225` } });
+  });
+  expect(await backend.readCanonical('products')).toHaveLength(225);
+  expect(offsets).toEqual([0,100,200]);
+});
+
 it('narrows fixture reads and paginates composite stock identities with a stable order', async () => {
   const urls = [];
   const backend = await createAuditBackend(env, async url => {

@@ -9,8 +9,8 @@ export function computeDraftTotals(lines) {
     const unitPrice = Number(line.unit_price) || 0;
     const discount = Number(line.discount_pct) || 0;
     const vatRate = Number(line.vat_rate) || 0;
-    const net = qty * unitPrice * (1 - discount / 100);
-    const vat = net * (vatRate / 100);
+    const net = round2(qty * unitPrice * (1 - discount / 100));
+    const vat = round2(net * (vatRate / 100));
     subtotal += net;
     vatTotal += vat;
     const group = vatGroups.get(vatRate) || { rate: vatRate, net: 0, vat: 0 };
@@ -55,6 +55,12 @@ export function validateDraft(draft) {
     const discount = Number(line.discount_pct);
     const vat = Number(line.vat_rate);
     const row = totals.rows[i];
+
+    for (const [field, value, scale] of [['qty', qty, 3], ['unit_price', price, 2],
+      ['discount_pct', discount, 2], ['vat_rate', vat, 2]]) {
+      if (Number.isFinite(value) && Number(value.toFixed(scale)) !== value)
+        addLine(i, field, 'error', `Bu sahədə ən çox ${scale} onluq rəqəm istifadə oluna bilər.`);
+    }
 
     if (line.qty === "" || Number.isNaN(qty)) addLine(i, "qty", "error", "Say rəqəm olmalıdır.");
     else if (qty <= 0) addLine(i, "qty", "error", "Say sıfırdan böyük olmalıdır.");

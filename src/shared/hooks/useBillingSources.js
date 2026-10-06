@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../../integrations/supabase/client';
+import { readBillingSources } from '../../services/billingRead.js';
+import { useTenantRequestScope } from './useTenantRequestScope.js';
 
 // Faktura kəsimi üçün mənbələr: satış sifarişləri və layihələr.
 export function useBillingSources(tenantId) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
+  const [loadedScope, setLoadedScope] = useState(null);
   const [orders, setOrders] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -10,29 +13,13 @@ export function useBillingSources(tenantId) {
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
-    const [ordersRes, projectsRes, invoicesRes] = await Promise.all([
-      supabase
-        .from('orders')
-        .select('*, customer:customers(id,name), items:order_items(*)')
-        .eq('tenant_id', tenantId)
-        .neq('status', 'cancelled')
-        .order('order_date', { ascending: false }),
-      supabase
-        .from('projects')
-        .select('id,name,budget,status,start_date,end_date')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('sales_invoices')
-        .select('id,order_id,notes,status')
-        .eq('tenant_id', tenantId),
-    ]);
-
-    const err = ordersRes.error || projectsRes.error || invoicesRes.error;
-    setError(err || null);
-
-    const invoices = invoicesRes.data || [];
+    try {
+    const data = await readBillingSources(tenantId, isCurrent);
+    if (!data || !isCurrent()) return;
+    setError(null);
+    const { invoices } = data;
     const billedOrderIds = new Set(invoices.filter((i) => i.order_id && i.status !== 'cancelled').map((i) => i.order_id));
     const billedProjectRefs = new Set(
       invoices
@@ -41,12 +28,15 @@ export function useBillingSources(tenantId) {
         .filter(Boolean),
     );
 
-    setOrders((ordersRes.data || []).map((o) => ({ ...o, billed: billedOrderIds.has(o.id) })));
-    setProjects((projectsRes.data || []).map((p) => ({ ...p, billed: billedProjectRefs.has(p.id) })));
-    setLoading(false);
-  }, [tenantId]);
+    setOrders(data.orders.map((o) => ({ ...o, billed: billedOrderIds.has(o.id) })));
+    setProjects(data.projects.map((p) => ({ ...p, billed: billedProjectRefs.has(p.id) })));
+    setLoadedScope(scope);
+    } catch (err) { if (isCurrent()) { setError(err); setLoadedScope(null); } }
+    finally { if (isCurrent()) setLoading(false); }
+  }, [tenantId, scope, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  return { orders, projects, loading, error, refresh: fetchAll };
+  const loaded = Boolean(tenantId && loadedScope === scope);
+  return { orders: loaded ? orders : [], projects: loaded ? projects : [], loading, error, refresh: fetchAll };
 }

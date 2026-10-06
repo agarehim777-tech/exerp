@@ -68,16 +68,21 @@ export async function createAuditBackend(env, fetcher = fetch) {
   if (!apikey || !email || !password) throw new Error('Authenticated Supabase audit credentials are required');
   let activeRequests = 0;
   const waitingRequests = [];
-  const request = async (path, { method = 'GET', data, token } = {}) => {
+  const request = async (path, { method = 'GET', data, token, includeCount = false } = {}) => {
     if (activeRequests >= 4) await new Promise(resolve => waitingRequests.push(resolve));
     else activeRequests += 1;
     try {
       const response = await fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(15000),
-        headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}),
+          ...(includeCount ? { prefer: 'count=exact' } : {}) },
         ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
       if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
       const text = await response.text();
-      return text ? JSON.parse(text) : null;
+      const result = text ? JSON.parse(text) : null;
+      if (!includeCount) return result;
+      const total = response.headers?.get?.('content-range')?.split('/')[1];
+      const count = total && total !== '*' ? Number(total) : null;
+      return { rows: result, count: Number.isInteger(count) && count >= 0 ? count : null };
     } finally {
       const next = waitingRequests.shift();
       if (next) next();
@@ -88,13 +93,15 @@ export async function createAuditBackend(env, fetcher = fetch) {
   const token = session.access_token;
   const read = async (table, select = '*', filter = '', tenantColumn = 'tenant_id') => {
     const result = [];
-    for (let offset = 0; ; offset += 500) {
+    for (;;) {
       const stableOrder = table === 'tenant_members' ? 'user_id.asc' : table === 'tenant_state_snapshots' ? 'tenant_id.asc'
-        : table === 'stock_balances' ? 'warehouse_id.asc,product_id.asc' : 'id.asc';
+        : table === 'stock_balances' ? 'warehouse_id.asc,product_id.asc'
+        : table === 'webhook_receipts' ? 'dispatch_id.asc'
+        : table === 'inventory_accounting_settings' ? 'tenant_id.asc' : 'id.asc';
       const order = /(?:^|&)order=/.test(filter) ? '' : `&order=${stableOrder}`;
-      const rows = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&${tenantColumn}=eq.${tenantId}&limit=500&offset=${offset}${filter}${order}`, { token });
+      const { rows, count } = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&${tenantColumn}=eq.${tenantId}&limit=500&offset=${result.length}${filter}${order}`, { token, includeCount: true });
       result.push(...rows);
-      if (rows.length < 500) return result;
+      if (!rows.length || (count === null ? rows.length < 500 : result.length >= count)) return result;
     }
   };
   const membership = await read('tenant_members', 'user_id,role', `&user_id=eq.${session.user.id}`);

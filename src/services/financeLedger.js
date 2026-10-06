@@ -7,7 +7,7 @@ export function financeRpcError(error) {
 }
 
 // Keep the key after an uncertain network failure; never persist financial payloads in browser storage.
-function createFinanceCommand(tenantId, name, normalize, rpc = (name, args) => supabase.rpc(name, args)) {
+export function createFinanceCommand(tenantId, name, normalize, rpc = (name, args) => supabase.rpc(name, args), validateResult = data => data) {
   const attempts = new Map();
   return (payload) => {
     if (!tenantId) return Promise.reject(new Error('Aktiv şirkət seçilməyib.'));
@@ -21,8 +21,9 @@ function createFinanceCommand(tenantId, name, normalize, rpc = (name, args) => s
         _tenant_id: tenantId, _request_key: attempt.key, _payload: normalized,
       });
       if (error) throw financeRpcError(error);
+      const result = validateResult(data);
       attempts.delete(fingerprint);
-      return data;
+      return result;
     }).finally(() => { attempt.pending = null; });
     return attempt.pending;
   };

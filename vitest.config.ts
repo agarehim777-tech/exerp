@@ -11,6 +11,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // Bound WASM PostgreSQL forks so UI assertions do not compete with dozens of database instances.
+    maxWorkers: 4,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx,js,jsx}"],
     exclude: ["node_modules", "dist", "tests/**"],

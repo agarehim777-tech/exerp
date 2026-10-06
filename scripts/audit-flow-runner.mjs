@@ -5,6 +5,15 @@ export function legacyAuditCompatibilityError(env) {
   return error;
 }
 
+export async function waitForAuditModule(page, path, label) {
+  await page.waitForURL(url => url.pathname === path);
+  await page.locator('.sidebar .nav-list .nav-item.active')
+    .getByText(label, { exact: true }).waitFor({ state: 'visible' });
+  await page.locator('main.main').waitFor({ state: 'visible' });
+  // Realtime and background reads may never become idle. Wait for the module instead.
+  await page.locator('main.main .page-suspense-loader').waitFor({ state: 'hidden' });
+}
+
 export async function runBoundedFlow(run, timeoutMs, cleanup) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid audit timeout');
   let timer;

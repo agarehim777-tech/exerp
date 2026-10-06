@@ -29,7 +29,7 @@ const STATUS_LABEL = {
 
 const emptyLine = () => ({ product_id: "", description: "", qty: 1, unit_price: 0, discount_pct: 0, vat_rate: 18 });
 
-export default function SalesInvoicesPage() {
+export default function SalesInvoicesPage({ onOpenSalesOrder }) {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
   const company = { name: activeMembership?.tenant?.name || "ExERP" };
@@ -76,7 +76,7 @@ export default function SalesInvoicesPage() {
 
   const run = async (fn) => {
     setMsg("");
-    try { await fn(); } catch (error) { setMsg(`Xəta: ${error.message}`); }
+    try { await fn(); return true; } catch (error) { setMsg(`Xəta: ${error.message}`); return false; }
   };
 
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
@@ -91,8 +91,10 @@ export default function SalesInvoicesPage() {
       </div>
 
       {msg && <div style={msgBox}>{msg}</div>}
+      {ar.error && <div role="alert" style={msgBox}>{ar.error.message}</div>}
 
       <BillingRunPanel
+        key={`billing-${tenantId}`}
         tenantId={tenantId}
         customers={customers}
         products={products}
@@ -116,11 +118,12 @@ export default function SalesInvoicesPage() {
 
         {showForm && (
           <InvoiceForm
+            key={`invoice-form-${tenantId}`}
             customers={customers}
             products={products}
             onCancel={() => setShowForm(false)}
             onSubmit={async (payload) => {
-              await run(async () => {
+              return run(async () => {
                 await ar.create(payload);
                 setShowForm(false);
               });
@@ -240,9 +243,10 @@ export default function SalesInvoicesPage() {
           <tbody>
             {filteredInvoices.map((invoice) => (
               <InvoiceRow
-                key={invoice.id}
+                key={`${tenantId}-${invoice.id}`}
                 invoice={invoice}
                 accounts={accounts}
+                onOpenSalesOrder={onOpenSalesOrder}
                 onPost={() => run(() => ar.postToLedger(invoice.id))}
                 onPay={(payload) => run(() => ar.addPayment({ ...payload, invoice_id: invoice.id }))}
                 onCancel={() => run(() => ar.cancel(invoice.id))}
@@ -260,11 +264,12 @@ export default function SalesInvoicesPage() {
   );
 }
 
-function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
+export function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company, onOpenSalesOrder }) {
   const [payOpen, setPayOpen] = useState(false);
   const outstanding = Number(invoice.total) - Number(invoice.paid_amount);
   const [amount, setAmount] = useState(outstanding.toFixed(2));
   const [accountId, setAccountId] = useState("");
+  const [busy, setBusy] = useState(false);
 
   return (
     <>
@@ -278,16 +283,27 @@ function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
         <td style={td}>
           {invoice.posted
             ? <span style={badge("green")}>Yazılıb</span>
-            : <button style={secondaryBtn} onClick={onPost}>Jurnala yaz</button>}
+            : invoice.status !== "cancelled" && <button style={secondaryBtn} disabled={busy} onClick={async () => {
+              setBusy(true);
+              try { await onPost(); } finally { setBusy(false); }
+            }}>Jurnala yaz</button>}
         </td>
         <td style={td}>
           {invoice.status !== "cancelled" && outstanding > 0 && (
-            <button style={primaryBtn} onClick={() => setPayOpen((v) => !v)}>Ödəniş</button>
+            invoice.order_id
+              ? <button style={secondaryBtn} disabled={!onOpenSalesOrder} onClick={() => onOpenSalesOrder?.(invoice.order_id)}>Satış ödənişi</button>
+              : <button style={primaryBtn} disabled={busy || !invoice.posted} onClick={() => {
+                setAmount(outstanding.toFixed(2)); setPayOpen((v) => !v);
+              }}>Ödəniş</button>
           )}
           <button style={secondaryBtn} title="PDF / çap" onClick={() => printInvoice(invoice, { company })}>PDF</button>
           <button style={secondaryBtn} title="E-faktura JSON" onClick={() => downloadEInvoice(invoice, company)}>E-faktura</button>
           {invoice.status !== "cancelled" && (
-            <button style={delBtn} onClick={async () => (await appConfirm("Faktura ləğv edilsin?", { danger: true })) && onCancel()}>Ləğv</button>
+            <button style={delBtn} disabled={busy} onClick={async () => {
+              if (!(await appConfirm("Faktura ləğv edilsin?", { danger: true }))) return;
+              setBusy(true);
+              try { await onCancel(); } finally { setBusy(false); }
+            }}>Ləğv</button>
           )}
         </td>
       </tr>
@@ -295,16 +311,19 @@ function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
         <tr>
           <td style={td} colSpan={8}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...input, width: 140 }} />
-              <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={input}>
+              <input aria-label="Faktura ödəniş məbləği" disabled={busy} type="number" min="0.01" max={outstanding} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...input, width: 140 }} />
+              <select aria-label="Faktura ödəniş hesabı" disabled={busy} value={accountId} onChange={(e) => setAccountId(e.target.value)} style={input}>
                 <option value="">Hesab seç…</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               <button
                 style={primaryBtn}
+                disabled={busy || !accountId || !(Number(amount) > 0) || Number(amount) > outstanding}
                 onClick={async () => {
-                  await onPay({ amount, account_id: accountId });
-                  setPayOpen(false);
+                  if (busy) return;
+                  setBusy(true);
+                  try { if (await onPay({ amount, account_id: accountId })) setPayOpen(false); }
+                  finally { setBusy(false); }
                 }}
               >
                 Ödənişi qeyd et
@@ -318,7 +337,7 @@ function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company }) {
   );
 }
 
-function InvoiceForm({ customers, products, onSubmit, onCancel }) {
+export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
   const [header, setHeader] = useState({
     invoice_no: `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
     customer_id: "",
@@ -330,14 +349,8 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
   const [busy, setBusy] = useState(false);
 
   const totals = useMemo(() => {
-    let net = 0;
-    let vat = 0;
-    lines.forEach((line) => {
-      const base = (Number(line.qty) || 0) * (Number(line.unit_price) || 0) * (1 - (Number(line.discount_pct) || 0) / 100);
-      net += base;
-      vat += base * ((Number(line.vat_rate) || 0) / 100);
-    });
-    return { net, vat, total: net + vat };
+    const draft = computeDraftTotals(lines);
+    return { net: draft.subtotal, vat: draft.vat_total, total: draft.total };
   }, [lines]);
 
   const patchLine = (index, patch) => {
@@ -349,14 +362,16 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
       style={{ border: "1px solid #e6dfc9", borderRadius: 10, padding: 14, marginBottom: 16, background: "#fcfaf2" }}
       onSubmit={async (event) => {
         event.preventDefault();
+        if (busy) return;
         setBusy(true);
-        await onSubmit({ ...header, due_date: header.due_date || null, lines });
-        setBusy(false);
+        try { await onSubmit({ ...header, due_date: header.due_date || null, lines }); }
+        finally { setBusy(false); }
       }}
     >
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 12 }}>
         <input required placeholder="Faktura №" value={header.invoice_no} onChange={(e) => setHeader({ ...header, invoice_no: e.target.value })} style={input} />
-        <select required value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })} style={input}>
+        <select aria-label="Faktura müştərisi" required value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })} style={input}>
           <option value="">Müştəri seç…</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -394,10 +409,10 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
                   style={{ ...input, width: "100%", marginTop: 4 }}
                 />
               </td>
-              <td style={td}><input type="number" step="0.001" value={line.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} style={{ ...input, width: 80 }} /></td>
-              <td style={td}><input type="number" step="0.01" value={line.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} style={{ ...input, width: 100 }} /></td>
-              <td style={td}><input type="number" step="0.01" value={line.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} style={{ ...input, width: 80 }} /></td>
-              <td style={td}><input type="number" step="0.01" value={line.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} style={{ ...input, width: 80 }} /></td>
+              <td style={td}><input aria-label="Faktura sətirinin sayı" type="number" min="0.001" step="0.001" value={line.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} style={{ ...input, width: 80 }} /></td>
+              <td style={td}><input aria-label="Faktura sətirinin qiyməti" type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} style={{ ...input, width: 100 }} /></td>
+              <td style={td}><input aria-label="Faktura sətirinin endirim faizi" type="number" min="0" max="100" step="0.01" value={line.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} style={{ ...input, width: 80 }} /></td>
+              <td style={td}><input aria-label="Faktura sətirinin ƏDV faizi" type="number" min="0" max="100" step="0.01" value={line.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} style={{ ...input, width: 80 }} /></td>
               <td style={td}>
                 <button type="button" style={delBtn} onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}>Sil</button>
               </td>
@@ -413,9 +428,10 @@ function InvoiceForm({ customers, products, onSubmit, onCancel }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" style={secondaryBtn} onClick={onCancel}>İmtina</button>
-          <button type="submit" disabled={busy} style={primaryBtn}>Yadda saxla</button>
+          <button type="submit" disabled={busy || !lines.length} style={primaryBtn}>Yadda saxla</button>
         </div>
       </div>
+      </fieldset>
     </form>
   );
 }
@@ -446,10 +462,11 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
   };
 
   const confirmDraft = async (draft) => {
+    if (busy) return;
     setBusy(true);
     try {
       const invoiceNo = draft.invoice_no || (await nextInvoiceNo?.().catch(() => null));
-      await onCreateDraft({
+      const saved = await onCreateDraft({
         invoice_no: invoiceNo,
         customer_id: draft.customer_id || null,
         order_id: draft.order_id || null,
@@ -459,8 +476,7 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
         notes: draft.notes || null,
         lines: draft.lines,
       });
-      setPreview(null);
-      src.refresh();
+      if (saved) { setPreview(null); src.refresh(); }
     } finally {
       setBusy(false);
     }
@@ -632,7 +648,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
 
   return (
     <div
-      onClick={onClose}
+      onClick={() => { if (!busy) onClose(); }}
       style={{
         position: "fixed", inset: 0, background: "rgba(12,20,18,0.55)", zIndex: 1000,
         display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
@@ -646,6 +662,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
           padding: 20, boxShadow: "0 24px 60px rgba(0,0,0,.28)",
         }}
       >
+        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
           <div>
             <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: "#8a7a4a" }}>
@@ -808,6 +825,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             {busy ? "Yaradılır…" : "Təsdiqlə və faktura kəs"}
           </button>
         </div>
+        </fieldset>
       </div>
     </div>
   );

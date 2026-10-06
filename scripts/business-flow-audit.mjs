@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { runBoundedFlow } from './audit-flow-runner.mjs';
+import { runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -147,7 +147,7 @@ async function selectPath(page, path) {
     if (await group.getAttribute('aria-expanded') !== 'true') await group.click();
   }
   await sidebar.getByRole('button', { name: item.label, exact: true }).click();
-  await page.waitForLoadState('networkidle');
+  await waitForAuditModule(page, path, item.label);
   assert(new URL(page.url()).pathname === path, `AUDIT_MODULE_REDIRECTED: expected ${path}, received ${new URL(page.url()).pathname}`);
   await page.locator('main.main').waitFor();
 }
@@ -984,47 +984,75 @@ async function auditReceivableCreditorWorkflow(browser) {
 async function auditInvoiceAccountingTax(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
-    const sale = await createCreditSale(page);
-
-    await selectModule(page, 6);
-    await page.locator(".invoice-registry-panel tbody tr").filter({ hasText: sale.order.id }).waitFor();
-    await page.locator('[data-testid="invoice-order-link"]').filter({ hasText: sale.order.id }).click();
-    await page.locator(".page-header h1").filter({ hasText: "Satış" }).waitFor();
-    await page.locator(".sales-order-card").filter({ hasText: sale.order.id }).waitFor();
-
-    await selectModule(page, 6);
-    await page.locator(".invoice-operations-panel").waitFor({ state: "visible" });
-    await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(100);
-    let state = await readState(page);
-    const sentOrder = state.orders?.find((order) => order.id === sale.order.id);
-    assert(sentOrder?.invoiceSentAt && sentOrder?.invoiceBatchId, "Invoice action did not mark the linked order as e-invoice sent");
-
-    await selectModule(page, 7);
-    await page.locator('[data-testid="accounting-close-readiness"]').waitFor({ state: "visible" });
-    const closeText = await page.locator('[data-testid="accounting-close-readiness"]').innerText();
-    assert(closeText.includes("Balans") && closeText.includes("Kassa"), "Accounting close checklist is missing reconciliation checks");
-    await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(100);
-    state = await readState(page);
-    assert(state.accountingClose?.journalCount > 0, "Accounting action did not create a close/export snapshot");
-
-    await selectModule(page, 8);
-    await page.locator('[data-testid="tax-control-panel"]').waitFor({ state: "visible" });
-    assert((await page.locator(".tax-calendar-panel tbody tr").count()) >= 3, "Tax calendar did not generate default obligations");
-    await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(100);
-    state = await readState(page);
-    assert(state.expenses?.some((expense) => String(expense.id).startsWith("TAXPAY-")), "Tax action did not create a payment task expense");
-    assert(state.taxCalendar?.some((item) => item.paymentTaskId), "Tax action did not persist the payment task on the calendar");
-    assert(errors.length === 0, `Invoice/accounting/tax flow produced browser errors: ${errors.join(" | ")}`);
-
-    return {
-      orderId: sale.order.id,
-      invoiceBatch: sentOrder.invoiceBatchId,
-      journalCount: state.accountingClose?.journalCount,
-      taxTasks: state.taxCalendar?.filter((item) => item.paymentTaskId).length || 0,
-    };
+    await createCustomer(page);
+    const { customer } = fixtureByPage.get(page);
+    const suffix = crypto.randomUUID().slice(0,8);
+    const marker = `QA Invoice Cash ${suffix}`;
+    const number = `INV-QA-${suffix}`;
+    const read = (table,filter='') => auditBackend.readCanonical(table,'*',filter);
+    await selectModule(page,5);
+    await page.getByRole('button',{ name:'Hesablar',exact:true }).click();
+    const accountForm = page.locator('form').filter({ has:page.getByPlaceholder('Hesab adı', { exact:true }) });
+    await accountForm.getByPlaceholder('Hesab adı',{ exact:true }).fill(marker);
+    await accountForm.getByPlaceholder('Açılış qalığı',{ exact:true }).fill('0');
+    await accountForm.getByRole('button',{ name:'+ Hesab',exact:true }).click();
+    const [account] = await waitForCanonical(() => read('cash_accounts','&name=eq.'+encodeURIComponent(marker)),rows => rows.length===1,'Invoice account was not persisted');
+    await selectModule(page,6);
+    await page.getByRole('button',{ name:'+ Yeni faktura',exact:true }).click();
+    const form = page.locator('form').filter({ has:page.getByPlaceholder('Faktura №',{ exact:true }) });
+    await form.getByPlaceholder('Faktura №',{ exact:true }).fill(number);
+    await form.getByLabel('Faktura müştərisi',{ exact:true }).selectOption(customer.id);
+    await form.getByPlaceholder('Təsvir',{ exact:true }).fill('QA taxable service');
+    await form.getByLabel('Faktura sətirinin sayı',{ exact:true }).fill('2');
+    await form.getByLabel('Faktura sətirinin qiyməti',{ exact:true }).fill('100');
+    await form.getByLabel('Faktura sətirinin ƏDV faizi',{ exact:true }).fill('18');
+    const createdResponse = page.waitForResponse(r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/create_sales_invoice_atomic'));
+    await form.getByRole('button',{ name:'Yadda saxla',exact:true }).click();
+    const created = await createdResponse;
+    assert(created.ok(),'Invoice creation RPC failed: '+await created.text());
+    const first = await created.json();
+    const replay = await auditBackend.command('create_sales_invoice_atomic',created.request().postDataJSON());
+    assert(first.invoice_id===replay.invoice_id,'Invoice retry created another invoice');
+    const [invoice] = await waitForCanonical(() => read('sales_invoices','&id=eq.'+first.invoice_id),rows => rows.length===1,'Invoice was not persisted');
+    assert(Number(invoice.subtotal)===200 && Number(invoice.vat_total)===36 && Number(invoice.total)===236,'Server invoice/VAT totals are wrong');
+    await page.getByTestId('invoice-search').fill(number);
+    const row = page.locator('main.main tr').filter({ has:page.getByText(number,{ exact:true }) });
+    await row.getByRole('button',{ name:'Jurnala yaz',exact:true }).click();
+    const [posted] = await waitForCanonical(() => read('sales_invoices','&id=eq.'+invoice.id),rows => rows[0]?.posted,'Invoice journal was not posted');
+    const journal = await read('journal_entries','&id=eq.'+posted.journal_entry_id);
+    const journalLines = await auditBackend.readCanonical('journal_lines','*,journal_entries!inner(tenant_id)',
+      '&entry_id=eq.'+posted.journal_entry_id,'journal_entries.tenant_id');
+    const [vatAccount] = await read('chart_of_accounts','&code=eq.2100');
+    assert(journal.length===1 && journal[0].posted,'Invoice has no posted GL entry');
+    assert(journalLines.reduce((sum,l) => sum+Number(l.debit)-Number(l.credit),0)===0,'Invoice journal is unbalanced');
+    assert(journalLines.some(l => l.account_id===vatAccount.id && Number(l.credit)===36),'VAT liability was not posted');
+    await row.getByRole('button',{ name:'Ödəniş',exact:true }).click();
+    await page.getByLabel('Faktura ödəniş məbləği',{ exact:true }).fill('100');
+    await page.getByLabel('Faktura ödəniş hesabı',{ exact:true }).selectOption(account.id);
+    const paymentResponse = page.waitForResponse(r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/record_invoice_payment_atomic'));
+    await page.getByRole('button',{ name:'Ödənişi qeyd et',exact:true }).click();
+    const response = await paymentResponse;
+    assert(response.ok(),'Invoice payment RPC failed: '+await response.text());
+    const payment = await response.json();
+    const repeated = await auditBackend.command('record_invoice_payment_atomic',response.request().postDataJSON());
+    assert(payment.payment_id===repeated.payment_id,'Invoice payment retry was not idempotent');
+    const cash = await read('cash_transactions','&reference_type=eq.invoice_payment&reference_id=eq.'+payment.payment_id);
+    assert(cash.length===1 && Number(cash[0].amount)===100 && cash[0].account_id===account.id,'Invoice receipt did not enter cash once');
+    const paymentLines = await auditBackend.readCanonical('journal_lines','*,journal_entries!inner(tenant_id)',
+      '&entry_id=eq.'+payment.journal_entry_id,'journal_entries.tenant_id');
+    assert(paymentLines.length===2 && paymentLines.reduce((sum,l) => sum+Number(l.debit)-Number(l.credit),0)===0,'Receipt journal is missing or unbalanced');
+    await waitForCanonical(() => read('sales_invoices','&id=eq.'+invoice.id),rows => Number(rows[0]?.paid_amount)===100,'Invoice paid amount was not updated');
+    const summary = await auditBackend.command('cashbook_ledger_summary',{ _tenant_id:auditBackend.tenantId });
+    assert(Number(summary.accounts.find(a => a.id===account.id)?.balance)===100,'Server cash balance is wrong');
+    await row.getByRole('button',{ name:'Ləğv',exact:true }).click();
+    await page.getByRole('dialog',{ name:'Təsdiq',exact:true }).getByRole('button',{ name:'Təsdiqlə',exact:true }).click();
+    await waitForCanonical(() => read('sales_invoices','&id=eq.'+invoice.id),rows => rows[0]?.status==='cancelled','Invoice was not cancelled');
+    const final = await auditBackend.command('cashbook_ledger_summary',{ _tenant_id:auditBackend.tenantId });
+    assert(Number(final.accounts.find(a => a.id===account.id)?.balance)===0,'Invoice cancellation did not reverse cash');
+    const reversals = await read('journal_entries','&source_type=in.(sales_invoice_cancellation,invoice_payment_reversal)&source_id=in.('+invoice.id+','+payment.payment_id+')');
+    assert(reversals.length===2 && reversals.every(j => j.posted),'Invoice/VAT and receipt journals were not both reversed');
+    assert(errors.length===0,'Invoice browser errors: '+errors.join(' | '));
+    return { invoiceId:invoice.id,paymentId:payment.payment_id,vat:36,cashAfterCancellation:0,replayVerified:true };
   } finally {
     await context.close();
   }
