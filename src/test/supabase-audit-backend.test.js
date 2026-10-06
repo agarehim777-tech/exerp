@@ -8,6 +8,39 @@ const env = { E2E_SUPABASE_PROJECT_REF: 'cvjctwgdyzhijhzhhjqd', VITE_SUPABASE_UR
   VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', E2E_USER_EMAIL: 'test@example.invalid', E2E_USER_PASSWORD: 'test-only' };
 const response = (value) => new Response(JSON.stringify(value), { status: 200 });
 
+it('narrows fixture reads and paginates composite stock identities with a stable order', async () => {
+  const urls = [];
+  const backend = await createAuditBackend(env, async url => {
+    const parsed = new URL(url); urls.push(parsed);
+    const path = parsed.pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/stock_balances') && parsed.searchParams.get('offset') === '0') return response(Array.from({length:500},(_,i)=>({ warehouse_id: 'warehouse', product_id: String(i), on_hand: 1 })));
+    return response([]);
+  });
+  urls.length = 0;
+  await backend.readState({ scope: 'sales', customerId: 'customer', warehouseId: 'warehouse' });
+  expect(urls.some(url => /cashbook|snapshot|expense|collection|purchase/.test(url.pathname))).toBe(false);
+  for (const url of urls.filter(url => /customers|orders|credit_contracts/.test(url.pathname))) {
+    expect(url.searchParams.get(url.pathname.endsWith('/customers') ? 'id' : 'customer_id')).toBe('eq.customer');
+    expect(url.searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  }
+  const balances = urls.filter(url => url.pathname.endsWith('/stock_balances'));
+  expect(balances.map(url => url.searchParams.get('offset'))).toEqual(['0','500']);
+  expect(balances.every(url => url.searchParams.get('order') === 'warehouse_id.asc,product_id.asc')).toBe(true);
+  expect(balances.every(url => url.searchParams.get('warehouse_id') === 'eq.warehouse')).toBe(true);
+  urls.length = 0;
+  await backend.readCollections(['employees','departments']);
+  expect(urls[0].searchParams.get('collection')).toBe('in.(employees,departments)');
+  expect(urls[0].searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  await expect(backend.readCollections(['employees)&tenant_id=eq.foreign'])).rejects.toThrow('COLLECTION');
+  await expect(backend.readState({ scope: 'unknown' })).rejects.toThrow('SCOPE');
+  urls.length = 0;
+  await backend.readState({ scope: 'hr' });
+  expect(urls.every(url => /snapshot|collection|audit_events|expenses/.test(url.pathname))).toBe(true);
+});
+
 it('bounds concurrent read requests without skipping failed reads or changing tenant filters', async () => {
   let active = 0;
   let peak = 0;

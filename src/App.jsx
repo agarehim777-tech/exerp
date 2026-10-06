@@ -138,6 +138,7 @@ import { describeStockError, isStockShortageError } from "./shared/lib/stockErro
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { ensureMainCashAccount } from "./services/cashAccounts.js";
+import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 
 import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
 import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
@@ -3853,90 +3854,15 @@ function App() {
     notify(`${product}: ${qty} ədəd ${warehouse.name} anbarına mədaxil edildi.`);
   }
 
-  function importWarehouseStock(rows) {
+  async function importWarehouseStock(rows, requestKey) {
     if (!requirePermission("warehouse.manage", "anbara toplu import etmək")) return;
-    if (!Array.isArray(rows) || rows.length === 0) {
-      notify("İmport üçün etibarlı CSV sətri tapılmadı.", "warning");
-      return;
-    }
-
-    setState((current) => {
-      let nextProducts = [...(current.products || [])];
-      let nextStock = [...(current.stock || [])];
-      const nextWarehouseStock = { ...(current.warehouseStock || {}) };
-      const productBySku = new Map(nextProducts.filter((product) => product.sku).map((product) => [normalize(product.sku), product]));
-      const productByName = new Map(nextProducts.map((product) => [normalize(product.name), product]));
-      const warehouseById = new Map((current.warehouses || []).map((warehouse) => [warehouse.id, warehouse]));
-      const touchedProducts = new Set();
-      const touchedWarehouses = new Set();
-
-      rows.forEach((row, index) => {
-        const warehouse = warehouseById.get(row.warehouseId);
-        if (!warehouse) return;
-
-        const matchedProduct = (row.sku && productBySku.get(normalize(row.sku))) || productByName.get(normalize(row.product));
-        const product = matchedProduct
-          ? {
-              ...matchedProduct,
-              category: row.category || matchedProduct.category || "Digər",
-              unit: row.unit || matchedProduct.unit || "ədəd",
-              salePrice: row.salePrice ?? Number(matchedProduct.salePrice || 0),
-              costPrice: row.costPrice ?? Number(matchedProduct.costPrice || 0),
-              reorderLevel: row.reorderLevel ?? Number(matchedProduct.reorderLevel || 0),
-              serialTracked: row.serialTracked ?? Boolean(matchedProduct.serialTracked),
-              status: matchedProduct.status || "Aktiv",
-            }
-          : {
-              id: `PRD-IMP-${Date.now()}-${index}`,
-              name: row.product,
-              sku: row.sku || `SKU-IMP-${Date.now().toString().slice(-6)}-${index + 1}`,
-              category: row.category || "Digər",
-              unit: row.unit || "ədəd",
-              salePrice: row.salePrice ?? 0,
-              costPrice: row.costPrice ?? 0,
-              reorderLevel: row.reorderLevel ?? 0,
-              serialTracked: row.serialTracked ?? false,
-              status: "Aktiv",
-            };
-
-        if (matchedProduct) {
-          nextProducts = nextProducts.map((item) => (item.id === product.id ? product : item));
-        } else {
-          nextProducts = [product, ...nextProducts];
-        }
-        productBySku.set(normalize(product.sku), product);
-        productByName.set(normalize(product.name), product);
-
-        const salePrice = row.salePrice ?? Number(product.salePrice || 0);
-        nextWarehouseStock[warehouse.id] = addStockToRows(
-          nextWarehouseStock[warehouse.id] || [],
-          product.name,
-          row.qty,
-          salePrice,
-          warehouse.id,
-          product,
-        );
-        nextStock = addStockToRows(nextStock, product.name, row.qty, salePrice, "", product);
-        touchedProducts.add(product.id);
-        touchedWarehouses.add(warehouse.id);
-      });
-
-      return auditCurrentState(
-        {
-          ...current,
-          products: nextProducts,
-          stock: nextStock,
-          warehouseStock: nextWarehouseStock,
-        },
-        {
-          module: "Anbar",
-          action: "Toplu stok import edildi",
-          detail: `${rows.length} sətir · ${touchedProducts.size} məhsul · ${touchedWarehouses.size} anbar`,
-        },
-      );
-    });
+    const isCurrent = beginTenantRequest();
+    await importWarehouseStockAtomic(activeTenantId, rows, requestKey);
+    if (!isCurrent()) return;
+    await Promise.all([refreshDbProducts(), dbInventory.refresh()]);
+    if (!isCurrent()) return;
     setModal(null);
-    notify(`${rows.length} stok sətri anbara import edildi.`);
+    notify(`${rows.length} stok sətri serverdə anbara import edildi.`);
   }
 
   async function updateProduct(productId, values) {

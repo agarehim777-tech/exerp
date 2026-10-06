@@ -124,13 +124,8 @@ async function createFlowPage(browser) {
       throw new Error(`E2E login did not reach the application${authError ? `: ${authError}` : ""}`);
     }
   }
-  const state = await readState(page);
-  if (!state) {
-    await context.close();
-    const error = new Error('Supabase audit state could not be loaded.');
-    error.code = 'AUDIT_BACKEND_INCOMPATIBLE';
-    throw error;
-  }
+  // The backend already checked membership and schema; readiness is a UI concern.
+  await page.locator('.sidebar .nav-list').waitFor({ state: 'visible', timeout: 15000 });
   return { context, page, errors };
 }
 
@@ -158,13 +153,29 @@ async function selectPath(page, path) {
 }
 
 async function readState(page) {
-  return auditBackend.readState();
+  return auditBackend.readState(flowReadOptions());
 }
 
-async function waitForState(predicate, message) {
+function flowReadOptions() {
+  if (['sales-credit-warehouse-reservation','sales-expense-edit-delete','credit-payment-finance-cash',
+    'credit-contracts-remain-separate','warehouse-delivery-stock-release'].includes(currentFlowName)) return { scope: 'sales-ledger' };
+  if (currentFlowName === 'hr-department-reporting-structure') return { scope: 'hr' };
+  if (currentFlowName === 'support-messaging-linked-comments') return { scope: 'ui' };
+  return { scope: 'all' };
+}
+
+async function readHrState() {
+  return auditBackend.readState({ scope: 'hr' });
+}
+
+async function waitForHrState(predicate, message) {
+  return waitForState(predicate, message, { scope: 'hr' });
+}
+
+async function waitForState(predicate, message, options) {
   const deadline = Date.now() + 15000;
   do {
-    const state = await auditBackend.readState();
+    const state = await auditBackend.readState(options || flowReadOptions());
     if (predicate(state)) return state;
     await new Promise(resolve => setTimeout(resolve, 250));
   } while (Date.now() < deadline);
@@ -206,8 +217,8 @@ async function createWarehouseWithStock(page) {
   await warehouseForm.getByPlaceholder('Ad', { exact: true }).fill(`QA Warehouse ${suffix}`);
   await warehouseForm.getByPlaceholder('Ünvan', { exact: true }).fill('QA Address');
   await warehouseForm.getByRole('button', { name: '+ Anbar', exact: true }).click();
-  let state = await waitForState(s => s.warehouses.some(w => w.code === code), 'Warehouse was not persisted');
-  const warehouse = state.warehouses.find(w => w.code === code);
+  const [warehouse] = await waitForCanonical(() => auditBackend.readCanonical('warehouses', '*', `&code=eq.${code}`),
+    rows => rows.length === 1, 'Warehouse was not persisted');
   await selectPath(page, '/anbar/mehsullar');
   await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
   await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
@@ -217,7 +228,8 @@ async function createWarehouseWithStock(page) {
   await productForm.getByLabel('Satış qiyməti', { exact: true }).fill('1200');
   await productForm.getByRole('button', { name: 'Məhsul yarat', exact: true }).click();
   await productForm.waitFor({ state: 'hidden' });
-  await waitForState(s => s.products.some(p => p.sku === sku), 'Product was not persisted');
+  const [product] = await waitForCanonical(() => auditBackend.readCanonical('products', '*', `&sku=eq.${sku}`),
+    rows => rows.length === 1, 'Product was not persisted');
   await selectModule(page, 3);
   await page.getByRole('button', { name: 'Hərəkətlər', exact: true }).click();
   const intakeForm = page.locator('form').filter({ has: page.getByPlaceholder('Say', { exact: true }) });
@@ -228,11 +240,13 @@ async function createWarehouseWithStock(page) {
   await intakeForm.getByPlaceholder('Maya dəyəri', { exact: true }).fill('1200');
   await intakeForm.getByPlaceholder('Sənəd №', { exact: true }).fill(code);
   await intakeForm.getByRole('button', { name: '+ Qeyd et', exact: true }).click();
-  state = await waitForState(s => stockTotal(s, warehouse.id, productName) === 5, 'Warehouse intake was not persisted');
+  const [balance] = await waitForCanonical(() => auditBackend.readCanonical('stock_balances', '*',
+    `&warehouse_id=eq.${warehouse.id}&product_id=eq.${product.id}`), rows => rows.length === 1 && Number(rows[0].on_hand) === 5,
+    'Warehouse intake was not persisted');
   assert(warehouse, "Warehouse seed was not created");
-  assert(stockTotal(state, warehouse.id, productName) === 5, "Warehouse intake did not create the seed stock");
-  assert(state.products?.some((item) => item.sku === sku), "Warehouse intake did not create the product catalog record");
-  fixtureByPage.set(page, { warehouse, productName, sku });
+  assert(Number(balance.on_hand) === 5, "Warehouse intake did not create the seed stock");
+  assert(product.sku === sku, "Warehouse intake did not create the product catalog record");
+  fixtureByPage.set(page, { warehouse, product, productName, sku });
   return warehouse;
 }
 
@@ -246,21 +260,25 @@ async function createCustomer(page) {
   await modal.getByLabel('Telefon', { exact: true }).fill('0500000000');
   await modal.getByRole('button', { name: 'Yarat', exact: true }).click();
   await modal.waitFor({ state: 'hidden' });
-  await waitForState(s => s.customers.some(c => c.fin === fin), 'Customer was not persisted');
+  const [customer] = await waitForCanonical(() => auditBackend.readCanonical('customers', '*', `&tax_id=eq.${fin}`),
+    rows => rows.length === 1, 'Customer was not persisted');
+  fixtureByPage.set(page, { ...fixtureByPage.get(page), customer });
   return fin;
 }
 
 async function createCreditSaleFromCurrentData(page, expectedFin) {
-  const state = await readState(page);
-  if (!state.employees.some(e => e.name === 'QA Audit Seller')) {
+  const employees = await auditBackend.readCollections(['employees']);
+  if (!employees.some(e => e.data?.name === 'QA Audit Seller')) {
     await selectModule(page, 14);
     await createHrEmployee(page, { name: 'QA Audit Seller', position: 'Satıcı', department: 'Satış', salary: 0 });
   }
   await selectModule(page, 2);
-  const before = await readState(page);
+  const fixture = fixtureByPage.get(page);
+  assert(fixture?.customer, 'Missing isolated customer fixture');
+  const scope = { scope: 'sales', customerId: fixture.customer.id, warehouseId: fixture.warehouse.id };
+  const before = await auditBackend.readState(scope);
   await page.locator(".page-header .primary-btn").click();
   const modal = page.locator('[role="dialog"]');
-  const fixture = fixtureByPage.get(page);
   assert(fixture, 'Missing isolated warehouse fixture');
   await modal.getByRole('combobox', { name: 'Müştəri axtar və seç', exact: true }).fill(expectedFin);
   await modal.getByRole('option').filter({ hasText: expectedFin }).click();
@@ -276,7 +294,7 @@ async function createCreditSaleFromCurrentData(page, expectedFin) {
   await modal.locator(".order-modal-form button[type=submit]").click();
   await modal.waitFor({ state: 'hidden' });
   const after = await waitForState(s => Boolean(findNewLinkedCreditSale(s, before.orders, expectedFin)),
-    'Sale and its credit/contract links were not persisted');
+    'Sale and its credit/contract links were not persisted', scope);
   const order = findNewLinkedCreditSale(after, before.orders, expectedFin);
   const credit = after.credits?.find((item) => item.id === order?.creditId);
   const contract = after.contracts?.find((item) => item.id === order?.contractId);
@@ -506,7 +524,8 @@ async function auditSeparateCreditContracts(browser) {
     const firstSale = await createCreditSaleFromCurrentData(page, fin);
     await page.waitForTimeout(20);
     const secondSale = await createCreditSaleFromCurrentData(page, fin);
-    const state = await readState(page);
+    const fixture = fixtureByPage.get(page);
+    const state = await auditBackend.readState({ scope: 'sales', customerId: fixture.customer.id, warehouseId: fixture.warehouse.id });
     const customerCredits = state.credits?.filter((credit) => credit.fin === fin) || [];
     const customerContracts = state.contracts?.filter((contract) => contract.fin === fin) || [];
 
@@ -1015,20 +1034,20 @@ async function auditWarehouseImport(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     await selectModule(page, 3);
-    await page.locator(".page-header .primary-btn").click();
-    const warehouseModal = page.locator('[role="dialog"]');
-    const suffix = Date.now().toString().slice(-6);
+    await page.getByRole('button', { name: '+ Yeni anbar', exact: true }).click();
+    const warehouseForm = page.locator('form').filter({ has: page.getByPlaceholder('Kod', { exact: true }) });
+    const suffix = crypto.randomUUID().slice(0, 8);
     const warehouseName = `QA Import ${suffix}`;
-    await warehouseModal.locator("input").nth(0).fill(`IMP-${suffix}`);
-    await warehouseModal.locator("input").nth(1).fill(warehouseName);
-    await warehouseModal.locator("input").nth(2).fill("Baku");
-    await warehouseModal.locator("input").nth(3).fill("QA Admin");
-    await warehouseModal.locator("input").nth(4).fill("100");
-    await warehouseModal.locator("input").nth(5).fill("QA Address");
-    await warehouseModal.locator('button[type="submit"]').click();
+    await warehouseForm.getByPlaceholder('Kod', { exact: true }).fill(`IMP-${suffix}`);
+    await warehouseForm.getByPlaceholder('Ad', { exact: true }).fill(warehouseName);
+    await warehouseForm.getByPlaceholder('Ünvan', { exact: true }).fill('QA Address');
+    await warehouseForm.getByRole('button', { name: '+ Anbar', exact: true }).click();
+    const [warehouse] = await waitForCanonical(() => auditBackend.readCanonical('warehouses', '*', `&code=eq.IMP-${suffix}`),
+      rows => rows.length === 1, 'Import warehouse was not persisted');
 
-    await page.locator(".warehouse-action-menu .primary-btn").click();
-    await page.locator(".warehouse-action-menu-popover button").nth(1).click();
+    await selectPath(page, '/anbar/mehsullar');
+    await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
+    await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: /Toplu import/ }).click();
     const importModal = page.locator('[role="dialog"]');
     const sku = `IMP-${suffix}-001`;
     const csv = [
@@ -1041,17 +1060,26 @@ async function auditWarehouseImport(browser) {
       buffer: Buffer.from(csv, "utf8"),
     });
     await importModal.locator(".warehouse-import-summary").waitFor();
-    await importModal.locator(".modal-actions .primary-btn").click();
+    const importResponse = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/rpc/import_warehouse_stock_atomic'));
+    await importModal.getByRole('button', { name: 'İmport et', exact: true }).click();
+    const response = await importResponse;
+    assert(response.ok(), 'Warehouse import RPC failed: ' + await response.text());
+    const result = await response.json();
+    const replay = await auditBackend.command('import_warehouse_stock_atomic', response.request().postDataJSON());
+    assert(result.request_id === replay.request_id && result.row_count === 1, 'Warehouse import replay was not idempotent');
+    await importModal.waitFor({ state: 'hidden' });
 
-    const state = await readState(page);
-    const warehouse = state.warehouses.find((item) => item.name === warehouseName);
-    const product = state.products.find((item) => item.sku === sku);
-    const item = state.warehouseStock?.[warehouse?.id || ""]?.find((row) => row.product === "Imported Device");
+    const [product] = await waitForCanonical(() => auditBackend.readCanonical('products', '*', `&sku=eq.${sku}`),
+      rows => rows.length === 1, 'Imported catalog product was not persisted');
+    const [item] = await waitForCanonical(() => auditBackend.readCanonical('stock_balances', '*',
+      `&warehouse_id=eq.${warehouse.id}&product_id=eq.${product.id}`), rows => rows.length === 1 && Number(rows[0].on_hand) === 7,
+      'Import did not increase warehouse stock');
     assert(warehouse, "Warehouse import test could not create the target warehouse");
-    assert(product?.costPrice === 600 && product?.serialTracked === true, "Import did not persist product metadata");
-    assert(Number(item?.total || 0) === 7, "Import did not increase warehouse stock");
+    assert(Number(product.cost_price) === 600 && product.serial_tracked === true, "Import did not persist product metadata");
+    assert(Number(item.on_hand) === 7, "Import did not increase warehouse stock");
     assert(errors.length === 0, `Warehouse import produced browser errors: ${errors.join(" | ")}`);
-    return { warehouseId: warehouse.id, sku: product.sku, quantity: item.total };
+    return { warehouseId: warehouse.id, sku: product.sku, quantity: Number(item.on_hand) };
   } finally {
     await context.close();
   }
@@ -1266,7 +1294,8 @@ async function createHrEmployee(page, values) {
   await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);
   await modal.getByLabel('Şöbə', { exact: true }).fill(values.department);
   await modal.getByLabel('Üst şöbə', { exact: true }).fill(values.departmentParent || '');
-  const manager = values.managerName ? (await readState(page)).employees.find(e => e.name === values.managerName) : null;
+  const manager = values.managerName ? (await auditBackend.readCollections(['employees'])).map(row => row.data)
+    .find(e => e.name === values.managerName) : null;
   if (values.managerName) assert(manager, 'Required HR manager was not persisted');
   await modal.getByLabel(/^Kimə tabedir/).selectOption(manager?.id || '');
   await modal.getByLabel(/^Səviyyə/).selectOption({ index: values.levelIndex ?? 3 });
@@ -1276,7 +1305,8 @@ async function createHrEmployee(page, values) {
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   await modal.locator('button[type="submit"]').click();
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
-  await waitForState(s => s.employees.some(e => e.name === values.name), 'Employee was not persisted');
+  await waitForCanonical(() => auditBackend.readCollections(['employees']),
+    rows => rows.some(row => row.data?.name === values.name), 'Employee was not persisted');
 }
 
 async function auditKpiPeriodPayoutWorkflow(browser) {
@@ -1407,7 +1437,7 @@ async function auditHrStructure(browser) {
     await editModal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill('60');
     await editModal.locator('button[type="submit"]').click();
     await editModal.waitFor({ state: "hidden" });
-    const updatedState = await waitForState(s => s.employees.some(e => e.name === specialistName && e.position === 'Senior B2B Specialist' && Number(e.salary) === 1750), 'Employee edit was not persisted');
+    const updatedState = await waitForHrState(s => s.employees.some(e => e.name === specialistName && e.position === 'Senior B2B Specialist' && Number(e.salary) === 1750), 'Employee edit was not persisted');
     const updatedEmployee = updatedState.employees.find((employee) => employee.name === specialistName);
     assert(updatedEmployee?.position === "Senior B2B Specialist", "Employee edit did not persist the new position");
     assert(Number(updatedEmployee?.salary) === 1750, "Employee edit did not persist the new salary");
@@ -1422,7 +1452,7 @@ async function auditHrStructure(browser) {
     await page.locator('.hr-profile-tabs').getByRole('button', { name: /^Sənədlər/ }).click();
     await page.locator('[data-testid="hr-document-complete"]').click();
     await page.waitForTimeout(100);
-    const documentState = await waitForState(s => s.employees.some(e => e.name === specialistName && Number(e.documentsComplete) === 100), 'Document completion was not persisted');
+    const documentState = await waitForHrState(s => s.employees.some(e => e.name === specialistName && Number(e.documentsComplete) === 100), 'Document completion was not persisted');
     const documentedEmployee = documentState.employees.find((employee) => employee.name === specialistName);
     assert(
       Number(documentedEmployee?.documentsComplete) === 100 && documentedEmployee?.documentReviewRequired === false,
@@ -1439,7 +1469,7 @@ async function auditHrStructure(browser) {
     await managerEditModal.getByLabel('Ad Soyad', { exact: true }).fill(leadName);
     await managerEditModal.locator('button[type="submit"]').click();
     await managerEditModal.waitFor({ state: "hidden" });
-    const renamedState = await waitForState(s => s.employees.some(e => e.name === leadName), 'Employee rename was not persisted');
+    const renamedState = await waitForHrState(s => s.employees.some(e => e.name === leadName), 'Employee rename was not persisted');
     const renamedManager = renamedState.employees.find((employee) => employee.name === leadName);
     assert(
       renamedState.employees.find((employee) => employee.name === specialistName)?.managerName === leadName,
@@ -1451,7 +1481,7 @@ async function auditHrStructure(browser) {
     await departmentModal.locator("textarea").fill("QA department for hierarchy validation");
     await departmentModal.locator('button[type="submit"]').click();
     await departmentModal.waitFor({ state: "hidden" });
-    const departmentState = await waitForState(s => s.departments?.some(d => d.name === departmentName),
+    const departmentState = await waitForHrState(s => s.departments?.some(d => d.name === departmentName),
       'HR department was not persisted');
     assert(
       departmentState.departments?.some((department) => department.name === departmentName),
@@ -1467,7 +1497,7 @@ async function auditHrStructure(browser) {
       employees.find(employee => employee.name === directorName).id);
     await deleteModal.locator(".danger-outline").click();
     await deleteModal.waitFor({ state: "hidden" });
-    const deletedState = await waitForState(s => !s.employees.some(e => e.id === renamedManager.id),
+    const deletedState = await waitForHrState(s => !s.employees.some(e => e.id === renamedManager.id),
       'HR manager deletion was not persisted');
     assert(!deletedState.employees.some((employee) => employee.name === leadName), "Employee delete did not remove the employee");
     assert(
@@ -1483,11 +1513,12 @@ async function auditHrStructure(browser) {
       "Deleting the last employee removed the department from the structure",
     );
 
+    const ledgerBeforePayroll = await auditBackend.command('cashbook_ledger_summary', { _tenant_id: auditBackend.tenantId });
     const hrTabs = page.locator(".hr-platform-toolbar .tabs button");
     await hrTabs.nth(3).click();
     await page.locator(".hr-platform-section tbody tr").filter({ hasText: specialistName }).locator(".hr-payroll-actions .text-btn").click();
     await page.waitForTimeout(100);
-    const payrollState = await waitForState(s => s.employees.some(e => e.name === specialistName && e.payrollStatus === 'Ödənildi'), 'Payroll status was not persisted');
+    const payrollState = await waitForHrState(s => s.employees.some(e => e.name === specialistName && e.payrollStatus === 'Ödənildi'), 'Payroll status was not persisted');
     const payrollEmployee = payrollState.employees.find((employee) => employee.name === specialistName);
     assert(
       payrollEmployee?.payrollStatus === "Ödənildi" && payrollEmployee?.payrollPaidAt,
@@ -1502,16 +1533,16 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-operation-toolbar .secondary-btn").click();
     const leaveModal = page.locator('[role="dialog"]');
     await leaveModal.getByLabel(/^Əməkdaş/).selectOption(updatedEmployee.id);
-    const previousLeaveIds = new Set((await readState()).leaveRequests?.map(request => request.id) || []);
+    const previousLeaveIds = new Set((await readHrState()).leaveRequests?.map(request => request.id) || []);
     await leaveModal.locator('button[type="submit"]').click();
     await leaveModal.waitFor({ state: "hidden" });
-    const leaveState = await waitForState(s => s.leaveRequests?.some(request => !previousLeaveIds.has(request.id) && request.employeeId === updatedEmployee.id),
+    const leaveState = await waitForHrState(s => s.leaveRequests?.some(request => !previousLeaveIds.has(request.id) && request.employeeId === updatedEmployee.id),
       'New HR leave request was not persisted');
     const leaveRequest = leaveState.leaveRequests.find(request => !previousLeaveIds.has(request.id) && request.employeeId === updatedEmployee.id);
     assert(leaveRequest, "Leave request did not persist");
     await page.locator(".hr-platform-section tbody tr").filter({ hasText: leaveRequest.employeeName }).locator(".hr-leave-actions .text-btn").first().click();
     await page.waitForTimeout(100);
-    const approvedLeaveState = await waitForState(s => s.leaveRequests?.some(request => request.id === leaveRequest.id && request.status === 'Təsdiq edildi'),
+    const approvedLeaveState = await waitForHrState(s => s.leaveRequests?.some(request => request.id === leaveRequest.id && request.status === 'Təsdiq edildi'),
       'HR leave approval was not persisted');
     assert(
       approvedLeaveState.leaveRequests?.find(request => request.id === leaveRequest.id)?.status === "Təsdiq edildi",
@@ -1529,21 +1560,22 @@ async function auditHrStructure(browser) {
     await vacancyModal.locator("input").nth(1).fill(departmentName);
     await vacancyModal.locator('button[type="submit"]').click();
     await vacancyModal.waitFor({ state: "hidden" });
-    const vacancyState = await readState(page);
+    const vacancyState = await readHrState();
     assert(vacancyState.vacancies?.some((vacancy) => vacancy.role === "QA Recruitment Role"), "Vacancy creation did not persist");
     await page.locator(".hr-recruitment-card").filter({ hasText: "QA Recruitment Role" }).waitFor();
 
     await selectModule(page, 24);
     await page.getByRole("button", { name: "Integrity yoxla" }).click();
     await page.waitForTimeout(75);
-    const integrityState = await readState(page);
+    const integrityState = await readHrState();
     assert(integrityState.integritySnapshot, "Integrity check did not create a snapshot");
     assert(
       !integrityState.integritySnapshot.issues?.some((issue) => issue.area === "HR"),
       "Healthy HR structure produced an integrity warning",
     );
-    const payrollExpense = integrityState.expenses?.find((expense) => expense.source === "HR Payroll");
-    assert(payrollExpense?.cashImpact === false, "HR payroll expense should not affect real cash balance");
+    const ledgerAfterPayroll = await auditBackend.command('cashbook_ledger_summary', { _tenant_id: auditBackend.tenantId });
+    assert(JSON.stringify(ledgerAfterPayroll) === JSON.stringify(ledgerBeforePayroll),
+      'An HR-only payroll status marker changed the canonical cash ledger');
     assert(errors.length === 0, `HR structure produced browser errors: ${errors.join(" | ")}`);
     return { employees: employees.length, selectedEmployee: specialistName, updatedSalary: updatedEmployee.salary, department: departmentName };
   } finally {
@@ -1552,10 +1584,10 @@ async function auditHrStructure(browser) {
 }
 
 async function auditSettingsPermissions() {
-  const before = await readState();
+  const before = await auditBackend.readCanonical('orders','id');
   const evidence = await verifyRestrictedRoleAudit(process.env, auditBackend.session.user.id);
-  const after = await readState();
-  assert(after.orders.length === before.orders.length, 'Denied role command created a sale');
+  const after = await auditBackend.readCanonical('orders','id');
+  assert(JSON.stringify(after) === JSON.stringify(before), 'Denied role command created or changed a sale');
   return evidence;
 }
 
@@ -1626,8 +1658,8 @@ async function auditSupportMessaging(browser) {
     await page.locator(".chat-panel").waitFor();
     const chatText = await page.locator(".chat-panel").innerText();
     assert(chatText.includes(ticket.id), "Message thread does not show the linked support task");
-    await page.locator(".composer input").fill(replyText);
-    await page.locator(".composer button").click();
+    await page.getByPlaceholder('Mesaj yazın...', { exact: true }).fill(replyText);
+    await page.getByRole('button', { name: 'Mesaj göndər', exact: true }).click();
     state = await waitForState(s => s.supportTickets?.some(t => t.id === ticket.id && t.comments?.some(c => c.text === replyText)),
       'Message reply was not persisted on its support task');
     ticket = state.supportTickets?.find((item) => item.id === ticket.id);

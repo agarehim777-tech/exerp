@@ -627,12 +627,26 @@ function TaskItem({ tone, title, value, label }) {
 
 function WarehouseImportModal({ warehouses, onClose, onImport }) {
   const fileInputRef = useRef(null);
+  const requestKey = useRef(crypto.randomUUID());
   const [fileName, setFileName] = useState("");
   const [analysis, setAnalysis] = useState({ rows: [], errors: [] });
   const [isReading, setIsReading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  async function submitImport() {
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
+    try { await onImport(analysis.rows, requestKey.current); }
+    catch (error) { setSaveError(error.message || 'İmport saxlanılmadı.'); }
+    finally { setSaving(false); }
+  }
 
   async function readFile(file) {
-    if (!file) return;
+    if (!file || saving) return;
+    requestKey.current = crypto.randomUUID();
+    setSaveError('');
     setIsReading(true);
     setFileName(file.name);
     try {
@@ -653,7 +667,7 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
             <h2>Toplu stok importu</h2>
             <p>CSV faylından anbar qalıqlarını əlavə edin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
+          <button className="icon-btn" disabled={saving} onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button>
         </div>
 
         <div className="warehouse-import-actions">
@@ -662,10 +676,11 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
             className="visually-hidden"
             type="file"
             accept=".csv,text/csv"
+            disabled={saving}
             aria-label="CSV faylı seçin"
             onChange={(event) => readFile(event.target.files?.[0])}
           />
-          <button type="button" className="primary-btn" disabled={isReading} onClick={() => fileInputRef.current?.click()}>
+          <button type="button" className="primary-btn" disabled={isReading || saving} onClick={() => fileInputRef.current?.click()}>
             <Upload size={16} /> {isReading ? "Oxunur..." : "CSV seçin"}
           </button>
           <button type="button" className="secondary-btn" onClick={downloadWarehouseImportTemplate}>
@@ -704,11 +719,12 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
         )}
 
         <div className="modal-actions">
-          <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-          <button type="button" className="primary-btn" disabled={analysis.rows.length === 0 || isReading} onClick={() => onImport(analysis.rows)}>
-            <Upload size={16} /> İmport et
+          <button type="button" className="secondary-btn" disabled={saving} onClick={onClose}>Ləğv et</button>
+          <button type="button" className="primary-btn" disabled={analysis.rows.length === 0 || analysis.errors.length > 0 || isReading || saving} onClick={submitImport}>
+            <Upload size={16} /> {saving ? 'Saxlanılır...' : 'İmport et'}
           </button>
         </div>
+        {saveError && <p role="alert">{saveError}</p>}
       </div>
     </div>
   );

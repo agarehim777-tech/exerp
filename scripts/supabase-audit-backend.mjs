@@ -89,7 +89,10 @@ export async function createAuditBackend(env, fetcher = fetch) {
   const read = async (table, select = '*', filter = '', tenantColumn = 'tenant_id') => {
     const result = [];
     for (let offset = 0; ; offset += 500) {
-      const rows = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&${tenantColumn}=eq.${tenantId}&limit=500&offset=${offset}${filter}`, { token });
+      const stableOrder = table === 'tenant_members' ? 'user_id.asc' : table === 'tenant_state_snapshots' ? 'tenant_id.asc'
+        : table === 'stock_balances' ? 'warehouse_id.asc,product_id.asc' : 'id.asc';
+      const order = /(?:^|&)order=/.test(filter) ? '' : `&order=${stableOrder}`;
+      const rows = await request(`rest/v1/${table}?select=${encodeURIComponent(select)}&${tenantColumn}=eq.${tenantId}&limit=500&offset=${offset}${filter}${order}`, { token });
       result.push(...rows);
       if (rows.length < 500) return result;
     }
@@ -103,21 +106,46 @@ export async function createAuditBackend(env, fetcher = fetch) {
   return {
     tenantId,
     readCanonical: read,
+    async readCollections(names) {
+      if (!Array.isArray(names) || !names.length || names.some(name => !/^[a-zA-Z]+$/.test(name))) {
+        throw new Error('AUDIT_COLLECTION_NAMES_REQUIRED');
+      }
+      return read('tenant_collection_records', '*', `&collection=in.(${names.join(',')})&order=collection.asc,position.asc,record_key.asc`);
+    },
     command: (name, data) => request(`rest/v1/rpc/${name}`, { method: 'POST', data, token }),
     invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
     storageKey: `sb-${new URL(url).hostname.split('.')[0]}-auth-token`,
     session,
-    async readState() {
+    async readState({ scope = 'all', customerId, warehouseId } = {}) {
+      if (!['all', 'sales', 'sales-ledger', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
+      const salesTables = new Set(['customers', 'products', 'orders', 'credit_contracts', 'credit_installments',
+        'credit_payments', 'warehouses', 'stock_balances', 'order_bonus_assignments']);
+      const hrTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events', 'expenses']);
+      const uiTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events']);
+      const salesLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions', 'expenses', 'audit_events']);
+      const scopedRead = (table, select = '*', filter = '', tenantColumn) => {
+        if (scope === 'sales' && !salesTables.has(table)) return [];
+        if (scope === 'sales-ledger' && !salesLedgerTables.has(table)) return [];
+        if (scope === 'hr' && !hrTables.has(table)) return [];
+        if (scope === 'ui' && !uiTables.has(table)) return [];
+        if (customerId && ['customers', 'orders', 'credit_contracts'].includes(table)) {
+          filter += `&${table === 'customers' ? 'id' : 'customer_id'}=eq.${encodeURIComponent(customerId)}`;
+        }
+        if (warehouseId && ['warehouses', 'stock_balances'].includes(table)) {
+          filter += `&${table === 'warehouses' ? 'id' : 'warehouse_id'}=eq.${encodeURIComponent(warehouseId)}`;
+        }
+        return read(table, select, filter, tenantColumn);
+      };
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
         balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines, reportExports] = await Promise.all([
-        read('tenant_state_snapshots'), read('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
-        read('customers'), read('products'), read('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
-        read('credit_contracts'), read('credit_installments'), read('credit_payments'), read('warehouses'), read('stock_balances'),
-        request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }),
-        read('cash_accounts'),
-        read('cash_transactions'), read('expenses'), read('vendors'), read('sales_invoices'), read('order_bonus_assignments'), read('audit_events'),
-        read('purchase_orders'), read('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),
-        read('workflow_records', '*', '&module=eq.reports&record_type=eq.report_export&order=created_at.desc,id.desc'),
+        scopedRead('tenant_state_snapshots'), scopedRead('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
+        scopedRead('customers'), scopedRead('products'), scopedRead('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
+        scopedRead('credit_contracts'), scopedRead('credit_installments'), scopedRead('credit_payments'), scopedRead('warehouses'), scopedRead('stock_balances'),
+        ['all','sales-ledger'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
+        scopedRead('cash_accounts'),
+        scopedRead('cash_transactions'), scopedRead('expenses'), scopedRead('vendors'), scopedRead('sales_invoices'), scopedRead('order_bonus_assignments'), scopedRead('audit_events'),
+        scopedRead('purchase_orders'), scopedRead('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),
+        scopedRead('workflow_records', '*', '&module=eq.reports&record_type=eq.report_export&order=created_at.desc,id.desc'),
       ]);
       const state = { ...(snapshots[0]?.state ?? {}) };
       for (const name of ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts']) {

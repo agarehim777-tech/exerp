@@ -4,6 +4,7 @@ import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
 import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { receiveStock } from '../../services/coreOperations.js';
+import { readInventoryBase } from '../../services/inventoryRead.js';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -86,19 +87,18 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     if (!tenantId) return;
     const isCurrent = begin('base');
     setLoading(true);
-    const [wh, bal] = await Promise.all([
-      supabase.from('warehouses').select('*').eq('tenant_id', tenantId).order('name'),
-      supabase.from('stock_balances').select(BALANCE_SELECT).eq('tenant_id', tenantId),
-    ]);
-    if (!isCurrent()) return;
-    const firstError = wh.error || bal.error;
-    setError(firstError || null);
-    if (!firstError) {
-      setWarehouses(wh.data || []);
-      setBalances((bal.data || []).map(normalizeBalance));
+    try {
+      const data = await readInventoryBase(tenantId, BALANCE_SELECT, isCurrent);
+      if (!isCurrent() || !data) return;
+      setError(null);
+      setWarehouses(data.warehouses);
+      setBalances(data.balances.map(normalizeBalance));
       setLoadedScope(scope);
+    } catch (error) {
+      if (isCurrent()) setError(error);
+    } finally {
+      if (isCurrent()) setLoading(false);
     }
-    setLoading(false);
   }, [tenantId, scope, begin]);
 
   useEffect(() => { fetchBase(); }, [fetchBase]);
