@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "overrides": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "@modelcontextprotocol/sdk": "1.31.0"
   },
   "engines": {
     "node": ">=24"

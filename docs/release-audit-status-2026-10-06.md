@@ -55,10 +55,18 @@
 
 ## Release remains blocked
 
-The last completed CI run, `37470681977` on `1f157311`, passed unit/static/build, restricted identity, signed HTTP delivery/replay, browser tenant isolation, sales/expense, concurrency and credit-deposit gates. Ephemeral identity cleanup succeeded. Its 21-flow audit passed 8 scenarios and failed 13. These results belong to that published commit, not to the subsequent local fixes.
+The last completed full business-audit run, `37470681977` on `1f157311`, passed unit/static/build, restricted identity, signed HTTP delivery/replay, browser tenant isolation, sales/expense, concurrency and credit-deposit gates. Ephemeral identity cleanup succeeded. Its 21-flow audit passed 8 scenarios and failed 13. These results belong to that published commit, not to the subsequent local fixes.
 
 The new commit must pass all 21 flows before production deployment. No production migrations or deployment have been performed in this continuation.
 
 The delivery/reversal matrix failed because its legacy fixture attempted a forbidden direct insert into `sales_invoices`. The subsequent fixture correction uses the authorized invoice commands; it still needs authenticated staging execution. The 13 business failures include UI/fixture mismatches as well as unfinished financial workflows. No running CI was cancelled; cleanup completed normally before preparing another main push.
 
 Unresolved work includes canonical debtor/creditor closure, KPI financial payout, project routing and canonical ROI sources, notification provider acknowledgement, and any failures still found by the updated staging audit. The updated invoice and message flows still require their authenticated browser audit to pass on the published commit. The AI live test is disabled in CI configuration; it has not been verified. Do not skip these business assertions or present simulated provider/financial state as live evidence.
+
+## Dependency continuation: 2026-10-07
+
+- Published audit/read fixes as `9b08227d`. CI run `37578666139` stopped at the dependency security gate before provisioning an identity or running any business flows; it does not provide a new 21-flow result.
+- Newly indexed advisory [GHSA-6qxp-vccf-f47h](https://github.com/advisories/GHSA-6qxp-vccf-f47h) flags the MCP OAuth client in SDK versions below `1.31.0`. The Lovable development dependency still pins `1.28.0`, so the repository now locks a patched `1.31.0` override rather than disabling the audit or making an unrelated major Lovable upgrade.
+- The npm lock changed only the SDK package compared with the published parent. The Bun lock also brings its existing DOMPurify/PGlite entries into line with the already published manifest. This updates repository tooling, not deployed Edge Function artifacts or provider credentials.
+- A clean `npm ci` and `npm audit --audit-level=high` passed with zero reported vulnerabilities. Compatibility tests verify the SDK resolved by Lovable, MCP initialization/catalog/existing echo invocation, and rejection of unauthenticated requests by the Supabase OAuth handler.
+- Full local release gates passed after the dependency change: 101 files, 410 tests, 224 migrations, security/hardening/backend/recovery checks, production build and 407.6 KB initial JavaScript. The next published commit must still run all live gates; production remains untouched.
