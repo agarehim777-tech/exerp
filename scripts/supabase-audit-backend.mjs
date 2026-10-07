@@ -135,6 +135,10 @@ export async function createAuditBackend(env, fetcher = fetch) {
         if (scope === 'sales-ledger' && !salesLedgerTables.has(table)) return [];
         if (scope === 'hr' && !hrTables.has(table)) return [];
         if (scope === 'ui' && !uiTables.has(table)) return [];
+        if (scope === 'hr' && table === 'tenant_collection_records') {
+          filter += '&collection=in.(employees,departments,leaveRequests,vacancies,contracts)';
+        }
+        if (scope === 'hr' && table === 'audit_events') filter += '&module=in.(HR,HR/Payroll)';
         if (customerId && ['customers', 'orders', 'credit_contracts'].includes(table)) {
           filter += `&${table === 'customers' ? 'id' : 'customer_id'}=eq.${encodeURIComponent(customerId)}`;
         }

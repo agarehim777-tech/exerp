@@ -64,8 +64,21 @@ for (const method of ['weighted_average', 'fifo']) {
         if (otherWarehouseId) expect(Number((await rows('stock_balances', `warehouse_id=eq.${otherWarehouseId}&product_id=eq.${product.id}&select=on_hand`))[0].on_hand)).toBe(10);
         const events = await rows('order_accounting_events', `order_id=eq.${orderId}&event_type=eq.delivery&select=journal_entry_id,cogs`);
         expect(events).toHaveLength(1); expect(Number(events[0].cogs)).toBe(50);
-        const invoice = await insert('sales_invoices', { invoice_no: marker, order_id: orderId, customer_id: customer.id,
-          status: 'issued', posted: true, journal_entry_id: events[0].journal_entry_id, total: 2000, subtotal: 2000, vat_total: 0 });
+        const invoiceCommand = { _tenant_id: tenantId, _request_key: `${marker}:invoice`, _payload: {
+          invoice_no: marker, order_id: orderId, customer_id: customer.id,
+          invoice_date: new Date().toISOString().slice(0, 10), currency: 'AZN',
+          lines: [{ product_id: product.id, description: marker, qty: '2', unit_price: '1000', discount_pct: '0', vat_rate: '0' }],
+        } };
+        const invoiceAck = await rpc('create_sales_invoice_atomic', invoiceCommand);
+        expect(await rpc('create_sales_invoice_atomic', invoiceCommand)).toEqual(invoiceAck);
+        const invoice = { id: invoiceAck.invoice_id };
+        const posting = { _invoice_id: invoice.id };
+        expect(await rpc('post_invoice_to_gl', posting)).toBe(events[0].journal_entry_id);
+        expect(await rpc('post_invoice_to_gl', posting)).toBe(events[0].journal_entry_id);
+        const [issued] = await rows('sales_invoices', `id=eq.${invoice.id}&select=posted,paid_amount,journal_entry_id`);
+        expect(issued.posted).toBe(true);
+        expect(Number(issued.paid_amount)).toBe(200);
+        expect(issued.journal_entry_id).toBe(events[0].journal_entry_id);
         const cancel = { _tenant_id: tenantId, _order_id: orderId, _reason: marker, _request_key: `${marker}:reverse` };
         const reversed = await rpc('reverse_sales_order_v3', cancel);
         expect(await rpc('reverse_sales_order_v3', cancel)).toEqual(reversed);

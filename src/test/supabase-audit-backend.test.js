@@ -70,6 +70,11 @@ it('narrows fixture reads and paginates composite stock identities with a stable
   urls.length = 0;
   await backend.readState({ scope: 'hr' });
   expect(urls.every(url => /snapshot|collection|audit_events|expenses/.test(url.pathname))).toBe(true);
+  expect(urls.find(url => url.pathname.endsWith('/tenant_collection_records')).searchParams.get('collection'))
+    .toBe('in.(employees,departments,leaveRequests,vacancies,contracts)');
+  expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module'))
+    .toBe('in.(HR,HR/Payroll)');
+  expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
 });
 
 it('bounds concurrent read requests without skipping failed reads or changing tenant filters', async () => {

@@ -4,6 +4,7 @@ import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 import { ensureMainCashAccount } from '../../services/cashAccounts';
+import { readOrderPage, readOrderRelations } from '../../services/orderRead.js';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
 
@@ -84,61 +85,28 @@ export function useOrders(tenantId) {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,order_item_id,status)')
-      .eq('tenant_id', tenantId)
-      // Ləğv edilmiş satışlar siyahıya qayıtmamalıdır.
-      .neq('status', 'cancelled')
-      .order('order_date', { ascending: false })
-      .limit(limit + 1);
-    if (!isCurrent()) return;
-    if (error) setError(error);
-    else {
-      setError(null);
-      const rows = data || [];
+    try {
+      const rows = await readOrderPage(tenantId, limit + 1, isCurrent);
+      if (!isCurrent()) return;
       const visibleRows = rows.slice(0, limit);
       const orderIds = visibleRows.map((row) => row.id).filter(Boolean);
       let creditsByOrder = new Map();
       let bonusesByOrder = new Map();
       let deliveriesByOrder = new Map();
       if (orderIds.length) {
-        const [creditResult, bonusResult, deliveryResult] = await Promise.all([
-          supabase.from('credit_contracts')
-            .select('id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at')
-            .eq('tenant_id', tenantId).in('order_id', orderIds),
-          supabase.from('order_bonus_assignments')
-            .select('id,order_id,seller_name,rate,position,effective_from,effective_to')
-            .eq('tenant_id', tenantId).in('order_id', orderIds)
-            .is('effective_to', null)
-            .order('effective_from', { ascending: false })
-            .order('position', { ascending: true })
-            .order('created_at', { ascending: true }),
-          supabase.from('deliveries')
-            .select('*')
-            .eq('tenant_id', tenantId).in('order_id', orderIds),
-        ]);
+        const related = await readOrderRelations(tenantId, orderIds, isCurrent);
         if (!isCurrent()) return;
-        const { data: credits, error: creditError } = creditResult;
-        if (creditError) setError(creditError);
-        else creditsByOrder = new Map((credits || []).map((credit) => [credit.order_id, credit]));
-        if (bonusResult.error) setError(bonusResult.error);
-        else {
-          for (const bonus of bonusResult.data || []) {
-            const rows = bonusesByOrder.get(bonus.order_id) || [];
-            rows.push(bonus);
-            bonusesByOrder.set(bonus.order_id, rows);
-          }
+        creditsByOrder = new Map(related.credits.map((credit) => [credit.order_id, credit]));
+        for (const bonus of related.bonuses) {
+          const rows = bonusesByOrder.get(bonus.order_id) || [];
+          rows.push(bonus);
+          bonusesByOrder.set(bonus.order_id, rows);
         }
-        if (!deliveryResult.error) {
-          deliveriesByOrder = new Map((deliveryResult.data || []).map((delivery) => [delivery.order_id, delivery]));
-        } else {
-          // Delivery history is supplementary. A role without delivery read
-          // permission must not prevent the sales list from loading.
-          console.warn('[orders] delivery history could not be loaded:', deliveryResult.error);
-        }
+        deliveriesByOrder = new Map((related.deliveries || []).map((delivery) => [delivery.order_id, delivery]));
+        if (related.deliveryError) console.warn('[orders] delivery history could not be loaded:', related.deliveryError);
       }
       if (!isCurrent()) return;
+      setError(null);
       setLoadedScope(scope);
       setHasMore(rows.length > limit);
       setOrders(visibleRows.map((row) => ({
@@ -148,15 +116,16 @@ export function useOrders(tenantId) {
         delivery: deliveriesByOrder.get(row.id) || null,
       })));
       setLoaded(true);
-    }
-    setLoading(false);
+    } catch (error) {
+      if (isCurrent()) { setError(error); setLoadedScope(null); setLoaded(false); }
+    } finally { if (isCurrent()) setLoading(false); }
   }, [tenantId, limit, scope, begin]);
 
   useEffect(() => {
     setOrders([]);
     setLoaded(false);
     setLimit(ORDERS_PAGE_SIZE);
-  }, [tenantId]);
+  }, [scope]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

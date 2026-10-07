@@ -158,7 +158,7 @@ async function readState(page) {
 
 function flowReadOptions() {
   if (['sales-credit-warehouse-reservation','sales-expense-edit-delete','credit-payment-finance-cash',
-    'credit-contracts-remain-separate','warehouse-delivery-stock-release'].includes(currentFlowName)) return { scope: 'sales-ledger' };
+    'credit-contracts-remain-separate','warehouse-delivery-stock-release','finance-module-integrated-ledger'].includes(currentFlowName)) return { scope: 'sales-ledger' };
   if (currentFlowName === 'hr-department-reporting-structure') return { scope: 'hr' };
   if (currentFlowName === 'support-messaging-linked-comments') return { scope: 'ui' };
   return { scope: 'all' };
@@ -794,115 +794,126 @@ async function auditVendorLifecycle(browser) {
 
 async function auditFinanceModuleIntegration(browser) {
   const { context, page, errors } = await createFlowPage(browser);
+  const read = (table, filter = '') => auditBackend.readCanonical(table, '*', filter);
+  const summary = () => auditBackend.command('cashbook_ledger_summary', { _tenant_id: auditBackend.tenantId });
+  const accountBalance = (ledger, id) => {
+    const account = ledger.accounts.find(row => row.id === id);
+    assert(account, 'Server ledger omitted the cash account');
+    return Number(account.balance);
+  };
   try {
-    await selectModule(page, 5);
-    const accountName = `QA Main Cash ${crypto.randomUUID().slice(0, 8)}`;
-    await page.getByRole('button', { name: 'Hesablar', exact: true }).click();
-    await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
-    const accountForm = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
-    await accountForm.getByPlaceholder('Hesab adı', { exact: true }).fill(accountName);
-    await accountForm.locator('select').selectOption('cash');
-    await accountForm.getByPlaceholder('Hesab №', { exact: true }).fill(`QAC${crypto.randomUUID().slice(0, 8)}`);
-    await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('250');
-    await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
-    await waitForState(s => s.financeAccounts.some(a => a.name === accountName && a.openingBalance === 250),
-      'Finance account opening balance was not persisted');
-    let modal;
-
     const sale = await createCreditSale(page);
     await selectModule(page, 9);
-    await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
-    await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
-    const paymentInputs = page.locator(".credit-detail-modal-card .credit-payment-form input");
-    await paymentInputs.nth(0).fill("150");
-    await paymentInputs.nth(1).fill("25");
-    await page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click();
-    await page.waitForTimeout(100);
-    await page.locator(".credit-detail-modal-head .icon-btn").click();
-    await page.locator(".credit-detail-modal-card").waitFor({ state: "hidden" });
-
-    await selectModule(page, 11);
-    await page.locator(".page-header .primary-btn").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Finance Vendor");
-    await modal.locator("input").nth(1).fill("Azerbaijan");
-    await modal.locator("input").nth(2).fill("2");
-    await modal.locator("input").nth(3).fill("100");
-    await modal.locator('button[type="submit"]').click();
-    await page.getByRole("button", { name: "Zavod sifarişi" }).click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Finance Vendor");
-    await modal.locator("input").nth(1).fill("3");
-    await modal.locator("input").nth(2).fill("80");
-    await modal.locator("input").nth(3).fill("140");
-    await modal.locator("input").nth(5).fill("QA finance integration PO");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(75);
-    let state = await readState(page);
-    const po = state.purchaseOrders?.[0];
-    await page.locator(".po-action-panel button.text-btn").first().click();
-    await page.waitForTimeout(100);
-
-    await selectModule(page, 14);
-    await createHrEmployee(page, {
-      name: "QA Finance Payroll",
-      position: "Finance Analyst",
-      department: "Finance",
-      salary: 1600,
-    });
-    await page.waitForTimeout(100);
-
-    state = await readState(page);
-    const cashEntry = state.cashEntries?.find((entry) => entry.creditId === sale.credit.id);
-    const poExpense = state.expenses?.find((expense) => expense.source === "Vendor PO" && expense.poId === po.id);
-    const payrollExpense = state.expenses?.find((expense) => expense.source === "HR Payroll");
-    const account = state.financeAccounts?.find((item) => item.name === accountName);
-
-    assert(account?.openingBalance === 250, "Finance account opening balance was not persisted");
-    assert(cashEntry?.amount === 175 && cashEntry.penalty === 25, "Credit cash entry did not reach finance correctly");
-    assert(poExpense?.status === "Təsdiq gözləyir" && poExpense.amount === po.amount, "Approved PO did not create a pending finance expense");
-    assert(payrollExpense?.cashImpact === false, "Payroll expense should remain cash-neutral in finance");
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
+    const creditRow = page.locator('.credit-directory-panel tr').filter({ hasText: sale.contract.id });
+    await creditRow.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    const startModal = page.getByRole('dialog', { name: 'Krediti başlat', exact: true });
+    assert(await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).isDisabled(),
+      'Finance flow activated credit before collecting the planned deposit');
+    await startModal.getByLabel('Qəbul ediləcək məbləğ', { exact: true }).fill('200');
+    await startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click();
+    await waitForCanonical(() => read('credit_contracts', '&id=eq.' + sale.credit.id),
+      rows => Number(rows[0]?.initial_payment) === 200, 'Finance deposit was not persisted');
+    const deposits = await read('cash_transactions', '&reference_id=eq.' + sale.order.id + '&category=eq.sales_payment');
+    assert(deposits.length === 1 && Number(deposits[0].amount) === 200 && deposits[0].direction === 'in',
+      'Deposit did not produce exactly one real cash receipt');
+    await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    await startModal.waitFor({ state: 'hidden' });
+    await waitForCanonical(() => read('credit_contracts', '&id=eq.' + sale.credit.id),
+      rows => rows[0]?.status === 'active', 'Finance credit was not activated');
+    const beforePayment = await summary();
+    await creditRow.locator('.credit-table-actions .icon-btn').first().click();
+    const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
+    await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill('150');
+    await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill('25');
+    const paymentResponse = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/rpc/post_credit_payment'));
+    await paymentForm.locator('button[type=submit]').click();
+    const response = await paymentResponse;
+    assert(response.ok(), 'Credit payment failed: ' + await response.text());
+    const paymentId = await response.json();
+    assert(await auditBackend.command('post_credit_payment', response.request().postDataJSON()) === paymentId,
+      'Credit payment retry returned a different receipt');
+    const [receipt] = await read('credit_payments', '&id=eq.' + paymentId);
+    const receipts = await read('cash_transactions', '&reference_type=eq.credit_payment&reference_id=eq.' + paymentId);
+    const [order] = await read('orders', '&id=eq.' + sale.order.id);
+    const installments = await read('credit_installments', '&credit_id=eq.' + sale.credit.id);
+    assert(receipt?.credit_id === sale.credit.id && Number(receipt.principal_amount) === 150
+      && Number(receipt.penalty_amount) === 25 && Number(receipt.amount) === 175,
+      'Credit receipt did not retain separate principal and penalty amounts');
+    assert(receipts.length === 1 && receipts[0].direction === 'in' && Number(receipts[0].amount) === 175,
+      'Credit receipt was missing or posted to cash twice');
+    assert(Number(order.paid_amount) === 350, 'Penalty incorrectly increased the linked order principal');
+    assert(round2(installments.reduce((sum, row) => sum + Number(row.principal_due) - Number(row.principal_paid), 0))
+      === round2(Number(order.total) - 350), 'Credit installment debt differs from the order principal');
+    const afterPayment = await summary();
+    assert(round2(accountBalance(afterPayment, receipts[0].account_id)
+      - accountBalance(beforePayment, receipts[0].account_id)) === 175, 'Credit payment did not increase server cash by principal plus penalty');
+    await page.locator('.credit-detail-modal-head .icon-btn').click();
+    await page.locator('.credit-detail-modal-card').waitFor({ state: 'hidden' });
 
     await selectModule(page, 5);
-    await page.locator('[data-testid="finance-daily-close"]').waitFor({ state: "visible" });
-    const dailyCloseText = await page.locator('[data-testid="finance-daily-close"]').innerText();
-    assert(dailyCloseText.includes("Bağlanış") && dailyCloseText.includes("Proqnoz"), "Finance daily cash close summary is missing");
-    await page.locator(".finance-ledger-summary").waitFor({ state: "visible" });
-    await page.locator(".finance-search-filter input").fill(cashEntry.creditId);
-    await page.locator(".finance-date-filter input").nth(0).fill(cashEntry.date);
-    await page.locator(".finance-date-filter input").nth(1).fill(cashEntry.date);
-    const filteredLedger = await page.locator(".finance-ledger-panel tbody").innerText();
-    assert(filteredLedger.includes(cashEntry.creditId), "Finance ledger search/date filters did not keep the credit cash row visible");
-    assert(filteredLedger.includes("25 ₼"), "Finance ledger did not expose the penalty income");
-    await page.locator(".finance-ledger-panel [data-testid=\"finance-ledger-credit-link\"]").filter({ hasText: cashEntry.creditId }).click();
-    await page.locator(".page-header h1").filter({ hasText: "Kredit" }).waitFor();
-    await page.locator(".credit-detail-modal-card").filter({ hasText: cashEntry.creditId }).waitFor();
-    await page.locator(".credit-detail-modal-head .icon-btn").click();
-    await page.locator(".credit-detail-modal-card").waitFor({ state: "hidden" });
-    await selectModule(page, 5);
-    await page.locator(".finance-search-filter input").fill(po.id);
-    const poLedger = await page.locator(".finance-ledger-panel tbody").innerText();
-    assert(poLedger.includes(po.id), "Finance ledger search did not expose linked PO expense");
-    await page.locator(".finance-ledger-panel [data-testid=\"finance-ledger-po-link\"]").filter({ hasText: po.id }).click();
-    await page.locator(".page-header h1").filter({ hasText: "Vendor" }).waitFor();
-    await selectModule(page, 5);
-    await page.locator(".finance-filter-tabs button").filter({ hasText: "Cash təsirsiz" }).click();
-    await page.locator(".finance-search-filter input").fill("Payroll");
-    const accrualLedger = await page.locator(".finance-ledger-panel tbody").innerText();
-    assert(accrualLedger.includes("cash təsiri yoxdur"), "Finance ledger did not expose payroll as cash-neutral accrual");
-    assert(errors.length === 0, `Finance integration produced browser errors: ${errors.join(" | ")}`);
-
-    return {
-      account: account.code,
-      creditCash: cashEntry.amount,
-      poExpense: poExpense.id,
-      payrollCashImpact: payrollExpense.cashImpact,
+    await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
+    await page.getByLabel('Kassa əməliyyatlarında axtarış', { exact: true }).fill(sale.contract.id);
+    await page.locator('main.main tr').filter({ hasText: receipts[0].transaction_no }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'Hesablar', exact: true }).click();
+    const marker = 'QA Ledger ' + crypto.randomUUID().slice(0, 8);
+    const createAccount = async (name, opening) => {
+      await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
+      const form = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
+      await form.getByPlaceholder('Hesab adı', { exact: true }).fill(name);
+      await form.getByPlaceholder('Açılış qalığı', { exact: true }).fill(String(opening));
+      await form.getByRole('button', { name: '+ Hesab', exact: true }).click();
+      await form.waitFor({ state: 'hidden' });
+      const [account] = await waitForCanonical(() => read('cash_accounts', '&name=eq.' + encodeURIComponent(name)),
+        rows => rows.length === 1, 'Cash account was not persisted');
+      return account;
     };
+    const source = await createAccount(marker + ' source', 250);
+    const target = await createAccount(marker + ' target', 0);
+    const beforeTransfer = await summary();
+    assert(accountBalance(beforeTransfer, source.id) === 250 && accountBalance(beforeTransfer, target.id) === 0,
+      'Opening balances differ from the server ledger');
+    await page.getByRole('button', { name: '↔ Pul transferi', exact: true }).click();
+    const transferForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Transfer et', exact: true }) });
+    await transferForm.locator('select').nth(0).selectOption(source.id);
+    await transferForm.locator('select').nth(1).selectOption(target.id);
+    await transferForm.getByPlaceholder('Məbləğ', { exact: true }).fill('40');
+    await transferForm.getByPlaceholder('Qeyd', { exact: true }).fill(marker);
+    const transferResponse = page.waitForResponse(result => result.request().method() === 'POST'
+      && new URL(result.url()).pathname.endsWith('/rpc/transfer_cash_atomic'));
+    await transferForm.getByRole('button', { name: 'Transfer et', exact: true }).click();
+    const transferResult = await transferResponse;
+    assert(transferResult.ok(), 'Cash transfer failed: ' + await transferResult.text());
+    const transfer = await transferResult.json();
+    const replay = await auditBackend.command('transfer_cash_atomic', transferResult.request().postDataJSON());
+    assert(replay.transfer_id === transfer.transfer_id, 'Transfer retry created another transfer');
+    await transferForm.waitFor({ state: 'hidden' });
+    const transferRows = await read('cash_transactions', '&reference=eq.TRANSFER:' + transfer.transfer_id);
+    assert(transferRows.length === 2 && transferRows.every(row => row.category === 'internal_transfer' && Number(row.amount) === 40)
+      && transferRows.some(row => row.account_id === source.id && row.direction === 'out')
+      && transferRows.some(row => row.account_id === target.id && row.direction === 'in'),
+      'Cash transfer did not preserve exactly one matching debit/credit pair');
+    const afterTransfer = await summary();
+    assert(accountBalance(afterTransfer, source.id) === 210 && accountBalance(afterTransfer, target.id) === 40,
+      'Transfer balances were not read from the server ledger');
+    for (const id of [source.id, target.id]) {
+      const account = afterTransfer.accounts.find(row => row.id === id);
+      assert(Number(account.inflow) === 0 && Number(account.outflow) === 0,
+        'An internal transfer was incorrectly counted as external income or expense');
+    }
+    const sourceRow = page.locator('main.main tr').filter({ has: page.getByText(source.name, { exact: true }) });
+    const targetRow = page.locator('main.main tr').filter({ has: page.getByText(target.name, { exact: true }) });
+    const formatCash = amount => new Intl.NumberFormat('az-AZ', { style: 'currency', currency: 'AZN' }).format(amount);
+    assert((await sourceRow.innerText()).includes(formatCash(210)) && (await targetRow.innerText()).includes(formatCash(40)),
+      'Cash account UI does not match the server ledger');
+    assert(errors.length === 0, 'Finance integration produced browser errors: ' + errors.join(' | '));
+    return { creditId: sale.credit.id, paymentId, deposit: 200, cashReceipt: 175,
+      transferId: transfer.transfer_id, sourceBalance: 210, targetBalance: 40 };
   } finally {
     await context.close();
   }
 }
-
 async function auditReceivableCreditorWorkflow(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
@@ -992,6 +1003,7 @@ async function auditInvoiceAccountingTax(browser) {
     const read = (table,filter='') => auditBackend.readCanonical(table,'*',filter);
     await selectModule(page,5);
     await page.getByRole('button',{ name:'Hesablar',exact:true }).click();
+    await page.getByRole('button',{ name:'+ Yeni kassa',exact:true }).click();
     const accountForm = page.locator('form').filter({ has:page.getByPlaceholder('Hesab adı', { exact:true }) });
     await accountForm.getByPlaceholder('Hesab adı',{ exact:true }).fill(marker);
     await accountForm.getByPlaceholder('Açılış qalığı',{ exact:true }).fill('0');
@@ -1077,7 +1089,7 @@ async function auditWarehouseImport(browser) {
     await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
     await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: /Toplu import/ }).click();
     const importModal = page.locator('[role="dialog"]');
-    const sku = `IMP-${suffix}-001`;
+    const sku = `IMP-${suffix}-001`.toUpperCase();
     const csv = [
       "Product;SKU;Warehouse;Quantity;Sale Price;Cost Price;Category;Minimum;Unit;Serial",
       `Imported Device;${sku};${warehouseName};7;900;600;Electronics;2;piece;Bəli`,
@@ -1400,6 +1412,7 @@ async function auditHrStructure(browser) {
     const executiveDepartment = `QA Executive ${suffix}`;
     const salesDepartment = `QA Sales ${suffix}`;
     const b2bDepartment = `QA B2B ${suffix}`;
+    const vacancyRole = `QA Recruitment Role ${suffix}`;
     await selectModule(page, 14);
     await createHrEmployee(page, {
       name: directorName,
@@ -1584,13 +1597,15 @@ async function auditHrStructure(browser) {
     await hrTabs.nth(4).click();
     await page.locator(".hr-operation-toolbar .secondary-btn").click();
     const vacancyModal = page.locator('[role="dialog"]');
-    await vacancyModal.locator("input").nth(0).fill("QA Recruitment Role");
+    await vacancyModal.locator("input").nth(0).fill(vacancyRole);
     await vacancyModal.locator("input").nth(1).fill(departmentName);
     await vacancyModal.locator('button[type="submit"]').click();
     await vacancyModal.waitFor({ state: "hidden" });
-    const vacancyState = await readHrState();
-    assert(vacancyState.vacancies?.some((vacancy) => vacancy.role === "QA Recruitment Role"), "Vacancy creation did not persist");
-    await page.locator(".hr-recruitment-card").filter({ hasText: "QA Recruitment Role" }).waitFor();
+    const vacancyState = await waitForHrState(s => s.vacancies?.some(vacancy => vacancy.role === vacancyRole),
+      'Vacancy creation did not persist');
+    assert(vacancyState.vacancies?.filter(vacancy => vacancy.role === vacancyRole).length === 1,
+      'Vacancy creation reused a previous audit fixture');
+    await page.locator(".hr-recruitment-card").filter({ hasText: vacancyRole }).waitFor();
 
     await selectModule(page, 24);
     await page.getByRole("button", { name: "Integrity yoxla" }).click();

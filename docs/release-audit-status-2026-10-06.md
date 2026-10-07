@@ -37,10 +37,28 @@
 - An authenticated-role staging rollback verified message-thread insert/update and rejection of unknown communication types. Policy tests additionally verify read-only, cross-tenant and child-record restrictions.
 - Database advisors were inspected. New invoice receipt foreign keys have covering indexes. Deliberately exposed authorized RPCs still produce authenticated SECURITY DEFINER warnings; leaked-password protection and existing performance notices remain separately visible. This is not a claim that every database advisory has been resolved.
 
+## Sales read and canonical fixture continuation
+
+- Sales base reads use exact counts, stable order-date/creation-time/id sorting and actual-row pagination. A server row cap no longer hides later orders or related credits/bonus assignments. The extra row still drives the load-more control.
+- Financial relation failures are exposed instead of silently removing credit links. Failed refreshes hide stale financial rows and release loading; tenant A-to-B-to-A responses cannot overwrite the latest tenant visit, including an empty result.
+- The sales registry distinguishes loading, query failure and a genuinely empty result.
+- Delivery/reversal fixtures create and post their linked invoice through the canonical commands, check command replay, reuse the delivery journal and verify the collected 200 deposit. The direct-write restriction stays enabled. All six FIFO/weighted-average delivery paths remain in the test matrix.
+- The finance integration audit now checks actual deposit and credit-payment receipts, principal/penalty separation, server-ledger balance changes, transfer replay and a matching debit/credit pair. Internal transfers must not count as external income or expense. Obsolete browser-only PO/payroll cash markers and removed finance panels are not evidence.
+- HR fixture reads are limited to the HR collections and HR/payroll audit modules, retaining tenant filters and pagination. Recruitment uses a unique persisted vacancy rather than matching a previous run's role.
+- The invoice audit explicitly opens the new-account form before entering its fixture. The warehouse import audit expects the server-normalized uppercase SKU instead of searching for a lowercase code.
+
+### Local verification
+
+- The full local release suite passed: 100 files, 407 tests; 224 migration-order checks, security posture (9), transaction hardening (54), core-backend and recovery (20) gates, build and 407.6 KB initial-JavaScript budget.
+- The updated delivery matrix parses and lists six Playwright scenarios. Listing is not execution: this fixture and the rewritten finance browser audit require a new authenticated staging CI run.
+- Static audit-fixture tests guard the invoice RPC boundary and removal of simulated finance evidence. They do not substitute for live lifecycle tests.
+
 ## Release remains blocked
 
-The last completed CI run, `37424479203` on `2730ed7`, passed unit/static/build, restricted identity, browser tenant isolation, sales/expense, concurrency, deposit and delivery/reversal gates. Ephemeral identity cleanup succeeded. Its 21-flow audit passed 4 scenarios and failed 17. The signed HTTP gate failed because the audit reader used a nonexistent `webhook_receipts.id` column; this continuation fixes that reader, but the new CI result is not yet known. These completed-run results must not be attributed to the new commit.
+The last completed CI run, `37470681977` on `1f157311`, passed unit/static/build, restricted identity, signed HTTP delivery/replay, browser tenant isolation, sales/expense, concurrency and credit-deposit gates. Ephemeral identity cleanup succeeded. Its 21-flow audit passed 8 scenarios and failed 13. These results belong to that published commit, not to the subsequent local fixes.
 
 The new commit must pass all 21 flows before production deployment. No production migrations or deployment have been performed in this continuation.
+
+The delivery/reversal matrix failed because its legacy fixture attempted a forbidden direct insert into `sales_invoices`. The subsequent fixture correction uses the authorized invoice commands; it still needs authenticated staging execution. The 13 business failures include UI/fixture mismatches as well as unfinished financial workflows. No running CI was cancelled; cleanup completed normally before preparing another main push.
 
 Unresolved work includes canonical debtor/creditor closure, KPI financial payout, project routing and canonical ROI sources, notification provider acknowledgement, and any failures still found by the updated staging audit. The updated invoice and message flows still require their authenticated browser audit to pass on the published commit. The AI live test is disabled in CI configuration; it has not been verified. Do not skip these business assertions or present simulated provider/financial state as live evidence.

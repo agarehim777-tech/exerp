@@ -17,7 +17,7 @@ const canonicalStatus = status => ['draft', 'pending', 'processing', 'shipped'].
 
 export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
-  const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading } = useOrders(activeTenantId);
+  const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading, error: ordersError } = useOrders(activeTenantId);
   const { accounts: cashAccounts } = useCashbook(activeTenantId);
   const { customers } = useCustomers(activeTenantId);
   const { products } = useProducts(activeTenantId);
@@ -64,6 +64,7 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {ordersError && <div role="alert" className="form-error">{ordersError.message || 'Satış məlumatları oxunmadı.'}</div>}
       {actionError && <div role="alert" style={{ padding: '10px 14px', border: '1px solid #fecaca', borderRadius: 10, background: '#fff1f2', color: '#b91c1c', fontSize: 13 }}>{actionError}</div>}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
@@ -109,7 +110,7 @@ export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderH
                   <Td>{new Date(o.order_date || o.created_at).toLocaleDateString('az-AZ')}</Td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Sifariş yoxdur</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>{ordersLoading ? 'Yüklənir...' : ordersError ? 'Məlumat alınmadı' : 'Sifariş yoxdur'}</td></tr>}
             </tbody>
           </table>
           <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={ordersLoading} />
