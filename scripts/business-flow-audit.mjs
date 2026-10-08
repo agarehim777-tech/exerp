@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
+import { auditResponse, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -707,9 +707,9 @@ async function auditPurchaseOrder(browser) {
     await page.locator('main.main tr').filter({ hasText: invoiceNumber }).getByRole('button', { name: 'Ödəniş et', exact: true }).click();
     const payment = page.getByRole('dialog', { name: 'Vendor fakturasının ödənişi', exact: true });
     await payment.getByLabel('Ödəniş hesabı', { exact: true }).selectOption(account.id);
-    const responsePromise = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/pay_vendor_invoice_atomic'));
-    await payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click();
-    const response = await responsePromise;
+    const response = await auditResponse(page,
+      r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/pay_vendor_invoice_atomic'),
+      () => payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click());
     assert(response.ok(), 'Purchase payment RPC failed: ' + await response.text());
     const first = await response.json();
     const replay = await auditBackend.command('pay_vendor_invoice_atomic', response.request().postDataJSON());
@@ -826,10 +826,9 @@ async function auditFinanceModuleIntegration(browser) {
     const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
     await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill('150');
     await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill('25');
-    const paymentResponse = page.waitForResponse(response => response.request().method() === 'POST'
-      && new URL(response.url()).pathname.endsWith('/rpc/post_credit_payment'));
-    await paymentForm.locator('button[type=submit]').click();
-    const response = await paymentResponse;
+    const response = await auditResponse(page, response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/rpc/post_credit_payment'),
+      () => paymentForm.locator('button[type=submit]').click());
     assert(response.ok(), 'Credit payment failed: ' + await response.text());
     const paymentId = await response.json();
     assert(await auditBackend.command('post_credit_payment', response.request().postDataJSON()) === paymentId,
@@ -880,10 +879,9 @@ async function auditFinanceModuleIntegration(browser) {
     await transferForm.locator('select').nth(1).selectOption(target.id);
     await transferForm.getByPlaceholder('Məbləğ', { exact: true }).fill('40');
     await transferForm.getByPlaceholder('Qeyd', { exact: true }).fill(marker);
-    const transferResponse = page.waitForResponse(result => result.request().method() === 'POST'
-      && new URL(result.url()).pathname.endsWith('/rpc/transfer_cash_atomic'));
-    await transferForm.getByRole('button', { name: 'Transfer et', exact: true }).click();
-    const transferResult = await transferResponse;
+    const transferResult = await auditResponse(page, result => result.request().method() === 'POST'
+      && new URL(result.url()).pathname.endsWith('/rpc/transfer_cash_atomic'),
+      () => transferForm.getByRole('button', { name: 'Transfer et', exact: true }).click());
     assert(transferResult.ok(), 'Cash transfer failed: ' + await transferResult.text());
     const transfer = await transferResult.json();
     const replay = await auditBackend.command('transfer_cash_atomic', transferResult.request().postDataJSON());
@@ -1018,9 +1016,9 @@ async function auditInvoiceAccountingTax(browser) {
     await form.getByLabel('Faktura sətirinin sayı',{ exact:true }).fill('2');
     await form.getByLabel('Faktura sətirinin qiyməti',{ exact:true }).fill('100');
     await form.getByLabel('Faktura sətirinin ƏDV faizi',{ exact:true }).fill('18');
-    const createdResponse = page.waitForResponse(r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/create_sales_invoice_atomic'));
-    await form.getByRole('button',{ name:'Yadda saxla',exact:true }).click();
-    const created = await createdResponse;
+    const created = await auditResponse(page,
+      r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/create_sales_invoice_atomic'),
+      () => form.getByRole('button',{ name:'Yadda saxla',exact:true }).click());
     assert(created.ok(),'Invoice creation RPC failed: '+await created.text());
     const first = await created.json();
     const replay = await auditBackend.command('create_sales_invoice_atomic',created.request().postDataJSON());
@@ -1041,9 +1039,9 @@ async function auditInvoiceAccountingTax(browser) {
     await row.getByRole('button',{ name:'Ödəniş',exact:true }).click();
     await page.getByLabel('Faktura ödəniş məbləği',{ exact:true }).fill('100');
     await page.getByLabel('Faktura ödəniş hesabı',{ exact:true }).selectOption(account.id);
-    const paymentResponse = page.waitForResponse(r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/record_invoice_payment_atomic'));
-    await page.getByRole('button',{ name:'Ödənişi qeyd et',exact:true }).click();
-    const response = await paymentResponse;
+    const response = await auditResponse(page,
+      r => r.request().method()==='POST' && new URL(r.url()).pathname.endsWith('/rpc/record_invoice_payment_atomic'),
+      () => page.getByRole('button',{ name:'Ödənişi qeyd et',exact:true }).click());
     assert(response.ok(),'Invoice payment RPC failed: '+await response.text());
     const payment = await response.json();
     const repeated = await auditBackend.command('record_invoice_payment_atomic',response.request().postDataJSON());
@@ -1100,10 +1098,9 @@ async function auditWarehouseImport(browser) {
       buffer: Buffer.from(csv, "utf8"),
     });
     await importModal.locator(".warehouse-import-summary").waitFor();
-    const importResponse = page.waitForResponse(response => response.request().method() === 'POST'
-      && new URL(response.url()).pathname.endsWith('/rpc/import_warehouse_stock_atomic'));
-    await importModal.getByRole('button', { name: 'İmport et', exact: true }).click();
-    const response = await importResponse;
+    const response = await auditResponse(page, response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/rpc/import_warehouse_stock_atomic'),
+      () => importModal.getByRole('button', { name: 'İmport et', exact: true }).click());
     assert(response.ok(), 'Warehouse import RPC failed: ' + await response.text());
     const result = await response.json();
     const replay = await auditBackend.command('import_warehouse_stock_atomic', response.request().postDataJSON());
@@ -1295,9 +1292,10 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
   try {
     const before = await auditBackend.readCanonical('webhook_dispatches');
     await selectModule(page, 23);
-    const firstResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'), { timeout: 15000 });
-    await page.getByTestId('webhook-http-test').click();
-    const firstResult = await (await firstResponse).json();
+    const firstResponse = await auditResponse(page,
+      r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'),
+      () => page.getByTestId('webhook-http-test').click(), { timeout: 15000 });
+    const firstResult = await firstResponse.json();
     assert(firstResult.delivered && firstResult.dispatch_id, 'HTTP command did not return a successful dispatch');
     const register = page.getByTestId('webhook-dispatch-register');
     await register.locator(`tr[data-dispatch-id="${firstResult.dispatch_id}"]`).filter({ hasText: 'delivered' }).waitFor();
@@ -1311,9 +1309,10 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
     await page.getByText(endpointBefore.name + ' · v' + (Number(endpointBefore.key_version) + 1), { exact: true }).waitFor();
     const endpointAfter = (await auditBackend.readCanonical('webhook_endpoints')).find(item => item.id === dispatch.endpoint_id);
     assert(endpointAfter.key_version === endpointBefore.key_version + 1, 'Server signing key version did not rotate');
-    const secondResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'), { timeout: 15000 });
-    await page.getByTestId('webhook-http-test').click();
-    const secondResult = await (await secondResponse).json();
+    const secondResponse = await auditResponse(page,
+      r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/functions/v1/webhook-dispatch'),
+      () => page.getByTestId('webhook-http-test').click(), { timeout: 15000 });
+    const secondResult = await secondResponse.json();
     assert(secondResult.delivered && secondResult.dispatch_id !== firstResult.dispatch_id, 'Rotated key did not deliver a distinct dispatch');
     await register.locator(`tr[data-dispatch-id="${secondResult.dispatch_id}"]`).filter({ hasText: 'delivered' }).waitFor();
     const after = await auditBackend.readCanonical('webhook_dispatches');

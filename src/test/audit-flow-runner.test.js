@@ -1,8 +1,26 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
+import { auditResponse, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
+it('registers response observation before clicking and returns the actual response', async () => {
+  const events = [];
+  const response = { ok: () => true };
+  const page = { waitForResponse: vi.fn(async () => { events.push('listen'); return response; }) };
+  expect(await auditResponse(page, () => true, () => events.push('click'), {timeout:100})).toBe(response);
+  expect(events).toEqual(['listen','click']);
+});
+it('catches a response timeout while the action is still pending', async () => {
+  const page = { waitForResponse: vi.fn(() => Promise.reject(new Error('Response timeout'))) };
+  await expect(auditResponse(page, () => true, () => new Promise(() => {}))).rejects.toThrow('Response timeout');
+});
+it('keeps a later response rejection handled after the click fails', async () => {
+  let failResponse;
+  const page = { waitForResponse: vi.fn(() => new Promise((_,reject) => { failResponse = reject; })) };
+  await expect(auditResponse(page, () => true, () => { throw new Error('Click failed'); })).rejects.toThrow('Click failed');
+  failResponse(new Error('Late response timeout'));
+  await new Promise(resolve => setImmediate(resolve));
+});
 it('waits for the requested route, active navigation and lazy module without network idle', async () => {
   const events = [];
   const page = {

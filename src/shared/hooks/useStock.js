@@ -95,7 +95,10 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       setBalances(data.balances.map(normalizeBalance));
       setLoadedScope(scope);
     } catch (error) {
-      if (isCurrent()) setError(error);
+      if (isCurrent()) {
+        setError(error);
+        setLoadedScope(null);
+      }
     } finally {
       if (isCurrent()) setLoading(false);
     }

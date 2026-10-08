@@ -7,6 +7,8 @@ it('waits for rendered modules without requiring background network traffic to s
   expect(source).not.toContain("waitForLoadState('networkidle')");
   expect(source).toContain('page.locator("main.main")');
   expect(source).toContain('page.locator(".page-header h1")');
+  expect(source).toContain("name: /^Kassa və bank hesabları/");
+  expect(source).toContain("name: 'Satınalma', exact: true");
   expect(source).toContain('expect(errors).toEqual([])');
   expect(source).toContain('insights rejects a tenant without membership');
 });

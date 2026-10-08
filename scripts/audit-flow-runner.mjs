@@ -29,3 +29,12 @@ export async function runBoundedFlow(run, timeoutMs, cleanup) {
     await cleanup();
   }
 }
+
+export async function auditResponse(page, predicate, action, options) {
+  // Attach both rejection handlers before the action can stall or fail.
+  const [response] = await Promise.all([
+    page.waitForResponse(predicate, options),
+    Promise.resolve().then(action),
+  ]);
+  return response;
+}

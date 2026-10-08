@@ -25,7 +25,13 @@ test.describe("Kritik ERP axınları", () => {
       await expect(page).not.toHaveURL(/\/login/);
       await expect(page).toHaveURL(new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[/?#]|$)`));
       await expect(page.locator("main.main")).toBeVisible();
-      await expect(page.locator(".page-header h1")).toBeVisible();
+      if (route === '/maliyye/kassa') {
+        await expect(page.getByRole('heading', { name: /^Kassa və bank hesabları/ })).toBeVisible();
+      } else if (route === '/satinalma') {
+        await expect(page.getByRole('heading', { name: 'Satınalma', exact: true })).toBeVisible();
+      } else {
+        await expect(page.locator(".page-header h1")).toBeVisible();
+      }
       if (route === '/anbar/qaliqlar') {
         await expect(page.getByRole('button', { name: '+ Yeni anbar', exact: true })).toBeVisible();
       }
