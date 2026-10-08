@@ -86,3 +86,41 @@ it('serializes newer edits behind an in-flight save', async () => {
   expect(mocks.save).toHaveBeenCalledTimes(2);
   expect(mocks.save.mock.calls[1][0][0].data.name).toBe('Second');
 });
+
+it('does not starve an employee write when unrelated inventory reads keep updating state', async () => {
+  mocks.save.mockResolvedValue({ error: null });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [], warehouses: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { setState, sync };
+  });
+  await waitFor(() => expect(result.current.sync.phase).toBe('saved'));
+  vi.useFakeTimers();
+  act(() => result.current.setState(current => ({ ...current, employees: [{ id: 'e1', name: 'Pending' }] })));
+  for (let read = 0; read < 4; read += 1) {
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    act(() => result.current.setState(current => ({ ...current, warehouses: [{ id: `w${read}` }] })));
+  }
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  expect(mocks.save.mock.calls[0][0][0].data.name).toBe('Pending');
+  expect(result.current.sync.phase).toBe('saved');
+});
+
+it('preserves edits during hydration without backfilling unchanged browser records', async () => {
+  let finishRead;
+  mocks.load.mockImplementation(() => new Promise(resolve => { finishRead = resolve; }));
+  mocks.save.mockResolvedValue({ error: null });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [{ id: 'stale', name: 'Browser only' }] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { state, setState, sync };
+  });
+  act(() => result.current.setState(current => ({ employees: [{ id: 'new', name: 'Pending' }, ...current.employees] })));
+  vi.useFakeTimers();
+  await act(async () => finishRead({ data: [{ collection: 'employees', record_key: 'server',
+    position: 0, data: { id: 'server', name: 'Canonical' } }], count: 1, error: null }));
+  expect(result.current.state.employees.map(row => row.id)).toEqual(['server', 'new']);
+  await act(async () => vi.advanceTimersByTimeAsync(450));
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  expect(mocks.save.mock.calls[0][0].map(row => row.record_key)).toEqual(['new']);
+});

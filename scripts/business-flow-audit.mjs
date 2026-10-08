@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { auditResponse, auditServerArguments, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, createAuditCustomerIdentity, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -251,10 +251,11 @@ async function createCustomer(page) {
   await selectModule(page, 1);
   await page.getByRole('button', { name: '+ Yeni müştəri', exact: true }).click();
   const modal = page.getByRole('dialog', { name: 'Yeni müştəri', exact: true });
-  const fin = `Q${crypto.randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase()}`;
+  const { fin, phone } = await createAuditCustomerIdentity(({ fin, phone }) =>
+    auditBackend.readCanonical('customers', 'id', `&or=(tax_id.eq.${fin},phone.eq.${phone})`));
   await modal.getByLabel('Ad və soyad / şirkət adı *', { exact: true }).fill(`QA Customer ${fin}`);
   await modal.getByLabel('FİN kod', { exact: true }).fill(fin);
-  await modal.getByLabel('Telefon', { exact: true }).fill('0500000000');
+  await modal.getByLabel('Telefon', { exact: true }).fill(phone);
   await modal.getByRole('button', { name: 'Yarat', exact: true }).click();
   await modal.waitFor({ state: 'hidden' });
   const [customer] = await waitForCanonical(() => auditBackend.readCanonical('customers', '*', `&tax_id=eq.${fin}`),

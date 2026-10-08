@@ -1,8 +1,21 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { auditResponse, auditServerArguments, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, createAuditCustomerIdentity, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
+it('allocates a fresh audit phone and FIN after a persisted identity collision', async () => {
+  const read = vi.fn().mockResolvedValueOnce([{ id: 'existing' }]).mockResolvedValue([]);
+  const uuid = vi.fn().mockReturnValueOnce('00000000-0000-4000-8000-000000000000')
+    .mockReturnValue('abcdef00-0000-4000-8000-000000000001');
+  expect(await createAuditCustomerIdentity(read, uuid)).toEqual({ fin: 'QABCDEF', phone: '0500000001' });
+  expect(read.mock.calls[0][0]).toEqual({ fin: 'Q000000', phone: '0500000000' });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+it('fails a fixture allocation instead of disabling customer uniqueness checks', async () => {
+  const read = vi.fn().mockResolvedValue([{ id: 'existing' }]);
+  await expect(createAuditCustomerIdentity(read)).rejects.toThrow('isolated audit customer identity');
+  expect(read).toHaveBeenCalledTimes(5);
+});
 it('runs CI business audits against the release build without dev transforms or HMR', () => {
   const url = new URL('http://localhost:5174/');
   expect(auditServerArguments(url, { CI: 'true' })).toEqual([

@@ -4,6 +4,16 @@ export function auditServerArguments(url, env = process.env) {
     '--port', url.port || '5174', '--strictPort'];
 }
 
+export async function createAuditCustomerIdentity(readExisting, randomUUID = () => crypto.randomUUID()) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const seed = randomUUID().replaceAll('-', '').toUpperCase();
+    const identity = { fin: `Q${seed.slice(0, 6)}`,
+      phone: `050${String(BigInt(`0x${seed.slice(-12)}`) % 10000000n).padStart(7, '0')}` };
+    if (!(await readExisting(identity)).length) return identity;
+  }
+  throw new Error('Could not allocate an isolated audit customer identity');
+}
+
 export function legacyAuditCompatibilityError(env) {
   if (!env.VITE_SUPABASE_URL?.trim()) return null;
   const error = new Error('Legacy audit uses browser business storage. Supabase scenarios must replace it before release.');

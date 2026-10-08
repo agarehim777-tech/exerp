@@ -40,6 +40,7 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
   const errorHandler = useRef(onError);
   errorHandler.current = onError;
   const sessionRef = useRef(null);
+  const flushTimer = useRef(null);
   const [status, setStatus] = useState({ phase: "idle", error: null });
 
   const flush = useCallback(async () => {
@@ -81,6 +82,7 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
   const hydrate = useCallback(async (session) => {
     if (!session?.alive || session.busy) return;
     session.busy = true;
+    const beforeRead = collectionRows(latest.current, names, tenantId);
     setStatus({ phase: "loading", error: null });
     try {
       const rows = [];
@@ -99,6 +101,20 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
       const next = Object.fromEntries(names.map(name => [name, []]));
       rows.forEach(row => { if (next[row.collection]) next[row.collection].push(rowToApp(row)); });
       session.baseline = collectionRows(next, names, tenantId);
+      // Preserve edits made during the read, without backfilling unchanged browser rows.
+      const pending = collectionChanges(beforeRead, collectionRows(latest.current, names, tenantId));
+      const merged = new Map(session.baseline);
+      pending.deletes.forEach(row => merged.delete(identity(row)));
+      pending.upserts.forEach(row => {
+        const key = identity(row);
+        const original = beforeRead.get(key);
+        if (!session.baseline.has(key) && original && JSON.stringify(original.data) === JSON.stringify(row.data)) return;
+        merged.set(key, row);
+      });
+      names.forEach(name => {
+        next[name] = [...merged.values()].filter(row => row.collection === name)
+          .sort((a, b) => a.position - b.position).map(rowToApp);
+      });
       session.hydrated = true;
       latest.current = { ...latest.current, ...next };
       setState(current => session.alive ? { ...current, ...next } : current);
@@ -117,14 +133,24 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
     const session = { scope, alive: true, hydrated: false, busy: false, baseline: new Map() };
     sessionRef.current = session;
     if (tenantId && ready) hydrate(session);
-    return () => { session.alive = false; };
+    return () => {
+      session.alive = false;
+      clearTimeout(flushTimer.current);
+      flushTimer.current = null;
+    };
   }, [scope, tenantId, ready, hydrate]);
 
   useEffect(() => {
-    if (!ready || !sessionRef.current?.hydrated) return;
-    const timer = setTimeout(flush, 400);
-    return () => clearTimeout(timer);
-  }, [state, ready, flush]);
+    const session = sessionRef.current;
+    if (!ready || !session?.hydrated || flushTimer.current !== null) return;
+    const changes = collectionChanges(session.baseline, collectionRows(state, names, tenantId));
+    if (!changes.upserts.length && !changes.deletes.length) return;
+    // Background reads must not postpone an already queued user edit indefinitely.
+    flushTimer.current = setTimeout(() => {
+      flushTimer.current = null;
+      flush();
+    }, 400);
+  }, [state, ready, flush, names, tenantId]);
 
   const retry = useCallback(() => {
     const session = sessionRef.current;

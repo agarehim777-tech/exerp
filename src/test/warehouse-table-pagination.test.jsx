@@ -18,7 +18,9 @@ it('bounds rendered stock rows while retaining totals for the complete filtered 
   expect(within(body).queryByText('Product 0')).toBeNull();
   fireEvent.click(within(body).getByRole('button', { name: 'Product 50' }));
   expect(open).toHaveBeenCalledWith('50');
-  for (let page = 1; page < 10; page += 1) fireEvent.click(view.getByRole('button', { name: 'Növbəti səhifə' }));
+  view.rerender(<WarehouseBalanceTable rows={rows.slice(0, 103)} view="warehouses" />);
+  expect(within(body).getByText('Product 0')).toBeVisible();
+  for (let page = 0; page < 2; page += 1) fireEvent.click(view.getByRole('button', { name: 'Növbəti səhifə' }));
   expect(within(body).getAllByRole('row')).toHaveLength(3);
   expect(view.getByRole('button', { name: 'Növbəti səhifə' })).toBeDisabled();
   view.rerender(<WarehouseBalanceTable rows={rows.slice(0, 2)} view="warehouses" />);
