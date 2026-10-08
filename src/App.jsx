@@ -3246,7 +3246,7 @@ function App() {
           });
         const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
         const orderNo = nextSalesOrderNumber(dbOrders);
-        createDbOrder({
+        const savedOrder = await createDbOrder({
           request_key: createIdempotencyKey("sales-order"),
           order_no: orderNo,
           customer_id: customerRow?.id || null,
@@ -3286,7 +3286,13 @@ function App() {
               status: "Bloklandı",
             });
           }
+          return null;
         });
+        if (!savedOrder) return false;
+        setModal(null);
+        notify("Yeni qeyd əlavə olundu.");
+        auditOperation(getCreateAudit(type, values));
+        return true;
       }
     }
 
@@ -3688,6 +3694,7 @@ function App() {
     setModal(null);
     notify("Yeni qeyd əlavə olundu.");
     auditOperation(getCreateAudit(type, values));
+    return true;
   }
 
   function updateVendor(vendorKey, values) {
@@ -6600,7 +6607,7 @@ function App() {
 
           {active === "sales-dashboard" && <SalesDashboardPage />}
           {active === "sales" && <SalesOrdersPage selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
-          {active === "stock" && <StockPage inventory={dbInventory} />}
+          {active === "stock" && <StockPage inventory={dbInventory} products={dbProducts} />}
           {active === "products" && (
             <ProductsPage
               warehouses={state.warehouses}

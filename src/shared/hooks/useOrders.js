@@ -131,7 +131,7 @@ export function useOrders(tenantId) {
 
   const loadMore = useCallback(() => setLimit((value) => value + ORDERS_PAGE_SIZE), []);
 
-  useRealtimeResync(tenantId, ['orders', 'order_items'], fetchAll, { channelPrefix: 'orders' });
+  useRealtimeResync(tenantId, ['orders', 'order_items', 'credit_contracts', 'credit_installments', 'credit_payments'], fetchAll, { channelPrefix: 'orders' });
 
   const resolveMainCashAccount = async (currency = 'AZN') => {
     return ensureMainCashAccount(tenantId, currency);

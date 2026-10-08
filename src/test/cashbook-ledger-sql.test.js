@@ -36,6 +36,8 @@ beforeAll(async () => {
   const oldSummary = (await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data;
   await db.exec(await readFile(new URL('../../supabase/migrations/20261003054612_optimize_cashbook_ledger_read.sql', import.meta.url), 'utf8'));
   expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
+  await db.exec(await readFile(new URL('../../supabase/migrations/20261008130228_hash_cashbook_reversal_lookup.sql', import.meta.url), 'utf8'));
+  expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
   await db.exec(await readFile(new URL('../../supabase/migrations/20261002122938_atomic_expense_edit.sql', import.meta.url), 'utf8'));
 }, 60000);
 afterAll(async () => { await db?.close(); });
@@ -144,4 +146,39 @@ it('rolls back the cash edit and request if the expense update fails', async () 
   await db.exec('DROP TRIGGER reject_expense_edit ON expenses');
   expect((await db.query('select amount from cash_transactions where id=$1',[created.transaction_id])).rows[0].amount).toBe('10');
   expect((await db.query("select count(*)::int n from operation_requests where request_key='edit-rollback'")).rows[0].n).toBe(0);
+});
+
+it('preserves legacy-marker semantics without duplicate sums or cross-tenant reversals', async () => {
+  await db.exec('BEGIN');
+  try {
+    const original = '20000000-0000-0000-0000-000000000001';
+    const another = '20000000-0000-0000-0000-000000000002';
+    await db.exec(`INSERT INTO cash_transactions(id,tenant_id,account_id,direction,amount,currency,category) VALUES
+      ('${original}','${tenant}','${account}','in',7,'AZN','sale'),
+      ('${another}','${tenant}','${account}','in',11,'AZN','sale');
+      INSERT INTO cash_transactions(tenant_id,account_id,direction,amount,currency,category,description) VALUES
+      ('${tenant}','${account}','out',7,'AZN','transaction_reversal','REVERSAL_OF:${original} REVERSAL_OF:${original}'),
+      ('${other}','10000000-0000-0000-0000-000000000002','out',11,'AZN','transaction_reversal','REVERSAL_OF:${another}');`);
+    await db.exec(await readFile(new URL('../../supabase/migrations/20261003054612_optimize_cashbook_ledger_read.sql', import.meta.url), 'utf8'));
+    const expected = await summary();
+    await db.exec(await readFile(new URL('../../supabase/migrations/20261008130228_hash_cashbook_reversal_lookup.sql', import.meta.url), 'utf8'));
+    expect(await summary()).toEqual(expected);
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+it('aggregates 6000 additional entries without changing complete ledger totals', async () => {
+  const before = (await summary()).currencies[0];
+  await db.exec('BEGIN');
+  try {
+    await db.exec(`INSERT INTO cash_transactions(tenant_id,account_id,direction,amount,currency,category)
+      SELECT '${tenant}', '${account}', 'in', 1, 'AZN', 'sale' FROM generate_series(1, 6000);`);
+    expect((await summary()).currencies[0]).toMatchObject({
+      balance: Number(before.balance) + 6000, inflow: Number(before.inflow) + 6000, outflow: before.outflow,
+    });
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+it('retains invoker security and denies anonymous function execution', async () => {
+  expect((await db.query("SELECT prosecdef FROM pg_proc WHERE oid='cashbook_ledger_summary(uuid)'::regprocedure")).rows[0].prosecdef).toBe(false);
+  expect((await db.query("SELECT has_function_privilege('anon','cashbook_ledger_summary(uuid)','execute') AS allowed")).rows[0].allowed).toBe(false);
 });

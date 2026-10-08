@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
-import { useProducts } from "../../shared/hooks/useProducts.js";
 import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
@@ -41,11 +40,10 @@ function TablePages({ value, label }) {
   </nav>;
 }
 
-export default function StockPage({ inventory: stock }) {
+export default function StockPage({ inventory: stock, products = [] }) {
   const { activeMembership } = useAuth();
   const { isAdmin } = usePermissions();
   const tenantId = activeMembership?.tenant_id;
-  const { products } = useProducts(tenantId);
   const [tab, setTab] = useState("warehouses");
 
   const totals = useMemo(() => {

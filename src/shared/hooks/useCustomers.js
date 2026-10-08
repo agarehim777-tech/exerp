@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
+import { readTenantPage } from '../../services/readTenantPage';
 
 const META_PREFIX = '__crm_meta__:';
 const readMeta = (notes) => { try { return String(notes || '').startsWith(META_PREFIX) ? JSON.parse(String(notes).slice(META_PREFIX.length)) : {}; } catch { return {}; } };
@@ -41,11 +42,12 @@ export function useCustomers(tenantId) {
     const isCurrent = begin();
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
-      supabase.from('customers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit + 1),
+      readTenantPage(() => supabase.from('customers').select('*', { count: 'exact' }).eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false }).order('id'), limit + 1, isCurrent),
       supabase.rpc('customer_sales_metrics', { _tenant: tenantId }),
       supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
-    if (!isCurrent()) return;
+    if (!isCurrent() || !customerResult) return;
     if (customerResult.error || orderResult.error || levelResult.error) setError(customerResult.error || orderResult.error || levelResult.error);
     else {
       setError(null);

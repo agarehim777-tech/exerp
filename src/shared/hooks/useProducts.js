@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
+import { readTenantPage } from '../../services/readTenantPage';
 
 const PRODUCTS_PAGE_SIZE = 500;
 const PRODUCT_IMAGES_BUCKET = 'product-images';
@@ -44,13 +45,14 @@ export function useProducts(tenantId) {
     if (!tenantId) return;
     const isCurrent = begin();
     setLoading(true);
-    const { data, error } = await supabase
+    const result = await readTenantPage(() => supabase
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .limit(limit + 1);
-    if (!isCurrent()) return;
+      .order('id'), limit + 1, isCurrent);
+    if (!isCurrent() || !result) return;
+    const { data, error } = result;
     if (error) setError(error);
     else {
       setError(null);

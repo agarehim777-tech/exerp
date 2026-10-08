@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CircleAlert, CreditCard, Plus, Search, Trash2, Users, X } from "lucide-react";
 import { stages } from "../../../data.js";
 import { money } from "../../../services/format.js";
@@ -490,6 +490,9 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
   );
 }
 export function SalesOrderModal({ type, onClose, onCreate, orderOptions, defaults = {} }) {
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const customers = orderOptions.customers;
   const stock = orderOptions.stock;
   const catalogProducts = orderOptions.products || [];
@@ -694,10 +697,14 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     setSellerRows((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== rowId)));
   }
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    if (!canCreateOrder || !bonusRateValid) return;
-    onCreate(type, {
+    if (!canCreateOrder || !bonusRateValid || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+    await onCreate(type, {
       customer: selectedCustomer?.name || "",
       fin: getCustomerIdentity(selectedCustomer).fin || selectedCustomer?.tax_id || "",
       paymentMethod,
@@ -715,6 +722,12 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       note,
       internalNotes,
     });
+    } catch (error) {
+      setSubmitError(error?.message || "Sifaris yadda saxlanilmadi.");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -725,11 +738,12 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <h2>Yeni Satış Sifarişi</h2>
             <p>Müştəri, məhsul və satıcı bonus faizlərini daxil edin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
+          <button className="icon-btn" onClick={onClose} disabled={submitting} aria-label="Pəncərəni bağla">
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={submit} className="order-modal-form">
+        <form onSubmit={submit} className="order-modal-form" aria-busy={submitting}>
+          {submitError && <p role="alert">{submitError}</p>}
           <section className="order-section">
             <label className="order-label" htmlFor="order-customer">
               MÜŞTƏRİ
@@ -1047,10 +1061,10 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
           </section>
 
           <div className="modal-actions order-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>
+            <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
               Ləğv et
             </button>
-            <button type="submit" className="primary-btn" disabled={!canCreateOrder}>
+            <button type="submit" className="primary-btn" disabled={!canCreateOrder || submitting}>
               Sifarişi yarat
             </button>
           </div>

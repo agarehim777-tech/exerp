@@ -11,7 +11,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: {
     let resolve;
     const promise = new Promise(done => { resolve = done; });
     const query = { select: () => query, eq: () => query, order: () => query,
-      limit: () => { requests.push(resolve); return promise; } };
+      range: () => { requests.push(resolve); return promise; } };
     return query;
   },
 } }));
