@@ -313,7 +313,7 @@ function App() {
   const { begin: beginTenantRequest } = useTenantRequestScope(activeTenantId);
   const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
-  const { orders: dbOrders, loaded: dbOrdersLoaded, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
+  const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
   const { ready: tenantStateReady } = useTenantUiPersistence({
@@ -482,7 +482,7 @@ function App() {
   const syncedAuditIds = useRef(new Set());
   const notificationAutoRunRef = useRef("");
   const creditSourceOrders = useMemo(
-    () => (dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
+    () => (!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
     [dbOrders, dbOrdersLoaded, state.orders],
   );
   const creditRecords = useMemo(
@@ -5415,7 +5415,7 @@ function App() {
 
     const principalAmount = Math.max(0, round2(Number(values.principalAmount || 0)));
     const penaltyAmount = Math.max(0, round2(Number(values.penaltyAmount || 0)));
-    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    const targetCredit = creditRecords.find((credit) => credit.id === creditId);
 
     if (principalAmount <= 0 && penaltyAmount <= 0) {
       notify("Ödəniş məbləği daxil edin.", "warning");
@@ -5549,21 +5549,22 @@ function App() {
   }
 
   async function payCreditInitial(creditId, amount) {
-    if (!requirePermission("credits.manage", "ilkin ödəniş qəbul etmək")) return;
-    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    if (!requirePermission("credits.manage", "ilkin ödəniş qəbul etmək")) return false;
+    const targetCredit = creditRecords.find((credit) => credit.id === creditId);
     if (!targetCredit) {
       notify("Kredit tapılmadı.", "warning");
-      return;
+      return false;
     }
     const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
     const alreadyPaid = Number(targetCredit.initialPaid ?? 0);
-    const payment = Math.min(Math.max(0, Math.round(Number(amount || 0))), Math.max(0, requiredInitial - alreadyPaid));
+    const payment = Math.min(Math.max(0, round2(Number(amount || 0))), Math.max(0, round2(requiredInitial - alreadyPaid)));
     if (payment <= 0) {
       notify("Qəbul ediləcək məbləğ düzgün deyil.", "warning");
-      return;
+      return false;
     }
 
     try {
+      if (!activeTenantId || !targetCredit.salesSource || !targetCredit.id) throw new Error("Kreditin server bağlantısı tapılmadı.");
       if (activeTenantId && targetCredit.salesSource && targetCredit.id) {
         const cashAccount = await ensureMainCashAccount(activeTenantId);
         const { error: rpcError } = await supabase.rpc("post_credit_initial_payment", {
@@ -5578,10 +5579,14 @@ function App() {
       }
     } catch (error) {
       notify(`İlkin ödəniş qeydə alınmadı: ${error.message}`, "error");
-      return;
+      return false;
     }
 
-    const nextPaid = alreadyPaid + payment;
+    const nextPaid = round2(alreadyPaid + payment);
+    if (!ENABLE_LEGACY_WRITES) {
+      notify(`${money(payment)} ilkin ödəniş kassaya qəbul edildi.`);
+      return true;
+    }
     setState((current) => ({
       ...current,
       cashEntries: [
@@ -5626,12 +5631,13 @@ function App() {
       action: "İlkin ödəniş qəbul edildi",
       detail: `${creditId}: ${money(payment)} · toplam ${money(nextPaid)}/${money(requiredInitial)}`,
     });
+    return true;
   }
 
 
   async function startCredit(creditId, startDate) {
     if (!requirePermission("credits.manage", "krediti başlatmaq")) return false;
-    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
+    const targetCredit = creditRecords.find((credit) => credit.id === creditId);
     if (!targetCredit) {
       notify("Kredit tapılmadı.", "warning");
       return false;
@@ -5642,7 +5648,7 @@ function App() {
     }
     const requiredInitial = Number(targetCredit.requiredInitial ?? targetCredit.initialPayment ?? 0);
     const initialPaid = Number(targetCredit.initialPaid ?? 0);
-    if (requiredInitial > 0 && initialPaid + 0.01 < requiredInitial) {
+    if (round2(requiredInitial - initialPaid) > 0) {
       notify(
         `İlkin ödəniş tamamlanmayıb: ${money(initialPaid)} / ${money(requiredInitial)}. Kredit başladıla bilməz.`,
         "warning",
@@ -5659,6 +5665,10 @@ function App() {
       return false;
     }
 
+    if (!ENABLE_LEGACY_WRITES) {
+      notify("Kredit başladıldı və ödəniş cədvəli aktiv edildi.");
+      return true;
+    }
 
     const plan = buildCreditPlan({
       total: targetCredit.total,
@@ -6664,6 +6674,9 @@ function App() {
           {active === "credits" && (
             <CreditsPage
               credits={filtered.credits}
+              loading={dbOrdersLoading}
+              error={dbOrdersError}
+              onRefresh={refreshDbOrders}
               sendCreditSms={sendCreditSms}
               onUpdatePaymentDate={updateCreditPaymentDate}
               onReceivePayment={receiveCreditPayment}

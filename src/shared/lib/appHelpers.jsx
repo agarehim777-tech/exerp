@@ -30,7 +30,25 @@ function getCreditIdForOrder(order) {
 }
 
 function buildSalesCreditRecord(order, storedCredit) {
-  const totalAmount = Number(order.amount || storedCredit?.total || 0);
+  if (order._source === "db") {
+    const installments = order.creditInstallments || [];
+    const next = installments.find(row => row.amount > 0);
+    const startDate = order.creditStartDate || null;
+    const status = normalize(order.creditStatus);
+    // Canonical contract fields must win over stale browser/collection projections.
+    storedCredit = { ...storedCredit, id: order.creditId, date: order.date, balance: order.creditBalance,
+      initialPaid: order.initialPaid, requiredInitial: order.requiredInitial,
+      startDate, startedAt: startDate,
+      status: status === "closed" ? "Tamamlandı" : !startDate || ["draft", "pending"].includes(status)
+        ? "Başlanmamış" : status === "overdue" ? "Gecikmiş" : "Aktiv",
+      installments, payments: [],
+      paidMonths: installments.filter(row => row.amount <= 0).length,
+      monthly: next?.amount ?? 0, lastPayment: installments.at(-1)?.amount ?? 0,
+      next: next?.due || "—",
+      rate: installments.length ? Math.round(installments.filter(row => row.amount <= 0).length / installments.length * 100) : 0,
+    };
+  }
+  const totalAmount = Number(order.creditPrincipal ?? order.amount ?? storedCredit?.total ?? 0);
   const initialPayment = Number(order.initialPayment ?? order.paid ?? storedCredit?.initialPayment ?? 0);
   const months = Number(order.creditMonths || storedCredit?.months || 12);
   const basePlan = buildCreditPlan({ total: totalAmount, initialPayment, months });

@@ -10,7 +10,7 @@ export const dayInMs = 24 * 60 * 60 * 1000;
 export function isCreditStarted(credit) {
   const status = normalize(credit?.status);
   if (status.includes("başlanmam") || status.includes("baslanmam") || status === "draft") return false;
-  return credit?.startedAt !== null && credit?.startDate !== null;
+  return Boolean(credit?.startedAt || credit?.startDate);
 }
 
 export function shiftPaymentDate(value, months) {

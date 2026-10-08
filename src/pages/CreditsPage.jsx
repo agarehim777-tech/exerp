@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../modules/credits/CreditInitialPayments.jsx";
@@ -32,6 +32,9 @@ export default CreditsPage;
 
 function CreditsPage({
   credits,
+  loading = false,
+  error = null,
+  onRefresh,
   sendCreditSms,
   onUpdatePaymentDate,
   onReceivePayment,
@@ -225,6 +228,14 @@ function CreditsPage({
 
   return (
     <div className="stack">
+      {error ? (
+        <div role="alert" className="form-error">
+          <p>Kredit məlumatları yüklənmədi: {error.message || String(error)}</p>
+          <button type="button" className="secondary-btn" disabled={loading} onClick={onRefresh}>
+            <RefreshCw size={16} /> Yenidən yüklə
+          </button>
+        </div>
+      ) : loading ? <p role="status">Kredit məlumatları yüklənir...</p> : null}
       <section className="metric-grid four">
         <MetricCard label="Aktiv kreditlər" value={activeCredits.length} icon={CreditCard} tone="primary" />
         <MetricCard label="Portfel qalığı" value={money(portfolioBalance)} trend={`${money(paidTotal)} ödənilib`} icon={Wallet} tone="success" />
@@ -453,14 +464,17 @@ function CreditsPage({
   );
 }
 
-function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
+export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const requiredInitial = Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0);
   const initialPaid = Number(item.credit.initialPaid ?? 0);
-  const initialRemaining = Math.max(0, requiredInitial - initialPaid);
-  const initialComplete = initialRemaining <= 0.01;
+  const initialRemaining = Number(Math.max(0, requiredInitial - initialPaid).toFixed(2));
+  const initialComplete = initialRemaining === 0;
   const [depositAmount, setDepositAmount] = useState(initialRemaining || 0);
   const [historyKey, setHistoryKey] = useState(0);
+  const [saving, setSaving] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const inFlight = useRef(false);
 
   useEffect(() => {
     // İlkin ödəniş dəyişdikdə giriş sahəsi və cədvəl avtomatik yenilənir
@@ -470,9 +484,11 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
 
   const depositValue = Number(depositAmount || 0);
   const depositError =
-    depositValue < 0
+    !Number.isFinite(depositValue)
+      ? "Məbləğ düzgün deyil."
+      : depositValue < 0
       ? "Məbləğ mənfi ola bilməz."
-      : depositValue > initialRemaining + 0.01
+      : depositValue > initialRemaining
         ? `Hədəfi aşırsınız: qalıq ${money(initialRemaining)}, daxil edilən ${money(depositValue)}.`
         : "";
 
@@ -489,17 +505,35 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
   );
   const firstPaymentDate = previewPlan.installments[0]?.due || "—";
 
+  async function save(kind, command) {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setSaving(kind);
+    setSaveError("");
+    try {
+      const saved = await command();
+      if (!saved) setSaveError("Əməliyyat tamamlanmadı.");
+      return Boolean(saved);
+    } catch (error) {
+      setSaveError(error.message || "Əməliyyat tamamlanmadı.");
+      return false;
+    } finally {
+      inFlight.current = false;
+      setSaving("");
+    }
+  }
+
   async function submit(event) {
     event.preventDefault();
     if (!startDate || !initialComplete) return;
-    const started = await onStartCredit?.(item.credit.id, startDate);
+    const started = await save("start", () => onStartCredit?.(item.credit.id, startDate));
     if (started) onClose();
   }
 
   async function collectDeposit() {
     if (depositError || depositValue <= 0) return;
-    await onPayInitial?.(item.credit.id, depositValue);
-    setHistoryKey((key) => key + 1);
+    const saved = await save("deposit", () => onPayInitial?.(item.credit.id, depositValue));
+    if (saved) setHistoryKey((key) => key + 1);
   }
 
   return (
@@ -510,9 +544,10 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
             <h2 id="start-credit-title">Krediti başlat</h2>
             <p>{item.credit.customer} · {item.credit.contractId || item.credit.id}</p>
           </div>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
+          <button className="icon-btn" type="button" disabled={Boolean(saving)} onClick={onClose} aria-label="Bağla">×</button>
         </div>
-        <form className="credit-payment-form" onSubmit={submit}>
+        <form className="credit-payment-form" onSubmit={submit} aria-busy={Boolean(saving)}>
+          {saveError ? <p role="alert" className="form-error">{saveError}</p> : null}
           <div className="credit-payment-preview">
             <span>İlkin ödəniş hədəfi <strong>{money(requiredInitial)}</strong></span>
             <span>Yığılıb <strong>{money(initialPaid)}</strong></span>
@@ -523,10 +558,12 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
             <strong>{initialComplete ? "İlkin ödəniş tamamlanıb" : "Qalıq ilkin ödənişi qəbul et"}</strong>
             {!initialComplete ? (
               <>
-              <label>
+              <label className="field">
                 <span>Qəbul ediləcək məbləğ</span>
                 <input
                   type="number"
+                  step="0.01"
+                  disabled={Boolean(saving)}
                   min="0"
                   max={initialRemaining}
                   value={depositAmount}
@@ -538,9 +575,9 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
                 type="button"
                 className="secondary-btn"
                 onClick={collectDeposit}
-                disabled={Boolean(depositError) || depositValue <= 0}
+                disabled={Boolean(saving) || Boolean(depositError) || depositValue <= 0}
               >
-                Behi kassaya qəbul et
+                {saving === "deposit" ? "Qəbul edilir..." : "Behi kassaya qəbul et"}
               </button>
               <p className="form-help">
                 İlkin ödəniş tam yığılmayınca kredit başladıla bilməz. Hədəf tamamlananda cədvəl avtomatik aktivləşir.
@@ -558,9 +595,9 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
             orderNo={item.credit.orderNo}
             refreshKey={historyKey}
           />
-          <label>
+          <label className="field">
             <span>Kreditin başlanma tarixi</span>
-            <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            <input type="date" required disabled={Boolean(saving)} value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           </label>
           <div className="credit-payment-preview">
             <span>İlk ödəniş tarixi <strong>{firstPaymentDate}</strong></span>
@@ -595,9 +632,9 @@ function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
           </div>
           <p className="form-help">Təsdiqdən sonra bu cədvəl yadda saxlanacaq və kredit aktiv portfelə keçəcək.</p>
           <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={!initialComplete}>
-              <Play size={15} /> Krediti başlat
+            <button type="button" className="secondary-btn" disabled={Boolean(saving)} onClick={onClose}>Ləğv et</button>
+            <button type="submit" className="primary-btn" disabled={Boolean(saving) || !initialComplete}>
+              <Play size={15} /> {saving === "start" ? "Başladılır..." : "Krediti başlat"}
             </button>
           </div>
         </form>

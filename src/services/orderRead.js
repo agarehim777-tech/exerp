@@ -26,7 +26,7 @@ export async function readOrderRelations(tenantId, orderIds, isCurrent) {
   const query = (table, columns) => supabase.from(table).select(columns, { count: 'exact' })
     .eq('tenant_id', tenantId).in('order_id', orderIds);
   const credits = await readPages(() => query('credit_contracts',
-    'id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at').order('id'), Infinity, isCurrent);
+    'id,order_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at,installments:credit_installments(id,installment_no,due_date,principal_due,principal_paid,status)').order('id'), Infinity, isCurrent);
   if (!isCurrent()) return null;
   const bonuses = await readPages(() => query('order_bonus_assignments',
     'id,order_id,seller_name,rate,position,effective_from,effective_to')

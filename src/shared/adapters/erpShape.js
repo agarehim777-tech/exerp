@@ -75,13 +75,11 @@ export function dbOrderToLegacy(o) {
   const paid = Math.max(0, Number(o.paid_amount || 0));
   const credit = Array.isArray(o.credit) ? o.credit[0] : o.credit;
   const paidInitial = Math.max(0, Number(credit?.initial_payment || 0));
-  const storedRequiredInitial = Math.max(0, Number(credit?.required_initial || 0));
-  // Older contracts lost the planned target when the legacy RPC was used.
-  // Their sales flow used the standard 10% target, so keep paid and planned
-  // amounts separate until the contract is repaired by the payment RPC.
-  const requiredInitial = credit
-    ? storedRequiredInitial || Math.max(paidInitial, Math.round(Number(credit.principal || amount) * 0.1))
-    : 0;
+  const requiredInitial = credit ? Math.max(0, Number(credit.required_initial ?? paidInitial)) : 0;
+  const creditInstallments = [...(credit?.installments || [])]
+    .sort((a, b) => Number(a.installment_no) - Number(b.installment_no))
+    .map(row => ({ id: row.id, month: Number(row.installment_no), due: row.due_date,
+      amount: Number(Math.max(0, Number(row.principal_due) - Number(row.principal_paid)).toFixed(2)) }));
   const delivery = Array.isArray(o.delivery) ? o.delivery[0] : o.delivery;
   const reservation = o.reservations?.find(row => row.status === 'active');
   let acceptanceNote = delivery?.acceptance_note || "";
@@ -124,7 +122,9 @@ export function dbOrderToLegacy(o) {
     initialPayment: requiredInitial,
     initialPaid: paidInitial,
     requiredInitial,
-    creditBalance: credit ? Math.max(0, Number(credit.principal || amount) - requiredInitial) : 0,
+    creditPrincipal: credit ? Number(credit.principal ?? amount) : 0,
+    creditBalance: credit ? Number(Math.max(0, Number(credit.principal ?? amount) - paid).toFixed(2)) : 0,
+    creditInstallments,
     creditStatus: credit?.status || null,
     creditStartDate: credit?.start_date || null,
     products: productLines.map((l) => l.product).filter(Boolean).join(", ") || "—",

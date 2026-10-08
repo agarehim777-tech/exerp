@@ -22,10 +22,10 @@ test.describe("Kritik ERP axınları", () => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.goto(route, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState('networkidle');
       await expect(page).not.toHaveURL(/\/login/);
       await expect(page).toHaveURL(new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[/?#]|$)`));
       await expect(page.locator("main.main")).toBeVisible();
+      await expect(page.locator(".page-header h1")).toBeVisible();
       if (route === '/anbar/qaliqlar') {
         await expect(page.getByRole('button', { name: '+ Yeni anbar', exact: true })).toBeVisible();
       }
@@ -38,7 +38,6 @@ test.describe("Kritik ERP axınları", () => {
 
   test("HR əməkdaş forması ayrıca dialog kimi açılır", async ({ page }) => {
     await page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/hr\/emekdaslar(?:[/?#]|$)/);
     await expect(page.getByRole("heading", { name: "İnsan Resursları" })).toBeVisible();
     const createButton = page.getByRole("button", { name: "Yeni əməkdaş", exact: true });

@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ calls: [], fail: '', cap: 100 }));
 vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
   const call = { table, filters: [], order: [] };
   const query = {
-    select: (_columns, options) => { call.count = options?.count; return query; },
+    select: (columns, options) => { call.columns = columns; call.count = options?.count; return query; },
     eq: (...args) => { call.filters.push(args); return query; },
     neq: (...args) => { call.filters.push(args); return query; },
     in: (...args) => { call.filters.push(args); return query; },
@@ -41,6 +41,8 @@ it('reads every linked credit, bonus and delivery with tenant and parent filters
   expect(related.bonuses).toHaveLength(225);
   expect(related.deliveries).toHaveLength(225);
   expect(related.deliveryError).toBeNull();
+  expect(mocks.calls.find(call => call.table === 'credit_contracts').columns)
+    .toContain('installments:credit_installments(id,installment_no,due_date,principal_due,principal_paid,status)');
   for (const call of mocks.calls) {
     expect(call.filters).toContainEqual(['tenant_id', 'tenant-a']);
     expect(call.filters).toContainEqual(['order_id', ids]);

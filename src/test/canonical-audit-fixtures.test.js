@@ -2,6 +2,15 @@
 import { readFile } from 'node:fs/promises';
 import { expect, it } from 'vitest';
 
+it('waits for rendered modules without requiring background network traffic to stop', async () => {
+  const source = await readFile(new URL('../../tests/critical-workflows.spec.ts', import.meta.url), 'utf8');
+  expect(source).not.toContain("waitForLoadState('networkidle')");
+  expect(source).toContain('page.locator("main.main")');
+  expect(source).toContain('page.locator(".page-header h1")');
+  expect(source).toContain('expect(errors).toEqual([])');
+  expect(source).toContain('insights rejects a tenant without membership');
+});
+
 it('keeps the delivery fixture behind invoice creation and posting commands', async () => {
   const source = await readFile(new URL('../../tests/delivery-reversal-lifecycle.spec.ts', import.meta.url), 'utf8');
   expect(source).toContain("rpc('create_sales_invoice_atomic', invoiceCommand)");
