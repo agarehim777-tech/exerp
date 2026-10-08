@@ -1606,9 +1606,8 @@ async function auditHrStructure(browser) {
 
     await selectModule(page, 24);
     await page.getByRole("button", { name: "Integrity yoxla" }).click();
-    await page.waitForTimeout(75);
-    const integrityState = await readHrState();
-    assert(integrityState.integritySnapshot, "Integrity check did not create a snapshot");
+    const integrityState = await waitForHrState(s => Boolean(s.integritySnapshot),
+      "Integrity check did not persist a snapshot");
     assert(
       !integrityState.integritySnapshot.issues?.some((issue) => issue.area === "HR"),
       "Healthy HR structure produced an integrity warning",

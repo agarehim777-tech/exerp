@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Check, Pencil, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
-import { useStock } from "../../shared/hooks/useStock.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
@@ -21,11 +20,10 @@ const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, col
 const formGrid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(220px, 1fr))", gap: 14 };
 const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
-export default function StockPage() {
+export default function StockPage({ inventory: stock }) {
   const { activeMembership } = useAuth();
   const { isAdmin } = usePermissions();
   const tenantId = activeMembership?.tenant_id;
-  const stock = useStock(tenantId);
   const { products } = useProducts(tenantId);
   const [tab, setTab] = useState("warehouses");
 

@@ -6600,7 +6600,7 @@ function App() {
 
           {active === "sales-dashboard" && <SalesDashboardPage />}
           {active === "sales" && <SalesOrdersPage selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
-          {active === "stock" && <StockPage />}
+          {active === "stock" && <StockPage inventory={dbInventory} />}
           {active === "products" && (
             <ProductsPage
               warehouses={state.warehouses}
