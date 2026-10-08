@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Check, Pencil, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useProducts } from "../../shared/hooks/useProducts.js";
@@ -8,17 +8,38 @@ import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import {
-  azn, badge, card, delBtn, input, msgBox, primaryBtn,
+  azn, badge, card as baseCard, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
 } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
+const card = { ...baseCard, minWidth: 0 };
 const sectionTitle = { margin: 0, fontSize: 19, lineHeight: 1.3, color: "#12372c" };
 const sectionSubtitle = { margin: "5px 0 18px", fontSize: 13, lineHeight: 1.5, color: "#66756f" };
 const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#334b43" };
 const formGrid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(220px, 1fr))", gap: 14 };
 const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
+
+function useTablePage(rows) {
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(rows.length / 50));
+  const current = Math.min(page, pages - 1);
+  useEffect(() => setPage(0), [rows]);
+  return { rows: rows.slice(current * 50, current * 50 + 50), total: rows.length,
+    page: current, pages, setPage };
+}
+
+function TablePages({ value, label }) {
+  if (value.total <= 50) return null;
+  return <nav aria-label={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12 }}>
+    <span>{value.page * 50 + 1}–{Math.min((value.page + 1) * 50, value.total)} / {value.total}</span>
+    <div style={{ display: "flex", gap: 8 }}>
+      <button type="button" style={secondaryActionBtn} title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={value.page === 0} onClick={() => value.setPage(value.page - 1)}><ChevronLeft size={16} /></button>
+      <button type="button" style={secondaryActionBtn} title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={value.page === value.pages - 1} onClick={() => value.setPage(value.page + 1)}><ChevronRight size={16} /></button>
+    </div>
+  </nav>;
+}
 
 export default function StockPage({ inventory: stock }) {
   const { activeMembership } = useAuth();
@@ -42,7 +63,7 @@ export default function StockPage({ inventory: stock }) {
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
       <div>
         <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.2, color: "#12372c" }}>Anbar idarəetməsi</h1>
         <p style={{ margin: "6px 0 0", fontSize: 14, color: "#66756f" }}>
@@ -108,6 +129,7 @@ function BalancesPanel({ stock }) {
       return matchesWarehouse && matchesStatus && (!query || haystack.includes(query));
     });
   }, [stock.balances, filters]);
+  const balancePage = useTablePage(filteredBalances);
 
   const resetFilters = () => setFilters({ warehouseId: "", query: "", status: "all" });
   const balanceKey = (balance) => balance.id || `${balance.warehouse_id}:${balance.product_id}`;
@@ -167,6 +189,7 @@ function BalancesPanel({ stock }) {
       </div>
       {editError && <div style={{ ...msgBox, marginBottom: 12 }}>{editError}</div>}
       {stock.loading && <div>Yüklənir…</div>}
+      <div style={{ overflowX: "auto" }}>
       <table style={table}>
         <thead>
           <tr>
@@ -175,7 +198,7 @@ function BalancesPanel({ stock }) {
           </tr>
         </thead>
         <tbody>
-          {filteredBalances.map((b) => {
+          {balancePage.rows.map((b) => {
             const saleable = Number(b.qty) - Number(b.reserved || 0) - Number(b.problem_qty || 0);
             const low = Number(b.reorder_point) > 0 && saleable <= Number(b.reorder_point);
             const key = balanceKey(b);
@@ -229,6 +252,8 @@ function BalancesPanel({ stock }) {
           )}
         </tbody>
       </table>
+      </div>
+      <TablePages value={balancePage} label="Qalıq səhifələri" />
     </div>
   );
 }
@@ -365,6 +390,12 @@ function WarehousesPanel({ stock, isAdmin }) {
   const [form, setForm] = useState(emptyForm);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [msg, setMsg] = useState("");
+  const [query, setQuery] = useState("");
+  const filteredWarehouses = useMemo(() => {
+    const search = query.trim().toLocaleLowerCase("az-AZ");
+    return stock.warehouses.filter(row => !search || `${row.code} ${row.name} ${row.address || ""}`.toLocaleLowerCase("az-AZ").includes(search));
+  }, [stock.warehouses, query]);
+  const warehousePage = useTablePage(filteredWarehouses);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -419,9 +450,10 @@ function WarehousesPanel({ stock, isAdmin }) {
         )}
       </div>
       <p style={sectionSubtitle}>Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
+      <input type="search" aria-label="Anbar axtarışı" placeholder="Anbar axtar..." value={query} onChange={event => setQuery(event.target.value)} style={{ ...input, marginBottom: 14 }} />
       {msg && <div style={msgBox}>{msg}</div>}
       {isAdmin && isFormOpen && (
-        <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1.4fr auto auto", gap: 10, marginBottom: 18, alignItems: "end" }}>
+        <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 10, marginBottom: 18, alignItems: "end" }}>
           <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
           <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
           <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={input} />
@@ -429,10 +461,11 @@ function WarehousesPanel({ stock, isAdmin }) {
           {form.id && <button type="button" style={secondaryActionBtn} onClick={() => { setForm(emptyForm); setIsFormOpen(false); }}>Ləğv et</button>}
         </form>
       )}
+      <div style={{ overflowX: "auto" }}>
       <table style={table}>
         <thead><tr><th style={th}>Kod</th><th style={th}>Ad</th><th style={th}>Ünvan</th>{isAdmin && <th style={th} />}</tr></thead>
         <tbody>
-          {stock.warehouses.map((w) => (
+          {warehousePage.rows.map((w) => (
             <tr key={w.id}>
               <td style={td}><b>{w.code}</b></td>
               <td style={td}>{w.name}</td>
@@ -440,9 +473,11 @@ function WarehousesPanel({ stock, isAdmin }) {
               {isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button style={secondaryActionBtn} onClick={() => edit(w)}>Redaktə et</button><button style={delBtn} onClick={() => remove(w)}>Sil</button></td>}
             </tr>
           ))}
-          {!stock.warehouses.length && <tr><td style={td} colSpan={4}>Anbar yoxdur.</td></tr>}
+          {!filteredWarehouses.length && <tr><td style={td} colSpan={4}>Anbar yoxdur.</td></tr>}
         </tbody>
       </table>
+      </div>
+      <TablePages value={warehousePage} label="Anbar səhifələri" />
     </div>
   );
 }
