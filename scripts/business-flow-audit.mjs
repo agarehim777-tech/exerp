@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { auditResponse, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -40,14 +40,11 @@ async function ensureAuditServer() {
   if (!isLocalBaseUrl(baseUrl)) return null;
 
   const url = new URL(baseUrl);
-  const server = spawn(process.execPath, [
-    "node_modules/vite/bin/vite.js",
-    "--host",
-    url.hostname === "localhost" ? "127.0.0.1" : url.hostname,
-    "--port",
-    url.port || "5174",
-    "--strictPort",
-  ], {
+  if (process.env.CI === 'true') {
+    // Release gates must build the exact application before its business audit.
+    await readFile('dist/index.html');
+  }
+  const server = spawn(process.execPath, auditServerArguments(url), {
     cwd: process.cwd(),
     stdio: "ignore",
     windowsHide: true,

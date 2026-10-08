@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
+import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronLeft, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
 import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../../modules/credits/CreditInitialPayments.jsx";
 import { lazy, useEffect, useMemo, useRef, useState } from "react";
@@ -3908,7 +3908,13 @@ export function WarehouseBalanceFilters({ filters, warehouses, categories, open,
 }
 
 export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct, onCreateProduct }) {
-  const totals = rows.reduce((summary, row) => ({
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  useEffect(() => { setPage(0); }, [rows]);
+  const pageRows = rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const totals = useMemo(() => rows.reduce((summary, row) => ({
     total: summary.total + Number(row.total || 0),
     reserved: summary.reserved + Number(row.reserved || 0),
     problem: summary.problem + Number(row.problem || 0),
@@ -3917,7 +3923,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
     recommendedQty: summary.recommendedQty + Number(row.recommendedQty || 0),
     stockValue: summary.stockValue + Number(row.stockValue || 0),
     salesValue: summary.salesValue + Number(row.salesValue || 0),
-  }), { total: 0, reserved: 0, problem: 0, available: 0, orderedQty: 0, recommendedQty: 0, stockValue: 0, salesValue: 0 });
+  }), { total: 0, reserved: 0, problem: 0, available: 0, orderedQty: 0, recommendedQty: 0, stockValue: 0, salesValue: 0 }), [rows]);
   const locationHeading = view === "products" ? "Anbarlar" : "Anbar";
 
   return (
@@ -3929,7 +3935,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {pageRows.map((row) => (
             <tr key={row.key}>
               <td>{row.category}</td>
               <td>
@@ -3981,6 +3987,11 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
           </tfoot>
         )}
       </table>
+      {pageCount > 1 && <nav aria-label="Stok cədvəlinin səhifələri" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, padding: 12 }}>
+        <span>{currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, rows.length)} / {rows.length}</span>
+        <button type="button" className="secondary-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button>
+        <button type="button" className="secondary-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage === pageCount - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button>
+      </nav>}
     </div>
   );
 }

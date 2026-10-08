@@ -11,10 +11,40 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
 } } }));
 const collections = ['employees'];
 beforeEach(() => {
-  mocks.load.mockReset().mockResolvedValue({ data: [], error: null });
+  mocks.load.mockReset().mockResolvedValue({ data: [], error: null, count: 0 });
   mocks.save.mockReset();
 });
 afterEach(() => vi.useRealTimers());
+
+it('hydrates every collection record when the server caps pages below the requested size', async () => {
+  const rows = Array.from({ length: 460 }, (_, index) => ({ collection: 'employees',
+    record_key: `e${index}`, position: index, data: { id: `e${index}`, name: `Employee ${index}` } }));
+  mocks.load.mockImplementation(async (start, end) => ({
+    data: rows.slice(start, Math.min(end + 1, start + 100)), count: rows.length, error: null,
+  }));
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { state, sync };
+  });
+  await waitFor(() => expect(result.current.sync.phase).toBe('saved'));
+  expect(result.current.state.employees).toHaveLength(460);
+  expect(result.current.state.employees.at(-1).id).toBe('e459');
+  expect(mocks.load.mock.calls.map(([start]) => start)).toEqual([0, 100, 200, 300, 400]);
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('does not hydrate or overwrite state after an incomplete collection response', async () => {
+  mocks.load.mockResolvedValue({ data: [], count: 460, error: null });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [{ id: 'unsaved' }] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { state, sync };
+  });
+  await waitFor(() => expect(result.current.sync.phase).toBe('error'));
+  expect(result.current.state.employees).toEqual([{ id: 'unsaved' }]);
+  expect(mocks.save).not.toHaveBeenCalled();
+});
 
 it('retains failed edits for retry and acknowledges only successful writes', async () => {
   mocks.save.mockResolvedValueOnce({ error: { message: 'offline' } }).mockResolvedValue({ error: null });

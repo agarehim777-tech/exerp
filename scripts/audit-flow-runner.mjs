@@ -1,3 +1,9 @@
+export function auditServerArguments(url, env = process.env) {
+  return ['node_modules/vite/bin/vite.js', ...(env.CI === 'true' ? ['preview'] : []),
+    '--host', url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
+    '--port', url.port || '5174', '--strictPort'];
+}
+
 export function legacyAuditCompatibilityError(env) {
   if (!env.VITE_SUPABASE_URL?.trim()) return null;
   const error = new Error('Legacy audit uses browser business storage. Supabase scenarios must replace it before release.');

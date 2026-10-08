@@ -84,14 +84,17 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
     setStatus({ phase: "loading", error: null });
     try {
       const rows = [];
-      for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from(TABLE).select("collection,record_key,position,data")
+      for (let offset = 0; ;) {
+        const { data, error, count } = await supabase.from(TABLE).select("collection,record_key,position,data", { count: "exact" })
           .eq("tenant_id", tenantId).in("collection", names)
           .order("collection").order("position").order("record_key").range(offset, offset + 499);
         if (error) throw error;
         if (!session.alive) return;
+        if (!Number.isInteger(count)) throw new Error("Collection read requires an exact count");
+        if (!data?.length && offset < count) throw new Error("Collection read ended before all records were loaded");
         rows.push(...(data || []));
-        if (!data || data.length < 500) break;
+        offset += data?.length || 0;
+        if (offset >= count) break;
       }
       const next = Object.fromEntries(names.map(name => [name, []]));
       rows.forEach(row => { if (next[row.collection]) next[row.collection].push(rowToApp(row)); });

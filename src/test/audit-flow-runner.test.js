@@ -1,8 +1,15 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { auditResponse, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
+it('runs CI business audits against the release build without dev transforms or HMR', () => {
+  const url = new URL('http://localhost:5174/');
+  expect(auditServerArguments(url, { CI: 'true' })).toEqual([
+    'node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '5174', '--strictPort',
+  ]);
+  expect(auditServerArguments(url, {})).not.toContain('preview');
+});
 it('registers response observation before clicking and returns the actual response', async () => {
   const events = [];
   const response = { ok: () => true };
