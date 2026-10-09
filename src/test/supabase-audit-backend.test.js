@@ -160,6 +160,32 @@ it('rejects production and elevated audit accounts', async () => {
     ? { access_token: 'test', user: { id: tenant } } : [{ user_id: tenant, role: 'owner' }]))).rejects.toThrow('restricted');
 });
 
+it('scopes a sales fixture without excluding canonical ledger evidence', async () => {
+  const urls = [];
+  const backend = await createAuditBackend(env, async url => {
+    urls.push(new URL(url));
+    const path = new URL(url).pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
+    return response([]);
+  });
+  await backend.readState({ scope: 'sales-ledger', customerId: 'customer-a', warehouseId: 'warehouse-a' });
+  const forTable = table => urls.find(url => url.pathname.endsWith('/' + table));
+  expect(forTable('customers').searchParams.get('id')).toBe('eq.customer-a');
+  for (const table of ['orders', 'credit_contracts']) {
+    expect(forTable(table).searchParams.get('customer_id')).toBe('eq.customer-a');
+  }
+  for (const table of ['credit_installments', 'credit_payments']) {
+    expect(forTable(table).searchParams.get('credit.customer_id')).toBe('eq.customer-a');
+    expect(forTable(table).searchParams.get('credit.tenant_id')).toBe(`eq.${tenant}`);
+  }
+  expect(forTable('stock_balances').searchParams.get('warehouse_id')).toBe('eq.warehouse-a');
+  for (const table of ['cashbook_ledger_summary', 'cash_transactions', 'expenses']) expect(forTable(table)).toBeTruthy();
+  expect(forTable('cash_transactions').searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+});
+
 it('verifies persisted workflow report exports instead of relying only on the UI snapshot', async () => {
   const backend = await createAuditBackend(env, async url => {
     const path = new URL(url).pathname;

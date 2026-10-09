@@ -24,7 +24,7 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-      AUDIT_FLOW_FILTER: support-messaging-linked-comments
+      AUDIT_FLOW_FILTER: sales-expense-edit-delete
       AUDIT_DIAGNOSTIC_ONLY: 'true'
       AUDIT_FLOW_TIMEOUT_MS: '90000'
     steps:

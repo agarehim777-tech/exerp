@@ -380,6 +380,7 @@ async function auditSalesAndExpenseMutations(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const sale = await createCreditSale(page);
+    const readScope = { scope: 'sales-ledger', customerId: fixtureByPage.get(page).customer.id, warehouseId: sale.warehouse.id };
     const originalReserved = stockReserved(sale.before, sale.warehouse.id, sale.line.product);
 
     await page.locator('main.main tr').filter({ hasText: sale.order.orderNo }).click();
@@ -388,7 +389,7 @@ async function auditSalesAndExpenseMutations(browser) {
     await page.getByRole('button', { name: 'Dəyişiklikləri yadda saxla', exact: true }).click();
     let state = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.amount === 1300
       && s.credits.find(c => c.id === sale.credit.id)?.total === 1300,
-      'Sales edit did not update order amount');
+      'Sales edit did not update order amount', readScope);
     let editedOrder = state.orders.find((item) => item.id === sale.order.id);
     let editedCredit = state.credits.find((item) => item.id === editedOrder?.creditId);
     assert(editedOrder?.amount === 1300, "Sales edit did not update order amount");
@@ -400,7 +401,7 @@ async function auditSalesAndExpenseMutations(browser) {
     const reversal = page.getByRole('dialog', { name: 'Satışın ləğv təsiri', exact: true });
     await reversal.getByRole('button', { name: 'Satışı ləğv et', exact: true }).click();
     state = await waitForState(s => !s.orders.some(o => o.id === sale.order.id)
-      && s.credits.find(c => c.id === sale.credit.id)?.status === 'cancelled', 'Sales cancellation did not cancel linked credit');
+      && s.credits.find(c => c.id === sale.credit.id)?.status === 'cancelled', 'Sales cancellation did not cancel linked credit', readScope);
     assert(!state.orders.some((item) => item.id === sale.order.id), "Sales delete did not remove order");
     assert(state.credits.find(item => item.id === sale.credit.id)?.status === 'cancelled', 'Sales cancellation lost cancelled credit history');
     assert(stockReserved(state, sale.warehouse.id, sale.line.product) === originalReserved, "Sales delete did not release reservation");
@@ -413,7 +414,7 @@ async function auditSalesAndExpenseMutations(browser) {
     await accountForm.getByPlaceholder('Hesab №', { exact: true }).fill(marker);
     await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('600');
     await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
-    state = await waitForState(s => s.financeAccounts.some(a => a.name === marker), 'Expense cash account was not persisted');
+    state = await waitForState(s => s.financeAccounts.some(a => a.name === marker), 'Expense cash account was not persisted', readScope);
     const account = state.financeAccounts.find(a => a.name === marker);
     await page.getByRole('button', { name: 'Xərclər', exact: true }).click();
     await page.getByRole('button', { name: '+ Yeni xərc', exact: true }).click();
@@ -423,7 +424,7 @@ async function auditSalesAndExpenseMutations(browser) {
     await createForm.getByPlaceholder('Məbləğ', { exact: true }).fill('300');
     await createForm.getByRole('button', { name: '+ Xərc', exact: true }).click();
     state = await waitForState(s => s.expenses.some(e => e.description === marker)
-      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 300, 'Expense create did not persist its cash debit');
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 300, 'Expense create did not persist its cash debit', readScope);
     const expense = state.expenses.find((item) => item.description === marker);
     assert(expense, "Expense create did not add finance expense");
 
@@ -434,14 +435,14 @@ async function auditSalesAndExpenseMutations(browser) {
     await editForm.getByPlaceholder('Məbləğ', { exact: true }).fill('450');
     await editForm.getByRole('button', { name: 'Dəyişiklikləri saxla', exact: true }).click();
     state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.amount === 450
-      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not persist its cash debit');
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not persist its cash debit', readScope);
     assert(state.expenses.find((item) => item.id === expense.id)?.amount === 450, "Expense edit did not update amount");
 
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not update its cash debit');
     await expenseRow.getByRole('button', { name: 'Ləğv et', exact: true }).click();
     await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
     state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.status === 'cancelled'
-      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not persist its cash reversal');
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not persist its cash reversal', readScope);
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not restore opening balance');
     const ledger = state.cashEntries.filter(tx => tx.reference === `EXPENSE:${expense.id}` || tx.reference === `EXPENSE-REVERSAL:${expense.id}`);
     assert(ledger.length === 2 && ledger.reduce((sum, tx) => sum + (tx.direction === 'in' ? tx.amount : -tx.amount), 0) === 0,
