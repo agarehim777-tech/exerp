@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest';
-import { money, percent } from '../services/format.js';
+import { expect, it, vi } from 'vitest';
+import { money, percent, normalize } from '../services/format.js';
 import { formatPaymentDate } from '../services/date.js';
 
 it('retains exact Azerbaijani formatting across repeated portfolio calculations', () => {
@@ -15,4 +15,22 @@ it('retains exact Azerbaijani formatting across repeated portfolio calculations'
     expect(formatPaymentDate(value)).toBe(date.format(value));
   }
   expect(() => formatPaymentDate(new Date(NaN))).toThrow(RangeError);
+});
+
+it('reuses exact locale-sensitive short text and evicts old entries without caching long strings', () => {
+  for (const text of ['I', 'İ', 'ƏĞÖÜŞÇ', 'ΟΣ', 'I\u0307', 123, null, undefined]) {
+    expect(normalize(text)).toBe(String(text ?? '').toLocaleLowerCase('az-AZ'));
+  }
+  const spy = vi.spyOn(String.prototype, 'toLocaleLowerCase');
+  try {
+    for (let i = 0; i < 10000; i++) expect(normalize('QA-CACHE-I-UNIQUE')).toBe('qa-cache-ı-unıque');
+    expect(spy).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 2200; i++) normalize(`QA-EVICTION-${i}`);
+    spy.mockClear();
+    normalize('QA-CACHE-I-UNIQUE');
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockClear();
+    normalize('I'.repeat(300)); normalize('I'.repeat(300));
+    expect(spy).toHaveBeenCalledTimes(2);
+  } finally { spy.mockRestore(); }
 });

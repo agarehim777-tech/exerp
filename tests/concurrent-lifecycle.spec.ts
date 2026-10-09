@@ -4,6 +4,38 @@ import { authenticatedApi, hasLifecycleEnvironment, runId } from './supabase-lif
 test.skip(!hasLifecycleEnvironment, 'Authenticated lifecycle environment is required');
 test.describe.configure({ mode: 'serial' });
 
+test('@lifecycle stale credit numbers remain unique across concurrent sales and replay', async ({ request }) => {
+  const { call, tenantId } = await authenticatedApi(request);
+  const marker = runId('E2E-CREDIT-NUMBER');
+  const customers = await call('get', `customers?tenant_id=eq.${tenantId}&select=id&limit=1`);
+  expect(customers[0]?.id).toBeTruthy();
+  const commands = [0, 1].map(index => ({
+    _tenant_id: tenantId, _request_key: `${marker}:${index}`, _order_no: `${marker}-${index}`,
+    _customer_id: customers[0].id, _order_date: new Date().toISOString().slice(0, 10),
+    _currency: 'AZN', _notes: 'CI stale credit number race',
+    _items: [{ line_no: 1, description: marker, qty: 1, unit_price: 100, discount_pct: 0, vat_rate: 0 }],
+    _credit: { contract_no: 'İN-1001', principal: 100, initial_payment: 0, required_initial: 25, term_months: 12 },
+    _bonus_allocations: [], _initial_payment: 0, _account_id: null,
+  }));
+  const results = await Promise.allSettled(commands.map(command => call('post', 'rpc/create_sales_order_complete', command)));
+  const created = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+  try {
+    expect(results.every(result => result.status === 'fulfilled')).toBe(true);
+    expect(created).toHaveLength(2);
+    const credits = await call('get', `credit_contracts?tenant_id=eq.${tenantId}&id=in.(${created.map(row => row.credit_id).join(',')})&select=id,contract_no`);
+    expect(credits).toHaveLength(2);
+    expect(new Set(credits.map(row => row.contract_no)).size).toBe(2);
+    expect(credits.every(row => /^İN-[0-9]+$/.test(row.contract_no))).toBe(true);
+    for (let index = 0; index < commands.length; index++) {
+      expect(await call('post', 'rpc/create_sales_order_complete', commands[index])).toEqual(created[index]);
+    }
+  } finally {
+    for (const row of created) await call('post', 'rpc/reverse_sales_order_v3', {
+      _tenant_id: tenantId, _order_id: row.order_id, _reason: 'CI credit number race cleanup', _request_key: `${marker}:reverse:${row.order_id}`,
+    });
+  }
+});
+
 test('@lifecycle concurrent sale requests create one order and one payment', async ({ request }) => {
   const { call, tenantId } = await authenticatedApi(request);
   const marker = runId('E2E-CONCURRENT-SALE');
