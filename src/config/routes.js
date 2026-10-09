@@ -28,6 +28,7 @@ export const moduleRoutes = {
   bonuses: "/bonuslar",
   contracts: "/muqavile",
   reports: "/hesabat",
+  projects: "/layiheler",
   "financial-statements": "/hesabat/maliyye",
   "data-reconciliation": "/sistem/barisdirma",
   support: "/destek",

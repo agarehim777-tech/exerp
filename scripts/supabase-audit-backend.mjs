@@ -219,6 +219,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
       const savedExports = reportExports.map(row => ({ ...row.payload, id: row.record_no, workflowId: row.id }));
       const savedExportIds = new Set(savedExports.map(row => row.id));
       state.reportExports = [...savedExports, ...(state.reportExports || []).filter(row => !savedExportIds.has(row.id))];
+      const roiExport = savedExports.find(row => row.title === 'Layihə ROI');
+      if (roiExport) state.projectRoiSnapshot = roiExport.snapshot;
       state.auditLog = [...(state.auditLog ?? []), ...audit];
       return state;
     },

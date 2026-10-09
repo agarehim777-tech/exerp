@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { AlertTriangle, CreditCard, Download, PackageCheck, ReceiptText, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Download, PackageCheck, ReceiptText, X } from 'lucide-react';
 import { downloadReportCsv } from '../../shared/lib/reportDownload.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useCashbook } from '../../shared/hooks/useCashbook.js';
@@ -25,6 +25,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   const [reversal, setReversal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('Müştərinin müraciəti ilə satış ləğv edildi');
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(() => orders.filter(o =>
     o.status !== 'cancelled'
@@ -32,6 +33,10 @@ export default function SalesOrdersPage({ repository, customers = [], products =
     && (!toDate || String(o.order_date || '').slice(0, 10) <= toDate)
     && (!q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase()))
   ), [orders, q, fromDate, toDate]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 50));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageRows = filtered.slice(currentPage * 50, (currentPage + 1) * 50);
+  useEffect(() => setPage(0), [q, fromDate, toDate, activeTenantId]);
 
   const exportRegistry = () => downloadReportCsv({
     title: 'Satis reyestri',
@@ -58,7 +63,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   }, [orders, selected]);
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {ordersError && <div role="alert" className="form-error">{ordersError.message || 'Satış məlumatları oxunmadı.'}</div>}
       {actionError && <div role="alert" style={{ padding: '10px 14px', border: '1px solid #fecaca', borderRadius: 10, background: '#fff1f2', color: '#b91c1c', fontSize: 13 }}>{actionError}</div>}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -78,7 +83,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
       </div>
 
       {view === 'table' ? (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead style={{ background: '#f8fafc' }}>
               <tr>
@@ -86,7 +91,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
               </tr>
             </thead>
             <tbody>
-              {filtered.map(o => (
+              {pageRows.map(o => (
                 <tr key={o.id} onClick={() => setSelected(o)}
                   style={{ cursor: 'pointer', borderTop: '1px solid #f1f5f9' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
@@ -122,7 +127,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
                   <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{col.length} · {sum.toFixed(0)} ₼</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {col.map(o => (
+                  {col.filter(o => pageRows.includes(o)).map(o => (
                     <div key={o.id} onClick={() => setSelected(o)}
                       style={{ background: '#fff', padding: 10, borderRadius: 10, cursor: 'pointer', border: '1px solid #e2e8f0' }}>
                       <div style={{ fontWeight: 700, fontSize: 13 }}>{o.order_no}</div>
@@ -139,6 +144,14 @@ export default function SalesOrdersPage({ repository, customers = [], products =
           })}
         </div>
       )}
+
+      <nav aria-label="Satış reyestri səhifələri" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <span>{filtered.length} sifariş · {currentPage + 1} / {pageCount}</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="icon-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18} /></button>
+          <button type="button" className="icon-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18} /></button>
+        </div>
+      </nav>
 
       {selected && (
         <OrderDrawer

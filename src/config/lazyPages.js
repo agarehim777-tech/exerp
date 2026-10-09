@@ -54,6 +54,7 @@ export const AccountingPageV2 = lazy(() => import("../modules/accounting/Account
 /* ------------------------------------------------------- HR & analytics */
 export const HrPage = lazy(() => import("../pages/HrPage.jsx"));
 export const KpiPage = lazy(() => import("../pages/KpiPage.jsx"));
+export const ProjectsPage = named(() => import("../modules/projects/ProjectsPage.jsx"), "ProjectsPage");
 export const BonusesPage = lazy(() => import("../pages/BonusesPage.jsx"));
 export const ReportsPage = named(() => import("../modules/reports/ReportsPage.jsx"), "ReportsPage");
 export const FinancialStatementsPage = lazy(() => import("../modules/reports/FinancialStatementsPage.jsx"));

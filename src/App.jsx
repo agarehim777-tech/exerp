@@ -69,6 +69,7 @@ import {
   stages,
 } from "./data.js";
 import { pageMeta } from "./config/page-meta.js";
+import { ProjectsPage } from "./config/lazyPages.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
 import { AccessCheckPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
@@ -2002,7 +2003,9 @@ function App() {
     }
   }
 
-  function runProjectsExportAction() {
+  async function runProjectsExportAction() {
+    if (!requirePermission("projects.manage", "ROI export etmək")) return;
+    const isCurrent = beginTenantRequest('project-export');
     if (projectRoiRows.length === 0) {
       notify("Export üçün layihə tapılmadı.", "warning");
       return;
@@ -2033,6 +2036,21 @@ function App() {
         orders: project.orderIds,
       })),
     };
+    const exportId = `RPT-ROI-${crypto.randomUUID()}`;
+    const exportRow = {
+      id: exportId, title: "Layihə ROI", format: "Excel/PDF", period: snapshot.period,
+      at: stamp, rows: projectRoiRows.length, score: Math.max(0, Math.min(100, Math.round(50 + summary.avgRoi))),
+      riskCount: summary.riskCount, owner: activeRoleInfo?.name || "System", status: "Hazır", snapshot,
+    };
+    try {
+      await saveWorkflowRecord({ tenantId: activeTenantId, module: 'reports',
+        record: { record_type: 'report_export', record_no: exportId, status: 'completed', title: exportRow.title,
+          completed_at: new Date().toISOString(), payload: exportRow } });
+    } catch (error) {
+      if (isCurrent()) notify(`ROI exportu saxlanmadı: ${error.message}`, 'warning');
+      return;
+    }
+    if (!isCurrent()) return;
     setState((current) =>
       auditCurrentState(
         {
@@ -2046,7 +2064,7 @@ function App() {
           })),
           reportExports: [
             {
-              id: `RPT-ROI-${Date.now().toString().slice(-6)}`,
+              id: exportId,
               title: "Layihə ROI",
               format: "Excel/PDF",
               period: snapshot.period,
@@ -6762,6 +6780,7 @@ function App() {
               onExport={(id) => setModal({ type: "contractPrint", contractId: id })}
             />
           )}
+          {active === "projects" && <ProjectsPage projects={filtered.projects} snapshot={state.projectRoiSnapshot} />}
           {active === "reports" && (
             <ReportsPage
               orders={state.orders}

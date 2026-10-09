@@ -23,3 +23,18 @@ it('shows a server-confirmed sale and refreshed payment directly from the creati
   view.rerender(<SalesOrdersPage repository={{ ...repository, orders: [] }} />);
   expect(screen.queryByText('SF-NEW')).toBeNull();
 });
+
+it('bounds rendered rows while searching the complete loaded registry', () => {
+  const orders = Array.from({ length: 203 }, (_, index) => ({ id: `order-${index}`, order_no: `SF-${index}`,
+    total: 1200, paid_amount: 0, currency: 'AZN', order_date: '2026-10-09', status: 'confirmed', customer: { name: `Buyer ${index}` } }));
+  const view = render(<SalesOrdersPage repository={{ orders, loading: false, hasMore: false }} />);
+  expect(view.container.querySelectorAll('tbody tr')).toHaveLength(50);
+  expect(screen.getByRole('navigation', { name: 'Satış reyestri səhifələri' })).toHaveTextContent('203 sifariş');
+  for (let index = 0; index < 4; index++) fireEvent.click(screen.getByRole('button', { name: 'Növbəti səhifə' }));
+  expect(view.container.querySelectorAll('tbody tr')).toHaveLength(3);
+  expect(screen.getByText('SF-202')).toBeVisible();
+  fireEvent.change(screen.getByPlaceholderText('Axtar...'), { target: { value: 'SF-175' } });
+  expect(view.container.querySelectorAll('tbody tr')).toHaveLength(1);
+  fireEvent.click(screen.getByText('SF-175'));
+  expect(screen.getByRole('dialog')).toHaveTextContent('SF-175');
+});

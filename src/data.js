@@ -42,6 +42,7 @@ export const navItems = [
   { id: "hr", label: "HR", group: "ops" },
 
   // Analitika
+  { id: "projects", label: "Layihə ROI", group: "analytics" },
   { id: "reports", label: "Hesabatlar", group: "analytics" },
   { id: "financial-statements", label: "Maliyyə hesabatları", group: "analytics" },
   { id: "kpi", label: "KPI", group: "analytics" },

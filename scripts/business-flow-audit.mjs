@@ -1177,9 +1177,9 @@ async function auditProjectRoiWorkflow(browser) {
     assert(panelText.includes("Avtomatik satış layihəsi") || panelText.includes(sale.order.id), "Project ROI page did not derive a project portfolio from sales");
 
     await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(150);
-
-    const state = await readState(page);
+    const state = await waitForState(state => state.reportExports?.some(row =>
+      row.title === 'Layihə ROI' && row.workflowId && row.snapshot?.projects?.some(project => project.orders?.includes(sale.order.id))),
+    'Project ROI export was not persisted for the isolated sale');
     const snapshot = state.projectRoiSnapshot;
     const exportRow = state.reportExports?.find((item) => item.title === "Layihə ROI");
     assert(snapshot?.projects?.length > 0, "Project ROI export did not persist a snapshot");
