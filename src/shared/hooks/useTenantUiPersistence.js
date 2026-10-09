@@ -9,6 +9,8 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
   const ready = Boolean(tenantId && loadedTenant === scope);
   const snapshotUnavailable = useRef(false);
   const saveTimer = useRef(null);
+  const snapshotJson = JSON.stringify(stripOperationalCollections(state));
+  const uiJson = JSON.stringify(pickUiPreferences(state));
 
   useEffect(() => {
     let cancelled = false;
@@ -34,18 +36,21 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
 
   useEffect(() => {
     if (!ready) return undefined;
-    try { writeTenantUiCache(window.localStorage, `${localKey}.${tenantId}`, state); }
+    try { writeTenantUiCache(window.localStorage, `${localKey}.${tenantId}`, JSON.parse(uiJson)); }
     catch (error) { onWarning?.(error); }
+  }, [tenantId, ready, uiJson, localKey, onWarning]);
+
+  useEffect(() => {
     if (!tenantId || !userId || !ready || snapshotUnavailable.current) return undefined;
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
       supabase.from('tenant_state_snapshots').upsert({
-        tenant_id: tenantId, state: stripOperationalCollections(state), schema_version: schemaVersion,
+        tenant_id: tenantId, state: JSON.parse(snapshotJson), schema_version: schemaVersion,
         updated_at: new Date().toISOString(), updated_by: userId,
       }, { onConflict: 'tenant_id' }).then(({ error }) => { if (error) onError?.(error); });
     }, 800);
     return () => window.clearTimeout(saveTimer.current);
-  }, [tenantId, userId, ready, state, localKey, schemaVersion, onWarning, onError]);
+  }, [tenantId, userId, ready, snapshotJson, schemaVersion, onError]);
 
   return { ready, snapshotUnavailable };
 }

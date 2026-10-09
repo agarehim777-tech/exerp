@@ -1,9 +1,12 @@
+const moneyFormatter = new Intl.NumberFormat("az-AZ");
+const percentFormatter = new Intl.NumberFormat("az-AZ", { maximumFractionDigits: 1 });
+
 export function money(value) {
-  return `${new Intl.NumberFormat("az-AZ").format(value)} ₼`;
+  return `${moneyFormatter.format(value)} ₼`;
 }
 
 export function percent(value) {
-  return `${new Intl.NumberFormat("az-AZ", { maximumFractionDigits: 1 }).format(value)}%`;
+  return `${percentFormatter.format(value)}%`;
 }
 
 export function normalize(value) {

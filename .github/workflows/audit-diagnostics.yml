@@ -5,6 +5,9 @@ on:
     paths:
       - scripts/audit-browser-diagnostics.mjs
       - .github/workflows/audit-diagnostics.yml
+      - src/services/date.js
+      - src/services/format.js
+      - src/shared/hooks/useTenantUiPersistence.js
   workflow_dispatch:
 permissions:
   contents: read

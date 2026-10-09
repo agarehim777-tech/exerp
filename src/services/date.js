@@ -1,9 +1,9 @@
+const paymentDateFormatter = new Intl.DateTimeFormat("az-AZ", {
+  day: "2-digit", month: "2-digit", year: "numeric",
+});
+
 export function formatPaymentDate(date) {
-  return new Intl.DateTimeFormat("az-AZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return paymentDateFormatter.format(date);
 }
 
 export function formatDateInput(date) {
