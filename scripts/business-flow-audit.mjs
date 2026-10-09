@@ -7,7 +7,7 @@ import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRes
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 import { round2 } from '../src/shared/utils/invoiceMath.js';
-import { collectAuditRequests } from './audit-browser-diagnostics.mjs';
+import { collectAuditRequests, startAuditCpuProfile } from './audit-browser-diagnostics.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
@@ -78,6 +78,7 @@ async function createFlowPage(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, acceptDownloads: true });
   const page = await context.newPage();
   const requestDiagnostics = collectAuditRequests(page);
+  const stopCpuProfile = process.env.AUDIT_DIAGNOSTIC_ONLY === 'true' ? await startAuditCpuProfile(context, page) : null;
   const evidenceName = currentFlowName;
   const closeContext = context.close.bind(context);
   let closing = false;
@@ -85,6 +86,9 @@ async function createFlowPage(browser) {
     if (closing) return;
     closing = true;
     const requests = requestDiagnostics();
+    if (stopCpuProfile) {
+      try { requests.cpu = await stopCpuProfile(); } catch (error) { requests.cpu = { unavailable: error.message }; }
+    }
     try {
       requests.ui = await Promise.race([
         page.evaluate(() => ({ longTasks: window.__auditLongTasks || [],
