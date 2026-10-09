@@ -4,7 +4,7 @@ import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 import { ensureMainCashAccount } from '../../services/cashAccounts';
-import { readOrderPage, readOrderRelations } from '../../services/orderRead.js';
+import { readOrderById, readOrderPage, readOrderRelations } from '../../services/orderRead.js';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
 
@@ -267,6 +267,7 @@ export function useOrders(tenantId) {
   }, [tenantId, loading, orders]);
 
   const create = async ({ items = [], request_key: requestKey, credit = null, bonus_allocations: bonusAllocations = [], ...header }) => {
+    const isCurrent = begin('create');
     if (requestKey && header.customer_id) {
       const initialPayment = Number(credit?.initial_payment || 0);
       let resolvedAccount = null;
@@ -280,7 +281,24 @@ export function useOrders(tenantId) {
           currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
           bonusAllocations, initialPayment, accountId: resolvedAccount?.id || null,
         });
-        await fetchAll();
+        // Hydrate only the committed order; refreshing a whole portfolio must not hold the form open.
+        try {
+          const row = await readOrderById(tenantId, completeResult.order_id, isCurrent);
+          if (row && isCurrent()) {
+            const related = await readOrderRelations(tenantId, [row.id], isCurrent);
+            if (related && isCurrent()) {
+              const saved = { ...row, credit: related.credits.find(item => item.order_id === row.id) || null,
+                bonus_assignments: related.bonuses, delivery: related.deliveries[0] || null };
+              setOrders(current => [saved, ...current.filter(item => item.id !== row.id)].slice(0, limit));
+              setLoadedScope(scope);
+              setLoaded(true);
+              setError(null);
+            }
+          }
+        } catch (readError) {
+          if (isCurrent()) setError(readError);
+        }
+        if (isCurrent()) void fetchAll();
         return { id: completeResult.order_id, creditId: completeResult.credit_id };
       } catch (completeError) {
         if (!ENABLE_LEGACY_WRITES || (!isMissingRpc(completeError) && completeError?.code !== 'ERP_SCHEMA_MIGRATION_REQUIRED')) throw completeError;

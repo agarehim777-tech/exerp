@@ -9,6 +9,10 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
     in: (...args) => { call.filters.push(args); return query; },
     is: (...args) => { call.filters.push(args); return query; },
     order: (column, options) => { call.order.push([column, options]); return query; },
+    maybeSingle: () => {
+      mocks.calls.push(call);
+      return Promise.resolve(mocks.fail === table ? { error: { message: `${table} failed` } } : { data: { id: 'saved-order' } });
+    },
     range: (start, end) => {
       mocks.calls.push({ ...call, start, end });
       if (mocks.fail === table) return Promise.resolve({ error: { message: `${table} failed` } });
@@ -20,8 +24,16 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
   };
   return query;
 } } }));
-import { readOrderPage, readOrderRelations } from '../services/orderRead.js';
+import { readOrderById, readOrderPage, readOrderRelations } from '../services/orderRead.js';
 beforeEach(() => { mocks.calls = []; mocks.fail = ''; });
+
+it('reads a single committed order under both tenant and order filters', async () => {
+  expect(await readOrderById('tenant-a', 'saved-order', () => true)).toEqual({ id: 'saved-order' });
+  expect(mocks.calls[0].filters).toEqual([['tenant_id', 'tenant-a'], ['id', 'saved-order'], ['status', 'cancelled']]);
+  expect(await readOrderById('tenant-a', 'saved-order', () => false)).toBeNull();
+  mocks.fail = 'orders';
+  await expect(readOrderById('tenant-a', 'saved-order', () => true)).rejects.toMatchObject({ message: 'orders failed' });
+});
 
 it('keeps newest same-day sales visible and reads through a lower API row cap', async () => {
   const rows = await readOrderPage('tenant-a', 201, () => true);

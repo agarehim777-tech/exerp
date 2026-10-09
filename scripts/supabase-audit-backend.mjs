@@ -113,11 +113,13 @@ export async function createAuditBackend(env, fetcher = fetch) {
   return {
     tenantId,
     readCanonical: read,
-    async readCollections(names) {
+    async readCollections(names, { name } = {}) {
       if (!Array.isArray(names) || !names.length || names.some(name => !/^[a-zA-Z]+$/.test(name))) {
         throw new Error('AUDIT_COLLECTION_NAMES_REQUIRED');
       }
-      return read('tenant_collection_records', '*', `&collection=in.(${names.join(',')})&order=collection.asc,position.asc,record_key.asc`);
+      if (name !== undefined && typeof name !== 'string') throw new Error('AUDIT_COLLECTION_RECORD_NAME_INVALID');
+      const recordFilter = name === undefined ? '' : `&data->>name=eq.${encodeURIComponent(name)}`;
+      return read('tenant_collection_records', '*', `&collection=in.(${names.join(',')})${recordFilter}&order=collection.asc,position.asc,record_key.asc`);
     },
     command: (name, data) => request(`rest/v1/rpc/${name}`, { method: 'POST', data, token }),
     invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
@@ -141,6 +143,10 @@ export async function createAuditBackend(env, fetcher = fetch) {
         if (scope === 'hr' && table === 'audit_events') filter += '&module=in.(HR,HR/Payroll)';
         if (customerId && ['customers', 'orders', 'credit_contracts'].includes(table)) {
           filter += `&${table === 'customers' ? 'id' : 'customer_id'}=eq.${encodeURIComponent(customerId)}`;
+        }
+        if (customerId && ['credit_installments', 'credit_payments'].includes(table)) {
+          select += ',credit:credit_contracts!inner(customer_id,tenant_id)';
+          filter += `&credit.customer_id=eq.${encodeURIComponent(customerId)}&credit.tenant_id=eq.${tenantId}`;
         }
         if (warehouseId && ['warehouses', 'stock_balances'].includes(table)) {
           filter += `&${table === 'warehouses' ? 'id' : 'warehouse_id'}=eq.${encodeURIComponent(warehouseId)}`;

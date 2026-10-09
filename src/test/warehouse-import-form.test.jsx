@@ -8,6 +8,19 @@ const chooseFile = (view, text = csv) => fireEvent.change(view.getByLabelText('C
   target: { files: [{ name: 'stock.csv', text: async () => text }] },
 });
 
+it('revalidates the preview when the canonical warehouse list arrives', async () => {
+  const save = vi.fn().mockResolvedValue({ row_count: 1 });
+  const view = render(<WarehouseImportModal warehouses={[]} onClose={vi.fn()} onImport={save} />);
+  chooseFile(view);
+  await waitFor(() => expect(view.getByText(/anbar tapılmadı/)).toBeInTheDocument());
+  expect(view.getByRole('button', { name: 'İmport et' })).toBeDisabled();
+  view.rerender(<WarehouseImportModal warehouses={warehouses} onClose={vi.fn()} onImport={save} />);
+  expect(view.queryByText(/anbar tapılmadı/)).not.toBeInTheDocument();
+  fireEvent.click(view.getByRole('button', { name: 'İmport et' }));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.calls[0][0][0].warehouseId).toBe('warehouse');
+});
+
 it('disables changes while saving, preserves an uncertain request and gives changed data a new key', async () => {
   let reject;
   const save = vi.fn().mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }))

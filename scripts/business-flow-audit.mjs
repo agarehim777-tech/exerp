@@ -265,7 +265,7 @@ async function createCustomer(page) {
 }
 
 async function createCreditSaleFromCurrentData(page, expectedFin) {
-  const employees = await auditBackend.readCollections(['employees']);
+  const employees = await auditBackend.readCollections(['employees'], { name: 'QA Audit Seller' });
   if (!employees.some(e => e.data?.name === 'QA Audit Seller')) {
     await selectModule(page, 14);
     await createHrEmployee(page, { name: 'QA Audit Seller', position: 'Satıcı', department: 'Satış', salary: 0 });
@@ -1331,7 +1331,7 @@ async function createHrEmployee(page, values) {
   await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);
   await modal.getByLabel('Şöbə', { exact: true }).fill(values.department);
   await modal.getByLabel('Üst şöbə', { exact: true }).fill(values.departmentParent || '');
-  const manager = values.managerName ? (await auditBackend.readCollections(['employees'])).map(row => row.data)
+  const manager = values.managerName ? (await auditBackend.readCollections(['employees'], { name: values.managerName })).map(row => row.data)
     .find(e => e.name === values.managerName) : null;
   if (values.managerName) assert(manager, 'Required HR manager was not persisted');
   await modal.getByLabel(/^Kimə tabedir/).selectOption(manager?.id || '');
@@ -1342,7 +1342,7 @@ async function createHrEmployee(page, values) {
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   await modal.locator('button[type="submit"]').click();
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
-  await waitForCanonical(() => auditBackend.readCollections(['employees']),
+  await waitForCanonical(() => auditBackend.readCollections(['employees'], { name: values.name }),
     rows => rows.some(row => row.data?.name === values.name), 'Employee was not persisted');
 }
 

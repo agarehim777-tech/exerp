@@ -21,6 +21,15 @@ export function readOrderPage(tenantId, limit, isCurrent) {
     .order('order_date', { ascending: false }).order('created_at', { ascending: false }).order('id'), limit, isCurrent);
 }
 
+export async function readOrderById(tenantId, orderId, isCurrent) {
+  const { data, error } = await supabase.from('orders')
+    .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,order_item_id,status)')
+    .eq('tenant_id', tenantId).eq('id', orderId).neq('status', 'cancelled').maybeSingle();
+  if (!isCurrent()) return null;
+  if (error) throw error;
+  return data;
+}
+
 export async function readOrderRelations(tenantId, orderIds, isCurrent) {
   if (!orderIds.length) return { credits: [], bonuses: [], deliveries: [], deliveryError: null };
   const query = (table, columns) => supabase.from(table).select(columns, { count: 'exact' })

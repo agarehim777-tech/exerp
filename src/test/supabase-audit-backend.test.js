@@ -58,6 +58,12 @@ it('narrows fixture reads and paginates composite stock identities with a stable
     expect(url.searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
   }
   const balances = urls.filter(url => url.pathname.endsWith('/stock_balances'));
+  for (const url of urls.filter(url => /credit_installments|credit_payments/.test(url.pathname))) {
+    expect(url.searchParams.get('select')).toContain('credit:credit_contracts!inner(customer_id,tenant_id)');
+    expect(url.searchParams.get('credit.customer_id')).toBe('eq.customer');
+    expect(url.searchParams.get('credit.tenant_id')).toBe(`eq.${tenant}`);
+    expect(url.searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  }
   expect(balances.map(url => url.searchParams.get('offset'))).toEqual(['0','500']);
   expect(balances.every(url => url.searchParams.get('order') === 'warehouse_id.asc,product_id.asc')).toBe(true);
   expect(balances.every(url => url.searchParams.get('warehouse_id') === 'eq.warehouse')).toBe(true);
@@ -65,6 +71,13 @@ it('narrows fixture reads and paginates composite stock identities with a stable
   await backend.readCollections(['employees','departments']);
   expect(urls[0].searchParams.get('collection')).toBe('in.(employees,departments)');
   expect(urls[0].searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  urls.length = 0;
+  await backend.readCollections(['employees'], { name: 'QA & Seller' });
+  expect(urls[0].searchParams.get('data->>name')).toBe('eq.QA & Seller');
+  expect(urls[0].searchParams.get('collection')).toBe('in.(employees)');
+  expect(urls[0].searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  expect(urls[0].searchParams.get('order')).toBe('collection.asc,position.asc,record_key.asc');
+  await expect(backend.readCollections(['employees'], { name: {} })).rejects.toThrow('NAME_INVALID');
   await expect(backend.readCollections(['employees)&tenant_id=eq.foreign'])).rejects.toThrow('COLLECTION');
   await expect(backend.readState({ scope: 'unknown' })).rejects.toThrow('SCOPE');
   urls.length = 0;

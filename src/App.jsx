@@ -313,7 +313,8 @@ function App() {
   const { begin: beginTenantRequest } = useTenantRequestScope(activeTenantId);
   const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
-  const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = useOrders(activeTenantId);
+  const dbSales = useOrders(activeTenantId);
+  const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
   const legacyBonusMigrationRef = useRef("");
   const { ready: tenantStateReady } = useTenantUiPersistence({
@@ -462,7 +463,7 @@ function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [modal, setModal] = useState(null);
   useEffect(() => {
-    if (modal?.type === 'sales' && activeTenantId) {
+    if (['sales', 'warehouseImport'].includes(modal?.type) && activeTenantId) {
       refreshDbCustomers();
       refreshDbProducts();
       dbInventory.refresh();
@@ -6606,7 +6607,7 @@ function App() {
 
 
           {active === "sales-dashboard" && <SalesDashboardPage />}
-          {active === "sales" && <SalesOrdersPage selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
+          {active === "sales" && <SalesOrdersPage repository={dbSales} customers={dbCustomers} products={dbProducts} selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
           {active === "stock" && <StockPage inventory={dbInventory} products={dbProducts} />}
           {active === "products" && (
             <ProductsPage
@@ -6966,7 +6967,7 @@ function App() {
             employees: state.employees || [],
             departments: state.departments || [],
             stock: state.stock,
-            warehouses: state.warehouses,
+            warehouses: dbInventory.warehouses,
             warehouseStock: state.warehouseStock,
             purchaseOrders: state.purchaseOrders || [],
             sellers: salesUsers,

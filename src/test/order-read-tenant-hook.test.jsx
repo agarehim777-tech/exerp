@@ -1,16 +1,34 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ read: vi.fn(), relations: vi.fn(), resync: vi.fn() }));
-vi.mock('../services/orderRead.js', () => ({ readOrderPage: mocks.read, readOrderRelations: mocks.relations }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), byId: vi.fn(), create: vi.fn(), relations: vi.fn(), resync: vi.fn() }));
+vi.mock('../services/orderRead.js', () => ({ readOrderPage: mocks.read, readOrderById: mocks.byId, readOrderRelations: mocks.relations }));
+vi.mock('../services/coreOperations', async importOriginal => ({ ...(await importOriginal()), createSalesOrderComplete: mocks.create }));
 vi.mock('../shared/hooks/useRealtimeResync', () => ({ useRealtimeResync: mocks.resync }));
 import { useOrders } from '../shared/hooks/useOrders.js';
 
 beforeEach(() => {
   mocks.read.mockReset();
+  mocks.byId.mockReset();
+  mocks.create.mockReset();
   mocks.resync.mockReset();
   mocks.relations.mockReset().mockResolvedValue({ credits: [], bonuses: [], deliveries: [], deliveryError: null });
 });
 afterEach(cleanup);
+
+it('hydrates the committed order without waiting for a full portfolio refresh', async () => {
+  mocks.read.mockResolvedValueOnce([]).mockImplementationOnce(() => new Promise(() => {}));
+  mocks.create.mockResolvedValue({ order_id: 'new-order', credit_id: 'new-credit' });
+  mocks.byId.mockResolvedValue({ id: 'new-order', total: 1200, paid_amount: 0 });
+  const { result } = renderHook(() => useOrders('A'));
+  await waitFor(() => expect(result.current.loaded).toBe(true));
+  mocks.relations.mockResolvedValue({ credits: [{ id: 'new-credit', order_id: 'new-order' }], bonuses: [], deliveries: [] });
+  let saved;
+  await act(async () => { saved = await result.current.create({ request_key: 'request-1', customer_id: 'buyer', items: [] }); });
+  expect(saved).toEqual({ id: 'new-order', creditId: 'new-credit' });
+  expect(mocks.byId.mock.calls[0].slice(0, 2)).toEqual(['A', 'new-order']);
+  expect(mocks.relations.mock.calls.at(-1).slice(0, 2)).toEqual(['A', ['new-order']]);
+  expect(result.current.orders[0]).toMatchObject({ id: 'new-order', total: 1200, credit: { id: 'new-credit' } });
+});
 
 it('refreshes canonical credit links when contracts or payments change', async () => {
   mocks.read.mockResolvedValue([{ id: 'order-1' }]);

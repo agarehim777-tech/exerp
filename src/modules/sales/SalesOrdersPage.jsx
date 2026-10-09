@@ -2,9 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { AlertTriangle, CreditCard, Download, PackageCheck, ReceiptText, X } from 'lucide-react';
 import { downloadReportCsv } from '../../shared/lib/reportDownload.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
-import { useOrders } from '../../shared/hooks/useOrders.js';
-import { useCustomers } from '../../shared/hooks/useCustomers.js';
-import { useProducts } from '../../shared/hooks/useProducts.js';
 import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
@@ -15,12 +12,10 @@ const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
 const STATUS_LABELS = { draft: 'Təsdiqləndi', pending: 'Təsdiqləndi', confirmed: 'Təsdiqləndi', processing: 'Təsdiqləndi', shipped: 'Təsdiqləndi', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
 const canonicalStatus = status => ['draft', 'pending', 'processing', 'shipped'].includes(status) ? 'confirmed' : status;
 
-export default function SalesOrdersPage({ selectedOrderId = '', onSelectedOrderHandled }) {
+export default function SalesOrdersPage({ repository, customers = [], products = [], selectedOrderId = '', onSelectedOrderHandled }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
-  const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading, error: ordersError } = useOrders(activeTenantId);
+  const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading, error: ordersError } = repository;
   const { accounts: cashAccounts } = useCashbook(activeTenantId);
-  const { customers } = useCustomers(activeTenantId);
-  const { products } = useProducts(activeTenantId);
   const [view, setView] = useState('table');
   const [q, setQ] = useState('');
   const [fromDate, setFromDate] = useState('');

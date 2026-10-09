@@ -629,13 +629,24 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
   const fileInputRef = useRef(null);
   const requestKey = useRef(crypto.randomUUID());
   const [fileName, setFileName] = useState("");
-  const [analysis, setAnalysis] = useState({ rows: [], errors: [] });
+  const [csvText, setCsvText] = useState(null);
+  const [readError, setReadError] = useState('');
+  const analysis = useMemo(() => readError
+    ? { rows: [], errors: [readError] }
+    : csvText === null ? { rows: [], errors: [] } : parseWarehouseImportCsv(csvText, warehouses),
+  [csvText, warehouses, readError]);
+  const submittedRows = useRef(null);
   const [isReading, setIsReading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
   async function submitImport() {
-    if (saving) return;
+    if (saving || isReading || analysis.errors.length || !analysis.rows.length) return;
+    const signature = JSON.stringify(analysis.rows);
+    if (submittedRows.current !== null && submittedRows.current !== signature) {
+      requestKey.current = crypto.randomUUID();
+    }
+    submittedRows.current = signature;
     setSaving(true);
     setSaveError('');
     try { await onImport(analysis.rows, requestKey.current); }
@@ -646,14 +657,17 @@ function WarehouseImportModal({ warehouses, onClose, onImport }) {
   async function readFile(file) {
     if (!file || saving) return;
     requestKey.current = crypto.randomUUID();
+    submittedRows.current = null;
     setSaveError('');
+    setReadError('');
+    setCsvText(null);
     setIsReading(true);
     setFileName(file.name);
     try {
       const text = await file.text();
-      setAnalysis(parseWarehouseImportCsv(text, warehouses));
+      setCsvText(text);
     } catch {
-      setAnalysis({ rows: [], errors: ["CSV faylı oxunmadı."] });
+      setReadError("CSV faylı oxunmadı.");
     } finally {
       setIsReading(false);
     }
