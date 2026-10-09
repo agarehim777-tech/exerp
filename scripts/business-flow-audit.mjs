@@ -7,6 +7,7 @@ import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRes
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 import { round2 } from '../src/shared/utils/invoiceMath.js';
+import { collectAuditRequests } from './audit-browser-diagnostics.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
@@ -76,12 +77,27 @@ function collectErrors(page, errors) {
 async function createFlowPage(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, acceptDownloads: true });
   const page = await context.newPage();
+  const requestDiagnostics = collectAuditRequests(page);
   const evidenceName = currentFlowName;
   const closeContext = context.close.bind(context);
   let closing = false;
   context.close = async () => {
     if (closing) return;
     closing = true;
+    const requests = requestDiagnostics();
+    try {
+      requests.ui = await Promise.race([
+        page.evaluate(() => ({ longTasks: window.__auditLongTasks || [],
+          dialogs: [...document.querySelectorAll('[role="dialog"]')].map(dialog => ({
+            title: dialog.querySelector('h1,h2,h3')?.textContent,
+            buttons: [...dialog.querySelectorAll('button')].map(button => ({ text: button.textContent?.trim(), disabled: button.disabled })),
+          })) })),
+        new Promise(resolve => setTimeout(() => resolve({ unavailable: 'UI did not respond within 1000ms' }), 1000)),
+      ]);
+    } catch { requests.ui = { unavailable: 'Page closed' }; }
+    console.log(`[audit] ${evidenceName} requests: ${JSON.stringify(requests)}`);
+    await mkdir('test-results/audit-evidence', { recursive: true });
+    await writeFile(`test-results/audit-evidence/${evidenceName}-requests.json`, JSON.stringify(requests, null, 2));
     if (errors.length) console.warn(`[audit] ${evidenceName} browser diagnostics: ${errors.join(' | ')}`);
     try {
       if (!page.isClosed()) {
@@ -97,6 +113,15 @@ async function createFlowPage(browser) {
   page.setDefaultTimeout(8000);
   const errors = [];
   collectErrors(page, errors);
+  await page.addInitScript(() => {
+    window.__auditLongTasks = [];
+    if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
+      new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) window.__auditLongTasks.push({ start: Math.round(entry.startTime), duration: Math.round(entry.duration) });
+        window.__auditLongTasks = window.__auditLongTasks.slice(-50);
+      }).observe({ type: 'longtask', buffered: true });
+    }
+  });
   await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)),
     { key: auditBackend.storageKey, session: auditBackend.session });
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
@@ -1718,7 +1743,8 @@ async function auditSupportMessaging(browser) {
 }
 
 assertE2eTarget(process.env);
-const report = { flows: [], failures: [] };
+const diagnosticOnly = process.env.AUDIT_DIAGNOSTIC_ONLY === 'true';
+const report = { kind: diagnosticOnly ? 'diagnostic' : 'release', flows: [], failures: [] };
 const flowFilter = process.env.AUDIT_FLOW_FILTER?.trim();
 const flowTimeoutMs = Number(process.env.AUDIT_FLOW_TIMEOUT_MS || 60000);
 
@@ -1785,8 +1811,8 @@ for (const [name, run] of auditFlows) {
     console.log(`[audit] ${name} passed`);
   } catch (error) {
     incompatibleBackend = error.code === 'AUDIT_BACKEND_INCOMPATIBLE';
-    report.failures.push({ name, error: error.message });
-    console.error(`[audit] ${name} failed: ${error.message}`);
+    report.failures.push({ name, error: error.message, stack: error.stack });
+    console.error(`[audit] ${name} failed: ${error.stack || error.message}`);
   }
   await saveReport();
 }
@@ -1803,6 +1829,6 @@ await writeFile(
 );
 console.log(JSON.stringify(report, null, 2));
 
-if (report.flows.length !== 21 || report.failures.length > 0) {
+if (report.flows.length !== (diagnosticOnly ? auditFlows.length : 21) || !auditFlows.length || report.failures.length > 0) {
   process.exitCode = 1;
 }

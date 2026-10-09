@@ -1,0 +1,42 @@
+name: Focused audit diagnostics (not a release gate)
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/audit-browser-diagnostics.mjs
+      - .github/workflows/audit-diagnostics.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
+      E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
+      E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
+      AUDIT_FLOW_FILTER: sales-credit-warehouse-reservation
+      AUDIT_DIAGNOSTIC_ONLY: 'true'
+      AUDIT_FLOW_TIMEOUT_MS: '90000'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run audit:flows
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-audit-diagnostics
+          path: test-results
+          retention-days: 5
