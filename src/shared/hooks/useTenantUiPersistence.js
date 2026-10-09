@@ -9,6 +9,9 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
   const ready = Boolean(tenantId && loadedTenant === scope);
   const snapshotUnavailable = useRef(false);
   const saveTimer = useRef(null);
+  const writer = useRef(null);
+  const errorHandler = useRef(onError);
+  errorHandler.current = onError;
   const snapshotJson = JSON.stringify(stripOperationalCollections(state));
   const uiJson = JSON.stringify(pickUiPreferences(state));
 
@@ -41,16 +44,44 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
   }, [tenantId, ready, uiJson, localKey, onWarning]);
 
   useEffect(() => {
+    const session = { alive: true, busy: false, pending: null };
+    writer.current = session;
+    return () => {
+      session.alive = false;
+      window.clearTimeout(saveTimer.current);
+    };
+  }, [scope, userId, ready]);
+
+  useEffect(() => {
     if (!tenantId || !userId || !ready || snapshotUnavailable.current) return undefined;
+    const session = writer.current;
+    session.pending = {
+      tenant_id: tenantId, state: JSON.parse(snapshotJson), schema_version: schemaVersion,
+      updated_at: new Date().toISOString(), updated_by: userId,
+    };
     window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      supabase.from('tenant_state_snapshots').upsert({
-        tenant_id: tenantId, state: JSON.parse(snapshotJson), schema_version: schemaVersion,
-        updated_at: new Date().toISOString(), updated_by: userId,
-      }, { onConflict: 'tenant_id' }).then(({ error }) => { if (error) onError?.(error); });
+    saveTimer.current = window.setTimeout(async () => {
+      if (!session.alive || session.busy) return;
+      session.busy = true;
+      try {
+        // Only one snapshot write may be in flight; later edits replace the queued payload.
+        while (session.alive && session.pending) {
+          const payload = session.pending;
+          session.pending = null;
+          const { error } = await supabase.from('tenant_state_snapshots').upsert(payload, { onConflict: 'tenant_id' });
+          if (error) {
+            session.pending ||= payload;
+            throw error;
+          }
+        }
+      } catch (error) {
+        if (session.alive) errorHandler.current?.(error);
+      } finally {
+        session.busy = false;
+      }
     }, 800);
     return () => window.clearTimeout(saveTimer.current);
-  }, [tenantId, userId, ready, snapshotJson, schemaVersion, onError]);
+  }, [tenantId, userId, ready, snapshotJson, schemaVersion]);
 
   return { ready, snapshotUnavailable };
 }

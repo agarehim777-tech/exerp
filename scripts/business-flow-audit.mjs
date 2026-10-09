@@ -7,6 +7,7 @@ import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRes
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 import { round2 } from '../src/shared/utils/invoiceMath.js';
+import { azn } from '../src/shared/ui/tokens.js';
 import { collectAuditRequests, startAuditCpuProfile } from './audit-browser-diagnostics.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
@@ -575,6 +576,7 @@ async function auditSeparateCreditContracts(browser) {
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: firstSale.contract.id }).waitFor();
     await page.locator('[data-testid="credit-contract-cell"]').filter({ hasText: secondSale.contract.id }).waitFor();
     await selectModule(page, 1);
+    await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     let customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
     await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
@@ -592,6 +594,7 @@ async function auditSeparateCreditContracts(browser) {
     await linkedOrderCard.getByRole('button', { name: 'Sifariş kartını bağla', exact: true }).click();
     await linkedOrderCard.waitFor({ state: 'hidden' });
     await selectModule(page, 1);
+    await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
     await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
@@ -929,9 +932,8 @@ async function auditFinanceModuleIntegration(browser) {
     }
     const sourceRow = page.locator('main.main tr').filter({ has: page.getByText(source.name, { exact: true }) });
     const targetRow = page.locator('main.main tr').filter({ has: page.getByText(target.name, { exact: true }) });
-    const formatCash = amount => new Intl.NumberFormat('az-AZ', { style: 'currency', currency: 'AZN' }).format(amount);
-    assert((await sourceRow.innerText()).includes(formatCash(210)) && (await targetRow.innerText()).includes(formatCash(40)),
-      'Cash account UI does not match the server ledger');
+    await sourceRow.getByText(azn(210), { exact: true }).waitFor({ state: 'visible' });
+    await targetRow.getByText(azn(40), { exact: true }).waitFor({ state: 'visible' });
     assert(errors.length === 0, 'Finance integration produced browser errors: ' + errors.join(' | '));
     return { creditId: sale.credit.id, paymentId, deposit: 200, cashReceipt: 175,
       transferId: transfer.transfer_id, sourceBalance: 210, targetBalance: 40 };
