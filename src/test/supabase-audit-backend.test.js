@@ -212,6 +212,48 @@ it('uses stable routes and reports removed modules instead of navigating by DOM 
   expect(() => auditModulePath(8)).toThrow('tax');
 });
 
+it('reads only the selected finance account and keeps the balance authoritative', async () => {
+  const urls = [];
+  const backend = await createAuditBackend(env, async url => {
+    const parsed = new URL(url); urls.push(parsed);
+    if (parsed.pathname.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (parsed.pathname.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (parsed.pathname.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (parsed.pathname.endsWith('/cashbook_ledger_summary')) return response({ accounts: [{ id: 'account', balance: 150 }, { id: 'other', balance: 900 }] });
+    if (parsed.pathname.endsWith('/cash_accounts')) return response([{ id: 'account', opening_balance: 600, balance: 999 }]);
+    return response([]);
+  });
+  urls.length = 0;
+  const state = await backend.readState({ scope: 'finance', accountId: 'account' });
+  expect(state.financeAccounts).toHaveLength(1);
+  expect(state.financeAccounts[0]).toMatchObject({ id: 'account', currentBalance: 150, openingBalance: 600 });
+  expect(urls.map(url => url.pathname.split('/').at(-1)).sort()).toEqual(['cash_accounts', 'cash_transactions', 'cashbook_ledger_summary', 'expenses']);
+  for (const url of urls.filter(url => !url.pathname.includes('/rpc/'))) {
+    expect(url.searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+    expect(url.searchParams.get(url.pathname.endsWith('/cash_accounts') ? 'id' : 'account_id')).toBe('eq.account');
+  }
+});
+
+it('checks persisted report exports and report audit events without unrelated business tables', async () => {
+  const urls = [];
+  const backend = await createAuditBackend(env, async url => {
+    const parsed = new URL(url); urls.push(parsed);
+    if (parsed.pathname.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (parsed.pathname.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (parsed.pathname.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (parsed.pathname.endsWith('/workflow_records')) return response([{ id: 'workflow', record_no: 'report', payload: { snapshot: { moduleRows: [1] } } }]);
+    if (parsed.pathname.endsWith('/audit_events')) return response([{ module: 'Hesabat', action: 'Export hazirlandi' }]);
+    return response([]);
+  });
+  urls.length = 0;
+  const state = await backend.readState({ scope: 'reports' });
+  expect(state.reportExports[0]).toMatchObject({ id: 'report', workflowId: 'workflow', snapshot: { moduleRows: [1] } });
+  expect(state.auditLog).toHaveLength(1);
+  expect(urls.map(url => url.pathname.split('/').at(-1)).sort()).toEqual(['audit_events', 'tenant_state_snapshots', 'workflow_records']);
+  expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
+  expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module')).toBe('eq.Hesabat');
+});
+
 it('preserves the server error status and detail instead of masking it with a fetch API error', async () => {
   await expect(createAuditBackend(env, async () => new Response('invalid_credentials', { status: 401 })))
     .rejects.toThrow('POST auth/v1/token: 401 invalid_credentials');

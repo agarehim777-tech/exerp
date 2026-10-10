@@ -125,16 +125,24 @@ export async function createAuditBackend(env, fetcher = fetch) {
     invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
     storageKey: `sb-${new URL(url).hostname.split('.')[0]}-auth-token`,
     session,
-    async readState({ scope = 'all', customerId, warehouseId } = {}) {
-      if (!['all', 'sales', 'sales-ledger', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
+    async readState({ scope = 'all', customerId, warehouseId, accountId } = {}) {
+      if (!['all', 'sales', 'sales-ledger', 'finance', 'reports', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
       const salesTables = new Set(['customers', 'products', 'orders', 'credit_contracts', 'credit_installments',
         'credit_payments', 'warehouses', 'stock_balances', 'order_bonus_assignments']);
       const hrTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events', 'expenses']);
       const uiTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events']);
       const salesLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions', 'expenses', 'audit_events']);
+      const financeTables = new Set(['cash_accounts', 'cash_transactions', 'expenses']);
+      const reportsTables = new Set(['tenant_state_snapshots', 'workflow_records', 'audit_events']);
       const scopedRead = (table, select = '*', filter = '', tenantColumn) => {
         if (scope === 'sales' && !salesTables.has(table)) return [];
         if (scope === 'sales-ledger' && !salesLedgerTables.has(table)) return [];
+        if (scope === 'finance' && !financeTables.has(table)) return [];
+        if (scope === 'reports' && !reportsTables.has(table)) return [];
+        if (scope === 'reports' && table === 'audit_events') filter += '&module=eq.Hesabat';
+        if (accountId && ['cash_accounts', 'cash_transactions', 'expenses'].includes(table)) {
+          filter += `&${table === 'cash_accounts' ? 'id' : 'account_id'}=eq.${encodeURIComponent(accountId)}`;
+        }
         if (scope === 'hr' && !hrTables.has(table)) return [];
         if (scope === 'ui' && !uiTables.has(table)) return [];
         if (scope === 'hr' && table === 'tenant_collection_records') {
@@ -158,7 +166,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         scopedRead('tenant_state_snapshots'), scopedRead('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
         scopedRead('customers'), scopedRead('products'), scopedRead('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         scopedRead('credit_contracts'), scopedRead('credit_installments'), scopedRead('credit_payments'), scopedRead('warehouses'), scopedRead('stock_balances'),
-        ['all','sales-ledger'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
+        ['all','sales-ledger','finance'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
         scopedRead('cash_accounts'),
         scopedRead('cash_transactions'), scopedRead('expenses'), scopedRead('vendors'), scopedRead('sales_invoices'), scopedRead('order_bonus_assignments'), scopedRead('audit_events'),
         scopedRead('purchase_orders'), scopedRead('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),
@@ -205,7 +213,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
       const canonicalContractIds = new Set(canonicalContracts.map(c => c.id));
       state.contracts = [...canonicalContracts, ...state.contracts.filter(c => !canonicalContractIds.has(c.id))];
       const accountById = new Map(accountMetadata.map(a => [a.id, a]));
-      state.financeAccounts = (accounts.accounts ?? []).map(a => ({ ...accountById.get(a.id), ...a,
+      state.financeAccounts = (accounts.accounts ?? []).filter(a => !accountId || a.id === accountId).map(a => ({ ...accountById.get(a.id), ...a,
         openingBalance: Number(accountById.get(a.id)?.opening_balance), currentBalance: Number(a.balance) }));
       state.cashEntries = cash.map((tx) => ({ ...tx, amount: Number(tx.amount), date: tx.occurred_at?.slice(0, 10),
         principal: Number(payments.find(p => p.id === tx.reference_id)?.principal_amount || 0),
