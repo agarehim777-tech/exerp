@@ -163,5 +163,5 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
     return () => window.removeEventListener("online", retry);
   }, [retry]);
 
-  return { ...status, retry, refresh: retry };
+  return { ...status, ready: Boolean(ready && sessionRef.current?.scope === scope && sessionRef.current.hydrated), retry, refresh: retry };
 }

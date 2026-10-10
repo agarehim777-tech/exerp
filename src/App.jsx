@@ -1001,6 +1001,10 @@ function App() {
   }
 
   function requirePermission(permission, action) {
+    if (permission?.startsWith("hr.") && !collectionSync.ready) {
+      notify("HR məlumatları serverdən yüklənir. Bir qədər sonra yenidən cəhd edin.", "warning");
+      return false;
+    }
     if (can(permission)) return true;
 
     const roleName = activeRoleInfo?.name || "Rol seçilməyib";
@@ -1070,6 +1074,7 @@ function App() {
   }
 
   function hasCreatePermission(type, values) {
+    if (type === "hr" && !collectionSync.ready) return requirePermission("hr.manage", "əməkdaş yaratmaq");
     const permission = createPermissionByType[type];
     if (!permission) return true;
 
@@ -2617,7 +2622,7 @@ function App() {
   }
 
   async function createRecord(type, values) {
-    if (!hasCreatePermission(type, values)) return;
+    if (!hasCreatePermission(type, values)) return false;
 
     if (type === "sales" || type === "dashboard") {
       const warehouseId = values.warehouseId || state.warehouses[0]?.id;
@@ -3624,6 +3629,7 @@ function App() {
 
   async function completeWarehouseDelivery(orderId, acceptance = {}) {
     if (!requirePermission("delivery.complete", "təhvili tamamlamaq")) return;
+    const isCurrentDelivery = beginTenantRequest("delivery");
 
     const targetOrder = state.orders.find((order) => order.id === orderId);
 
@@ -3686,6 +3692,16 @@ function App() {
         notify(describeStockError(error, "Təhvil tamamlanmadı"), "warning");
         return;
       }
+      if (!isCurrentDelivery()) return;
+      try {
+        await refreshDbOrders();
+        await dbInventory.refresh();
+        if (isCurrentDelivery()) notify("Təhvil və anbar əməliyyatları serverdə tamamlandı.");
+      } catch (refreshError) {
+        if (isCurrentDelivery()) notify("Təhvil serverdə saxlanıldı, ekran yenilənmədi. Səhifəni yeniləyin.", "warning");
+        console.error("[delivery] committed delivery refresh failed:", refreshError);
+      }
+      return;
     }
 
     setState((current) => {
@@ -5911,9 +5927,10 @@ function App() {
   const meta = pageMeta[active];
   const pageHasHeaderAction = hasPageAction(active);
   const actionPermission = getPageActionPermission(active);
-  const canPerformPageAction = pageHasHeaderAction && (!actionPermission || can(actionPermission));
+  const canPerformPageAction = pageHasHeaderAction && (active !== "hr" || collectionSync.ready) && (!actionPermission || can(actionPermission));
   const actionDeniedReason =
-    pageHasHeaderAction && actionPermission && !can(actionPermission)
+    active === "hr" && !collectionSync.ready ? "HR məlumatları serverdən yüklənir."
+    : pageHasHeaderAction && actionPermission && !can(actionPermission)
       ? `${activeRoleInfo?.name || "Rol"}: ${meta.action} üçün icazə yoxdur.`
       : "";
 

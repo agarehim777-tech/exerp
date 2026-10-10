@@ -623,7 +623,9 @@ async function auditWarehouseDelivery(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const sale = await createCreditSale(page);
-    const before = await readState(page);
+    const fixture = fixtureByPage.get(page);
+    const scope = { scope: 'sales', customerId: fixture.customer.id, warehouseId: sale.warehouse.id };
+    const before = await auditBackend.readState(scope);
     await selectModule(page, 4);
     await page.locator(".delivery-search input").fill(sale.order.orderNo);
     const deliveryRegistryText = await page.locator(".delivery-registry-panel").innerText();
@@ -642,9 +644,12 @@ async function auditWarehouseDelivery(browser) {
     await card.getByLabel('Anbardan götürən əməkdaş', { exact: true }).fill('QA Audit Seller');
     await card.getByLabel('Sənəd nömrəsi', { exact: true }).fill(`QA-${sale.order.orderNo}`);
     await card.getByLabel('Təhvil alan şəxs elektron imzanı təsdiqlədi', { exact: true }).check();
-    await card.getByRole('button', { name: 'Təhvil verildi', exact: true }).click();
+    const fulfillment = await auditResponse(page, r => r.request().method() === 'POST'
+      && new URL(r.url()).pathname.endsWith('/rpc/complete_sales_delivery'),
+      () => card.getByRole('button', { name: 'Təhvil verildi', exact: true }).click(), { timeout: 0 });
+    assert(fulfillment.ok(), 'Delivery command failed: ' + await fulfillment.text());
     const after = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.status === 'Təhvil verilib',
-      'Delivery acceptance was not persisted');
+      'Delivery acceptance was not persisted', scope);
     const deliveredOrder = after.orders?.find((item) => item.id === sale.order.id);
 
     assert(deliveredOrder?.status === "Təhvil verilib", "Warehouse delivery did not complete the order");
@@ -1380,7 +1385,12 @@ async function createHrEmployee(page, values) {
   if (values.kpi != null) await modal.getByLabel('KPI', { exact: true }).fill(String(values.kpi));
   if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
-  await modal.locator('button[type="submit"]').click();
+  const saved = await auditResponse(page, response => {
+    if (response.request().method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/tenant_collection_records')) return false;
+    const payload = response.request().postDataJSON();
+    return (Array.isArray(payload) ? payload : [payload]).some(row => row.collection === 'employees' && row.data?.name === values.name);
+  }, () => modal.locator('button[type="submit"]').click(), { timeout: 0 });
+  assert(saved.ok(), 'Employee write was rejected: ' + await saved.text());
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
   await waitForCanonical(() => auditBackend.readCollections(['employees'], { name: values.name }),
     rows => rows.some(row => row.data?.name === values.name), 'Employee was not persisted');

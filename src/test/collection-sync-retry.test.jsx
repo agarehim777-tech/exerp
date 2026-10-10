@@ -16,6 +16,23 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+it('keeps collection commands blocked until initial hydration finishes and resets readiness on tenant changes', async () => {
+  let finish;
+  mocks.load.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const { result, rerender } = renderHook(({ tenant }) => {
+    const [state, setState] = useState({ employees: [] });
+    return useCollectionSync({ tenantId: tenant, ready: true, collections, state, setState });
+  }, { initialProps: { tenant: 'A' } });
+  expect(result.current.ready).toBe(false);
+  await act(async () => finish({ data: [], error: null, count: 0 }));
+  expect(result.current.ready).toBe(true);
+  rerender({ tenant: 'B' });
+  expect(result.current.ready).toBe(false);
+  await act(async () => finish({ data: [], error: null, count: 0 }));
+  expect(result.current.ready).toBe(true);
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+
 it('hydrates every collection record when the server caps pages below the requested size', async () => {
   const rows = Array.from({ length: 460 }, (_, index) => ({ collection: 'employees',
     record_key: `e${index}`, position: index, data: { id: `e${index}`, name: `Employee ${index}` } }));
