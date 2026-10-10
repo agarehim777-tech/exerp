@@ -7,8 +7,8 @@ import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRes
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 import { round2 } from '../src/shared/utils/invoiceMath.js';
-import { cashAmount } from '../src/services/format.js';
 import { collectAuditRequests, startAuditCpuProfile } from './audit-browser-diagnostics.mjs';
+import { auditReleaseScope } from './audit-release-scope.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
 let auditBackend;
@@ -319,7 +319,10 @@ async function createCreditSaleFromCurrentData(page, expectedFin) {
   await modal.getByRole('spinbutton', { name: 'Beh məbləği', exact: true }).fill('0');
   await modal.getByRole('combobox', { name: 'Satıcı axtar və seç', exact: true }).fill('QA Audit Seller');
   await modal.getByRole('option').filter({ hasText: 'QA Audit Seller' }).first().click();
-  await modal.locator(".order-modal-form button[type=submit]").click();
+  const creation = await auditResponse(page, response => response.request().method() === 'POST'
+    && new URL(response.url()).pathname.endsWith('/rpc/create_sales_order_complete'),
+    () => modal.locator(".order-modal-form button[type=submit]").click(), { timeout: 0 });
+  assert(creation.ok(), 'Sale creation failed: ' + await creation.text());
   await modal.waitFor({ state: 'hidden' });
   const after = await waitForState(s => Boolean(findNewLinkedCreditSale(s, before.orders, expectedFin)),
     'Sale and its credit/contract links were not persisted', scope);
@@ -665,7 +668,7 @@ async function auditWarehouseDelivery(browser) {
   }
 }
 
-async function auditPurchaseOrder(browser) {
+async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const warehouse = await createWarehouseWithStock(page);
@@ -735,15 +738,22 @@ async function auditPurchaseOrder(browser) {
     await invoiceForm.getByLabel('Faktura nömrəsi', { exact: true }).fill(invoiceNumber);
     await invoiceForm.getByRole('button', { name: 'Faktura yarat', exact: true }).click();
     const [invoice] = await waitForCanonical(() => read('vendor_invoices', '&invoice_number=eq.' + invoiceNumber), rows => rows.length === 1 && rows[0].status === 'matched', 'Invoice did not pass three-way matching');
-    await page.locator('main.main tr').filter({ hasText: invoiceNumber }).getByRole('button', { name: 'Ödəniş et', exact: true }).click();
-    const payment = page.getByRole('dialog', { name: 'Vendor fakturasının ödənişi', exact: true });
-    await payment.getByLabel('Ödəniş hesabı', { exact: true }).selectOption(account.id);
+    if (viaReceivables) {
+      await selectModule(page, 10);
+      await page.locator('[data-testid="receivable-control-panel"] tr').filter({ hasText: invoiceNumber })
+        .getByRole('button', { name: 'Bağla', exact: true }).click();
+    } else {
+      await page.locator('main.main tr').filter({ hasText: invoiceNumber }).getByRole('button', { name: 'Ödəniş et', exact: true }).click();
+    }
+    const payment = page.getByRole('dialog', { name: viaReceivables ? 'Borcun bağlanışı' : 'Vendor fakturasının ödənişi', exact: true });
+    await payment.getByLabel(viaReceivables ? 'Borc bağlanışı hesabı' : 'Ödəniş hesabı', { exact: true }).selectOption(account.id);
+    const paymentCommand = viaReceivables ? 'settle_receivable_atomic' : 'pay_vendor_invoice_atomic';
     const response = await auditResponse(page,
-      r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/pay_vendor_invoice_atomic'),
-      () => payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click());
+      r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/' + paymentCommand),
+      () => payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: 0 });
     assert(response.ok(), 'Purchase payment RPC failed: ' + await response.text());
     const first = await response.json();
-    const replay = await auditBackend.command('pay_vendor_invoice_atomic', response.request().postDataJSON());
+    const replay = await auditBackend.command(paymentCommand, response.request().postDataJSON());
     assert(first.payment_id === replay.payment_id && Number(first.amount) === 100, 'Purchase payment replay was not idempotent');
     const cash = await read('cash_transactions', '&reference_type=eq.vendor_invoice&reference_id=eq.' + invoice.id);
     assert(cash.length === 1 && cash[0].direction === 'out' && Number(cash[0].amount) === 100 && cash[0].account_id === account.id, 'Purchase payment did not debit cash once');
@@ -753,6 +763,14 @@ async function auditPurchaseOrder(browser) {
     assert(paidInvoice.status === 'paid', 'Invoice did not become paid');
     const paymentJournal = await read('journal_entries', '&id=eq.' + first.journal_entry_id);
     assert(paymentJournal.length === 1 && paymentJournal[0].posted, 'Purchase payment has no posted journal');
+    if (viaReceivables) {
+      const settlements = await read('receivable_settlements', '&invoice_id=eq.' + invoice.id);
+      assert(settlements.length === 1 && settlements[0].receipt_id === first.payment_id && Number(settlements[0].amount) === 100,
+        'Creditor settlement did not retain its canonical invoice/payment link');
+      await payment.waitFor({ state: 'hidden' });
+      assert(await page.locator('[data-testid="receivable-control-panel"] tr').filter({ hasText: invoiceNumber }).count() === 0,
+        'Paid vendor invoice remained in the open creditor registry');
+    }
     assert(errors.length === 0, 'Purchase browser errors: ' + errors.join(' | '));
     return { poId: po.id, receiptId: receipt.id, invoiceId: invoice.id, paymentId: first.payment_id, warehouseId: warehouse.id, cashBalance: 400, replayVerified: true };
   } finally {
@@ -765,7 +783,7 @@ async function auditVendorLifecycle(browser) {
   const readVendorState = async () => ({
     vendors: await auditBackend.readCanonical('vendors'),
     purchaseOrders: await auditBackend.readCanonical('purchase_orders'),
-    purchaseOrderLines: await auditBackend.readCanonical('purchase_order_lines'),
+    purchaseOrderLines: await auditBackend.readCanonical('purchase_order_lines', '*,po:purchase_orders!inner(tenant_id)', '', 'po.tenant_id'),
   });
   try {
     await createWarehouseWithStock(page);
@@ -938,8 +956,12 @@ async function auditFinanceModuleIntegration(browser) {
     }
     const sourceRow = page.locator('main.main tr').filter({ has: page.getByText(source.name, { exact: true }) });
     const targetRow = page.locator('main.main tr').filter({ has: page.getByText(target.name, { exact: true }) });
-    await sourceRow.getByText(cashAmount(210, source.currency), { exact: true }).waitFor({ state: 'visible' });
-    await targetRow.getByText(cashAmount(40, target.currency), { exact: true }).waitFor({ state: 'visible' });
+    const renderedBalances = await page.evaluate(([sourceCurrency, targetCurrency]) => [
+      new Intl.NumberFormat('az-AZ', { style: 'currency', currency: sourceCurrency }).format(210),
+      new Intl.NumberFormat('az-AZ', { style: 'currency', currency: targetCurrency }).format(40),
+    ], [source.currency, target.currency]);
+    await sourceRow.getByText(renderedBalances[0], { exact: true }).waitFor({ state: 'visible' });
+    await targetRow.getByText(renderedBalances[1], { exact: true }).waitFor({ state: 'visible' });
     assert(errors.length === 0, 'Finance integration produced browser errors: ' + errors.join(' | '));
     return { creditId: sale.credit.id, paymentId, deposit: 200, cashReceipt: 175,
       transferId: transfer.transfer_id, sourceBalance: 210, targetBalance: 40 };
@@ -949,80 +971,61 @@ async function auditFinanceModuleIntegration(browser) {
 }
 async function auditReceivableCreditorWorkflow(browser) {
   const { context, page, errors } = await createFlowPage(browser);
+  let debtor;
+  const read = (table, filter = '') => auditBackend.readCanonical(table, '*', filter);
   try {
     const sale = await createCreditSale(page);
-    await selectModule(page, 11);
-    await page.locator(".page-header .primary-btn").click();
-    let modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Receivable Vendor");
-    await modal.locator("input").nth(1).fill("Azerbaijan");
-    await modal.locator("input").nth(2).fill("2");
-    await modal.locator("input").nth(3).fill("100");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-
-    await page.locator(".vendor-command-actions .secondary-btn").click();
-    modal = page.locator('[role="dialog"]');
-    await modal.locator("input").nth(0).fill("QA Receivable Vendor");
-    await modal.locator("input").nth(1).fill("2");
-    await modal.locator("input").nth(2).fill("110");
-    await modal.locator("input").nth(3).fill("160");
-    await modal.locator("input").nth(5).fill("QA receivable close PO");
-    await modal.locator('button[type="submit"]').click();
-    await page.waitForTimeout(100);
-    let state = await readState(page);
-    const poId = state.purchaseOrders?.[0]?.id;
-    assert(poId, "Receivable audit did not create a vendor PO");
-
+    await selectModule(page, 9);
+    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
+    const creditRow = page.locator('.credit-directory-panel tr').filter({ hasText: sale.contract.id });
+    await creditRow.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    const startModal = page.getByRole('dialog', { name: 'Krediti başlat', exact: true });
+    assert(await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).isDisabled(),
+      'Credit was activatable before the planned deposit');
+    await startModal.getByLabel('Qəbul ediləcək məbləğ', { exact: true }).fill('200');
+    await startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click();
+    await waitForCanonical(() => read('credit_contracts', '&id=eq.' + sale.credit.id),
+      rows => Number(rows[0]?.initial_payment) === 200, 'Deposit was not collected');
+    const [deposit] = await read('cash_transactions', '&reference_id=eq.' + sale.order.id + '&category=eq.sales_payment');
+    assert(deposit?.account_id, 'Deposit has no cash account');
+    await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    await startModal.waitFor({ state: 'hidden' });
+    await waitForCanonical(() => read('credit_contracts', '&id=eq.' + sale.credit.id),
+      rows => rows[0]?.status === 'active', 'Credit did not activate');
     await selectModule(page, 10);
-    await page.locator('[data-testid="receivable-control-panel"]').waitFor({ state: "visible" });
-    await page.locator('[data-testid="receivable-aging-panel"]').waitFor({ state: "visible" });
-    const panelText = await page.locator('[data-testid="receivable-control-panel"]').innerText();
-    assert(panelText.includes("Kolleksiya") && panelText.includes("Növbəti addım"), "Receivable registry did not expose collection/risk controls");
-
-    const closeButtons = page.locator('[data-testid="receivable-close-button"]');
-    const closeCount = await closeButtons.count();
-    if (closeCount < 2) {
-      const state = await readState(page);
-      throw new Error(
-        `Receivable registry did not expose both debtor and creditor close actions: ${JSON.stringify({
-          closeCount,
-          customers: state.customers?.map((customer) => ({ name: customer.name, fin: customer.fin, debt: customer.debt, delay: customer.delay })),
-          credits: state.credits?.map((credit) => ({ id: credit.id, customer: credit.customer, fin: credit.fin, balance: credit.balance })),
-          vendors: state.vendors?.map((vendor) => ({ name: vendor.name, status: vendor.status })),
-          purchaseOrders: state.purchaseOrders?.map((po) => ({ id: po.id, vendor: po.vendor, amount: po.amount, status: po.status })),
-          panel: panelText.slice(0, 800),
-        })}`,
-      );
-    }
-    await closeButtons.first().click();
-    await page.waitForTimeout(100);
-    await closeButtons.first().click();
-    await page.waitForTimeout(100);
-
-    const after = await readState(page);
-    const closedCredit = after.credits?.find((credit) => credit.id === sale.credit.id);
-    const debtorClosure = after.receivableClosures?.find((closure) => closure.type === "Debitor");
-    const creditorClosure = after.receivableClosures?.find((closure) => closure.type === "Kreditor");
-    const closedPo = after.purchaseOrders?.find((po) => po.id === poId);
-    const creditorExpense = after.expenses?.find((expense) => expense.poId === poId);
-    const debtorCash = after.cashEntries?.find((entry) => entry.receivableId?.startsWith("DB-"));
-
-    assert(Number(closedCredit?.balance || 0) === 0, "Debitor close did not clear the linked credit balance");
-    assert(debtorCash?.source === "Debitor/Kreditor", "Debitor close did not create a cash-in ledger entry");
-    assert(closedPo?.status === "Ödənilib", "Kreditor close did not mark the PO as paid");
-    assert(creditorExpense?.status === "Təsdiq edildi", "Kreditor close did not approve the finance expense");
-    assert(debtorClosure && creditorClosure, "Receivable close history did not persist both closure types");
-    assert(
-      after.auditLog?.some((entry) => entry.module === "Debitor/Kreditor" && entry.action.includes("borcu bağlandı")),
-      "Receivable close actions were not written to audit log",
-    );
-    assert(errors.length === 0, `Receivable workflow produced browser errors: ${errors.join(" | ")}`);
-
-    return { creditId: sale.credit.id, poId, closures: after.receivableClosures.length, cashIn: debtorCash.amount };
+    const registry = page.locator('[data-testid="receivable-control-panel"]');
+    await registry.locator('tr').filter({ hasText: sale.contract.id }).getByRole('button', { name: 'Bağla', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Borcun bağlanışı', exact: true });
+    await dialog.getByLabel('Borc bağlanışı hesabı', { exact: true }).selectOption(deposit.account_id);
+    const response = await auditResponse(page, r => r.request().method() === 'POST'
+      && new URL(r.url()).pathname.endsWith('/rpc/settle_receivable_atomic'),
+      () => dialog.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: 0 });
+    assert(response.ok(), 'Debtor settlement failed: ' + await response.text());
+    const receipt = await response.json();
+    const replay = await auditBackend.command('settle_receivable_atomic', response.request().postDataJSON());
+    assert(replay.payment_id === receipt.payment_id && Number(receipt.amount) === 1000,
+      'Full settlement amount or idempotency is incorrect');
+    await dialog.waitFor({ state: 'hidden' });
+    const [order] = await read('orders', '&id=eq.' + sale.order.id);
+    const installments = await read('credit_installments', '&credit_id=eq.' + sale.credit.id);
+    const cash = await read('cash_transactions', '&reference_type=eq.credit_payment&reference_id=eq.' + receipt.payment_id);
+    const settlements = await read('receivable_settlements', '&credit_id=eq.' + sale.credit.id);
+    assert(Number(order.paid_amount) === Number(order.total), 'Full settlement did not clear the order principal');
+    assert(installments.every(row => Number(row.principal_due) === Number(row.principal_paid)
+      && Number(row.penalty_due) === Number(row.penalty_paid)), 'Credit installments remain unpaid');
+    assert(cash.length === 1 && Number(cash[0].amount) === 1000 && cash[0].direction === 'in',
+      'Debtor settlement did not post one real cash receipt');
+    assert(settlements.length === 1 && settlements[0].receipt_id === receipt.payment_id,
+      'Settlement history lost its structured credit/payment link');
+    assert(await registry.locator('tr').filter({ hasText: sale.contract.id }).count() === 0,
+      'Settled credit remained in the open debtor registry');
+    assert(errors.length === 0, 'Debtor browser errors: ' + errors.join(' | '));
+    debtor = { creditId: sale.credit.id, paymentId: receipt.payment_id, amount: receipt.amount };
   } finally {
     await context.close();
   }
+  const creditor = await auditPurchaseOrder(browser, { viaReceivables: true });
+  return { debtor, creditor, canonicalSettlement: true };
 }
 
 async function auditInvoiceAccountingTax(browser) {
@@ -1385,50 +1388,70 @@ async function createHrEmployee(page, values) {
 
 async function auditKpiPeriodPayoutWorkflow(browser) {
   const { context, page, errors } = await createFlowPage(browser);
+  const read = (table, filter = '') => auditBackend.readCanonical(table, '*', filter);
   try {
     await selectModule(page, 14);
     await createHrEmployee(page, {
-      name: "QA KPI Seller",
-      position: "Satış mütəxəssisi",
-      department: "Satış",
-      salary: 2000,
-      kpi: 110,
+      name: 'QA KPI Seller ' + crypto.randomUUID().slice(0, 8),
+      position: 'Satış mütəxəssisi', department: 'Satış', salary: 2000, kpi: 110,
     });
-
+    const prior = await read('kpi_periods');
+    const occupied = new Set(prior.map(row => row.period.slice(0, 7)));
+    let period;
+    const now = new Date();
+    for (let offset = 1; offset <= 1200; offset++) {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+      const candidate = date.toISOString().slice(0, 7);
+      if (!occupied.has(candidate)) { period = candidate; break; }
+    }
+    assert(period, 'No unused audit period is available; paid periods must not be reopened');
+    const marker = 'QA KPI Cash ' + crypto.randomUUID().slice(0, 8);
+    await selectModule(page, 5);
+    await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
+    const accountForm = page.locator('form').filter({ has: page.getByPlaceholder('Hesab adı', { exact: true }) });
+    await accountForm.getByPlaceholder('Hesab adı', { exact: true }).fill(marker);
+    await accountForm.getByPlaceholder('Açılış qalığı', { exact: true }).fill('1000000');
+    await accountForm.getByRole('button', { name: '+ Hesab', exact: true }).click();
+    await accountForm.waitFor({ state: 'hidden' });
+    const [account] = await waitForCanonical(() => read('cash_accounts', '&name=eq.' + encodeURIComponent(marker)),
+      rows => rows.length === 1, 'KPI payout account was not persisted');
     await selectModule(page, 15);
-    await page.locator('[data-testid="kpi-period-panel"]').waitFor();
-    await page.locator('[data-testid="kpi-payout-plan-panel"]').waitFor();
-
-    const closeButton = page.locator('[data-testid="kpi-close-period"]');
-    assert(!(await closeButton.isDisabled()), "KPI close period button should be enabled");
-    await closeButton.click();
-    await page.waitForFunction(() => {
-      const button = document.querySelector('[data-testid="kpi-approve-period"]');
-      return button && !button.disabled;
-    });
-
-    await page.locator('[data-testid="kpi-approve-period"]').click();
-    await page.waitForFunction(() => {
-      const button = document.querySelector('[data-testid="kpi-payout-period"]');
-      return button && !button.disabled;
-    });
-
-    await page.locator('[data-testid="kpi-payout-period"]').click();
-    await page.waitForTimeout(200);
-
-    const state = await readState(page);
-    const period = state.kpiPeriods?.[0];
-    assert(period?.approvalStatus === "Təsdiq edildi", "KPI period was not approved");
-    assert(period?.payoutStatus === "Ödənildi", "KPI payout status was not marked as paid");
-    assert(Number(period?.payoutAmount || 0) > 0, "KPI payout amount was not calculated");
-    assert(
-      state.expenses?.some((expense) => expense.source === "KPI Payout" && expense.status === "Təsdiq edildi" && expense.cashImpact === true),
-      "KPI payout did not create an approved cash expense",
-    );
-    assert(state.kpiPayouts?.some((payout) => payout.status === "Ödənildi"), "KPI payout history was not persisted");
-    assert(state.auditLog?.some((entry) => entry.action === "KPI payout ödənildi"), "KPI payout was not written to audit log");
-    assert(errors.length === 0, `KPI period payout flow produced browser errors: ${errors.join(" | ")}`);
-    return { period: period.period, payout: period.payoutAmount };
+    await page.getByLabel('KPI periodu', { exact: true }).fill(period);
+    await page.getByLabel('KPI ödəniş hesabı', { exact: true }).selectOption(account.id);
+    const action = async name => {
+      const result = await auditResponse(page, r => r.request().method() === 'POST'
+        && new URL(r.url()).pathname.endsWith('/rpc/run_kpi_period_atomic'),
+        () => page.locator('[data-testid="kpi-' + name + '-period"]').click(), { timeout: 0 });
+      assert(result.ok(), 'KPI ' + name + ' failed: ' + await result.text());
+      return { response: result, receipt: await result.json() };
+    };
+    const closed = await action('close');
+    assert(closed.receipt.status === 'closed' && Number(closed.receipt.payout_amount) > 0,
+      'KPI close did not freeze a positive payout');
+    await page.locator('[data-testid="kpi-approve-period"]:enabled').waitFor();
+    await action('approve');
+    await page.locator('[data-testid="kpi-payout-period"]:enabled').waitFor();
+    const paid = await action('payout');
+    const replay = await auditBackend.command('run_kpi_period_atomic', paid.response.request().postDataJSON());
+    assert(paid.receipt.expense_id === replay.expense_id, 'KPI retry created another payout');
+    const [persisted] = await read('kpi_periods', '&id=eq.' + paid.receipt.id);
+    const [expense] = await read('expenses', '&id=eq.' + persisted.expense_id);
+    const cash = await read('cash_transactions', '&reference=eq.EXPENSE:' + persisted.expense_id);
+    const payout = Number(persisted.payout_amount);
+    assert(persisted.status === 'paid' && payout === Number(closed.receipt.payout_amount)
+      && JSON.stringify(persisted.snapshot) === JSON.stringify(closed.receipt.snapshot),
+      'KPI approval/payment recalculated the frozen financial snapshot');
+    assert(expense?.status === 'approved' && Number(expense.amount) === payout,
+      'KPI payout did not create the linked approved server expense');
+    assert(cash.length === 1 && cash[0].direction === 'out' && Number(cash[0].amount) === payout
+      && cash[0].account_id === account.id, 'KPI payout did not post exactly one cash debit');
+    const summary = await auditBackend.command('cashbook_ledger_summary', { _tenant_id: auditBackend.tenantId });
+    assert(Number(summary.accounts.find(row => row.id === account.id)?.balance) === round2(1000000 - payout),
+      'KPI ledger balance differs from the approved payout');
+    await page.locator('[data-testid="kpi-period-panel"]').getByText('Ödənildi', { exact: true }).waitFor();
+    assert(await page.locator('[data-testid="kpi-payout-period"]').isDisabled(), 'A paid period can be paid twice');
+    assert(errors.length === 0, 'KPI browser errors: ' + errors.join(' | '));
+    return { period, periodId: persisted.id, expenseId: persisted.expense_id, payout, replayVerified: true };
   } finally {
     await context.close();
   }
@@ -1771,7 +1794,7 @@ const report = { kind: diagnosticOnly ? 'diagnostic' : 'release', flows: [], fai
 const flowFilter = process.env.AUDIT_FLOW_FILTER?.trim();
 const flowTimeoutMs = Number(process.env.AUDIT_FLOW_TIMEOUT_MS || 60000);
 
-const auditFlows = [
+const allAuditFlows = [
   ["sales-credit-warehouse-reservation", auditCreditSale],
   ["sales-expense-edit-delete", auditSalesAndExpenseMutations],
   ["credit-payment-finance-cash", auditCreditPayment],
@@ -1793,7 +1816,10 @@ const auditFlows = [
   ["settings-role-permission-enforcement", auditSettingsPermissions],
   ["reports-analytics-export-package", auditReportsAnalytics],
   ["support-messaging-linked-comments", auditSupportMessaging],
-].filter(([name]) => !flowFilter || name.includes(flowFilter));
+];
+const releaseScope = auditReleaseScope(allAuditFlows, process.env);
+report.deferred = releaseScope.deferred;
+const auditFlows = releaseScope.required.filter(([name]) => !flowFilter || name.includes(flowFilter));
 
 const saveReport = async () => {
   await mkdir('test-results', { recursive: true });
@@ -1852,6 +1878,6 @@ await writeFile(
 );
 console.log(JSON.stringify(report, null, 2));
 
-if (report.flows.length !== (diagnosticOnly ? auditFlows.length : 21) || !auditFlows.length || report.failures.length > 0) {
+if (report.flows.length !== (diagnosticOnly ? auditFlows.length : releaseScope.expected) || !auditFlows.length || report.failures.length > 0) {
   process.exitCode = 1;
 }

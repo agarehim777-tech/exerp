@@ -1,10 +1,33 @@
 import { Building2, Check, CircleAlert, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
-import { money } from "../services/format.js";
+import { cashAmount } from "../services/format.js";
+import { useAuth } from "../auth/AuthProvider.jsx";
+import { useReceivableLedger } from "../shared/hooks/useFinancialSettlement.js";
+import { receivableItemView } from "../services/financialSettlement.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
-export default function ReceivablesPage({ rows, syncMeta, closures = [], onCloseDebt, onOpenSalesOrder }) {
+export default function ReceivablesPage({ onOpenSalesOrder }) {
+  const { activeMembership } = useAuth();
+  const tenantId = activeMembership?.tenant_id;
+  const ledger = useReceivableLedger(tenantId);
+  const rows = useMemo(() => (ledger.data?.items || []).map(item => receivableItemView(item)), [ledger.data]);
+  const closures = ledger.data?.settlements || [];
+  const [currency, setCurrency] = useState("AZN");
+  const money = value => cashAmount(value, currency);
+  const [settling, setSettling] = useState(null);
+  const [accountId, setAccountId] = useState("");
+  const [commandError, setCommandError] = useState("");
+  useEffect(() => { setSelectedDebt(null); setSettling(null); setAccountId(""); setCommandError(""); }, [tenantId]);
+  const accounts = (ledger.data?.accounts || []).filter(account => account.currency === settling?.currency);
+  async function settle() {
+    if (!settling || !accounts.some(account => account.id === accountId) || ledger.busy) return;
+    setCommandError("");
+    try {
+      const receipt = await ledger.execute({ source_type: settling.source_type, source_id: settling.source_id, account_id: accountId });
+      if (receipt) { setSettling(null); setAccountId(""); }
+    } catch (failure) { setCommandError(failure.message || "Ödəniş icra olunmadı"); }
+  }
   const [typeFilter, setTypeFilter] = useState("Hamısı");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("Hamısı");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
@@ -12,14 +35,14 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
   const [agingFilter, setAgingFilter] = useState("Hamısı");
   const [selectedDebt, setSelectedDebt] = useState(null);
   const effectiveRows = useMemo(
-    () => (rows || []).filter((row) => Number(row.amount || 0) > 0 && row.status !== "Bağlandı"),
-    [rows],
+    () => rows.filter((row) => row.currency === currency && Number(row.amount || 0) > 0 && row.status !== "Bağlandı"),
+    [rows, currency],
   );
   const liveSignature = useMemo(
     () => effectiveRows.map((row) => `${row.id}:${Number(row.amount || 0)}:${row.overdueDays || 0}:${row.status || ""}`).sort().join("|"),
     [effectiveRows],
   );
-  const [lastLiveUpdate, setLastLiveUpdate] = useState(() => syncMeta?.at || new Date().toLocaleString("az-AZ"));
+  const [lastLiveUpdate, setLastLiveUpdate] = useState(() => new Date().toLocaleString("az-AZ"));
 
   useEffect(() => {
     setLastLiveUpdate(new Date().toLocaleString("az-AZ"));
@@ -48,6 +71,14 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
 
   return (
     <div className="stack">
+      <div className="filter-bar">
+        <select aria-label="Borc valyutası" value={currency} onChange={event => setCurrency(event.target.value)}>
+          {[...new Set(['AZN', ...rows.map(row => row.currency)])].map(value => <option key={value}>{value}</option>)}
+        </select>
+        <button type="button" className="icon-button" aria-label="Balansı yenilə" disabled={ledger.busy} onClick={() => ledger.refresh().catch(() => {})}><RefreshCw size={18}/></button>
+      </div>
+      {ledger.error && <div role="alert">{ledger.error.message}</div>}
+      {!ledger.ready && !ledger.error && <div role="status">Balans yüklənir...</div>}
       <section className="metric-grid four">
         <MetricCard label="Debitor borcu" value={money(totalDebitor)} trend={`${debtorRows.length} borc sətri`} icon={Wallet} tone="primary" />
         <MetricCard label="Kreditor borcu" value={money(totalCreditor)} trend={`${creditorRows.length} borc sətri`} icon={Building2} tone="warning" />
@@ -63,7 +94,7 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
           </div>
         ))}
       </section>
-      {syncMeta && (
+      {ledger.ready && (
         <Panel className="module-action-panel">
           <PanelHeader title="Canlı balans" subtitle="Satış, kredit və vendor məlumatlarından real vaxtda hesablanır" icon={RefreshCw} />
           <div className="db-status-grid">
@@ -134,7 +165,7 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
             row.nextAction,
             row.owner,
             Number(row.amount || 0) > 0 ? (
-              <button className="text-btn receivable-close-button" data-testid="receivable-close-button" onClick={(event) => { event.stopPropagation(); onCloseDebt?.(row.id); }}>
+              <button className="text-btn receivable-close-button" data-testid="receivable-close-button" disabled={!row.can_settle || ledger.busy} onClick={(event) => { event.stopPropagation(); setSettling(row); setAccountId(""); setCommandError(""); }}>
                 Bağla
               </button>
             ) : (
@@ -149,26 +180,37 @@ export default function ReceivablesPage({ rows, syncMeta, closures = [], onClose
           <EmptyState title="Borc bağlanışı hələ yoxdur" />
         ) : (
           <DataTable
-            columns={["ID", "Tip", "Tərəf", "Məbləğ", "Aging", "Risk", "Tarix", "Status"]}
-            rows={closures.slice(0, 8).map((row) => [
-              <strong>{row.id}</strong>,
-              row.type,
-              row.party,
-              money(row.amount),
-              row.agingBucket,
-              <StatusBadge status={row.riskCategory} />,
-              row.at,
-              <StatusBadge status={row.collectionStatus || "Bağlandı"} />,
+            columns={["Mənbə", "Məbləğ", "Tarix", "Status"]}
+            rows={closures.filter(row => row.currency === currency).slice(0, 8).map((row) => [
+              <TwoLine title={row.source_type} subtitle={row.source_id} />,
+              cashAmount(row.amount, row.currency),
+              new Date(row.created_at).toLocaleString("az-AZ"),
+              <StatusBadge status="Bağlandı" />,
             ])}
           />
         )}
       </Panel>
       {selectedDebt && <DebtDetail row={selectedDebt} onClose={() => setSelectedDebt(null)} onOpenSalesOrder={onOpenSalesOrder} />}
+      {settling && <div className="confirm-action-backdrop">
+        <section className="confirm-action-dialog" role="dialog" aria-modal="true" aria-labelledby="settlement-title">
+          <h2 id="settlement-title">Borcun bağlanışı</h2>
+          <p>{settling.party} · {settling.source}</p>
+          <strong>{cashAmount(settling.amount, settling.currency)}</strong>
+          <label>Kassa hesabı<select aria-label="Borc bağlanışı hesabı" value={accountId} disabled={ledger.busy} onChange={event => setAccountId(event.target.value)}>
+            <option value="">Hesab seçin</option>
+            {accounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
+          </select></label>
+          {commandError && <p role="alert">{commandError}</p>}
+          <footer><button type="button" className="secondary-btn" disabled={ledger.busy} onClick={() => setSettling(null)}>Geri qayıt</button>
+            <button type="button" className="primary-btn" disabled={ledger.busy || !accounts.some(account => account.id === accountId)} onClick={settle}>{ledger.busy ? 'İcra olunur...' : 'Ödənişi təsdiq et'}</button></footer>
+        </section>
+      </div>}
     </div>
   );
 }
 
 function DebtDetail({ row, onClose, onOpenSalesOrder }) {
+  const money = value => cashAmount(value, row.currency);
   const orderId = row.openOrderIds?.[0] || row.orderIds?.[0];
   const detailRows = [
     ["Tip", row.type], ["Tərəf", row.party], ["Mənbə", row.source],

@@ -4,6 +4,7 @@ import { money, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildKpiEmployeeScoreRows, getKpiPeriodKey } from "../shared/lib/appDomain.jsx";
+import { input } from "../shared/ui/tokens.js";
 export default function KpiPage({
   employees,
   salesBonuses = [],
@@ -13,11 +14,18 @@ export default function KpiPage({
   periods = [],
   payouts = [],
   onRunPeriodAction,
+  period, onSelectPeriod, accounts = [], accountId, onSelectAccount,
+  busy = false, error, onRetry,
 }) {
   const [bonusFilter, setBonusFilter] = useState("Hamısı");
-  const rankingSource = employeeRows.length > 0 ? employeeRows : buildKpiEmployeeScoreRows(employees, salesBonuses);
+  const rankingSource = activePeriod.status === "Period bağlandı" ? (activePeriod.payoutRows || []).map(row => ({
+    ...row, id: row.employeeId, name: row.employee, initials: row.employee?.slice(0, 2),
+    payoutStatus: activePeriod.payoutStatus,
+  })) : employeeRows.length > 0 ? employeeRows : buildKpiEmployeeScoreRows(employees, salesBonuses);
+  const displayedTargets = activePeriod.status === "Period bağlandı" ? activePeriod.targetRows || [] : targetRows;
   const ranking = [...rankingSource].sort((a, b) => Number(b.kpi || 0) - Number(a.kpi || 0));
-  const companyKpi = targetRows.find((row) => row.metricKey === "companyKpi")?.actual || 0;
+  const companyKpi = activePeriod.status === "Period bağlandı" ? activePeriod.companyScore || 0
+    : targetRows.find((row) => row.metricKey === "companyKpi")?.actual || 0;
   const topPerformer = ranking[0];
   const bonusSellers = [...new Set(salesBonuses.map((row) => row.seller).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, "az"),
@@ -28,12 +36,21 @@ export default function KpiPage({
   const payoutRows = rankingSource.filter((row) => Number(row.payoutAmount || 0) > 0);
   const periodHistory = [...periods].sort((a, b) => String(b.period).localeCompare(String(a.period)));
   const lastPayout = payouts[0];
-  const canClose = activePeriod.status !== "Period bağlandı";
-  const canApprove = activePeriod.status === "Period bağlandı" && activePeriod.approvalStatus !== "Təsdiq edildi";
-  const canPayout = activePeriod.approvalStatus === "Təsdiq edildi" && activePeriod.payoutStatus !== "Ödənildi";
+  const canClose = !busy && !error && activePeriod.status !== "Period bağlandı";
+  const canApprove = !busy && !error && activePeriod.status === "Period bağlandı" && activePeriod.approvalStatus !== "Təsdiq edildi";
+  const canPayout = !busy && !error && activePeriod.approvalStatus === "Təsdiq edildi" && activePeriod.payoutStatus !== "Ödənildi"
+    && (Number(activePeriod.payoutAmount) === 0 || accounts.some(account => account.id === accountId));
 
   return (
     <div className="stack">
+      <div className="filter-bar">
+        <label>Period <input aria-label="KPI periodu" type="month" value={period || activePeriod.period || ''}
+          onChange={event => onSelectPeriod?.(event.target.value)} disabled={busy} style={input} /></label>
+        <label>Kassa <select aria-label="KPI ödəniş hesabı" value={accountId || ''} onChange={event => onSelectAccount?.(event.target.value)} disabled={busy} style={input}>
+          <option value="">Hesab seçin</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
+        </select></label>
+      </div>
+      {error && <div role="alert">{error.message}<button type="button" className="secondary-btn" onClick={onRetry}>Yenidən cəhd et</button></div>}
       <section className="metric-grid four">
         <MetricCard label="Şirkət ümumi KPI" value={percent(companyKpi)} trend={`${ranking.length} əməkdaş üzrə`} icon={TrendingUp} tone="success" />
         <MetricCard label="Period score" value={percent(activePeriod.companyScore || 0)} trend={activePeriod.period || getKpiPeriodKey()} icon={CalendarClock} tone="primary" />
@@ -46,7 +63,7 @@ export default function KpiPage({
           <PanelHeader title="KPI hədəf planı" subtitle="Çəkili hədəflər və cari faktiki nəticələr" icon={SlidersHorizontal} />
           <DataTable
             columns={["Hədəf", "Məsul", "Çəki", "Faktiki / Hədəf", "Progress", "Status"]}
-            rows={targetRows.map((row) => [
+            rows={displayedTargets.map((row) => [
               <TwoLine title={row.name} subtitle={row.metricKey} />,
               row.owner,
               `${row.weight}%`,

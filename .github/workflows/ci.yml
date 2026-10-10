@@ -139,7 +139,7 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
-      - name: All 21 business lifecycle flows
+      - name: 20 required business flows (external notification provider deferred)
         id: business_flows
         if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
         run: npm run audit:flows
@@ -149,6 +149,7 @@ jobs:
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
           AUDIT_FLOW_TIMEOUT_MS: 90000
+          AUDIT_DEFER_NOTIFICATION_PROVIDER: 'true'
 
       - name: Remove ephemeral restricted audit identity
         if: ${{ always() && env.E2E_EPHEMERAL_USER_ID != '' }}

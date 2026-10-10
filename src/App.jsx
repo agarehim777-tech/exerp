@@ -11,6 +11,8 @@ import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
+import { useKpiLedger } from "./shared/hooks/useFinancialSettlement.js";
+import { kpiPeriodView } from "./services/financialSettlement.js";
 import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
 import { useDbReadBridge } from "./shared/hooks/useDbReadBridge.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
@@ -473,6 +475,9 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState("");
   const [selectedCreditId, setSelectedCreditId] = useState("");
+  const [selectedKpiPeriod, setSelectedKpiPeriod] = useState(getKpiPeriodKey);
+  const [kpiAccountId, setKpiAccountId] = useState("");
+  const kpiLedger = useKpiLedger(active === "kpi" ? activeTenantId : null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState("all");
   const [notificationFilter, setNotificationFilter] = useState("Cəmi");
   const [conversationId, setConversationId] = useState("c1");
@@ -507,16 +512,16 @@ function App() {
     [state.kpiTargets, state.employees, kpiEmployeeRows, salesBonusRows],
   );
   const activeKpiPeriod = useMemo(() => {
-    const period = getKpiPeriodKey();
-    const existing = (state.kpiPeriods || []).find((item) => item.period === period);
+    const period = selectedKpiPeriod;
+    const existing = kpiLedger.data?.periods.find(item => item.period.slice(0, 7) === period);
+    if (existing) return kpiPeriodView(existing);
     return buildKpiPeriodSnapshot({
       period,
       targetRows: kpiTargetRows,
       employeeRows: kpiEmployeeRows,
       salesBonuses: salesBonusRows,
-      existing,
     });
-  }, [state.kpiPeriods, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
+  }, [selectedKpiPeriod, kpiLedger.data, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
   const legacyCurrentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
   const salesUsers = useMemo(() => {
@@ -614,113 +619,7 @@ function App() {
     [state.notificationRules, state.notificationProviders, state.settings, state.notificationSendLog, creditRecords, state.stock, state.warehouseStock, state.products, state.purchaseOrders, state.expenses, state.orders],
   );
 
-  useEffect(() => {
-    const creditRules = notificationAutomationRows.filter(
-      (rule) =>
-        ["RULE-CREDIT-OVERDUE", "RULE-CREDIT-UPCOMING"].includes(rule.id) &&
-        rule.status === "Aktiv" &&
-        Number(rule.queueCount || 0) > 0,
-    );
-    const autoKey = creditRules
-      .flatMap((rule) => (rule.events || []).map((event) => event.dedupeKey || getNotificationEventKey(rule, event)))
-      .sort()
-      .join("|");
-
-    if (!autoKey || notificationAutoRunRef.current === autoKey) return;
-    notificationAutoRunRef.current = autoKey;
-
-    const stamp = getActionStamp();
-    const deliveries = buildNotificationDeliveriesForRules({
-      rules: creditRules,
-      providerRows: notificationProviderRows,
-      settings: state.settings,
-      stamp,
-      source: "Avtomatik kredit monitoru",
-    });
-
-    if (deliveries.length === 0) return;
-    persistNotificationDeliveries(deliveries);
-
-    setState((current) => {
-      const existingKeys = new Set((current.notificationSendLog || []).map((log) => log.dedupeKey).filter(Boolean));
-      const freshDeliveries = deliveries.filter((delivery) => !delivery.dedupeKey || !existingKeys.has(delivery.dedupeKey));
-      if (freshDeliveries.length === 0) return current;
-
-      const sentCount = freshDeliveries.filter((item) => item.status === "Göndərildi").length;
-      const blockedCount = freshDeliveries.length - sentCount;
-      const touchedRuleIds = new Set(freshDeliveries.map((item) => item.ruleId));
-      const providerUse = freshDeliveries.reduce((map, item) => {
-        if (!item.providerId) return map;
-        map.set(item.providerId, (map.get(item.providerId) || 0) + (item.status === "Göndərildi" ? 1 : 0));
-        return map;
-      }, new Map());
-
-      return appendAudit(
-        {
-          ...current,
-          notificationSweepAt: stamp,
-          notificationSendLog: [...freshDeliveries, ...(current.notificationSendLog || [])].slice(0, 120),
-          notificationDispatchSnapshot: {
-            at: stamp,
-            total: freshDeliveries.length,
-            sent: sentCount,
-            blocked: blockedCount,
-            rules: creditRules.length,
-            source: "Avtomatik kredit monitoru",
-            autoRunKey: autoKey,
-          },
-          notificationRules: ensureNotificationRules(current.notificationRules || []).map((rule) =>
-            touchedRuleIds.has(rule.id)
-              ? {
-                  ...rule,
-                  lastRunAt: stamp,
-                  sentCount:
-                    Number(rule.sentCount || 0) +
-                    freshDeliveries.filter((item) => item.ruleId === rule.id && item.status === "Göndərildi").length,
-                  failedCount:
-                    Number(rule.failedCount || 0) +
-                    freshDeliveries.filter((item) => item.ruleId === rule.id && item.status !== "Göndərildi").length,
-                  lastStatus: freshDeliveries.some((item) => item.ruleId === rule.id && item.status !== "Göndərildi")
-                    ? "Qismən bloklandı"
-                    : "Göndərildi",
-                }
-              : rule,
-          ),
-          notificationProviders: ensureNotificationProviders(current.notificationProviders || []).map((provider) =>
-            providerUse.has(provider.id)
-              ? {
-                  ...provider,
-                  lastSentAt: stamp,
-                  sentCount: Number(provider.sentCount || 0) + providerUse.get(provider.id),
-                }
-              : provider,
-          ),
-          notifications: [
-            ...freshDeliveries.slice(0, 10).map((delivery) => ({
-              id: `IN-${delivery.id}`,
-              type: delivery.channel,
-              title: `${delivery.ruleName}: ${delivery.status}`,
-              body: `${delivery.recipient} · ${delivery.body}`,
-              time: stamp,
-              unread: true,
-              deliveryId: delivery.id,
-              module: delivery.module,
-              entityId: delivery.entityId,
-              actionTarget: delivery.actionTarget,
-            })),
-            ...(current.notifications || []),
-          ],
-        },
-        {
-          module: "Bildiriş",
-          action: "Avtomatik kredit monitoru işlədi",
-          detail: `${sentCount} göndərildi · ${blockedCount} bloklandı · ${creditRules.length} qayda`,
-          status: "Avtomatik",
-          role: "System",
-        },
-      );
-    });
-  }, [notificationAutomationRows, notificationProviderRows, state.settings]);
+  // External delivery remains disabled until a server provider adapter is configured.
 
   const productionRows = useMemo(
     () => buildProductionPlanRows(state.productionPlans || [], state.stock, state.warehouseStock, state.products || [], state.warehouses),
@@ -1725,217 +1624,6 @@ function App() {
     notify("Debitor/kreditor reyestri yeniləndi.");
   }
 
-  function closeReceivableDebt(rowId) {
-    if (!requirePermission("receivables.manage", "debitor/kreditor borcunu bağlamaq")) return;
-
-    const targetRow = receivableRows.find((row) => row.id === rowId);
-    if (!targetRow || Number(targetRow.amount || 0) <= 0) {
-      notify("Bağlanacaq açıq borc tapılmadı.", "warning");
-      return;
-    }
-
-    const stamp = getActionStamp();
-    const closureId = `RC-${Date.now()}`;
-
-    setState((current) => {
-      const closureBase = {
-        id: closureId,
-        rowId: targetRow.id,
-        type: targetRow.type,
-        party: targetRow.party,
-        at: stamp,
-        riskCategory: targetRow.riskCategory,
-        agingBucket: targetRow.agingBucket,
-        collectionStatus: "Bağlandı",
-        owner: activeRoleInfo?.name || "System",
-      };
-
-      if (targetRow.type === "Debitor") {
-        const creditIds = new Set(targetRow.creditIds || []);
-        const openOrderIds = new Set(targetRow.openOrderIds || []);
-        const currentCredits = buildAllCreditRecords(current.orders || [], current.credits || []);
-        const updatedCredits = new Map();
-        const paymentByOrderId = new Map();
-        const paymentByCreditId = new Map();
-        const closedAmount = getReceivableClosureAmount(targetRow);
-
-        currentCredits
-          .filter((credit) => creditIds.has(credit.id))
-          .forEach((credit) => {
-            const plan = getCreditDisplayPlan(credit);
-            const balance = Number(plan.balance || 0);
-            if (balance <= 0) return;
-
-            const paymentResult = applyCreditPrincipalPayment(credit, balance);
-            paymentByCreditId.set(credit.id, paymentResult);
-            if (credit.orderId) paymentByOrderId.set(credit.orderId, paymentResult);
-
-            updatedCredits.set(credit.id, {
-              ...credit,
-              balance: paymentResult.nextBalance,
-              installments: paymentResult.installments,
-              paidMonths: paymentResult.nextPaidMonths,
-              rate: 100,
-              monthly: paymentResult.nextMonthly,
-              next: paymentResult.nextDue,
-              status: paymentResult.status,
-              payments: [
-                {
-                  date: baseFinanceDate,
-                  principal: paymentResult.appliedPrincipal,
-                  penalty: 0,
-                  cashIn: paymentResult.appliedPrincipal,
-                  note: "Debitor bağlanışı",
-                  closureId,
-                },
-                ...(credit.payments || []),
-              ],
-            });
-          });
-
-        const nextOrders = (current.orders || []).map((order) => {
-          let nextOrder = order;
-          const creditId = order.creditId || getCreditIdForOrder(order);
-          const paymentResult = paymentByOrderId.get(order.id) || paymentByCreditId.get(creditId);
-
-          if (paymentResult) {
-            nextOrder = {
-              ...nextOrder,
-              paid: Math.min(Number(nextOrder.amount || 0), Number(nextOrder.paid || 0) + Number(paymentResult.appliedPrincipal || 0)),
-              creditBalance: paymentResult.nextBalance,
-              creditMonthly: paymentResult.nextMonthly,
-              creditLastPayment: paymentResult.installments[paymentResult.installments.length - 1]?.amount || 0,
-              paymentStatus: paymentResult.nextBalance <= 0 ? "Ödənilib" : "Kredit satış",
-            };
-          }
-
-          if (openOrderIds.has(order.id)) {
-            nextOrder = {
-              ...nextOrder,
-              paid: Number(nextOrder.amount || 0),
-              paymentStatus: "Ödənilib",
-            };
-          }
-
-          return nextOrder;
-        });
-
-        const existingCreditIds = new Set((current.credits || []).map((credit) => credit.id));
-        const nextCredits = [
-          ...Array.from(updatedCredits.values()).filter((credit) => !existingCreditIds.has(credit.id)),
-          ...(current.credits || []).map((credit) => updatedCredits.get(credit.id) || credit),
-        ];
-        const cashEntry = {
-          id: `RCV-${Date.now()}`,
-          type: "Debitor",
-          source: "Debitor/Kreditor",
-          category: "Borc bağlanışı",
-          receivableId: targetRow.id,
-          creditId: targetRow.creditIds?.[0] || "",
-          orderId: targetRow.openOrderIds?.[0] || "",
-          contractId: targetRow.contractIds?.[0] || "",
-          customer: targetRow.party,
-          principal: Math.max(0, closedAmount),
-          penalty: 0,
-          amount: Math.max(0, closedAmount),
-          date: baseFinanceDate,
-          note: `${targetRow.detail} · ${targetRow.riskCategory}`,
-          closureId,
-        };
-        const closure = {
-          ...closureBase,
-          amount: cashEntry.amount,
-          direction: "cash-in",
-          sourceIds: [...(targetRow.creditIds || []), ...(targetRow.openOrderIds || []), targetRow.source].filter(Boolean),
-        };
-
-        return auditCurrentState(
-          {
-            ...current,
-            customers: (current.customers || []).map((customer) =>
-              targetRow.sourceType === "manual" &&
-              (customer.fin === targetRow.source || normalize(customer.name) === normalize(targetRow.party))
-                ? { ...customer, debt: 0, delay: 0, receivableStatus: "Bağlandı" }
-                : customer,
-            ),
-            orders: nextOrders,
-            credits: nextCredits,
-            cashEntries: cashEntry.amount > 0 ? [cashEntry, ...(current.cashEntries || [])] : current.cashEntries || [],
-            receivableClosures: [closure, ...(current.receivableClosures || [])].slice(0, 30),
-          },
-          {
-            module: "Debitor/Kreditor",
-            action: "Debitor borcu bağlandı",
-            detail: `${targetRow.party} · ${money(cashEntry.amount)} · ${targetRow.riskCategory}`,
-          },
-        );
-      }
-
-      const poIds = new Set(targetRow.poIds || []);
-      const payablePos = (current.purchaseOrders || []).filter((po) => poIds.has(po.id));
-      const closedAmount = getReceivableClosureAmount(targetRow);
-      const existingExpenseIds = new Set((current.expenses || []).map((expense) => expense.id));
-      const paymentExpenses = payablePos
-        .filter((po) => !existingExpenseIds.has(`EXP-${po.id}`))
-        .map((po) => ({
-          id: `EXP-${po.id}`,
-          description: `Kreditor bağlanışı - ${po.product}`,
-          category: "Vendor ödənişi",
-          date: baseFinanceDate,
-          amount: Number(po.amount || 0),
-          status: "Təsdiq edildi",
-          source: "Debitor/Kreditor",
-          cashImpact: true,
-          poId: po.id,
-          vendor: po.vendor,
-          closureId,
-        }));
-      const closure = {
-        ...closureBase,
-        amount: closedAmount,
-        direction: "cash-out",
-        sourceIds: [...poIds],
-      };
-
-      return auditCurrentState(
-        {
-          ...current,
-          purchaseOrders: (current.purchaseOrders || []).map((po) =>
-            poIds.has(po.id)
-              ? {
-                  ...po,
-                  status: "Ödənilib",
-                  paidAt: baseFinanceDate,
-                  paymentStatus: "Bağlandı",
-                  closureId,
-                }
-              : po,
-          ),
-          expenses: [
-            ...paymentExpenses,
-            ...(current.expenses || []).map((expense) =>
-              poIds.has(expense.poId)
-                ? {
-                    ...expense,
-                    status: "Təsdiq edildi",
-                    paidAt: baseFinanceDate,
-                    closureId,
-                  }
-                : expense,
-            ),
-          ],
-          receivableClosures: [closure, ...(current.receivableClosures || [])].slice(0, 30),
-        },
-        {
-          module: "Debitor/Kreditor",
-          action: "Kreditor borcu bağlandı",
-          detail: `${targetRow.party} · ${money(closedAmount)} · ${targetRow.riskCategory}`,
-        },
-      );
-    });
-
-    notify(`${targetRow.party} üzrə borc bağlanış workflow-u tamamlandı.`, "success");
-  }
 
   async function exportReport(title = "PDF export", format = "PDF", displayedSnapshot) {
     if (!requirePermission("reports.export", "hesabat export etmək")) return null;
@@ -2827,271 +2515,28 @@ function App() {
 
   function runNotificationDispatchAction() {
     if (!requirePermission("notifications.manage", "bildiriş növbəsini göndərmək")) return;
-
-    const readyRules = notificationAutomationRows.filter((rule) => rule.queueCount > 0 && rule.status === "Aktiv");
-    if (readyRules.length === 0) {
-      notify("Göndəriş üçün aktiv bildiriş növbəsi yoxdur.", "warning");
-      return;
-    }
-
-    const stamp = getActionStamp();
-    const deliveries = buildNotificationDeliveriesForRules({
-      rules: readyRules,
-      providerRows: notificationProviderRows,
-      settings: state.settings,
-      stamp,
-      source: "Manual növbə",
-    });
-
-    if (deliveries.length === 0) {
-      notify("Qaydalarda hadisə tapılmadı.", "warning");
-      return;
-    }
-
-    const sentCount = deliveries.filter((item) => item.status === "Göndərildi").length;
-    const blockedCount = deliveries.length - sentCount;
-    if (activeTenantId) {
-      deliveries.forEach((delivery) => {
-        const channelMap = { SMS: "sms", Email: "email", Push: "push" };
-        void queueNotification({
-          tenantId: activeTenantId,
-          notification: {
-            entity_type: delivery.module || "notifications",
-            recipient: delivery.recipient || "Daxili komanda",
-            channel: channelMap[delivery.channel] || "in_app",
-            provider: delivery.providerName || null,
-            subject: delivery.subject || null,
-            body: delivery.body || delivery.subject || "Bildiriş",
-            status: delivery.status === "Göndərildi" ? "sent" : "failed",
-            sent_at: delivery.status === "Göndərildi" ? delivery.sentAtIso : null,
-            last_error: delivery.status === "Göndərildi" ? null : delivery.status,
-            metadata: {
-              rule_id: delivery.ruleId,
-              dedupe_key: delivery.dedupeKey,
-              priority: delivery.priority,
-              action_target: delivery.actionTarget,
-            },
-          },
-        }).catch((error) => notify(`Bildiriş logu sinxronlaşmadı: ${error.message}`, "warning"));
-      });
-    }
-    const touchedRuleIds = new Set(deliveries.map((item) => item.ruleId));
-    const providerUse = deliveries.reduce((map, item) => {
-      if (!item.providerId) return map;
-      map.set(item.providerId, (map.get(item.providerId) || 0) + (item.status === "Göndərildi" ? 1 : 0));
-      return map;
-    }, new Map());
-
-    setState((current) =>
-      auditCurrentState(
-        {
-          ...current,
-          notificationSweepAt: stamp,
-          notificationSendLog: [...deliveries, ...(current.notificationSendLog || [])].slice(0, 120),
-          notificationDispatchSnapshot: {
-            at: stamp,
-            total: deliveries.length,
-            sent: sentCount,
-            blocked: blockedCount,
-            rules: readyRules.length,
-            source: "Manual növbə",
-          },
-          notificationRules: ensureNotificationRules(current.notificationRules || []).map((rule) =>
-            touchedRuleIds.has(rule.id)
-              ? {
-                  ...rule,
-                  lastRunAt: stamp,
-                  sentCount: Number(rule.sentCount || 0) + deliveries.filter((item) => item.ruleId === rule.id && item.status === "Göndərildi").length,
-                  failedCount: Number(rule.failedCount || 0) + deliveries.filter((item) => item.ruleId === rule.id && item.status !== "Göndərildi").length,
-                  lastStatus: deliveries.some((item) => item.ruleId === rule.id && item.status !== "Göndərildi") ? "Qismən bloklandı" : "Göndərildi",
-                }
-              : rule,
-          ),
-          notificationProviders: ensureNotificationProviders(current.notificationProviders || []).map((provider) =>
-            providerUse.has(provider.id)
-              ? {
-                  ...provider,
-                  lastSentAt: stamp,
-                  sentCount: Number(provider.sentCount || 0) + providerUse.get(provider.id),
-                }
-              : provider,
-          ),
-          notifications: [
-            ...deliveries.slice(0, 8).map((delivery) => ({
-              id: `IN-${delivery.id}`,
-              type: delivery.channel,
-              title: `${delivery.ruleName}: ${delivery.status}`,
-              body: `${delivery.recipient} · ${delivery.body}`,
-              time: stamp,
-              unread: true,
-              deliveryId: delivery.id,
-              module: delivery.module,
-              entityId: delivery.entityId,
-              actionTarget: delivery.actionTarget,
-            })),
-            ...(current.notifications || []),
-          ],
-        },
-        {
-          module: "Bildiriş",
-          action: "Provider göndəriş növbəsi işləndi",
-          detail: `${sentCount} göndərildi · ${blockedCount} bloklandı · ${readyRules.length} qayda`,
-        },
-      ),
-    );
-
-    notify(`Bildiriş növbəsi işləndi: ${sentCount} göndərildi, ${blockedCount} bloklandı.`);
+    notify("Bildiriş xidməti qoşulmayıb. Göndəriş icra olunmadı.", "warning");
   }
 
-  function runKpiPeriodAction(requestedAction = "next") {
+  async function runKpiPeriodAction(requestedAction = "next") {
     if (!requirePermission("kpi.manage", "KPI periodunu işləmək")) return;
-
-    const period = activeKpiPeriod.period || getKpiPeriodKey();
-    const nextAction =
-      requestedAction !== "next"
-        ? requestedAction
-        : activeKpiPeriod.status !== "Period bağlandı"
-          ? "close"
-          : activeKpiPeriod.approvalStatus !== "Təsdiq edildi"
-            ? "approve"
-            : activeKpiPeriod.payoutStatus !== "Ödənildi"
-              ? "payout"
-              : "complete";
-
-    if (nextAction === "complete") {
-      notify(`${period} KPI periodu artıq bağlanıb, təsdiqlənib və ödənilib.`);
-      return;
+    if (kpiLedger.busy || !kpiLedger.ready) {
+      notify("KPI məlumatları serverdən yüklənməlidir.", "warning"); return;
     }
-
-    if (nextAction === "payout" && activeKpiPeriod.approvalStatus !== "Təsdiq edildi") {
-      notify("Payout üçün əvvəl KPI periodunu təsdiq edin.", "warning");
-      return;
-    }
-
-    const stamp = getActionStamp();
-    let toast =
-      nextAction === "close"
-        ? `${period} KPI periodu bağlandı və təsdiq gözləyir.`
-        : nextAction === "approve"
-          ? `${period} KPI periodu təsdiq edildi.`
-          : `${period} KPI payout-u maliyyə xərcinə yazıldı.`;
-
-    setState((current) => {
-      const salesBonuses = buildSalesBonusRows(current.orders || []);
-      const employeeRows = buildKpiEmployeeScoreRows(current.employees || [], salesBonuses);
-      const targetRows = buildKpiTargetRows({
-        targets: current.kpiTargets || [],
-        employees: current.employees || [],
-        employeeRows,
-        salesBonuses,
+    const action = requestedAction !== "next" ? requestedAction
+      : activeKpiPeriod.status !== "Period bağlandı" ? "close"
+      : activeKpiPeriod.approvalStatus !== "Təsdiq edildi" ? "approve"
+      : activeKpiPeriod.payoutStatus !== "Ödənildi" ? "payout" : "complete";
+    if (action === "complete") { notify("Bu period artıq ödənilib."); return; }
+    try {
+      const receipt = await kpiLedger.execute({
+        action, period: selectedKpiPeriod,
+        snapshot: activeKpiPeriod, account_id: kpiAccountId,
       });
-      const existing = (current.kpiPeriods || []).find((item) => item.period === period) || {};
-      const baseSnapshot = buildKpiPeriodSnapshot({
-        period,
-        targetRows,
-        employeeRows,
-        salesBonuses,
-        existing,
-        stamp,
-      });
-
-      let nextPeriod = baseSnapshot;
-      let nextExpenses = current.expenses || [];
-      let nextPayouts = current.kpiPayouts || [];
-      let audit = {
-        module: "KPI",
-        action: "KPI periodu bağlandı",
-        detail: `${period} · score ${baseSnapshot.companyScore}% · payout ${money(baseSnapshot.payoutAmount)}`,
-      };
-
-      if (nextAction === "close") {
-        nextPeriod = {
-          ...baseSnapshot,
-          status: "Period bağlandı",
-          approvalStatus: "Təsdiq gözləyir",
-          payoutStatus: baseSnapshot.payoutStatus === "Ödənildi" ? "Ödənildi" : "Gözləyir",
-          closedAt: baseSnapshot.closedAt || stamp,
-          updatedAt: stamp,
-        };
-      }
-
-      if (nextAction === "approve") {
-        nextPeriod = {
-          ...baseSnapshot,
-          status: "Period bağlandı",
-          approvalStatus: "Təsdiq edildi",
-          approvedAt: stamp,
-          approvedBy: currentUser?.name || activeRoleInfo?.name || "System",
-          updatedAt: stamp,
-        };
-        audit = {
-          module: "KPI",
-          action: "KPI periodu təsdiq edildi",
-          detail: `${period} · ${money(baseSnapshot.payoutAmount)} payout fondu təsdiqləndi`,
-        };
-      }
-
-      if (nextAction === "payout") {
-        const expenseId = `EXP-KPI-${period}`;
-        const expense = {
-          id: expenseId,
-          description: `KPI payout - ${period}`,
-          category: "KPI/Bonus payout",
-          date: baseFinanceDate,
-          amount: baseSnapshot.payoutAmount,
-          status: "Təsdiq edildi",
-          source: "KPI Payout",
-          cashImpact: true,
-          kpiPeriodId: baseSnapshot.id,
-        };
-        const payout = {
-          id: `KPI-PAY-${period}`,
-          period,
-          amount: baseSnapshot.payoutAmount,
-          at: stamp,
-          status: "Ödənildi",
-          expenseId,
-          rows: baseSnapshot.payoutRows,
-        };
-
-        nextExpenses = nextExpenses.some((item) => item.id === expenseId)
-          ? nextExpenses.map((item) => (item.id === expenseId ? { ...item, ...expense } : item))
-          : [expense, ...nextExpenses];
-        nextPayouts = nextPayouts.some((item) => item.id === payout.id)
-          ? nextPayouts.map((item) => (item.id === payout.id ? payout : item))
-          : [payout, ...nextPayouts];
-        nextPeriod = {
-          ...baseSnapshot,
-          status: "Period bağlandı",
-          approvalStatus: "Təsdiq edildi",
-          payoutStatus: "Ödənildi",
-          paidAt: stamp,
-          payoutExpenseId: expenseId,
-          updatedAt: stamp,
-        };
-        audit = {
-          module: "KPI",
-          action: "KPI payout ödənildi",
-          detail: `${period} · ${money(baseSnapshot.payoutAmount)} maliyyə xərcinə yazıldı`,
-        };
-      }
-
-      const nextPeriods = (current.kpiPeriods || []).some((item) => item.period === period)
-        ? (current.kpiPeriods || []).map((item) => (item.period === period ? nextPeriod : item))
-        : [nextPeriod, ...(current.kpiPeriods || [])];
-
-      return auditCurrentState(
-        {
-          ...current,
-          kpiPeriods: nextPeriods,
-          kpiPayouts: nextPayouts,
-          expenses: nextExpenses,
-        },
-        audit,
-      );
-    });
-
-    if (toast) notify(toast);
+      if (!receipt) return;
+      notify(action === "payout" ? "KPI ödənişi kassaya və perioda birlikdə yazıldı."
+        : action === "approve" ? "KPI periodu təsdiq edildi." : "KPI periodu serverdə bağlandı.");
+    } catch (error) { notify(error.message || "KPI əməliyyatı alınmadı.", "error"); }
   }
 
   function openAction() {
@@ -5335,63 +4780,9 @@ function App() {
     notify("Əməkdaş silindi və tabeçilik xətti yeniləndi.");
   }
 
-  function sendCreditSms(id) {
+  function sendCreditSms() {
     if (!requirePermission("credits.manage", "kredit SMS göndərmək")) return;
-
-    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === id);
-    const provider = notificationProviderRows.find((item) => item.channel === "SMS") || {};
-    const stamp = getActionStamp();
-    const status = getNotificationChannelEnabled("SMS", state.settings) && provider.status === "Aktiv" ? "Göndərildi" : "Bloklandı";
-    const delivery = createNotificationSendLogEntry({
-      rule: {
-        id: "MANUAL-CREDIT-SMS",
-        name: "Manual kredit SMS",
-        channel: "SMS",
-        providerId: provider.id,
-        template: "{creditId} üzrə SMS xatırlatma",
-      },
-      provider,
-      event: {
-        entityId: id,
-        recipient: targetCredit?.customer || "Müştəri",
-        target: targetCredit?.fin || targetCredit?.customer || id,
-        creditId: id,
-        body: `${id} üzrə SMS müştəriyə göndərildi.`,
-        module: "credits",
-        priority: "Orta",
-      },
-      stamp,
-      status,
-      source: "Manual kredit",
-    });
-
-    setState((current) => ({
-      ...current,
-      notificationSendLog: [delivery, ...(current.notificationSendLog || [])].slice(0, 100),
-      notificationProviders: ensureNotificationProviders(current.notificationProviders || []).map((item) =>
-        item.id === provider.id && status === "Göndərildi"
-          ? { ...item, lastSentAt: stamp, sentCount: Number(item.sentCount || 0) + 1 }
-          : item,
-      ),
-      notifications: [
-        {
-          id: `IN-${delivery.id}`,
-          type: "SMS",
-          title: `Kredit ödənişi xatırlatması ${status.toLowerCase()}`,
-          body: delivery.body,
-          time: stamp,
-          unread: true,
-          deliveryId: delivery.id,
-        },
-        ...current.notifications,
-      ],
-    }));
-    notify("SMS xatırlatma göndərildi.");
-    auditOperation({
-      module: "Kredit",
-      action: "SMS xatırlatma göndərildi",
-      detail: `${id} · ${status}`,
-    });
+    notify("SMS xidməti qoşulmayıb. Göndəriş icra olunmadı.", "warning");
   }
 
   function updateCreditPaymentDate(creditId, month, due) {
@@ -6716,10 +6107,6 @@ function App() {
           )}
           {active === "receivables" && (
             <ReceivablesPage
-              rows={filtered.receivables}
-              syncMeta={state.receivableSync}
-              closures={state.receivableClosures || []}
-              onCloseDebt={closeReceivableDebt}
               onOpenSalesOrder={openLinkedSalesOrder}
             />
           )}
@@ -6767,8 +6154,16 @@ function App() {
               targetRows={kpiTargetRows}
               employeeRows={kpiEmployeeRows}
               activePeriod={activeKpiPeriod}
-              periods={state.kpiPeriods || []}
-              payouts={state.kpiPayouts || []}
+              periods={(kpiLedger.data?.periods || []).map(kpiPeriodView)}
+              payouts={(kpiLedger.data?.periods || []).filter(row => row.status === 'paid').map(row => ({ id: row.id, period: row.period.slice(0, 7), amount: Number(row.payout_amount), at: row.paid_at, expenseId: row.expense_id }))}
+              period={selectedKpiPeriod}
+              onSelectPeriod={setSelectedKpiPeriod}
+              accounts={kpiLedger.data?.accounts || []}
+              accountId={kpiAccountId}
+              onSelectAccount={setKpiAccountId}
+              busy={kpiLedger.busy || !kpiLedger.ready}
+              error={kpiLedger.error}
+              onRetry={() => kpiLedger.refresh().catch(() => {})}
               onRunPeriodAction={runKpiPeriodAction}
             />
           )}

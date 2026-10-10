@@ -10,7 +10,7 @@ it('keeps identity provisioning mandatory without suppressing independent busine
   expect(step('Restricted identity authorization gate')).toContain("steps.readonly_identity.outcome == 'success'");
   for (const name of ['Browser and tenant-isolation tests', 'Sales and expense lifecycle tests',
     'Concurrent server lifecycle tests', 'Credit deposit lifecycle', 'Delivery and reversal lifecycle matrix',
-    'All 21 business lifecycle flows']) {
+    '20 required business flows (external notification provider deferred)']) {
     expect(step(name)).toContain("!cancelled() && steps.browser_runtime.outcome == 'success'");
     expect(step(name)).not.toContain('continue-on-error');
   }
