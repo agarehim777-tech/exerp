@@ -1,6 +1,18 @@
 import { expect, it, vi } from 'vitest';
-import { money, percent, normalize } from '../services/format.js';
+import { money, percent, normalize, cashAmount } from '../services/format.js';
 import { formatPaymentDate } from '../services/date.js';
+
+it('preserves native cash currency formatting, spacing, and unavailable balances', () => {
+  for (const currency of ['AZN', 'USD', 'EUR', 'JPY']) {
+    const formatter = new Intl.NumberFormat('az-AZ', { style: 'currency', currency });
+    for (const value of [0, 40, 210, -12.345, '1000.5']) {
+      expect(cashAmount(value, currency)).toBe(formatter.format(Number(value)));
+    }
+  }
+  expect(cashAmount(null)).toBe('—');
+  expect(cashAmount(undefined)).toBe('—');
+  expect(() => cashAmount(1, 'INVALID')).toThrow(RangeError);
+});
 
 it('retains exact Azerbaijani formatting across repeated portfolio calculations', () => {
   const number = new Intl.NumberFormat('az-AZ');

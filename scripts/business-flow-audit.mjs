@@ -7,7 +7,7 @@ import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRes
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
 import { round2 } from '../src/shared/utils/invoiceMath.js';
-import { azn } from '../src/shared/ui/tokens.js';
+import { cashAmount } from '../src/services/format.js';
 import { collectAuditRequests, startAuditCpuProfile } from './audit-browser-diagnostics.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5174/";
@@ -762,6 +762,11 @@ async function auditPurchaseOrder(browser) {
 
 async function auditVendorLifecycle(browser) {
   const { context, page, errors } = await createFlowPage(browser);
+  const readVendorState = async () => ({
+    vendors: await auditBackend.readCanonical('vendors'),
+    purchaseOrders: await auditBackend.readCanonical('purchase_orders'),
+    purchaseOrderLines: await auditBackend.readCanonical('purchase_order_lines'),
+  });
   try {
     await createWarehouseWithStock(page);
     const fixture = fixtureByPage.get(page);
@@ -775,13 +780,13 @@ async function auditVendorLifecycle(browser) {
     await vendorForm.getByLabel('Ad', { exact: true }).fill(vendorName);
     await vendorForm.getByLabel('Telefon', { exact: true }).fill('0501112233');
     await vendorForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
-    let state = await waitForState(s => s.vendors.some(v => v.name === vendorName), 'Vendor create did not persist');
+    let state = await waitForCanonical(readVendorState, s => s.vendors.some(v => v.name === vendorName), 'Vendor create did not persist');
     const vendor = state.vendors.find(v => v.name === vendorName);
     await page.locator('main.main tr').filter({ hasText: vendorName }).getByRole('button', { name: 'Edit', exact: true }).click();
     await vendorForm.getByLabel('Ad', { exact: true }).fill(updatedName);
     await vendorForm.getByLabel('Email', { exact: true }).fill(`qa-${suffix}@example.invalid`);
     await vendorForm.getByRole('button', { name: 'Yadda saxla', exact: true }).click();
-    state = await waitForState(s => s.vendors.some(v => v.id === vendor.id && v.name === updatedName), 'Vendor edit did not persist');
+    state = await waitForCanonical(readVendorState, s => s.vendors.some(v => v.id === vendor.id && v.name === updatedName), 'Vendor edit did not persist');
     assert(state.vendors.find(v => v.id === vendor.id)?.email === `qa-${suffix}@example.invalid`, 'Vendor contact edit did not persist');
     assert(!state.vendors.some(v => v.name === vendorName), 'Vendor edit retained its old name');
 
@@ -795,16 +800,16 @@ async function auditVendorLifecycle(browser) {
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
     await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('70');
     await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
-    state = await waitForState(s => s.purchaseOrders.some(p => p.po_number === poNumber), 'Vendor PO was not persisted');
+    state = await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.po_number === poNumber), 'Vendor PO was not persisted');
     const po = state.purchaseOrders.find(p => p.po_number === poNumber);
     assert(po.vendor_id === vendor.id && po.status === 'draft', 'PO lost the vendor foreign key or draft status');
     assert(state.purchaseOrderLines.some(l => l.po_id === po.id && Number(l.qty_ordered) === 2), 'PO line did not persist');
     await page.locator('main.main tr').filter({ hasText: poNumber }).getByRole('button', { name: 'Təsdiq', exact: true }).click();
-    await waitForState(s => s.purchaseOrders.some(p => p.id === po.id && p.status === 'approved'), 'Vendor PO approval did not persist');
+    await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.id === po.id && p.status === 'approved'), 'Vendor PO approval did not persist');
 
     await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
     await page.locator('main.main tr').filter({ hasText: updatedName }).getByRole('button', { name: 'Sil', exact: true }).click();
-    state = await waitForState(s => s.vendors.some(v => v.id === vendor.id && v.is_active === false), 'Historical vendor was not deactivated');
+    state = await waitForCanonical(readVendorState, s => s.vendors.some(v => v.id === vendor.id && v.is_active === false), 'Historical vendor was not deactivated');
     assert(state.purchaseOrders.some(p => p.id === po.id && p.vendor_id === vendor.id), 'Vendor deactivation broke PO history');
 
     const disposableName = `QA Disposable Vendor ${suffix}`;
@@ -812,10 +817,10 @@ async function auditVendorLifecycle(browser) {
     const disposableForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
     await disposableForm.getByLabel('Ad', { exact: true }).fill(disposableName);
     await disposableForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
-    await waitForState(s => s.vendors.some(v => v.name === disposableName), 'Unlinked vendor was not created');
+    await waitForCanonical(readVendorState, s => s.vendors.some(v => v.name === disposableName), 'Unlinked vendor was not created');
     await page.locator('main.main tr').filter({ hasText: disposableName }).getByRole('button', { name: 'Sil', exact: true }).click();
     await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
-    await waitForState(s => !s.vendors.some(v => v.name === disposableName), 'Unlinked vendor delete did not persist');
+    await waitForCanonical(readVendorState, s => !s.vendors.some(v => v.name === disposableName), 'Unlinked vendor delete did not persist');
     assert(errors.length === 0, `Vendor lifecycle produced browser errors: ${errors.join(' | ')}`);
     return { vendorId: vendor.id, poId: po.id, historicalVendorPreserved: true };
   } finally {
@@ -933,8 +938,8 @@ async function auditFinanceModuleIntegration(browser) {
     }
     const sourceRow = page.locator('main.main tr').filter({ has: page.getByText(source.name, { exact: true }) });
     const targetRow = page.locator('main.main tr').filter({ has: page.getByText(target.name, { exact: true }) });
-    await sourceRow.getByText(azn(210), { exact: true }).waitFor({ state: 'visible' });
-    await targetRow.getByText(azn(40), { exact: true }).waitFor({ state: 'visible' });
+    await sourceRow.getByText(cashAmount(210, source.currency), { exact: true }).waitFor({ state: 'visible' });
+    await targetRow.getByText(cashAmount(40, target.currency), { exact: true }).waitFor({ state: 'visible' });
     assert(errors.length === 0, 'Finance integration produced browser errors: ' + errors.join(' | '));
     return { creditId: sale.credit.id, paymentId, deposit: 200, cashReceipt: 175,
       transferId: transfer.transfer_id, sourceBalance: 210, targetBalance: 40 };
@@ -1708,13 +1713,24 @@ async function auditSupportMessaging(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   const commentText = `QA support ${crypto.randomUUID()}`;
   const replyText = `QA reply ${crypto.randomUUID()}`;
+  const saveMessage = async (text, action) => {
+    const response = await auditResponse(page, response => {
+      const request = response.request();
+      if (request.method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/tenant_state_snapshots')) return false;
+      const payload = request.postDataJSON();
+      return payload?.tenant_id === auditBackend.tenantId && payload.state?.supportTickets?.some(
+        ticket => ticket.comments?.some(comment => comment.text === text));
+    }, action, { timeout: 0 });
+    // The unchanged outer flow deadline bounds queueing and the actual server acknowledgement.
+    assert(response.ok(), 'Linked support message save was rejected: ' + response.status());
+  };
   try {
     await createCreditSale(page);
     await selectModule(page, 18);
     await page.locator(".page-header .primary-btn").click();
     await page.locator('[data-testid="support-task-panel"]').waitFor();
     await page.locator('[data-testid="support-comment-input"]').fill(commentText);
-    await page.locator('[data-testid="support-comment-submit"]').click();
+    await saveMessage(commentText, () => page.locator('[data-testid="support-comment-submit"]').click());
     let state = await waitForState(s => s.supportTickets?.some(t => t.comments?.some(c => c.text === commentText)),
       'Support comment was not persisted');
     let ticket = state.supportTickets?.find(t => t.comments?.some(c => c.text === commentText));
@@ -1730,7 +1746,7 @@ async function auditSupportMessaging(browser) {
     const chatText = await page.locator(".chat-panel").innerText();
     assert(chatText.includes(ticket.id), "Message thread does not show the linked support task");
     await page.getByPlaceholder('Mesaj yazın...', { exact: true }).fill(replyText);
-    await page.getByRole('button', { name: 'Mesaj göndər', exact: true }).click();
+    await saveMessage(replyText, () => page.getByRole('button', { name: 'Mesaj göndər', exact: true }).click());
     state = await waitForState(s => s.supportTickets?.some(t => t.id === ticket.id && t.comments?.some(c => c.text === replyText)),
       'Message reply was not persisted on its support task');
     ticket = state.supportTickets?.find((item) => item.id === ticket.id);

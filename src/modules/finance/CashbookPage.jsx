@@ -3,13 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
+import { cashAmount } from "../../services/format.js";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
 } from "../../shared/ui/tokens.js";
-
-const cashAmount = (value, currency = "AZN") => value == null ? "—"
-  : new Intl.NumberFormat("az-AZ", { style: "currency", currency }).format(Number(value));
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];

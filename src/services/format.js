@@ -1,5 +1,6 @@
 const moneyFormatter = new Intl.NumberFormat("az-AZ");
 const percentFormatter = new Intl.NumberFormat("az-AZ", { maximumFractionDigits: 1 });
+const cashFormatters = new Map();
 const normalizedText = new Map();
 const NORMALIZED_TEXT_LIMIT = 2048;
 
@@ -9,6 +10,15 @@ export function money(value) {
 
 export function percent(value) {
   return `${percentFormatter.format(value)}%`;
+}
+
+export function cashAmount(value, currency = "AZN") {
+  if (value == null) return "—";
+  if (!cashFormatters.has(currency)) {
+    if (cashFormatters.size >= 32) cashFormatters.delete(cashFormatters.keys().next().value);
+    cashFormatters.set(currency, new Intl.NumberFormat("az-AZ", { style: "currency", currency }));
+  }
+  return cashFormatters.get(currency).format(Number(value));
 }
 
 export function normalize(value) {
