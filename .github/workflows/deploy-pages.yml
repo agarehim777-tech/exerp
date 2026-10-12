@@ -56,6 +56,8 @@ jobs:
 
       - name: Backend contract gate
         run: npm run verify:core-backend
+        env:
+          EXPECTED_SUPABASE_PROJECT_REF: tcqdhwtnjrwpfdxoijmv
 
       - name: Build
         run: npm run build:pages
