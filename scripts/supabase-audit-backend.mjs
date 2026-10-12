@@ -125,23 +125,29 @@ export async function createAuditBackend(env, fetcher = fetch) {
     invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
     storageKey: `sb-${new URL(url).hostname.split('.')[0]}-auth-token`,
     session,
-    async readState({ scope = 'all', customerId, warehouseId, accountId } = {}) {
-      if (!['all', 'sales', 'sales-ledger', 'finance', 'reports', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
+    async readState({ scope = 'all', customerId, warehouseId, accountId, productId } = {}) {
+      if (!['all', 'sales', 'sales-ledger', 'credit-ledger', 'finance', 'reports', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
       const salesTables = new Set(['customers', 'products', 'orders', 'credit_contracts', 'credit_installments',
         'credit_payments', 'warehouses', 'stock_balances', 'order_bonus_assignments']);
       const hrTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events', 'expenses']);
       const uiTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events']);
       const salesLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions', 'expenses', 'audit_events']);
+      const creditLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions']);
       const financeTables = new Set(['cash_accounts', 'cash_transactions', 'expenses']);
       const reportsTables = new Set(['tenant_state_snapshots', 'workflow_records', 'audit_events']);
       const scopedRead = (table, select = '*', filter = '', tenantColumn) => {
         if (scope === 'sales' && !salesTables.has(table)) return [];
         if (scope === 'sales-ledger' && !salesLedgerTables.has(table)) return [];
+        if (scope === 'credit-ledger' && !creditLedgerTables.has(table)) return [];
         if (scope === 'finance' && !financeTables.has(table)) return [];
         if (scope === 'reports' && !reportsTables.has(table)) return [];
         if (scope === 'reports' && table === 'audit_events') filter += '&module=eq.Hesabat';
         if (accountId && ['cash_accounts', 'cash_transactions', 'expenses'].includes(table)) {
           filter += `&${table === 'cash_accounts' ? 'id' : 'account_id'}=eq.${encodeURIComponent(accountId)}`;
+        }
+        if (customerId && table === 'cash_transactions') filter += `&customer_id=eq.${encodeURIComponent(customerId)}`;
+        if (productId && ['products', 'stock_balances'].includes(table)) {
+          filter += `&${table === 'products' ? 'id' : 'product_id'}=eq.${encodeURIComponent(productId)}`;
         }
         if (scope === 'hr' && !hrTables.has(table)) return [];
         if (scope === 'ui' && !uiTables.has(table)) return [];
@@ -166,7 +172,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         scopedRead('tenant_state_snapshots'), scopedRead('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
         scopedRead('customers'), scopedRead('products'), scopedRead('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         scopedRead('credit_contracts'), scopedRead('credit_installments'), scopedRead('credit_payments'), scopedRead('warehouses'), scopedRead('stock_balances'),
-        ['all','sales-ledger','finance'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
+        ['all','sales-ledger','credit-ledger','finance'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
         scopedRead('cash_accounts'),
         scopedRead('cash_transactions'), scopedRead('expenses'), scopedRead('vendors'), scopedRead('sales_invoices'), scopedRead('order_bonus_assignments'), scopedRead('audit_events'),
         scopedRead('purchase_orders'), scopedRead('purchase_order_lines', '*,purchase_orders!inner(tenant_id)', '', 'purchase_orders.tenant_id'),

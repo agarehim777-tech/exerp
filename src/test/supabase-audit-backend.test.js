@@ -212,6 +212,27 @@ it('uses stable routes and reports removed modules instead of navigating by DOM 
   expect(() => auditModulePath(8)).toThrow('tax');
 });
 
+it('reads a credit fixture ledger without fetching unrelated customers, products or cash receipts', async () => {
+  const urls = [];
+  const backend = await createAuditBackend(env, async url => {
+    const parsed = new URL(url); urls.push(parsed);
+    if (parsed.pathname.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (parsed.pathname.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (parsed.pathname.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (parsed.pathname.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
+    return response([]);
+  });
+  urls.length = 0;
+  await backend.readState({ scope: 'credit-ledger', customerId: 'customer', warehouseId: 'warehouse', productId: 'product' });
+  expect(urls.some(url => /snapshot|collection|expense|audit_events|purchase/.test(url.pathname))).toBe(false);
+  expect(urls.find(url => url.pathname.endsWith('/cash_transactions')).searchParams.get('customer_id')).toBe('eq.customer');
+  expect(urls.find(url => url.pathname.endsWith('/products')).searchParams.get('id')).toBe('eq.product');
+  expect(urls.find(url => url.pathname.endsWith('/stock_balances')).searchParams.get('product_id')).toBe('eq.product');
+  expect(urls.find(url => url.pathname.endsWith('/stock_balances')).searchParams.get('warehouse_id')).toBe('eq.warehouse');
+  expect(urls.some(url => url.pathname.endsWith('/cashbook_ledger_summary'))).toBe(true);
+  expect(urls.filter(url => !url.pathname.includes('/rpc/')).every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
+});
+
 it('reads only the selected finance account and keeps the balance authoritative', async () => {
   const urls = [];
   const backend = await createAuditBackend(env, async url => {

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ rows: {}, tenant: 'tenant-a', filters: [], selects: [], pending: null, rpc: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rows: {}, tenant: 'tenant-a', filters: [], selects: [], events: [], pending: null, rpc: vi.fn() }));
 vi.mock('../auth/AuthProvider.jsx', () => ({ useAuth: () => ({ activeTenantId: mocks.tenant, user: { id: 'actor-a' } }) }));
 vi.mock('../services/enterpriseWorkflows.js', () => ({ listWorkflowRecords: async () => [], saveWorkflowRecord: vi.fn() }));
 vi.mock('../modules/procurement/procurementSchema.js', () => ({
@@ -13,7 +13,7 @@ vi.mock('../modules/procurement/procurementSchema.js', () => ({
 vi.mock('../integrations/supabase/client', () => ({ supabase: {
   rpc: mocks.rpc,
   channel: () => {
-    const channel = { on: () => channel, subscribe: () => channel };
+    const channel = { on: (kind, options, handler) => { mocks.events.push({ table: options.table, handler }); return channel; }, subscribe: () => channel };
     return channel;
   },
   removeChannel: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: {
 import ProcurementPage from '../modules/procurement/ProcurementPage.jsx';
 
 beforeEach(() => {
-  mocks.tenant = 'tenant-a'; mocks.filters = []; mocks.selects = []; mocks.pending = null;
+  mocks.tenant = 'tenant-a'; mocks.filters = []; mocks.selects = []; mocks.events = []; mocks.pending = null;
   mocks.rpc.mockReset().mockResolvedValue({ data: {}, error: null });
   mocks.rows = {
     purchase_orders: [{ id: 'po-a', po_number: 'PO-QA', currency: 'AZN', status: 'approved', vendors: { name: 'QA Vendor' } }],
@@ -52,6 +52,34 @@ it('explicitly scopes child line queries through their tenant-owned parent and l
   expect(screen.getByRole('combobox', { name: 'PO', exact: true })).toHaveAttribute('aria-label', 'PO');
   fireEvent.click(screen.getByRole('button', { name: 'Fakturalar', exact: true }));
   expect(screen.getByRole('combobox', { name: 'PO', exact: true })).toHaveAttribute('aria-label', 'PO');
+});
+
+it('exposes registry readiness while the canonical read is pending', async () => {
+  let finish;
+  mocks.pending = table => table === 'vendors' ? new Promise(resolve => { finish = resolve; }) : null;
+  const { container } = render(<MemoryRouter><ProcurementPage /></MemoryRouter>);
+  expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'true');
+  await waitFor(() => expect(finish).toBeTypeOf('function'));
+  await act(async () => finish({ data: [], error: null }));
+  await waitFor(() => expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false'));
+});
+
+it('debounces related table events into one registry reload', async () => {
+  const { container } = render(<MemoryRouter><ProcurementPage /></MemoryRouter>);
+  await waitFor(() => expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false'));
+  const before = mocks.selects.length;
+  vi.useFakeTimers();
+  try {
+    act(() => {
+      mocks.events.find(event => event.table === 'vendor_invoices').handler();
+      mocks.events.find(event => event.table === 'purchase_orders').handler();
+      mocks.events.find(event => event.table === 'vendor_invoices').handler();
+    });
+    expect(mocks.selects).toHaveLength(before);
+    await act(async () => vi.advanceTimersByTimeAsync(1200));
+    expect(mocks.selects).toHaveLength(before + 8);
+    expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false');
+  } finally { vi.useRealTimers(); }
 });
 
 it('resets tenant forms and rejects an old A response after A -> B -> A', async () => {

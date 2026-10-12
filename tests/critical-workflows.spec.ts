@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { hasAuthenticatedE2E, restoreAuthenticatedSession } from "./auth-session";
 import { authenticatedApi, supabaseKey, supabaseUrl } from "./supabase-lifecycle";
+import { isLastCollectionPage } from './collection-readiness.mjs';
 
 test.describe("Kritik ERP axınları", () => {
   test.skip(!hasAuthenticatedE2E, "E2E test istifadəçisi konfiqurasiya edilməyib");
@@ -43,7 +44,12 @@ test.describe("Kritik ERP axınları", () => {
   }
 
   test("HR əməkdaş forması ayrıca dialog kimi açılır", async ({ page }) => {
-    await page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" });
+    const hydrated = page.waitForResponse(async response => response.request().method() === 'GET'
+      && new URL(response.url()).pathname.endsWith('/tenant_collection_records')
+      && (!process.env.E2E_TENANT_ID || new URL(response.url()).searchParams.get('tenant_id') === `eq.${process.env.E2E_TENANT_ID}`)
+      && (!response.ok() || isLastCollectionPage(await response.headerValue('content-range'))), { timeout: 0 });
+    const [result] = await Promise.all([hydrated, page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" })]);
+    expect(result.ok(), `HR_COLLECTION_HYDRATION_FAILED: ${result.status()}`).toBe(true);
     await expect(page).toHaveURL(/\/hr\/emekdaslar(?:[/?#]|$)/);
     await expect(page.getByRole("heading", { name: "İnsan Resursları" })).toBeVisible();
     const createButton = page.getByRole("button", { name: "Yeni əməkdaş", exact: true });

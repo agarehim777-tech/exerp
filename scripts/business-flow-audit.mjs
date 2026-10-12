@@ -466,6 +466,8 @@ async function auditCreditPayment(browser) {
   const { context, page, errors } = await createFlowPage(browser);
   try {
     const sale = await createCreditSale(page);
+    const fixture = fixtureByPage.get(page);
+    const readScope = { scope: 'credit-ledger', customerId: fixture.customer.id, warehouseId: sale.warehouse.id, productId: fixture.product.id };
     await selectModule(page, 9);
     await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
     const creditRow = page.locator('.credit-directory-panel tr').filter({ hasText: sale.contract.id });
@@ -474,12 +476,18 @@ async function auditCreditPayment(browser) {
     assert(await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).isDisabled(),
       'Credit activation was enabled before collecting the planned deposit');
     await startModal.getByLabel('Qəbul ediləcək məbləğ', { exact: true }).fill('200');
-    await startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click();
-    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.initialPaid === 200, 'Deposit was not posted');
-    await startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click();
+    const deposit = await auditResponse(page, r => r.request().method() === 'POST'
+      && new URL(r.url()).pathname.endsWith('/rpc/post_credit_initial_payment'),
+      () => startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click(), { timeout: 0 });
+    assert(deposit.ok(), 'Deposit command failed: ' + await deposit.text());
+    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.initialPaid === 200, 'Deposit was not posted', readScope);
+    const activation = await auditResponse(page, r => r.request().method() === 'POST'
+      && new URL(r.url()).pathname.endsWith('/rpc/start_credit_contract'),
+      () => startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click(), { timeout: 0 });
+    assert(activation.ok(), 'Activation command failed: ' + await activation.text());
     await startModal.waitFor({ state: 'hidden' });
-    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.status === 'active', 'Credit was not activated');
-    const before = await readState(page);
+    await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.status === 'active', 'Credit was not activated', readScope);
+    const before = await auditBackend.readState(readScope);
     const previousCredit = before.credits?.find((item) => item.id === sale.credit.id);
     const previousOrder = before.orders?.find((order) => order.id === sale.order.id);
     const previousPaidMonths = Number(previousCredit?.paidMonths || 0);
@@ -511,7 +519,10 @@ async function auditCreditPayment(browser) {
     const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
     await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill(String(principalPayment));
     await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill(String(penaltyPayment));
-    await page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click();
+    const paid = await auditResponse(page, r => r.request().method() === 'POST'
+      && new URL(r.url()).pathname.endsWith('/rpc/post_credit_payment'),
+      () => page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click(), { timeout: 0 });
+    assert(paid.ok(), 'Credit payment command failed: ' + await paid.text());
     // Separate HTTP reads can straddle a transaction commit; require every linked effect.
     const after = await waitForState(s => {
       const credit = s.credits.find(c => c.id === sale.credit.id);
@@ -520,7 +531,7 @@ async function auditCreditPayment(browser) {
         && Number(order?.paid) === round2(Number(previousOrder.paid) + principalPayment)
         && Number(credit.balance) === round2(Number(previousCredit.balance) - principalPayment)
         && s.cashEntries.some(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
-    }, 'Credit payment receipt, linked principal and cash effects did not converge');
+    }, 'Credit payment receipt, linked principal and cash effects did not converge', readScope);
     const cashEntry = after.cashEntries.find(tx => tx.creditId === sale.credit.id && !before.cashEntries.some(old => old.id === tx.id));
     const linkedOrder = after.orders?.find((order) => order.id === sale.order.id);
     const linkedCredit = after.credits?.find((credit) => credit.id === cashEntry?.creditId);
@@ -726,8 +737,9 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     await receiptForm.getByRole('button', { name: 'Mədaxil et', exact: true }).click();
     const [grn] = await waitForCanonical(() => read('goods_receipts', '&grn_number=eq.' + grnNumber), rows => rows.length === 1, 'Purchase GRN was not persisted');
     const [shipment] = await waitForCanonical(() => read('procurement_shipments', '&source_grn_id=eq.' + grn.id), rows => rows.length === 1, 'GRN did not create the canonical shipment');
-    const before = await readState(page);
-    assert(stockTotal(before, warehouse.id, fixture.productName) === 5, 'PO approval or GRN changed physical stock before warehouse receipt');
+    const stockFilter = `&warehouse_id=eq.${warehouse.id}&product_id=eq.${fixture.product.id}`;
+    const before = await read('stock_balances', stockFilter);
+    assert(before.length === 1 && Number(before[0].on_hand) === 5, 'PO approval or GRN changed physical stock before warehouse receipt');
 
     await page.getByRole('button', { name: 'Göndəriş və maya', exact: true }).click();
     await page.locator('.landed-list button').filter({ has: page.getByText(shipment.shipment_no, { exact: true }) }).click();
@@ -738,7 +750,8 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     const [receipt] = await waitForCanonical(() => read('procurement_receipts', '&shipment_id=eq.' + shipment.id), rows => rows.length === 1, 'Warehouse receipt was not posted');
     const journals = await read('journal_entries', '&source_type=eq.procurement_receipt&source_id=eq.' + receipt.id);
     assert(journals.length === 1 && journals[0].posted, 'Warehouse receipt has no posted accounting journal');
-    await waitForState(s => stockTotal(s, warehouse.id, fixture.productName) === 7, 'Purchase receipt did not increase physical stock');
+    await waitForCanonical(() => read('stock_balances', stockFilter), rows => rows.length === 1 && Number(rows[0].on_hand) === 7,
+      'Purchase receipt did not increase physical stock');
 
     await page.getByRole('button', { name: 'Fakturalar', exact: true }).click();
     const invoiceNumber = 'INV-QA-' + suffix;
@@ -747,6 +760,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     await invoiceForm.getByLabel('Faktura nömrəsi', { exact: true }).fill(invoiceNumber);
     await invoiceForm.getByRole('button', { name: 'Faktura yarat', exact: true }).click();
     const [invoice] = await waitForCanonical(() => read('vendor_invoices', '&invoice_number=eq.' + invoiceNumber), rows => rows.length === 1 && rows[0].status === 'matched', 'Invoice did not pass three-way matching');
+    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: 0 });
     if (viaReceivables) {
       await selectModule(page, 10);
       await page.locator('[data-testid="receivable-control-panel"] tr').filter({ hasText: invoiceNumber })
@@ -766,8 +780,10 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     assert(first.payment_id === replay.payment_id && Number(first.amount) === 100, 'Purchase payment replay was not idempotent');
     const cash = await read('cash_transactions', '&reference_type=eq.vendor_invoice&reference_id=eq.' + invoice.id);
     assert(cash.length === 1 && cash[0].direction === 'out' && Number(cash[0].amount) === 100 && cash[0].account_id === account.id, 'Purchase payment did not debit cash once');
-    const state = await waitForState(s => s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 400, 'Purchase payment did not update the server cash balance');
-    assert(stockTotal(state, warehouse.id, fixture.productName) === 7, 'Invoice payment changed warehouse stock');
+    await waitForState(s => s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 400,
+      'Purchase payment did not update the server cash balance', { scope: 'finance', accountId: account.id });
+    const afterStock = await read('stock_balances', stockFilter);
+    assert(afterStock.length === 1 && Number(afterStock[0].on_hand) === 7, 'Invoice payment changed warehouse stock');
     const [paidInvoice] = await read('vendor_invoices', '&id=eq.' + invoice.id);
     assert(paidInvoice.status === 'paid', 'Invoice did not become paid');
     const paymentJournal = await read('journal_entries', '&id=eq.' + first.journal_entry_id);

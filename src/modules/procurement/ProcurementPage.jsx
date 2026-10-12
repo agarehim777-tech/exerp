@@ -35,6 +35,7 @@ import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSch
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { vendorInvoiceLineGross, vendorInvoiceTotal } from "./procurementMath.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
+import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -365,22 +366,8 @@ function ProcurementWorkspace({ tenantId, user }) {
     setTab("po");
   }
 
-  useEffect(() => {
-    if (!tenantId) return undefined;
-    let channel = supabase
-      .channel(`procurement:${tenantId}:${Math.random().toString(36).slice(2, 10)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vendors", filter: `tenant_id=eq.${tenantId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders", filter: `tenant_id=eq.${tenantId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "goods_receipts", filter: `tenant_id=eq.${tenantId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vendor_invoices", filter: `tenant_id=eq.${tenantId}` }, load);
-    if (poPaymentsAvailable) {
-      channel = channel.on("postgres_changes", { event: "*", schema: "public", table: "po_payments", filter: `tenant_id=eq.${tenantId}` }, load);
-    }
-    channel.subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tenantId, load, poPaymentsAvailable]);
+  useRealtimeResync(tenantId, ['vendors', 'purchase_orders', 'goods_receipts', 'vendor_invoices',
+    ...(poPaymentsAvailable ? ['po_payments'] : [])], load, { channelPrefix: 'procurement' });
 
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
@@ -1098,10 +1085,13 @@ function ProcurementWorkspace({ tenantId, user }) {
       setSaving(false);
       return;
     }
-    await runMatch(invoiceId, false);
+    if (!await runMatch(invoiceId, false)) {
+      setEditingInvoiceId(invoiceId);
+      setSaving(false);
+      return;
+    }
     setNotice(editingInvoiceId ? "Faktura yeniləndi və 3-way match hesablandı." : "Faktura yaradıldı və 3-way match hesablandı.");
     resetInvoiceForm();
-    await load();
     setSaving(false);
   }
 
@@ -1112,11 +1102,12 @@ function ProcurementWorkspace({ tenantId, user }) {
     ]);
     if (evalError || applyError) {
       setError(getError(evalError || applyError));
-      return;
+      return false;
     }
     setMatchRows((current) => ({ ...current, [invoiceId]: rows || [] }));
     if (withNotice) setNotice("3-way match yeniləndi.");
     await load();
+    return true;
   }
 
   async function updateInvoiceStatus(invoiceId, status) {
@@ -1207,7 +1198,7 @@ function ProcurementWorkspace({ tenantId, user }) {
   }
 
   return (
-    <main style={styles.page} className="procurement-page">
+    <main style={styles.page} className="procurement-page" aria-busy={loading || saving}>
       <header style={styles.header}>
         <div>
           <h1 style={styles.title}>Satınalma</h1>
