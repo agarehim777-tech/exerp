@@ -486,7 +486,7 @@ async function auditCreditPayment(browser) {
     await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.initialPaid === 200, 'Deposit was not posted', readScope);
     const activation = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/start_credit_contract'),
-      () => startModal.getByRole('button', { name: 'Krediti başlat', exact: true }).click(), { timeout: 0 });
+      () => clickAuditReady(page, startModal.getByRole('button', { name: 'Krediti başlat', exact: true })), { timeout: 0 });
     assert(activation.ok(), 'Activation command failed: ' + await activation.text());
     await startModal.waitFor({ state: 'hidden' });
     await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.status === 'active', 'Credit was not activated', readScope);
