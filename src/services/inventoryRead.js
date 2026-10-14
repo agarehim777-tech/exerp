@@ -39,3 +39,40 @@ export async function readInventoryBase(tenantId, balanceSelect, isCurrent = () 
   ]);
   return warehouses && balances ? { warehouses: warehouses.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'az') || String(a.id).localeCompare(String(b.id))), balances } : null;
 }
+
+export async function readSaleStockShortages(tenantId, warehouseId, lines, products, isCurrent = () => true) {
+  if (!tenantId || !warehouseId) throw new Error('SALES_STOCK_SCOPE_REQUIRED');
+  const normalize = value => String(value ?? '').trim().toLowerCase();
+  const bySku = new Map(products.filter(product => product.sku).map(product => [normalize(product.sku), product]));
+  const byName = new Map(products.filter(product => product.name).map(product => [normalize(product.name), product]));
+  const required = new Map();
+  for (const line of lines) {
+    const product = bySku.get(normalize(line.product)) || byName.get(normalize(line.product));
+    if (!product?.id) throw new Error('SALES_PRODUCT_NOT_FOUND');
+    const quantity = Number(line.qty);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('SALES_QUANTITY_INVALID');
+    const existing = required.get(product.id);
+    required.set(product.id, { product: line.product, qty: (existing?.qty || 0) + quantity });
+  }
+  const balances = new Map();
+  const ids = [...required.keys()];
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const batch = ids.slice(offset, offset + 100);
+    const rows = await readPages(last => {
+      let query = supabase.from('stock_balances').select('product_id,on_hand,reserved,problem_qty', { count: 'exact' })
+        .eq('tenant_id', tenantId).eq('warehouse_id', warehouseId).in('product_id', batch).order('product_id');
+      if (last) query = query.gt('product_id', last.product_id);
+      return query;
+    }, isCurrent, row => row.product_id);
+    if (!rows) return null;
+    for (const row of rows) {
+      const values = [row.on_hand, row.reserved, row.problem_qty ?? 0].map(Number);
+      if (!values.every(Number.isFinite)) throw new Error('SALES_STOCK_READ_INVALID');
+      balances.set(row.product_id, values[0] - values[1] - values[2]);
+    }
+  }
+  return [...required].flatMap(([id, line]) => {
+    const shortage = Math.max(0, line.qty - (balances.get(id) || 0));
+    return shortage > 0 ? [{ product: line.product, shortage }] : [];
+  });
+}

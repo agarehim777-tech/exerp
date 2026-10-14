@@ -9,6 +9,7 @@ import { useCustomers } from "./shared/hooks/useCustomers.js";
 import { useProducts } from "./shared/hooks/useProducts.js";
 import { useOrders } from "./shared/hooks/useOrders.js";
 import { useStock } from "./shared/hooks/useStock.js";
+import { readSaleStockShortages } from "./services/inventoryRead.js";
 import { useTenantUiPersistence } from "./shared/hooks/useTenantUiPersistence.js";
 import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
 import { useKpiLedger } from "./shared/hooks/useFinancialSettlement.js";
@@ -2629,17 +2630,7 @@ function App() {
       const productLines = (Array.isArray(values.products) ? values.products : [])
         .filter((item) => item.product)
         .map((item) => ({ product: item.product, qty: Number(item.qty || 0) }));
-      const warehouseRows = state.warehouseStock?.[warehouseId] || [];
       const invalidQtyLine = productLines.some((line) => line.qty <= 0);
-      // Çatışmayan qalıq satışı bloklamır — sifariş backorder (mənfi mövcud) kimi qeyd olunur.
-      const shortageLines = productLines
-        .map((line) => {
-          const item = warehouseRows.find((row) => row.product === line.product);
-          const free = item ? getFreeQuantity(item) : 0;
-          const shortage = Math.max(0, line.qty - free);
-          return shortage > 0 ? `${line.product} (${shortage} ədəd)` : null;
-        })
-        .filter(Boolean);
 
       if (
         !values.customer ||
@@ -2650,6 +2641,29 @@ function App() {
       ) {
         notify("Sifariş üçün müştəri, anbar və ən azı bir məhsul (say > 0) seçin.", "warning");
         return;
+      }
+
+      let shortageLines;
+      if (activeTenantId) {
+        const isCurrent = beginTenantRequest('sale-stock-preview');
+        try {
+          const shortages = await readSaleStockShortages(activeTenantId, warehouseId, productLines, dbProducts || [], isCurrent);
+          if (!isCurrent() || shortages === null) return false;
+          shortageLines = shortages.map(line => `${line.product} (${line.shortage} ədəd)`);
+        } catch (error) {
+          if (isCurrent()) notify(`Qalıq serverdən yoxlanılmadı: ${error.message}`, 'error');
+          return false;
+        }
+      } else if (ENABLE_LEGACY_WRITES) {
+        const warehouseRows = state.warehouseStock?.[warehouseId] || [];
+        shortageLines = productLines.map(line => {
+          const item = warehouseRows.find(row => row.product === line.product);
+          const shortage = Math.max(0, line.qty - (item ? getFreeQuantity(item) : 0));
+          return shortage > 0 ? `${line.product} (${shortage} ədəd)` : null;
+        }).filter(Boolean);
+      } else {
+        notify('Aktiv şirkət seçilməyib.', 'error');
+        return false;
       }
 
       if (shortageLines.length > 0) {
