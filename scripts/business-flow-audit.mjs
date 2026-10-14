@@ -1161,9 +1161,12 @@ async function auditWarehouseImport(browser) {
       buffer: Buffer.from(csv, "utf8"),
     });
     await importModal.locator(".warehouse-import-summary").waitFor();
+    const importButton = importModal.getByRole('button', { name: 'İmport et', exact: true });
+    // The preview can render before the warehouse catalog has finished revalidating it.
+    await importButton.click({ trial: true });
     const response = await auditResponse(page, response => response.request().method() === 'POST'
       && new URL(response.url()).pathname.endsWith('/rpc/import_warehouse_stock_atomic'),
-      () => importModal.getByRole('button', { name: 'İmport et', exact: true }).click());
+      () => importButton.click());
     assert(response.ok(), 'Warehouse import RPC failed: ' + await response.text());
     const result = await response.json();
     const replay = await auditBackend.command('import_warehouse_stock_atomic', response.request().postDataJSON());

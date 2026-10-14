@@ -14,8 +14,11 @@ it('revalidates the preview when the canonical warehouse list arrives', async ()
   chooseFile(view);
   await waitFor(() => expect(view.getByText(/anbar tapılmadı/)).toBeInTheDocument());
   expect(view.getByRole('button', { name: 'İmport et' })).toBeDisabled();
+  expect(view.queryByText('0 xəta')).not.toBeInTheDocument();
   view.rerender(<WarehouseImportModal warehouses={warehouses} onClose={vi.fn()} onImport={save} />);
   expect(view.queryByText(/anbar tapılmadı/)).not.toBeInTheDocument();
+  expect(view.getByText('0 xəta')).toBeInTheDocument();
+  expect(view.getByRole('button', { name: 'İmport et' })).toBeEnabled();
   fireEvent.click(view.getByRole('button', { name: 'İmport et' }));
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
   expect(save.mock.calls[0][0][0].warehouseId).toBe('warehouse');
