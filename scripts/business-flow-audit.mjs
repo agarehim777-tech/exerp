@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { auditResponse, auditServerArguments, createAuditCustomerIdentity, runBoundedFlow, waitForAuditModule } from './audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, runBoundedFlow, selectAuditOption, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -261,7 +261,7 @@ async function createWarehouseWithStock(page) {
   await selectModule(page, 3);
   await page.getByRole('button', { name: 'Hərəkətlər', exact: true }).click();
   const intakeForm = page.locator('form').filter({ has: page.getByPlaceholder('Say', { exact: true }) });
-  await intakeForm.locator('select').filter({ has: page.locator('option', { hasText: 'Anbar seç' }) }).selectOption(warehouse.id);
+  await selectAuditOption(intakeForm.locator('select').filter({ has: page.locator('option', { hasText: 'Anbar seç' }) }), warehouse.id);
   await intakeForm.getByPlaceholder('Məhsul adı və ya SKU yazın', { exact: true }).fill(sku);
   await intakeForm.getByRole('button', { name: `${productName} ${sku}`, exact: true }).click();
   await intakeForm.getByPlaceholder('Say', { exact: true }).fill('5');
@@ -1393,7 +1393,7 @@ async function auditApiWebhookIntegrationWorkflow(browser) {
 }
 
 async function createHrEmployee(page, values) {
-  await page.getByRole('button', { name: 'Yeni əməkdaş', exact: true }).click();
+  await clickAuditReady(page, page.getByRole('button', { name: 'Yeni əməkdaş', exact: true }));
   const modal = page.locator('[role="dialog"]');
   await modal.getByLabel('Ad Soyad', { exact: true }).fill(values.name);
   await modal.getByLabel('Vəzifə', { exact: true }).fill(values.position);

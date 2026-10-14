@@ -54,3 +54,14 @@ export async function auditResponse(page, predicate, action, options) {
   ]);
   return response;
 }
+
+export async function selectAuditOption(select, value) {
+  // Catalog hydration belongs to the bounded flow, not the short interaction budget.
+  await select.locator(`option[value=${JSON.stringify(value)}]`).waitFor({ state: 'attached', timeout: 0 });
+  await select.selectOption(value);
+}
+
+export async function clickAuditReady(page, button) {
+  await button.and(page.locator(':enabled')).waitFor({ state: 'visible', timeout: 0 });
+  await button.click();
+}

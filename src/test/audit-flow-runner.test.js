@@ -1,8 +1,35 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { auditResponse, auditServerArguments, createAuditCustomerIdentity, legacyAuditCompatibilityError, runBoundedFlow, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
+import { auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, legacyAuditCompatibilityError, runBoundedFlow, selectAuditOption, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
+it('waits for the exact canonical option before interacting with a hydrated selector', async () => {
+  let hydrated;
+  const waitFor = vi.fn(() => new Promise(resolve => { hydrated = resolve; }));
+  const select = { locator: vi.fn(() => ({ waitFor })), selectOption: vi.fn() };
+  const pending = selectAuditOption(select, 'warehouse-id');
+  expect(select.locator).toHaveBeenCalledWith('option[value="warehouse-id"]');
+  expect(waitFor).toHaveBeenCalledWith({ state: 'attached', timeout: 0 });
+  expect(select.selectOption).not.toHaveBeenCalled();
+  hydrated();
+  await pending;
+  expect(select.selectOption).toHaveBeenCalledWith('warehouse-id');
+});
+
+it('keeps the HR hydration guard until the specific create button is enabled', async () => {
+  let hydrated;
+  const waitFor = vi.fn(() => new Promise(resolve => { hydrated = resolve; }));
+  const enabled = {};
+  const page = { locator: vi.fn(() => enabled) };
+  const button = { and: vi.fn(() => ({ waitFor })), click: vi.fn() };
+  const pending = clickAuditReady(page, button);
+  expect(button.and).toHaveBeenCalledWith(enabled);
+  expect(waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 0 });
+  expect(button.click).not.toHaveBeenCalled();
+  hydrated();
+  await pending;
+  expect(button.click).toHaveBeenCalledOnce();
+});
 it('allocates a fresh audit phone and FIN after a persisted identity collision', async () => {
   const read = vi.fn().mockResolvedValueOnce([{ id: 'existing' }]).mockResolvedValue([]);
   const uuid = vi.fn().mockReturnValueOnce('00000000-0000-4000-8000-000000000000')
