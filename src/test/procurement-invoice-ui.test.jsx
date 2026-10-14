@@ -82,6 +82,25 @@ it('debounces related table events into one registry reload', async () => {
   } finally { vi.useRealTimers(); }
 });
 
+it.each([false, true])('keeps an open vendor draft mounted during background reload (error=%s)', async (failed) => {
+  const { container } = render(<MemoryRouter><ProcurementPage /></MemoryRouter>);
+  await waitFor(() => expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false'));
+  fireEvent.click(screen.getByRole('button', { name: 'Vendorlar', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Yeni vendor', exact: true }));
+  fireEvent.change(screen.getByLabelText('Ad', { exact: true }), { target: { value: 'Unsaved vendor draft' } });
+  let finish;
+  mocks.pending = table => table === 'vendors' ? new Promise(resolve => { finish = resolve; }) : null;
+  fireEvent.click(screen.getByRole('button', { name: 'Yenilə', exact: true }));
+  await waitFor(() => expect(finish).toBeTypeOf('function'));
+  expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.getByDisplayValue('Unsaved vendor draft')).toBeVisible();
+  expect(screen.queryByText('Məlumatlar yüklənir')).not.toBeInTheDocument();
+  await act(async () => finish({ data: [], error: failed ? new Error('Registry read failed') : null }));
+  await waitFor(() => expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false'));
+  expect(screen.getByDisplayValue('Unsaved vendor draft')).toBeVisible();
+  if (failed) expect(screen.getByText('Registry read failed')).toBeVisible();
+});
+
 it('resets tenant forms and rejects an old A response after A -> B -> A', async () => {
   let resolveOld;
   const old = new Promise(resolve => { resolveOld = resolve; });

@@ -175,6 +175,9 @@ async function selectPath(page, path) {
   }
   await sidebar.getByRole('button', { name: item.label, exact: true }).click();
   await waitForAuditModule(page, path, item.label);
+  if (path === '/satinalma') {
+    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: 0 });
+  }
   assert(new URL(page.url()).pathname === path, `AUDIT_MODULE_REDIRECTED: expected ${path}, received ${new URL(page.url()).pathname}`);
   await page.locator('main.main').waitFor();
 }

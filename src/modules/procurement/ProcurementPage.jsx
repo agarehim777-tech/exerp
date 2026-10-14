@@ -207,6 +207,7 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [poStatus, setPoStatusFilter] = useState("all");
   const [invoiceStatus, setInvoiceStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [registryLoaded, setRegistryLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -286,6 +287,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       setInvoices(invoiceRes.data || []);
       setInvoiceLines(invoiceLineRes.data || []);
       setPoPayments(paymentTableMissing ? [] : (paymentRes.data || []));
+      setRegistryLoaded(true);
     } catch (loadError) {
       if (isCurrent()) setError(getError(loadError));
     } finally {
@@ -1262,7 +1264,7 @@ function ProcurementWorkspace({ tenantId, user }) {
         ))}
       </nav>
 
-      {loading ? (
+      {loading && !registryLoaded ? (
         <section style={styles.emptyPanel}>
           <RefreshCw size={26} />
           <h2>Məlumatlar yüklənir</h2>
