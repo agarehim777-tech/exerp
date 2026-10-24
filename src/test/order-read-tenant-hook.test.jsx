@@ -44,6 +44,31 @@ it('refreshes canonical credit links when contracts or payments change', async (
 });
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 
+it('reads a deep-linked sale outside the loaded page with tenant-scoped relations', async () => {
+  mocks.read.mockResolvedValue([]);
+  mocks.byId.mockResolvedValue({ id: 'outside-page', total: 20000 });
+  mocks.relations.mockResolvedValue({ credits: [{ id: 'credit', order_id: 'outside-page' }], bonuses: [], deliveries: [] });
+  const { result } = renderHook(() => useOrders('A'));
+  await waitFor(() => expect(result.current.loaded).toBe(true));
+  const order = await result.current.getById('outside-page');
+  expect(order).toMatchObject({ id: 'outside-page', credit: { id: 'credit' } });
+  expect(mocks.byId).toHaveBeenCalledWith('A', 'outside-page', expect.any(Function));
+  expect(mocks.relations).toHaveBeenLastCalledWith('A', ['outside-page'], expect.any(Function));
+  expect(result.current.orders).toEqual([]);
+});
+
+it('does not return a deep-linked record after switching tenants', async () => {
+  mocks.read.mockResolvedValue([]);
+  const pending = deferred();
+  mocks.byId.mockReturnValue(pending.promise);
+  const { result, rerender } = renderHook(({ tenant }) => useOrders(tenant), { initialProps: { tenant: 'A' } });
+  await waitFor(() => expect(result.current.loaded).toBe(true));
+  const request = result.current.getById('A-order');
+  rerender({ tenant: 'B' });
+  await act(async () => pending.resolve({ id: 'A-order' }));
+  expect(await request).toBeNull();
+});
+
 it('ignores an earlier A response after A-to-B-to-A and clears rows for empty or absent tenants', async () => {
   const old = deferred();
   mocks.read.mockImplementationOnce(() => old.promise).mockResolvedValue([]);

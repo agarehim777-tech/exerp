@@ -1,4 +1,10 @@
 :root {
+  --bg: #f1f5f4;
+  --bg-soft: #f7faf9;
+  --line: #d7e1dd;
+  --line-strong: #bacbc4;
+  --radius: 8px;
+  --radius-lg: 8px;
   --font-body: Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: Sora, Manrope, ui-sans-serif, system-ui, sans-serif;
   --font-size-xs: 11px;
@@ -8,7 +14,7 @@
   --font-size-xl: 17px;
   --font-size-page: 24px;
   --control-height: 38px;
-  --control-height-compact: 32px;
+  --control-height-compact: 38px;
   --control-height-large: 42px;
   --radius-control: 6px;
   --radius-panel: 8px;
@@ -23,5 +29,14 @@
   --panel-padding: 16px;
   --panel-padding-compact: 12px;
   --table-row-height: 44px;
+  --surface: #ffffff;
+  --surface-subtle: #f4f7f6;
+  --table-head: #edf3f1;
+  --border: #d7e1dd;
+  --text-primary: #183c31;
+  --text-secondary: #526b63;
+  --action: #08765d;
+  --action-hover: #075f4c;
+  --focus-ring: #3478bd;
 }
 

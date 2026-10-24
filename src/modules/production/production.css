@@ -8,4 +8,4 @@
 .production-register .table-scroll { overflow-x: auto; }
 .production-register table { width: 100%; }
 .production-register td, .production-register th { padding: 10px; white-space: nowrap; text-align: left; }
-@media (max-width: 768px) { .production-fields { grid-template-columns: 1fr; } .production-material { grid-template-columns: minmax(0, 2fr) 90px 38px; gap: 8px; } }
+@media (max-width: 900px) { .production-fields { grid-template-columns: 1fr; } .production-material { grid-template-columns: minmax(0, 2fr) 90px 38px; gap: 8px; } }

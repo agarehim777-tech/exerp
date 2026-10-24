@@ -75,8 +75,8 @@ const panel = { position: "absolute", bottom: 42, right: 0, background: "#fff", 
 const row = { display: "flex", alignItems: "center", padding: "0 4px" };
 const rowBtn = { flex: 1, background: "none", border: 0, textAlign: "left", padding: "8px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6 };
 const delBtn = { background: "none", border: 0, color: "#b23a3a", cursor: "pointer", padding: "6px 10px", fontSize: 14, borderRadius: 6 };
-const roleBadge = { background: "#064e3b", color: "#fbe89a", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, letterSpacing: 0.5, textTransform: "uppercase" };
-const inlineRoleBadge = { background: "#f0e6c8", color: "#5a4a1e", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 5, marginLeft: 8, textTransform: "uppercase", letterSpacing: 0.4 };
+const roleBadge = { background: "#064e3b", color: "#fbe89a", fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, letterSpacing: 0.5, textTransform: "uppercase" };
+const inlineRoleBadge = { background: "#f0e6c8", color: "#5a4a1e", fontSize: 12, fontWeight: 700, padding: "1px 5px", borderRadius: 5, marginLeft: 8, textTransform: "uppercase", letterSpacing: 0.4 };
 
 function roleLabel(role) {
   const map = { owner: "Sahib", admin: "Admin", member: "Üzv", viewer: "Baxış" };

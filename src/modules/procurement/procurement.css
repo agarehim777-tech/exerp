@@ -41,7 +41,7 @@
 .product-autocomplete__menu button:hover,
 .product-autocomplete__menu button.active { background:#e8f5ef; }
 .product-autocomplete__menu button span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800; }
-.product-autocomplete__menu button small { flex:0 0 auto; color:#71867f; font-size:10px; }
+.product-autocomplete__menu button small { flex:0 0 auto; color:#71867f; font-size: 11px; }
 .product-autocomplete__empty { padding:12px 9px; color:#71867f; text-align:center; font-size:12px; }
 
 @media (max-width: 1180px) {
@@ -61,7 +61,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .po-line-grid--main,
   .po-line-grid--details { grid-template-columns:repeat(2,minmax(0,1fr)); }
 
@@ -88,7 +88,7 @@
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .po-line-grid--main,
   .po-line-grid--details { grid-template-columns:minmax(0,1fr); }
 
@@ -110,7 +110,7 @@
 .landed-list button.completed { border-left:4px solid #169b72; }
 .landed-list-title,.landed-shipment-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .landed-list-title svg { color:#07815f; }
-.landed-list em { width:max-content; margin-top:3px; border-radius:999px; padding:3px 7px; color:#526b63; background:#eef3f1; font-size:10px; font-style:normal; font-weight:700; }
+.landed-list em { width:max-content; margin-top:3px; border-radius:999px; padding:3px 7px; color:#526b63; background:#eef3f1; font-size: 11px; font-style:normal; font-weight:700; }
 .landed-list button.completed em { color:#08745a; background:#dff4eb; }
 .landed-list small { color:#71867f; }
 .landed-main { min-width:0; display:grid; gap:10px; }
@@ -135,4 +135,4 @@
 .landed-message button,.landed-cost-row button,.landed-card td button { border:0; background:transparent; cursor:pointer; color:#c24141; }
 .landed-error { color:#b42318; background:#fff1f0; padding:10px; border-radius:8px; }
 @media(max-width:900px){.landed-layout{grid-template-columns:1fr}.landed-list{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.landed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.landed-inline{grid-template-columns:1fr 1fr}}
-@media(max-width:560px){.landed-grid,.landed-inline,.landed-complete-summary{grid-template-columns:1fr}.landed-shipment-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width: 640px){.landed-grid,.landed-inline,.landed-complete-summary{grid-template-columns:1fr}.landed-shipment-heading{align-items:flex-start;flex-direction:column}}

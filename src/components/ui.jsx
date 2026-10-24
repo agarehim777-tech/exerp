@@ -1,4 +1,5 @@
 import { Filter } from "lucide-react";
+import SharedDataTable from '../shared/ui/DataTable.jsx';
 
 function normalizeText(value) {
   return String(value ?? "").toLocaleLowerCase("az-AZ");
@@ -51,32 +52,14 @@ export function PanelHeader({ title, subtitle, icon: Icon }) {
   );
 }
 
-export function DataTable({ columns, rows, onRowClick }) {
+export function DataTable({ columns, rows, onRowClick, ...props }) {
   const numericLabels = /məbləğ|qiymət|maaş|borc|qalıq|ödəni|gəlir|xərc|cəmi|ümumi|say|ədəd|faiz|kpi|aylıq|netto|brutto|vergi|dsmf|işsizlik|tibbi|stok|rezerv|norma|saat|gün/i;
-  const columnClass = (column) => numericLabels.test(String(column)) ? "is-numeric" : undefined;
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column} className={columnClass(column)}>{column}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} onClick={() => onRowClick?.(rowIndex)} style={onRowClick ? { cursor: "pointer" } : undefined}>
-              {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className={columnClass(columns[cellIndex])}>{cell}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {rows.length === 0 && <EmptyState title="Axtarışa uyğun məlumat tapılmadı" />}
-    </div>
-  );
+  const normalized = columns.map((column, index) => typeof column === 'object'
+    ? { ...column, key: index }
+    : { key: index, label: column, align: numericLabels.test(String(column)) ? 'right' : 'left' });
+  return <SharedDataTable {...props} columns={normalized} rows={rows}
+    emptyText="Axtarışa uyğun məlumat tapılmadı"
+    onRowClick={onRowClick ? (_row, index) => onRowClick(index) : undefined} />;
 }
 
 export function StatusBadge({ status }) {

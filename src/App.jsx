@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
+import { moduleFromPath, pathForModule, pathForRecord, canonicalPath } from "./config/routes.js";
 import { resolveModalKind } from "./config/modal-registry.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { ProductionLedgerPage } from './config/lazyPages.js';
@@ -448,10 +448,10 @@ function App() {
   const setActive = useCallback((id) => {
     setActiveState(id);
     const target = pathForModule(id);
-    if (location.pathname !== target && !location.pathname.startsWith(target + "/")) {
+    if (location.search || (location.pathname !== target && !location.pathname.startsWith(target + "/"))) {
       navigate(target);
     }
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, location.search]);
   useEffect(() => {
     const fromUrl = moduleFromPath(location.pathname);
     setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
@@ -474,8 +474,6 @@ function App() {
     }
   }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, dbInventory.refresh]);
   const [toasts, setToasts] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState("");
-  const [selectedCreditId, setSelectedCreditId] = useState("");
   const [selectedKpiPeriod, setSelectedKpiPeriod] = useState(getKpiPeriodKey);
   const [kpiAccountId, setKpiAccountId] = useState("");
   const kpiLedger = useKpiLedger(active === "kpi" ? activeTenantId : null);
@@ -3932,31 +3930,19 @@ function App() {
   }
 
   function openLinkedSalesOrder(orderId) {
-    const linkedCredit = creditRecords.find((credit) => String(credit.orderId) === String(orderId));
     const normalizedOrderId = normalize(orderId);
     const targetOrder = state.orders.find((order) =>
       normalize(order.id) === normalizedOrderId ||
       normalize(order.orderNo || order.order_no) === normalizedOrderId
-    ) || (linkedCredit ? state.orders.find((order) => {
-      const sameCustomer = normalize(order.customer) === normalize(linkedCredit.customer);
-      const sameAmount = Math.abs(Number(order.amount || order.total || 0) - Number(linkedCredit.total || 0)) < 0.01;
-      const sameDate = !linkedCredit.date || !order.date || String(order.date).slice(0, 10) === String(linkedCredit.date).slice(0, 10);
-      return sameCustomer && sameAmount && sameDate;
-    }) : null);
-
-    if (!targetOrder) {
-      notify("Bağlı sifariş tapılmadı.", "warning");
-      return;
-    }
-
-    setSelectedOrder(targetOrder.id);
+    );
+    if (!orderId) return;
     setQuery("");
-    setActive("sales");
+    navigate(pathForRecord('sales', targetOrder?.id || orderId));
     setMobileNav(false);
     auditOperation({
       module: "Kredit/Satış",
       action: "Bağlı sifarişə keçid edildi",
-      detail: `${targetOrder.orderNo || targetOrder.id} · ${targetOrder.customer}`,
+      detail: targetOrder ? `${targetOrder.orderNo || targetOrder.id} · ${targetOrder.customer}` : String(orderId),
     });
   }
 
@@ -3968,9 +3954,8 @@ function App() {
       return;
     }
 
-    setSelectedCreditId(creditId);
     setQuery("");
-    setActive("credits");
+    navigate(pathForRecord('credits', creditId));
     setMobileNav(false);
     auditOperation({
       module: "CRM/Kredit",
@@ -6047,7 +6032,7 @@ function App() {
 
 
           {active === "sales-dashboard" && <SalesDashboardPage />}
-          {active === "sales" && <SalesOrdersPage repository={dbSales} customers={dbCustomers} products={dbProducts} selectedOrderId={selectedOrder} onSelectedOrderHandled={() => setSelectedOrder("")} />}
+          {active === "sales" && <SalesOrdersPage repository={dbSales} customers={dbCustomers} products={dbProducts} />}
           {active === "stock" && <StockPage inventory={dbInventory} products={dbProducts} />}
           {active === "products" && (
             <ProductsPage
@@ -6132,8 +6117,6 @@ function App() {
               onPayCreditInitial={payCreditInitial}
               onCreateCredit={() => setModal({ type: "sales", presetPaymentMethod: "Kredit" })}
               onOpenSalesOrder={openLinkedSalesOrder}
-              selectedCreditId={selectedCreditId}
-              onClearSelectedCredit={() => setSelectedCreditId("")}
             />
           )}
           {active === "receivables" && (

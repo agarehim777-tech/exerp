@@ -32,3 +32,14 @@ body { background: #f3f6f5; }
 
 .main :where(button, input, select, textarea) { letter-spacing: 0; }
 
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.nav-item { text-decoration: none; }
+.record-link { color: var(--action); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.record-link:hover { color: var(--action-hover); }
+.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.money-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
+

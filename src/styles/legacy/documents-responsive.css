@@ -1,0 +1,1207 @@
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-modal-shell,
+  .print-modal-shell * {
+    visibility: visible;
+  }
+
+  .print-modal-shell {
+    position: fixed;
+    inset: 0;
+    display: block;
+    background: white;
+  }
+
+  .print-modal-shell .modal-card {
+    max-width: none;
+    max-height: none;
+    box-shadow: none;
+    border: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body.warehouse-print-mode .app-shell,
+  body.warehouse-print-mode .app-shell * {
+    visibility: visible;
+  }
+
+  body.warehouse-print-mode .sidebar,
+  body.warehouse-print-mode .topbar,
+  body.warehouse-print-mode .page-header,
+  body.warehouse-print-mode .warehouse-balance-toolbar,
+  body.warehouse-print-mode .warehouse-balance-filters,
+  body.warehouse-print-mode .warehouse-balance-table-meta,
+  body.warehouse-print-mode .warehouse-operations-drawer,
+  body.warehouse-print-mode .toast-stack {
+    display: none !important;
+  }
+
+  body.warehouse-print-mode .main {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.warehouse-print-mode .warehouse-balance-workspace {
+    border: 0;
+    box-shadow: none;
+  }
+
+  body.warehouse-print-mode .warehouse-balance-table-wrap {
+    overflow: visible;
+    border: 0;
+  }
+
+  body.warehouse-print-mode .warehouse-balance-table {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.invoice-paper-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.invoice-total-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.statement-list {
+  display: grid;
+  gap: 8px;
+}
+
+.statement-list .two-line {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfe;
+}
+
+.statement-list .two-line strong,
+.statement-list .two-line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wms-summary-grid,
+.procurement-summary-grid,
+.finance-scenario-grid,
+.hr-planning-summary,
+.executive-insight-grid,
+.aging-bucket-grid,
+.receivable-aging-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.wms-summary-grid,
+.finance-scenario-grid,
+.executive-insight-grid,
+.aging-bucket-grid,
+.receivable-aging-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.finance-scenario-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.procurement-summary-grid,
+.hr-planning-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.procurement-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 14px;
+}
+
+.vendor-command-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.vendor-command-head,
+.po-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.vendor-command-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.vendor-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(150px, 190px) minmax(150px, 190px);
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfe;
+}
+
+.vendor-toolbar label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.vendor-toolbar input,
+.vendor-toolbar select {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: white;
+  padding: 0 10px;
+  outline: 0;
+}
+
+.vendor-toolbar input:focus,
+.vendor-toolbar select:focus {
+  border-color: #9ac7ba;
+  box-shadow: 0 0 0 3px rgba(18, 128, 92, 0.12);
+}
+
+.vendor-search {
+  position: relative;
+}
+
+.vendor-search svg {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.vendor-search input {
+  padding-left: 38px;
+}
+
+.vendor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.vendor-registry-panel,
+.vendor-profile-panel {
+  min-width: 0;
+}
+
+.vendor-row-button {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  background: transparent;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.vendor-row-button:hover,
+.vendor-row-button.active {
+  border-color: #b9ddcf;
+  background: #f4fbf8;
+}
+
+.vendor-row-button.active {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.vendor-quota-cell {
+  min-width: 118px;
+}
+
+.vendor-row-actions {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.vendor-profile-card {
+  display: grid;
+  gap: 14px;
+}
+
+.vendor-profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #b9ddcf;
+  border-radius: var(--radius);
+  background: #f7fbf9;
+}
+
+.vendor-profile-head h3,
+.vendor-profile-head p,
+.vendor-profile-subsection h4,
+.vendor-note {
+  margin: 0;
+}
+
+.vendor-profile-head h3 {
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.vendor-profile-head p,
+.vendor-profile-quota span,
+.vendor-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.vendor-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.vendor-profile-grid .two-line,
+.vendor-profile-quota,
+.vendor-profile-subsection {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfe;
+}
+
+.vendor-profile-quota {
+  display: grid;
+  gap: 10px;
+}
+
+.vendor-profile-quota > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vendor-profile-quota strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.vendor-profile-actions,
+.vendor-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.vendor-profile-subsection {
+  display: grid;
+  gap: 10px;
+}
+
+.vendor-profile-subsection h4 {
+  font-size: 14px;
+}
+
+.vendor-recommendation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.vendor-recommendation-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: white;
+}
+
+.po-panel-head > span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #e9f5ef;
+  color: var(--accent-strong);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.vendor-form-modal {
+  width: min(880px, calc(100vw - 28px));
+}
+
+.vendor-form-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #b9ddcf;
+  border-radius: var(--radius);
+  background: #f7fbf9;
+}
+
+.wms-summary-grid div,
+.procurement-summary-grid div,
+.finance-scenario-grid div,
+.hr-planning-summary div,
+.executive-insight-card,
+.aging-bucket {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfe;
+}
+
+.wms-summary-grid strong,
+.procurement-summary-grid strong,
+.finance-scenario-grid strong,
+.hr-planning-summary strong,
+.executive-insight-card strong,
+.aging-bucket strong {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.executive-insight-card.primary {
+  border-color: #bfdbfe;
+  background: #f7fbff;
+}
+
+.executive-insight-card.success {
+  border-color: #bbf7d0;
+  background: #f4fff8;
+}
+
+.executive-insight-card.warning {
+  border-color: #fed7aa;
+  background: #fffaf3;
+}
+
+.executive-insight-card.danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.automation-rule-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.automation-rule-list div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: white;
+}
+
+.automation-rule-list strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+@media (max-width: 1180px) {
+  .metric-grid,
+  .metric-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-control-grid,
+  .sales-alert-list,
+  .sales-registry-summary,
+  .sales-context-grid,
+  .warehouse-control-grid,
+  .warehouse-signal-list,
+  .delivery-control-grid,
+  .delivery-signal-list,
+  .finance-control-grid,
+  .finance-signal-list,
+  .finance-cash-bridge,
+  .finance-account-summary,
+  .finance-ledger-summary,
+  .finance-daily-grid,
+  .invoice-control-grid,
+  .accounting-close-summary,
+  .tax-control-grid,
+  .credit-handover-strip,
+  .credit-contract-snapshot,
+  .messages-summary-grid,
+  .report-control-grid,
+  .project-roi-control-grid,
+  .onboarding-command-grid,
+  .onboarding-checklist-grid,
+  .production-control-grid,
+  .production-bom-grid,
+  .wms-summary-grid,
+  .procurement-summary-grid,
+  .finance-scenario-grid,
+  .accounting-statement-grid,
+  .hr-planning-summary,
+  .executive-insight-grid,
+  .aging-bucket-grid,
+  .receivable-aging-grid,
+  .db-status-grid,
+  .automation-rule-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .receivable-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .receivable-filter-bar span {
+    text-align: left;
+  }
+
+  .user-create-form,
+  .invoice-paper-grid,
+  .invoice-total-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .module-access-grid.compact {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+  }
+
+  .dashboard-grid,
+  .delivery-grid,
+  .credit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .span-2 {
+    grid-column: span 2;
+  }
+
+  .messages-layout,
+  .settings-grid,
+  .warehouse-layout,
+  .delivery-queue-layout,
+  .delivery-workspace,
+  .credit-workspace,
+  .support-workspace,
+  .vendor-workspace,
+  .hr-employee-platform {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-detail-panel,
+  .support-detail-panel {
+    position: static;
+  }
+
+  .credit-directory-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .credit-management-topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .credit-management-summary {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .credit-detail-layout,
+  .credit-detail-records,
+  .customer-360-grid,
+  .customer-360-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-detail-aside,
+  .customer-360-side {
+    position: static;
+  }
+
+  .hr-profile-grid,
+  .hr-profile-snapshot,
+  .hr-document-grid,
+  .hr-recruitment-pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .message-list-panel,
+  .chat-panel {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .delivery-filter-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-result-count {
+    min-height: auto;
+  }
+
+  .delivery-acceptance-form {
+    grid-template-columns: 1fr;
+  }
+
+  .company-module-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .company-module-field {
+    padding: 12px;
+  }
+
+  .module-access-grid,
+  .module-access-grid.compact {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    transform: translateX(-102%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 180ms ease;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .sidebar-close,
+  .mobile-menu {
+    display: grid !important;
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    border: 0;
+    background: rgba(15, 23, 42, 0.36);
+  }
+
+  .main {
+    padding: 18px;
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .top-actions {
+    gap: 6px;
+  }
+
+  .session-pill,
+  .logout-btn {
+    display: none;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primary-btn {
+    width: fit-content;
+  }
+
+  .stage-rail,
+  .template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .warehouse-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .warehouse-stock-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .credit-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sales-filter-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sales-filter-controls {
+    justify-content: flex-start;
+  }
+
+  .delivery-filter-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finance-filter-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .crm-pipeline-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .crm-registry-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .crm-registry-toolbar select,
+  .crm-search-field {
+    width: 100%;
+  }
+
+  .crm-pipeline-total {
+    text-align: left;
+  }
+
+  .crm-pipeline-row {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-pipeline-selection {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-seller-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .delivery-driver-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finance-category-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finance-filter-controls {
+    justify-content: flex-start;
+  }
+
+  .credit-source-filter select {
+    width: 100%;
+  }
+
+  .sales-seller-filter select {
+    width: 100%;
+  }
+
+  .delivery-driver-filter select {
+    width: 100%;
+  }
+
+  .finance-category-filter select,
+  .finance-date-filter input,
+  .finance-search-filter input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .user-switcher select {
+    max-width: 150px;
+  }
+
+  .kpi-bonus-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-platform-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendor-command-head,
+  .po-panel-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendor-command-actions,
+  .vendor-profile-actions {
+    justify-content: flex-start;
+  }
+
+  .vendor-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-platform-kpis {
+    justify-content: flex-start;
+  }
+
+  .kpi-bonus-total {
+    justify-content: space-between;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .credit-detail-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .credit-today {
+    white-space: normal;
+  }
+
+  .hr-structure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-builder-panel,
+  .hr-tree-panel {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .metric-grid,
+  .metric-grid.three,
+  .metric-grid.four,
+  .dashboard-grid,
+  .delivery-grid,
+  .credit-grid,
+  .help-article-grid,
+  .wms-summary-grid,
+  .procurement-summary-grid,
+  .finance-scenario-grid,
+  .accounting-statement-grid,
+  .hr-planning-summary,
+  .hr-platform-summary,
+  .hr-profile-grid,
+  .hr-profile-snapshot,
+  .hr-document-grid,
+  .hr-recruitment-pipeline,
+  .executive-insight-grid,
+  .aging-bucket-grid,
+  .receivable-aging-grid,
+  .db-status-grid,
+  .sales-registry-summary,
+  .sales-context-grid,
+  .customer-360-summary,
+  .customer-360-contract-meta,
+  .customer-360-contract-values,
+  .credit-handover-strip,
+  .messages-summary-grid,
+  .report-control-grid,
+  .project-roi-control-grid,
+  .onboarding-command-grid,
+  .onboarding-checklist-grid,
+  .production-control-grid,
+  .production-bom-grid,
+  .support-link-grid,
+  .vendor-profile-grid,
+  .vendor-form-summary,
+  .automation-rule-list {
+    grid-template-columns: 1fr;
+  }
+
+  .receivable-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-debt-formula {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-debt-formula b {
+    display: none;
+  }
+
+  .user-create-form,
+  .invoice-paper-head,
+  .invoice-paper-grid,
+  .invoice-total-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .message-list-head,
+  .chat-head-main,
+  .chat-head-actions,
+  .message-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .message-filter-tabs {
+    flex-wrap: wrap;
+  }
+
+  .bubble,
+  .bubble.mine {
+    max-width: 100%;
+  }
+
+  .span-2 {
+    grid-column: auto;
+  }
+
+  .main {
+    padding: 14px;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 66px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .top-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .report-risk-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-risk-tabs button,
+  .report-actions .primary-btn,
+  .report-actions .secondary-btn {
+    flex: 1;
+  }
+
+  .searchbox {
+    flex: 1 1 calc(100% - 48px);
+    height: 38px;
+  }
+
+  .user-switcher {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-switcher select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .page-header h1 {
+    font-size: 23px;
+  }
+
+  .bar-chart {
+    gap: 10px;
+  }
+
+  .workflow-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .sales-filter-controls,
+  .sales-search-field,
+  .sales-seller-filter,
+  .sales-date-filter,
+  .sales-seller-filter select,
+  .sales-date-filter input {
+    width: 100%;
+  }
+
+  .credit-status-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .credit-status-chip {
+    flex: 0 0 auto;
+  }
+
+  .customer-360-contract-head,
+  .customer-360-payment-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .customer-360-contract-head p {
+    max-width: none;
+    white-space: normal;
+  }
+
+  .customer-360-schedule-row {
+    grid-template-columns: 52px minmax(64px, 1fr);
+  }
+
+  .customer-360-schedule-row em,
+  .customer-360-schedule-row .status {
+    grid-column: span 2;
+  }
+
+  .credit-directory-filters {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .credit-directory-filters .icon-only,
+  .credit-excel-btn {
+    width: 100%;
+  }
+
+  .credit-detail-modal-body {
+    padding: 10px;
+  }
+
+  .credit-detail-primary {
+    padding: 12px;
+  }
+
+  .credit-directory-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stage-rail,
+  .form-grid,
+  .modal-form,
+  .warehouse-info-grid,
+  .credit-order-grid,
+  .credit-plan-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .order-two-col,
+  .order-line-grid,
+  .seller-line-grid,
+  .sales-control-grid,
+  .sales-alert-list,
+  .warehouse-control-grid,
+  .warehouse-signal-list,
+  .delivery-control-grid,
+    .delivery-signal-list,
+    .finance-control-grid,
+    .finance-signal-list,
+    .finance-cash-bridge,
+    .finance-account-summary,
+    .finance-ledger-summary,
+    .finance-daily-grid,
+    .invoice-control-grid,
+    .accounting-close-summary,
+    .tax-control-grid,
+    .credit-control-grid,
+    .credit-signal-row,
+    .credit-health-grid,
+    .hr-builder-preview,
+    .hr-employee-node,
+    .order-detail-grid,
+    .delivery-detail-grid,
+    .credit-context-grid,
+    .credit-contract-snapshot,
+    .credit-detail-values,
+    .credit-detail-layout,
+    .credit-detail-records,
+    .customer-360-credit-card dl,
+    .factory-order-snapshot,
+    .credit-list-row,
+    .credit-payment-inputs,
+    .credit-payment-preview,
+    .credit-payment-row,
+    .audit-row {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-platform-section table,
+  .hr-planning-panel table,
+  .hr-employee-registry-panel table {
+    min-width: 100%;
+  }
+
+  .hr-platform-section th,
+  .hr-platform-section td,
+  .hr-planning-panel th,
+  .hr-planning-panel td,
+  .hr-employee-registry-panel th,
+  .hr-employee-registry-panel td {
+    padding: 9px 7px;
+    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .hr-platform-section .status,
+  .hr-planning-panel .status,
+  .hr-employee-registry-panel .status {
+    white-space: normal;
+  }
+
+  .hr-employee-registry-panel .table-wrap {
+    display: none;
+  }
+
+  .hr-mobile-employee-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .hr-department-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-department-head > div:last-child {
+    justify-items: start;
+  }
+
+  .hr-tree-children {
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+
+  .credit-schedule label {
+    grid-template-columns: 48px minmax(60px, 1fr);
+  }
+
+  .credit-schedule input {
+    grid-column: 1 / -1;
+  }
+
+  .credit-schedule small {
+    grid-column: 1 / -1;
+  }
+
+  .section-title-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .order-modal-card {
+    max-height: 96vh;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions .primary-btn,
+  .modal-actions .secondary-btn {
+    width: 100%;
+  }
+
+  .report-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .report-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .report-row svg {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .module-handover-grid,
+  .module-handover-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .module-handover-grid,
+  .module-handover-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .module-handover-card {
+    min-height: auto;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .module-handover-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .delivery-export-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -1,58 +1,65 @@
-// Shared inline-style tokens for DB-backed module pages (matches AccountingPage look).
+import { cashAmount } from '../../services/format.js';
+
+// Compatibility styles resolve the same CSS tokens as the shared components.
 export const card = {
-  background: "#fff",
-  border: "1px solid #e6dfc9",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 4px 18px rgba(6,78,59,0.06)",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-panel)",
+  padding: "var(--panel-padding)",
+  minWidth: 0,
 };
-export const table = { width: "100%", borderCollapse: "collapse", fontSize: 13, lineHeight: 1.4 };
+export const table = { width: "100%", minWidth: 0, borderCollapse: "collapse", fontSize: "var(--font-size-md)", lineHeight: 1.4 };
 export const th = {
   textAlign: "left",
   padding: "10px 12px",
-  background: "#f0e6c8",
-  color: "#5a4a1e",
-  fontSize: 12,
+  background: "var(--table-head)",
+  color: "var(--text-secondary)",
+  fontSize: "var(--font-size-xs)",
   textTransform: "uppercase",
-  letterSpacing: 0.4,
-  borderBottom: "1px solid #e6dfc9",
+  letterSpacing: 0,
+  height: "var(--table-row-height)",
+  borderBottom: "1px solid var(--border)",
 };
-export const td = { padding: "9px 11px", borderBottom: "1px solid #f0ecdb", color: "#33443e" };
+export const td = { padding: "9px 12px", height: "var(--table-row-height)", borderBottom: "1px solid var(--border)", color: "var(--text-primary)", verticalAlign: "middle" };
 export const input = {
   padding: "9px 11px",
-  borderRadius: 6,
-  border: "1px solid #d4c9a3",
-  fontSize: 13,
-  background: "#fff",
+  borderRadius: "var(--radius-control)",
+  border: "1px solid var(--border)",
+  fontSize: "var(--font-size-md)",
+  minHeight: "var(--control-height)",
+  background: "var(--surface)",
 };
 export const primaryBtn = {
-  background: "#064e3b",
-  color: "#fbe89a",
+  background: "var(--action)",
+  color: "#fff",
   border: 0,
-  padding: "8px 14px",
-  borderRadius: 8,
+  padding: "0 14px",
+  minHeight: "var(--control-height)",
+  borderRadius: "var(--radius-control)",
   cursor: "pointer",
   fontWeight: 600,
-  fontSize: 13,
+  fontSize: "var(--font-size-md)",
 };
 export const secondaryBtn = {
-  background: "#f0e6c8",
-  color: "#5a4a1e",
-  border: 0,
-  padding: "6px 12px",
-  borderRadius: 6,
+  background: "var(--surface)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border)",
+  padding: "0 12px",
+  minHeight: "var(--control-height)",
+  borderRadius: "var(--radius-control)",
   cursor: "pointer",
   fontWeight: 600,
-  fontSize: 12,
+  fontSize: "var(--font-size-md)",
 };
 export const delBtn = {
   background: "none",
   color: "#b23a3a",
   border: "1px solid #e6c8c8",
-  padding: "4px 10px",
-  borderRadius: 6,
+  padding: "0 10px",
+  minHeight: "var(--control-height)",
+  borderRadius: "var(--radius-control)",
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: "var(--font-size-sm)",
   marginLeft: 4,
 };
 export const msgBox = {
@@ -64,14 +71,15 @@ export const msgBox = {
   marginBottom: 10,
 };
 export const tabBtn = (active) => ({
-  background: active ? "#064e3b" : "transparent",
-  color: active ? "#fbe89a" : "#064e3b",
+  background: active ? "var(--surface)" : "transparent",
+  color: active ? "var(--action)" : "var(--text-secondary)",
   border: 0,
-  padding: "8px 16px",
-  borderRadius: 8,
+  padding: "0 14px",
+  minHeight: "var(--control-height)",
+  borderRadius: "var(--radius-control)",
   cursor: "pointer",
   fontWeight: 600,
-  fontSize: 13,
+  fontSize: "var(--font-size-md)",
 });
 export const tabBar = {
   display: "flex",
@@ -81,18 +89,18 @@ export const tabBar = {
   flexWrap: "wrap",
 };
 export const statTile = {
-  background: "#fff",
-  border: "1px solid #e6dfc9",
-  borderRadius: 12,
-  padding: 16,
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-panel)",
+  padding: "var(--panel-padding)",
   minWidth: 160,
   flex: "1 1 160px",
 };
 export const statLabel = {
-  fontSize: 12,
+  fontSize: "var(--font-size-sm)",
   textTransform: "uppercase",
-  letterSpacing: 0.5,
-  color: "#8a7a4a",
+  letterSpacing: 0,
+  color: "var(--text-secondary)",
   marginBottom: 6,
 };
 export const statValue = { fontSize: 20, lineHeight: 1.2, fontWeight: 700, color: "#064e3b" };
@@ -108,5 +116,5 @@ export function badge(tone = "gray") {
 }
 
 export function azn(value) {
-  return `${new Intl.NumberFormat("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} ₼`;
+  return cashAmount(Number(value) || 0);
 }

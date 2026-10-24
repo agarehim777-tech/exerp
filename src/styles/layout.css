@@ -6,13 +6,13 @@
 .main > .stack:not(.density-comfortable) {
   --content-gap: 12px;
   --panel-padding: var(--panel-padding-compact);
-  --table-row-height: 40px;
+  --table-row-height: 44px;
 }
 
 .density-comfortable {
   --content-gap: 18px;
   --panel-padding: 18px;
-  --table-row-height: 46px;
+  --table-row-height: 48px;
 }
 
 .main .panel {

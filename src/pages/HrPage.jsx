@@ -4,6 +4,8 @@ import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wa
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
+import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
+import { Tabs } from '../shared/ui/primitives.jsx';
 import { getEmployeeKey } from "../shared/lib/appDomain.jsx";
 import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({
@@ -23,11 +25,14 @@ export default function HrPage({
   onUpdateEmployeeDocuments,
 }) {
   const structure = useMemo(() => buildHrStructure(allEmployees, departments), [allEmployees, departments]);
-  const [hrView, setHrView] = useState("Komanda");
+  const [pageQuery, setPageQuery] = usePageQuery({ tab: 'Komanda', q: '', department: 'Hamısı', status: 'Hamısı' });
+  const hrView = hrPlatformTabs.includes(pageQuery.tab) ? pageQuery.tab : 'Komanda';
+  const setHrView = tab => setPageQuery({ tab });
   const [selectedEmployeeKey, setSelectedEmployeeKey] = useState(allEmployees[0] ? getEmployeeKey(allEmployees[0]) : "");
-  const [teamQuery, setTeamQuery] = useState("");
-  const [teamDepartment, setTeamDepartment] = useState("Hamısı");
-  const [teamStatus, setTeamStatus] = useState("Hamısı");
+  const { q: teamQuery, department: teamDepartment, status: teamStatus } = pageQuery;
+  const setTeamQuery = q => setPageQuery({ q }, { replace: true });
+  const setTeamDepartment = department => setPageQuery({ department }, { replace: true });
+  const setTeamStatus = status => setPageQuery({ status }, { replace: true });
   const selectedEmployee =
     allEmployees.find((employee) => getEmployeeKey(employee) === selectedEmployeeKey) || allEmployees[0] || null;
   const departmentCount = structure.length;
@@ -87,13 +92,7 @@ export default function HrPage({
           icon={UserCog}
         />
         <div className="hr-platform-toolbar">
-          <div className="tabs">
-            {hrPlatformTabs.map((tab) => (
-              <button key={tab} className={hrView === tab ? "active" : ""} onClick={() => setHrView(tab)}>
-                {tab}
-              </button>
-            ))}
-          </div>
+          <Tabs items={hrPlatformTabs.map(tab => [tab, tab])} value={hrView} onChange={setHrView} />
           <div className="hr-platform-kpis">
             <span>{pendingLeaveCount} məzuniyyət təsdiqdə</span>
             <span>{paidPayrollCount}/{payrollRows.length} payroll ödənildi</span>

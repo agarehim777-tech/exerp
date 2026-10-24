@@ -304,7 +304,7 @@ export default function RolesPermissionsPage({
               <tbody>
                 {MODULES.map((mod) => (
                   <tr key={mod.id}>
-                    <td style={{ ...td, fontWeight: 600 }}>{mod.label}<div style={{ fontSize: 10, color: "#8a9a92" }}>{mod.id}</div></td>
+                    <td style={{ ...td, fontWeight: 600 }}>{mod.label}<div style={{ fontSize: 12, color: "#8a9a92" }}>{mod.id}</div></td>
                     {ROLES.map((r) => {
                       const cell = matrix[r.key]?.[mod.id] || { view: r.key === "owner", edit: r.key === "owner" };
                       const locked = r.locked;
@@ -480,10 +480,10 @@ export default function RolesPermissionsPage({
 const card = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: 20, boxShadow: "0 4px 18px rgba(6,78,59,0.06)" };
 const table = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
 const th = { textAlign: "left", padding: "8px 10px", background: "#f0e6c8", color: "#5a4a1e", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid #e6dfc9" };
-const subTh = { textAlign: "center", padding: "4px 6px", background: "#faf5e2", color: "#8a6a1e", fontSize: 10, borderBottom: "1px solid #e6dfc9", fontWeight: 500 };
+const subTh = { textAlign: "center", padding: "4px 6px", background: "#faf5e2", color: "#8a6a1e", fontSize: 12, borderBottom: "1px solid #e6dfc9", fontWeight: 500 };
 const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb", verticalAlign: "middle", textAlign: "center" };
 const select = { padding: "4px 8px", borderRadius: 6, border: "1px solid #d4c9a3", background: "#fff", fontSize: 13 };
-const lockBadge = { fontSize: 9, background: "#064e3b", color: "#fbe89a", padding: "1px 5px", borderRadius: 4, marginLeft: 6, verticalAlign: "middle" };
+const lockBadge = { fontSize: 12, background: "#064e3b", color: "#fbe89a", padding: "1px 5px", borderRadius: 4, marginLeft: 6, verticalAlign: "middle" };
 const overviewCard = { display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 1, overflow: "hidden", background: "#e6dfc9", border: "1px solid #e6dfc9", borderRadius: 8 };
 const overviewItem = { padding: "14px 16px", background: "#fff" };
 const overviewLabel = { display: "block", color: "#6b7a72", fontSize: 11, marginBottom: 5 };

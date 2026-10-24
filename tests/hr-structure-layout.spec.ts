@@ -1,9 +1,11 @@
-import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 import { expect, test } from '@playwright/test';
 
 for (const width of [1440, 375]) {
   test(`wide HR structure scrolls without hiding department actions at ${width}px`, async ({ page }) => {
-    const css = await readFile(new URL('../src/styles.css', import.meta.url), 'utf8');
+    const bundle = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";', loader: 'css', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false });
+    const css = bundle.outputFiles[0].text;
     await page.setViewportSize({ width, height: 800 });
     // Exercise the real chart classes with a tree wider than its containing module.
     const branches = Array.from({ length: 8 }, (_, index) => `<div class="hr-org-branch has-children">

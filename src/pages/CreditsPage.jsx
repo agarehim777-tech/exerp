@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../modules/credits/CreditInitialPayments.jsx";
-import { money } from "../services/format.js";
+import { cashAmount as money } from "../services/format.js";
+import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
+import ModuleLink from '../shared/ui/ModuleLink.jsx';
+import { pathForRecord } from '../config/routes.js';
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import {
@@ -45,13 +48,17 @@ function CreditsPage({
   selectedCreditId,
   onClearSelectedCredit,
 }) {
-  const [creditFilter, setCreditFilter] = useState("Hamısı");
-  const [sourceFilter, setSourceFilter] = useState("Bütün mənbələr");
-  const [monthFilter, setMonthFilter] = useState("Bütün aylar");
-  const [yearFilter, setYearFilter] = useState(String(currentBusinessYear));
-  const [searchTerm, setSearchTerm] = useState("");
-  const [pageSize, setPageSize] = useState(10);
-  const [detailCreditId, setDetailCreditId] = useState("");
+  const defaults = { credit: '', filter: 'Hamısı', source: 'Bütün mənbələr', month: 'Bütün aylar', year: String(currentBusinessYear), q: '', size: '10' };
+  const [pageQuery, setPageQuery] = usePageQuery(defaults);
+  const { credit: detailCreditId, filter: creditFilter, source: sourceFilter, month: monthFilter, year: yearFilter, q: searchTerm } = pageQuery;
+  const pageSize = [10, 25, 50, 100].includes(Number(pageQuery.size)) ? Number(pageQuery.size) : 10;
+  const setCreditFilter = filter => setPageQuery({ filter });
+  const setSourceFilter = source => setPageQuery({ source }, { replace: true });
+  const setMonthFilter = month => setPageQuery({ month }, { replace: true });
+  const setYearFilter = year => setPageQuery({ year }, { replace: true });
+  const setSearchTerm = q => setPageQuery({ q }, { replace: true });
+  const setPageSize = size => setPageQuery({ size: String(size) }, { replace: true });
+  const setDetailCreditId = credit => setPageQuery({ credit });
   const [quickCreditId, setQuickCreditId] = useState("");
   const [startCreditId, setStartCreditId] = useState("");
 
@@ -81,7 +88,7 @@ function CreditsPage({
     (sum, item) => sum + Number(item.paymentState.nextInstallment?.amount || 0),
     0,
   );
-  const portfolioBalance = enrichedCredits.reduce((sum, item) => sum + Number(item.plan.balance || 0), 0);
+  const portfolioBalance = enrichedCredits.reduce((sum, item) => sum + Number(getCreditDebtFormula(item).balance || 0), 0);
   const paidTotal = enrichedCredits.reduce(
     (sum, item) =>
       sum +
@@ -172,7 +179,7 @@ function CreditsPage({
   const todayLabel = formatPaymentDate(parsePaymentDate(baseCreditDate));
 
   useEffect(() => {
-    if (!selectedCreditId) return;
+    if (!selectedCreditId || selectedCreditId === detailCreditId) return;
     if (credits.some((credit) => credit.id === selectedCreditId)) {
       setDetailCreditId(selectedCreditId);
     }
@@ -183,15 +190,10 @@ function CreditsPage({
     onClearSelectedCredit?.();
   };
   const resetFilters = () => {
-    setCreditFilter("Hamısı");
-    setSourceFilter("Bütün mənbələr");
-    setMonthFilter("Bütün aylar");
-    setYearFilter(String(currentBusinessYear));
-    setSearchTerm("");
-    setPageSize(10);
+    setPageQuery({ ...defaults, credit: detailCreditId }, { replace: true });
   };
   const applyFilters = () => {
-    setSearchTerm((value) => value.trim());
+    setSearchTerm(searchTerm.trim());
   };
   const exportVisibleCredits = () => {
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -227,7 +229,7 @@ function CreditsPage({
   };
 
   return (
-    <div className="stack">
+    <div className="stack credit-workspace">
       {error ? (
         <div role="alert" className="form-error">
           <p>Kredit məlumatları yüklənmədi: {error.message || String(error)}</p>
@@ -236,6 +238,10 @@ function CreditsPage({
           </button>
         </div>
       ) : loading ? <p role="status">Kredit məlumatları yüklənir...</p> : null}
+      {!loading && !error && detailCreditId && !detailItem && <div role="alert" className="ui-notice ui-notice-warning">
+        Kredit tapılmadı və ya bu şirkətdə əlçatan deyil.
+        <button type="button" className="text-btn" onClick={closeDetail}>Bağla</button>
+      </div>}
       <section className="metric-grid four">
         <MetricCard label="Aktiv kreditlər" value={activeCredits.length} icon={CreditCard} tone="primary" />
         <MetricCard label="Portfel qalığı" value={money(portfolioBalance)} trend={`${money(paidTotal)} ödənilib`} icon={Wallet} tone="success" />
@@ -350,7 +356,18 @@ function CreditsPage({
           </div>
 
           <DataTable
-            columns={["#", "Müştəri", "Müqavilə / cihaz", "Müqavilə məbləği", "Ödənilib / beh", "Qalıq", "Növbəti", "Status", "Əməl."]}
+            label="Kredit siyahısı"
+            columns={[
+              { label: '#', mobileHidden: true },
+              { label: 'Müştəri', sticky: true },
+              { label: 'Müqavilə / cihaz', mobileHidden: true },
+              { label: 'Müqavilə məbləği', align: 'right', mobileHidden: true },
+              { label: 'Ödənilib / beh', align: 'right', mobileHidden: true },
+              { label: 'Qalıq', align: 'right' },
+              { label: 'Növbəti', mobileHidden: true },
+              { label: 'Status', mobileHidden: true },
+              { label: 'Əməl.' },
+            ]}
             rows={tableCredits.map((item, index) => {
               const { credit, plan, paymentState } = item;
               const nextAmount = Number(paymentState.nextInstallment?.amount || 0);
@@ -363,6 +380,7 @@ function CreditsPage({
                   <span className="credit-avatar">{getCreditInitials(credit.customer)}</span>
                   <div className="credit-customer-copy">
                     <strong>{credit.customer}</strong>
+                    <ModuleLink className="record-link credit-mobile-contract" to={pathForRecord('credits', credit.id)} onSelect={() => setDetailCreditId(credit.id)}>{credit.contractId || 'Kreditə bax'}</ModuleLink>
                     <span>
                       <b>#{compactCode}</b>
                       {customerMeta ? ` · ${customerMeta}` : ""}
@@ -374,14 +392,14 @@ function CreditsPage({
                   <span>{credit.device || credit.product || "Cihaz qeyd edilməyib"}</span>
                   <em>
                     {credit.orderId ? (
-                      <button
+                      <ModuleLink
                         className="inline-module-link"
-                        type="button"
-                        onClick={() => onOpenSalesOrder?.(credit.orderId)}
+                        to={pathForRecord('sales', credit.orderId)}
+                        onSelect={onOpenSalesOrder ? () => onOpenSalesOrder(credit.orderId) : undefined}
                         data-testid="credit-row-order-link"
                       >
                         {credit.orderNo || credit.orderId} sifarişi
-                      </button>
+                      </ModuleLink>
                     ) : (
                       "Manual qeyd"
                     )}{" "}
@@ -397,7 +415,7 @@ function CreditsPage({
                 />,
                 <TwoLine
                   title={money(debt.balance)}
-                  subtitle={debt.phase === "initial" ? "Qalıq ümumi borc" : `Növbəti ${money(debt.nextAmount)}`}
+                  subtitle={debt.phase === "initial" ? <>Qalıq ümumi borc<b className="credit-mobile-initial">İlkin qalıq: {money(Math.max(0, debt.requiredInitial - debt.paid))}</b></> : `Növbəti ${money(debt.nextAmount)}`}
                 />,
                 <TwoLine title={isCreditStarted(credit) ? paymentState.nextInstallment?.due || credit.next || "—" : "Tarix təyin edilməyib"} subtitle={!isCreditStarted(credit) ? "Başlatma gözləyir" : nextAmount > 0 ? `${money(nextAmount)} aylıq` : "Plan tamamlanıb"} />,
                 <div className="credit-status-stack">
@@ -409,21 +427,22 @@ function CreditsPage({
                     className="primary-btn compact"
                     type="button"
                     title="Kredit üzrə ödəniş götür"
+                    aria-label="Kredit üzrə ödəniş götür"
                     disabled={debt.balance <= 0 || !isCreditStarted(credit)}
                     onClick={() => setQuickCreditId(credit.id)}
                   >
                     <Wallet size={15} />
-                    Ödəniş götür
+                    <span className="credit-action-label">Ödəniş götür</span>
                   </button>
                   {!isCreditStarted(credit) && !isCreditClosed(credit, plan) ? (
-                    <button className="primary-btn compact" type="button" onClick={() => setStartCreditId(credit.id)}>
+                    <button className="primary-btn compact" type="button" title="Krediti başlat" aria-label="Krediti başlat" onClick={() => setStartCreditId(credit.id)}>
                       <Play size={15} />
-                      Krediti başlat
+                      <span className="credit-action-label">Krediti başlat</span>
                     </button>
                   ) : null}
-                  <button className="icon-btn" title="Kredit kartına bax" onClick={() => setDetailCreditId(credit.id)}>
+                  <ModuleLink className="icon-btn" title="Kredit kartına bax" aria-label="Kredit kartına bax" to={pathForRecord('credits', credit.id)} onSelect={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
-                  </button>
+                  </ModuleLink>
                 </div>,
 
               ];

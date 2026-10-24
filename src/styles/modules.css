@@ -1,3 +1,19 @@
+.sales-registry-toolbar { align-items: end; }
+.sales-registry-toolbar .ui-tabs { margin: 0; }
+.sales-registry { min-width: 0; }
+.credit-mobile-contract, .credit-mobile-initial { display: none; }
+.credit-directory-panel table { width: 100%; min-width: 0; }
+.credit-search-field > div { height: var(--control-height); min-width: 0; }
+.credit-search-field input { min-width: 0; width: 100%; }
+.credit-directory-panel :is(.credit-customer-copy strong, .credit-contract-cell strong, .two-line strong) { font-size: var(--font-size-md); }
+.credit-directory-panel :is(.credit-customer-copy span, .credit-contract-cell span, .credit-contract-cell em, .two-line span, .status) { font-size: var(--font-size-sm); line-height: 1.45; }
+.credit-directory-panel .credit-deposit-target { color: var(--text-primary); font-weight: 800; }
+.credit-customer-cell { min-width: 180px; }
+.credit-contract-cell { min-width: 150px; }
+.credit-table-actions { flex-wrap: nowrap; }
+.credit-table-actions .credit-action-label { display: none; }
+.credit-directory-panel .credit-table-actions .primary-btn { width: var(--control-height); height: var(--control-height); padding: 0; justify-content: center; }
+.credit-table-actions .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: var(--control-height); height: var(--control-height); flex-shrink: 0; }
 .main > .stack:not(.dashboard-page) .metric-card {
   min-height: 104px;
   padding: 16px;

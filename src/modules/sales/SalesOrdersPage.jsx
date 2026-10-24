@@ -6,6 +6,11 @@ import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
+import { DataTable, Tabs } from '../../shared/ui/primitives.jsx';
+import ModuleLink from '../../shared/ui/ModuleLink.jsx';
+import { pathForRecord } from '../../config/routes.js';
+import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
+import { cashAmount } from '../../services/format.js';
 import './sales-reversal.css';
 
 const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
@@ -16,16 +21,24 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
   const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading, error: ordersError } = repository;
   const { accounts: cashAccounts } = useCashbook(activeTenantId);
-  const [view, setView] = useState('table');
-  const [q, setQ] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [pageQuery, setPageQuery] = usePageQuery({ order: '', view: 'table', q: '', from: '', to: '', page: '1' });
+  const view = pageQuery.view === 'kanban' ? 'kanban' : 'table';
+  const { q, from: fromDate, to: toDate } = pageQuery;
+  const setFilter = patch => setPageQuery({ ...patch, page: '1' }, { replace: true });
+  const setQ = value => setFilter({ q: value });
+  const setFromDate = value => setFilter({ from: value });
+  const setToDate = value => setFilter({ to: value });
   const [selected, setSelected] = useState(null);
   const [actionError, setActionError] = useState('');
   const [reversal, setReversal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('Müştərinin müraciəti ilə satış ləğv edildi');
   const [deleting, setDeleting] = useState(false);
-  const [page, setPage] = useState(0);
+  const page = Math.max(0, (Number.parseInt(pageQuery.page, 10) || 1) - 1);
+  const setPage = value => setPageQuery({ page: String(value + 1) });
+  const [detailLoading, setDetailLoading] = useState(false);
+  const requestedId = pageQuery.order || selectedOrderId;
+  const openOrder = order => { setActionError(''); setSelected(order); setPageQuery({ order: order.id }); };
+  const closeOrder = () => { setSelected(null); setPageQuery({ order: '' }); };
 
   const filtered = useMemo(() => orders.filter(o =>
     o.status !== 'cancelled'
@@ -36,7 +49,6 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   const pageCount = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pageCount - 1);
   const pageRows = filtered.slice(currentPage * 50, (currentPage + 1) * 50);
-  useEffect(() => setPage(0), [q, fromDate, toDate, activeTenantId]);
 
   const exportRegistry = () => downloadReportCsv({
     title: 'Satis reyestri',
@@ -47,72 +59,68 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   });
 
   useEffect(() => {
-    if (!selectedOrderId || !orders.length) return;
-    const target = orders.find(order => String(order.id) === String(selectedOrderId) || String(order.order_no) === String(selectedOrderId));
+    let current = true;
+    setSelected(null);
+    setDetailLoading(false);
+    if (!requestedId) return;
+    const target = orders.find(order => order.status !== 'cancelled' && (String(order.id) === String(requestedId) || String(order.order_no) === String(requestedId)));
     if (target) {
       setSelected(target);
-      onSelectedOrderHandled?.();
+      if (selectedOrderId) onSelectedOrderHandled?.();
+    } else if (!ordersLoading && repository.getById) {
+      setDetailLoading(true);
+      repository.getById(requestedId).then(order => {
+        if (!current) return;
+        setSelected(order);
+        setActionError(order ? '' : 'Bağlı sifariş tapılmadı və ya bu şirkətdə əlçatan deyil.');
+      }).catch(error => { if (current) setActionError(error.message || 'Sifariş oxunmadı.'); })
+        .finally(() => { if (current) setDetailLoading(false); });
     }
-  }, [selectedOrderId, orders, onSelectedOrderHandled]);
-
-  useEffect(() => {
-    if (!selected?.id) return;
-    const current = orders.find(order => order.id === selected.id);
-    if (!current) setSelected(null);
-    else if (current !== selected) setSelected(current);
-  }, [orders, selected]);
+    return () => { current = false; };
+  }, [requestedId, orders, ordersLoading, repository.getById, activeTenantId]);
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+    <div className="ui-page-stack sales-registry">
+      {detailLoading && <p role="status">Sifariş yüklənir...</p>}
       {ordersError && <div role="alert" className="form-error">{ordersError.message || 'Satış məlumatları oxunmadı.'}</div>}
       {actionError && <div role="alert" style={{ padding: '10px 14px', border: '1px solid #fecaca', borderRadius: 10, background: '#fff1f2', color: '#b91c1c', fontSize: 13 }}>{actionError}</div>}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="ui-toolbar sales-registry-toolbar">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
           style={{ flex: 1, minWidth: 200, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8 }} />
         <input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
         <input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
         <button type="button" onClick={exportRegistry} disabled={!filtered.length || ordersLoading} className="secondary-btn" title="Görünən satışları CSV formatında ixrac et"><Download size={16} /> CSV ixrac</button>
-        <div style={{ display: 'flex', background: '#f1f5f9', padding: 3, borderRadius: 10 }}>
-          {['table', 'kanban'].map(v => (
-            <button key={v} onClick={() => setView(v)}
-              style={{ padding: '6px 14px', border: 0, background: view === v ? '#fff' : 'transparent', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: view === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
-              {v === 'table' ? 'Cədvəl' : 'Kanban'}
-            </button>
-          ))}
-        </div>
+        <Tabs items={[["table", "Cədvəl"], ["kanban", "Kanban"]]} value={view} onChange={value => setPageQuery({ view: value })} />
       </div>
 
       {view === 'table' ? (
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead style={{ background: '#f8fafc' }}>
-              <tr>
-                <Th>№</Th><Th>Müştəri</Th><Th align="right">Ümumi məbləğ</Th><Th align="right">Ödənilib</Th><Th align="right">Qalıq borc</Th><Th>Status</Th><Th>Ödəniş statusu</Th><Th>Tarix</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map(o => (
-                <tr key={o.id} onClick={() => setSelected(o)}
-                  style={{ cursor: 'pointer', borderTop: '1px solid #f1f5f9' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <Td><b>{o.order_no}</b></Td>
-                  <Td>{o.customer?.name || '—'}</Td>
-                  <Td align="right"><b>{Number(o.total).toFixed(2)} {o.currency}</b></Td>
-                  <Td align="right"><b style={{ color: '#047857' }}>{Math.max(0, Number(o.paid_amount || 0)).toFixed(2)} {o.currency}</b></Td>
-                  <Td align="right">
-                    <b style={{ color: Math.max(0, Number(o.total || 0) - Number(o.paid_amount || 0)) > 0 ? '#dc2626' : '#047857' }}>
-                      {Math.max(0, Number(o.total || 0) - Number(o.paid_amount || 0)).toFixed(2)} {o.currency}
-                    </b>
-                  </Td>
-                  <Td><StatusBadge status={STATUS_LABELS[o.status] || o.status} /></Td>
-                  <Td><StatusBadge status={o.payment_status} /></Td>
-                  <Td>{new Date(o.order_date || o.created_at).toLocaleDateString('az-AZ')}</Td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>{ordersLoading ? 'Yüklənir...' : ordersError ? 'Məlumat alınmadı' : 'Sifariş yoxdur'}</td></tr>}
-            </tbody>
-          </table>
+        <div>
+          <DataTable label="Satış reyestri" rows={pageRows} onRowClick={openOrder}
+            emptyText={ordersLoading ? 'Yüklənir...' : ordersError ? 'Məlumat alınmadı' : 'Sifariş yoxdur'}
+            columns={[
+              { key: 'order_no', label: '№', sticky: true, nowrap: true },
+              { key: 'customer', label: 'Müştəri' },
+              { key: 'total', label: 'Ümumi məbləğ', align: 'right', mobileHidden: true },
+              { key: 'paid', label: 'Ödənilib', align: 'right', mobileHidden: true },
+              { key: 'balance', label: 'Qalıq borc', align: 'right' },
+              { key: 'status', label: 'Status', mobileHidden: true },
+              { key: 'payment', label: 'Ödəniş statusu', mobileHidden: true },
+              { key: 'date', label: 'Tarix', nowrap: true, mobileHidden: true },
+            ]}
+            renderCell={(order, column) => {
+              const balance = Math.max(0, Number(order.total) - Number(order.paid_amount || 0));
+              switch (column.key) {
+                case 'order_no': return <ModuleLink className="record-link" to={pathForRecord('sales', order.id)} onSelect={() => openOrder(order)}>{order.order_no}</ModuleLink>;
+                case 'customer': return order.customer?.name || '—';
+                case 'total': return <b className="money-value">{cashAmount(order.total, order.currency || 'AZN')}</b>;
+                case 'paid': return <b className="money-value amount-positive">{cashAmount(Math.max(0, Number(order.paid_amount || 0)), order.currency || 'AZN')}</b>;
+                case 'balance': return <b className={`money-value ${balance > 0 ? 'amount-due' : 'amount-positive'}`}>{cashAmount(balance, order.currency || 'AZN')}</b>;
+                case 'status': return <StatusBadge status={STATUS_LABELS[order.status] || order.status} />;
+                case 'payment': return <StatusBadge status={order.payment_status} />;
+                case 'date': return new Date(order.order_date || order.created_at).toLocaleDateString('az-AZ');
+                default: return null;
+              }
+            }} />
           <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={ordersLoading} />
         </div>
       ) : (
@@ -128,12 +136,12 @@ export default function SalesOrdersPage({ repository, customers = [], products =
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {col.filter(o => pageRows.includes(o)).map(o => (
-                    <div key={o.id} onClick={() => setSelected(o)}
+                    <div key={o.id}
                       style={{ background: '#fff', padding: 10, borderRadius: 10, cursor: 'pointer', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontWeight: 700, fontSize: 13 }}>{o.order_no}</div>
+                      <ModuleLink className="record-link" to={pathForRecord('sales', o.id)} onSelect={() => openOrder(o)}>{o.order_no}</ModuleLink>
                       <div style={{ fontSize: 12, color: '#64748b', margin: '2px 0' }}>{o.customer?.name || '—'}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                        <b style={{ color: '#10b981', fontSize: 13 }}>{Number(o.total).toFixed(0)} ₼</b>
+                        <b className="money-value amount-positive">{cashAmount(o.total, o.currency || 'AZN')}</b>
                         <StatusBadge status={o.payment_status} />
                       </div>
                     </div>
@@ -158,13 +166,13 @@ export default function SalesOrdersPage({ repository, customers = [], products =
           order={selected} customers={customers} products={products}
           cashAccounts={cashAccounts.filter(account => account.is_active !== false)}
           canManageOrder={Boolean(isPlatformAdmin || ['owner', 'admin'].includes(activeMembership?.role) || (selected.created_by && selected.created_by === user?.id))}
-          onClose={() => setSelected(null)}
+          onClose={closeOrder}
           onStatus={(id, s) => updateStatus(id, s)}
           onPatch={(id, p) => updateHeader(id, p)}
           onPayment={(amount, accountId) => registerPayment(selected, amount, accountId)}
           onUpdate={async (id, values) => {
             await update(id, values);
-            setSelected(null);
+            closeOrder();
           }}
           onDelete={async (id) => {
             setActionError('');
@@ -191,7 +199,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
           setDeleting(true); setActionError('');
           try {
             await remove(reversal.orderId, deleteReason.trim());
-            setSelected(null); setReversal(null);
+            closeOrder(); setReversal(null);
           } catch (error) {
             setActionError(error?.message || 'Satış ləğv edilmədi.');
           } finally { setDeleting(false); }
@@ -224,6 +232,4 @@ function ReversalPreview({ state, reason, setReason, deleting, onClose, onConfir
 function Impact({ icon: Icon, label, value }) {
   return <div><Icon size={18} /><span>{label}</span><strong>{value}</strong></div>;
 }
-const Th = ({ children, align }) => <th style={{ padding: '10px 12px', textAlign: align || 'left', color: '#64748b', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 }}>{children}</th>;
-const Td = ({ children, align }) => <td style={{ padding: '10px 12px', textAlign: align || 'left' }}>{children}</td>;
 

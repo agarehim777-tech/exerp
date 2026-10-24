@@ -4,9 +4,11 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import { cashAmount } from "../../services/format.js";
+import { DataTable, Tabs } from '../../shared/ui/primitives.jsx';
+import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import {
-  azn, badge, card, delBtn, input, msgBox, primaryBtn,
-  statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
+  badge, card, delBtn, input, msgBox, primaryBtn,
+  statLabel, statTile, statValue,
 } from "../../shared/ui/tokens.js";
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
@@ -18,7 +20,13 @@ export default function CashbookPage() {
   const tenantId = activeMembership?.tenant_id;
   const canApproveExpenses = Boolean(isPlatformAdmin || ["owner", "admin", "audit", "auditor"].includes(activeMembership?.role));
   const book = useCashbook(tenantId);
-  const [tab, setTab] = useState(() => searchParams.get("tab") || "accounts");
+  const tab = ['accounts', 'transactions', 'expenses'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'accounts';
+  const setTab = value => setSearchParams(previous => {
+    const next = new URLSearchParams(previous);
+    next.set('tab', value);
+    next.delete('status');
+    return next;
+  });
 
   const [currency, setCurrency] = useState("AZN");
   const currencies = book.summary?.currencies || [];
@@ -40,11 +48,7 @@ export default function CashbookPage() {
         <div style={statTile}><div style={statLabel}>Geri qaytarılacaq</div><div style={{ ...statValue, color: totals?.refundPending ? "#b45309" : undefined }}>{cashAmount(totals?.refundPending ?? null, selectedCurrency)}</div></div>
       </div>
 
-      <div style={tabBar}>
-        {[["accounts", "Hesablar"], ["transactions", "Əməliyyatlar"], ["expenses", "Xərclər"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
-        ))}
-      </div>
+      <Tabs items={[["accounts", "Hesablar"], ["transactions", "Əməliyyatlar"], ["expenses", "Xərclər"]]} value={tab} onChange={setTab} />
 
       {book.error && <div style={msgBox}>Xəta: {book.error.message}</div>}
       {tab === "accounts" && <AccountsPanel book={book} />}
@@ -53,8 +57,6 @@ export default function CashbookPage() {
         <ExpensesPanel
           book={book}
           canApprove={canApproveExpenses}
-          initialStatus={searchParams.get("status") || ""}
-          onFilterApplied={() => setSearchParams({}, { replace: true })}
         />
       )}
     </div>
@@ -107,25 +109,22 @@ function AccountsPanel({ book }) {
         <input placeholder="Qeyd" value={transfer.description} onChange={event => setTransfer({ ...transfer, description: event.target.value })} style={input} />
         <button type="submit" style={primaryBtn}>Transfer et</button>
       </form>}
-      <table style={table}>
-        <thead><tr><th style={th}>Ad</th><th style={th}>Növ</th><th style={th}>Valyuta</th><th style={th}>Cari qalıq</th><th style={th} /></tr></thead>
-        <tbody>
-          {book.accounts.map((a) => (
-            <tr key={a.id}>
-              <td style={td}><b>{a.name}</b></td>
-              <td style={td}>{ACCOUNT_TYPE[a.type]}</td>
-              <td style={td}>{a.currency}</td>
-              <td style={{ ...td, fontWeight: 600 }}>{cashAmount(book.balanceOf(a.id), a.currency)}</td>
-              <td style={{ ...td, textAlign: "right" }}>{a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <button type="button" style={delBtn} onClick={async () => {
+      <DataTable label="Kassa və bank hesabları" rows={book.accounts} emptyText="Hesab yoxdur."
+        columns={[{key:'name',label:'Ad',sticky:true},{key:'type',label:'Növ',mobileHidden:true},{key:'currency',label:'Valyuta',mobileHidden:true},{key:'balance',label:'Cari qalıq',align:'right'},{key:'action',label:'Əməl.'}]}
+        renderCell={(a, column) => {
+          switch (column.key) {
+            case 'name': return <b>{a.name}</b>;
+            case 'type': return ACCOUNT_TYPE[a.type];
+            case 'currency': return a.currency;
+            case 'balance': return <b className="money-value">{cashAmount(book.balanceOf(a.id), a.currency)}</b>;
+            case 'action': return a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <button type="button" style={delBtn} onClick={async () => {
                 if (!(await appConfirm(`${a.name} kassası silinsin?`, { danger: true }))) return;
                 setMsg("");
                 try { await book.removeAccount(a); } catch (error) { setMsg(`Xəta: ${error.message}`); }
-              }}>Sil</button>}</td>
-            </tr>
-          ))}
-          {!book.accounts.length && <tr><td style={td} colSpan={5}>Hesab yoxdur.</td></tr>}
-        </tbody>
-      </table>
+              }}>Sil</button>;
+            default: return null;
+          }
+        }} />
     </div>
   );
 }
@@ -249,41 +248,45 @@ function TransactionsPanel({ book, tenantId }) {
           <input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)} style={{ ...input, width: "min(100%, 380px)" }} />
         </div>
       </div>
-      <div style={{ overflowX: "auto" }}><table style={{ ...table, minWidth: 1120 }}>
-        <thead><tr><th style={th}>Tarix</th><th style={th}>Əməliyyat №</th><th style={th}>Hesab</th><th style={th}>Növ</th><th style={th}>Məbləğ</th><th style={th}>Ödəyən / qarşı tərəf</th><th style={th}>Bağlı sənəd</th><th style={th}>Kateqoriya</th><th style={th}>Daxil edən</th><th style={th}>Qeyd</th><th style={th} /></tr></thead>
-        <tbody>
-          {visibleTransactions.map((t) => {
+      <DataTable label="Kassa əməliyyatları" rows={visibleTransactions}
+        emptyText={book.transactions.length ? "Axtarışa uyğun əməliyyat yoxdur." : "Əməliyyat yoxdur."}
+        columns={[
+          { key: 'date', label: 'Tarix', nowrap: true }, { key: 'number', label: 'Əməliyyat №', sticky: true },
+          { key: 'account', label: 'Hesab' }, { key: 'type', label: 'Növ' },
+          { key: 'amount', label: 'Məbləğ', align: 'right' }, { key: 'party', label: 'Ödəyən / qarşı tərəf' },
+          { key: 'reference', label: 'Bağlı sənəd' }, { key: 'category', label: 'Kateqoriya' },
+          { key: 'employee', label: 'Daxil edən' }, { key: 'description', label: 'Qeyd', minWidth: 200 },
+          { key: 'actions', label: 'Əməl.' },
+        ]}
+        renderCell={(t, column) => {
             const employee = employeeByUser.get(t.created_by);
             const partyName = t.customer?.name || t.vendor?.name || t.counterparty || "—";
-            return (
-            <tr key={t.id}>
-              <td style={td}>{new Date(t.occurred_at).toLocaleDateString("az-AZ")}</td>
-              <td style={td}><b>{t.transaction_no || "—"}</b></td>
-              <td style={td}>{t.account?.name || "—"}</td>
-              <td style={td}><span style={badge(t.category === "internal_transfer" ? "gray" : t.direction === "in" ? "green" : "red")}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span></td>
-              <td style={{ ...td, fontWeight: 600 }}>{azn(t.amount)}</td>
-              <td style={td}><b>{partyName}</b>{t.customer?.fin && <div style={{ color: "#64748b", fontSize: 12 }}>FİN: {t.customer.fin}</div>}</td>
-              <td style={td}>{t.reference || "—"}</td>
-              <td style={td}>{t.category || "—"}</td>
-              <td style={td}>{employee?.full_name || "Sistem"}{employee?.position && <div style={{ color: "#64748b", fontSize: 12 }}>{employee.position}</div>}</td>
-              <td style={{ ...td, maxWidth: 260, whiteSpace: "normal" }}>{t.description || "—"}</td>
-              <td style={td}>{showHidden && hiddenIds.has(t.id)
+            switch (column.key) {
+              case 'date': return new Date(t.occurred_at).toLocaleDateString("az-AZ");
+              case 'number': return <b>{t.transaction_no || "—"}</b>;
+              case 'account': return t.account?.name || "—";
+              case 'type': return <span style={badge(t.category === "internal_transfer" ? "gray" : t.direction === "in" ? "green" : "red")}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span>;
+              case 'amount': return <b className="money-value">{cashAmount(t.amount, t.account?.currency || 'AZN')}</b>;
+              case 'party': return <><b>{partyName}</b>{t.customer?.fin && <div className="muted">FİN: {t.customer.fin}</div>}</>;
+              case 'reference': return t.reference || "—";
+              case 'category': return t.category || "—";
+              case 'employee': return <>{employee?.full_name || "Sistem"}{employee?.position && <div className="muted">{employee.position}</div>}</>;
+              case 'description': return t.description || "—";
+              case 'actions': return showHidden && hiddenIds.has(t.id)
                 ? <button className="secondary-btn" type="button" onClick={() => restoreHidden(t)}>Bərpa et</button>
                 : t.reversal_of
                 ? <span style={badge("gray")}>Reversal</span>
                 : reversedIds.has(t.id)
                   ? <div style={{display:"grid",gap:5}}><span style={badge("gray")}>Ləğv edilib</span><button style={delBtn} type="button" onClick={() => hideCanceled(t)}>Siyahıdan sil</button></div>
-                  : <button style={delBtn} onClick={() => reverse(t)}>Ləğv et</button>}</td>
-            </tr>
-          );})}
-          {!visibleTransactions.length && <tr><td style={td} colSpan={11}>{book.transactions.length ? "Axtarışa uyğun əməliyyat yoxdur." : "Əməliyyat yoxdur."}</td></tr>}
-        </tbody>
-      </table></div>
+                  : <button style={delBtn} onClick={() => reverse(t)}>Ləğv et</button>;
+              default: return null;
+            }
+        }} />
     </div>
   );
 }
 
-function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }) {
+function ExpensesPanel({ book, canApprove }) {
   const [form, setForm] = useState({ account_id: "", category: "digər", description: "", amount: "", vat_amount: "", expense_date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(null);
@@ -291,12 +294,8 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
   const [openCategories, setOpenCategories] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
-  const [filters, setFilters] = useState({ search: "", category: "", status: initialStatus, dateFrom: "", dateTo: "" });
-  useEffect(() => {
-    if (!initialStatus) return;
-    setFilters(current => ({ ...current, status: initialStatus }));
-    onFilterApplied?.();
-  }, [initialStatus]);
+  const [filters, updateFilters] = usePageQuery({ search: "", category: "", status: "", dateFrom: "", dateTo: "" });
+  const setFilters = values => updateFilters(values, { replace: true });
   const categoryNames = book.expenseCategories.map(item => item.name);
   const visibleExpenses = book.expenses.filter(expense => {
     const search = filters.search.trim().toLocaleLowerCase("az");
@@ -366,32 +365,36 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
         <input value={filters.search} onChange={event => setFilters({ ...filters, search: event.target.value })} placeholder="Axtar…" style={{ ...input, minWidth: 0, boxSizing: "border-box" }} />
         <select value={filters.category} onChange={event => setFilters({ ...filters, category: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün kateqoriyalar</option>{categoryNames.map(category => <option key={category}>{category}</option>)}</select>
         <select value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün statuslar</option><option value="pending">Təsdiq gözləyir</option><option value="approved">Təsdiqləndi</option><option value="paid">Qəbul edildi</option><option value="refund_pending">Geri qaytarma gözləyir</option><option value="cancelled">Ləğv edildi</option></select>
-        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 10, color: "#64748b" }}><span>Başlanğıc tarixi</span><input type="date" value={filters.dateFrom} onChange={event => setFilters({ ...filters, dateFrom: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 10, color: "#64748b" }}><span>Bitmə tarixi</span><input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 12, color: "#64748b" }}><span>Başlanğıc tarixi</span><input type="date" value={filters.dateFrom} onChange={event => setFilters({ ...filters, dateFrom: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 12, color: "#64748b" }}><span>Bitmə tarixi</span><input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
         <button type="button" style={{ ...primaryBtn, minWidth: 0, alignSelf: "end", background: "#fff", color: "#475569", border: "1px solid #cbd5e1" }} onClick={() => setFilters({ search: "", category: "", status: "", dateFrom: "", dateTo: "" })}>Təmizlə</button>
       </div>
-      <table style={table}>
-        <thead><tr><th style={th}>Tarix</th><th style={th}>Kateqoriya</th><th style={th}>Təsvir</th><th style={th}>Məbləğ</th><th style={th}>Status</th><th style={th}>Təsdiq</th><th style={th}>Qəbul</th><th style={th}>Ləğv</th><th style={th}>Kassa təsiri</th><th style={th} /></tr></thead>
-        <tbody>
-          {visibleExpenses.map((e) => {
+      <DataTable label="Xərclər" rows={visibleExpenses} emptyText="Filterə uyğun xərc yoxdur."
+        columns={[
+          { key: 'date', label: 'Tarix', nowrap: true }, { key: 'category', label: 'Kateqoriya' },
+          { key: 'description', label: 'Təsvir', sticky: true }, { key: 'amount', label: 'Məbləğ', align: 'right' },
+          { key: 'status', label: 'Status' }, { key: 'approved', label: 'Təsdiq' },
+          { key: 'accepted', label: 'Qəbul' }, { key: 'cancelled', label: 'Ləğv' },
+          { key: 'impact', label: 'Kassa təsiri', align: 'right' }, { key: 'actions', label: 'Əməl.', minWidth: 200 },
+        ]}
+        renderCell={(e, column) => {
             const isPending = ["pending", "draft"].includes(e.status);
             const isCancelled = ["cancelled", "rejected"].includes(e.status);
             const isAccepted = e.status === "paid";
             const isApproved = isAccepted || e.status === "approved";
             const cashImpact = isCancelled ? 0 : -Number(e.amount || 0);
-            return (
-            <tr key={e.id}>
-              <td style={td}>{new Date(e.expense_date).toLocaleDateString("az-AZ")}</td>
-              <td style={td}>{e.category}</td>
-              <td style={td}>{e.description || "—"}</td>
-              <td style={{ ...td, fontWeight: 600 }}>{azn(e.amount)}</td>
-              <td style={td}><span style={badge(isCancelled ? "red" : isApproved ? "green" : e.status === "refund_pending" ? "red" : "amber")}>{isAccepted ? "Qəbul edildi" : e.status === "approved" ? "Təsdiqləndi" : isCancelled ? "Ləğv edildi" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span></td>
-              <td style={td}>{isApproved ? "Bəli" : "—"}</td>
-              <td style={td}>{isAccepted ? "Bəli" : "—"}</td>
-              <td style={td}>{isCancelled ? "Bəli" : "—"}</td>
-              <td style={{ ...td, color: cashImpact ? "#b91c1c" : "#64748b" }}>{cashImpact ? azn(cashImpact) : "Kassaya qaytarılıb"}</td>
-              <td style={td}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            const currency = e.account?.currency || book.accounts.find(account => account.id === e.account_id)?.currency || 'AZN';
+            switch (column.key) {
+              case 'date': return new Date(e.expense_date).toLocaleDateString("az-AZ");
+              case 'category': return e.category;
+              case 'description': return e.description || "—";
+              case 'amount': return <b className="money-value">{cashAmount(e.amount, currency)}</b>;
+              case 'status': return <span style={badge(isCancelled ? "red" : isApproved ? "green" : e.status === "refund_pending" ? "red" : "amber")}>{isAccepted ? "Qəbul edildi" : e.status === "approved" ? "Təsdiqləndi" : isCancelled ? "Ləğv edildi" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span>;
+              case 'approved': return isApproved ? "Bəli" : "—";
+              case 'accepted': return isAccepted ? "Bəli" : "—";
+              case 'cancelled': return isCancelled ? "Bəli" : "—";
+              case 'impact': return <span className={cashImpact ? 'amount-due money-value' : 'muted'}>{cashImpact ? cashAmount(cashImpact, currency) : "Kassaya qaytarılıb"}</span>;
+              case 'actions': return <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                 {isPending && <>
                   <button style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setEditing({ original: e, values: { account_id: e.account_id || "", category: e.category, description: e.description || "", amount: e.amount, vat_amount: e.vat_amount || "", expense_date: e.expense_date } })}>Redaktə et</button>
                   {!canApprove && <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc ləğv edildi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
@@ -400,13 +403,10 @@ function ExpensesPanel({ book, canApprove, initialStatus = "", onFilterApplied }
                 {canApprove && !isAccepted && !isCancelled && <button style={{ ...primaryBtn, background: "#0f766e" }} onClick={async () => { setMsg(""); try { await book.acceptExpense(e); setMsg("Xərc qəbul edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Qəbul et</button>}
                 {canApprove && !isCancelled && <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
                 {canApprove && e.status === "refund_pending" && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpenseRefund(e); setMsg("Ləğv edilmiş məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Məbləği kassaya qaytar</button>}
-                </div>
-              </td>
-            </tr>
-          );})}
-          {!visibleExpenses.length && <tr><td style={td} colSpan={10}>Filterə uyğun xərc yoxdur.</td></tr>}
-        </tbody>
-      </table>
+                </div>;
+              default: return null;
+            }
+        }} />
     </div>
   );
 }

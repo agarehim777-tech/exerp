@@ -340,7 +340,7 @@ export default function FloatingAssistant() {
         }
         .floating-assistant-pre {
           margin: 6px 0 0;
-          font-size: 10px;
+          font-size: 11px;
           color: var(--color-text-secondary, #334155);
           white-space: pre-wrap;
           word-break: break-word;
@@ -394,7 +394,7 @@ export default function FloatingAssistant() {
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        @media (max-width: 480px) {
+        @media (max-width: 640px) {
           .floating-assistant {
             left: 10px;
             bottom: 10px;

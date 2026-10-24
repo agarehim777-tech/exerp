@@ -131,6 +131,16 @@ export function useOrders(tenantId) {
 
   const loadMore = useCallback(() => setLimit((value) => value + ORDERS_PAGE_SIZE), []);
 
+  const getById = useCallback(async orderId => {
+    if (!tenantId || !orderId) return null;
+    const isCurrent = begin('order-detail');
+    const order = await readOrderById(tenantId, orderId, isCurrent);
+    if (!order || !isCurrent()) return null;
+    const related = await readOrderRelations(tenantId, [order.id], isCurrent);
+    if (!related || !isCurrent()) return null;
+    return { ...order, credit: related.credits[0] || null, bonus_assignments: related.bonuses, delivery: related.deliveries[0] || null };
+  }, [tenantId, begin]);
+
   useRealtimeResync(tenantId, ['orders', 'order_items', 'credit_contracts', 'credit_installments', 'credit_payments'], fetchAll, { channelPrefix: 'orders' });
 
   const resolveMainCashAccount = async (currency = 'AZN') => {
@@ -512,7 +522,7 @@ export function useOrders(tenantId) {
   };
 
   const current = Boolean(tenantId && loadedScope === scope && loaded);
-  return { orders: current ? orders : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
+  return { orders: current ? orders : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, getById, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
 }
 
 const EMPTY_ROWS = Object.freeze([]);

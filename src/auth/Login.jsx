@@ -222,7 +222,7 @@ export default function Login() {
         .xp-metric b { display:block; font-family:'Sora',sans-serif; font-weight:600; font-size:1.25rem; color:#d5bc72; line-height:1; margin-bottom:.4rem; }
         .xp-metric span { font-size:var(--fs-2xs); color:#9fb8ae; text-transform:uppercase; letter-spacing:var(--ls-wide); }
         @media(max-width:900px){ .xp-product-body{grid-template-columns:7.5rem 1fr;} .xp-kpis{grid-template-columns:repeat(2,1fr);} }
-        @media(max-width:700px){
+        @media(max-width: 900px){
           .xp { --fs-display:2.35rem; --fs-h2:1.9rem; }
           .xp-hero{padding:1.8rem 1rem 1.5rem;}
           .xp-product{margin-top:1.8rem;}
@@ -247,7 +247,7 @@ export default function Login() {
         .xp-sec-t { font-family:'Sora',sans-serif; font-weight:600; font-size: var(--fs-h2); line-height: var(--lh-snug); color:#fff; margin:0; letter-spacing:0; }
         .xp-mods { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
         @media(max-width:900px){ .xp-mods{ grid-template-columns:repeat(2,1fr);} }
-        @media(max-width:560px){ .xp-mods{ grid-template-columns:1fr;} }
+        @media(max-width: 640px){ .xp-mods{ grid-template-columns:1fr;} }
         .xp-mod { position:relative; background:#0b1915; border:1px solid rgba(230,242,236,.09); border-radius:.5rem; padding: 1.6rem 1.4rem; transition:.25s; overflow:hidden; }
         .xp-mod::after { content:''; position:absolute; inset:0; border-radius:.75rem; padding:1px; background:linear-gradient(135deg, rgba(201,168,76,.4), transparent 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity:0; transition:.25s; }
         .xp-mod:hover { transform:translateY(-3px); border-color:rgba(201,168,76,.3); }

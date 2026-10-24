@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { navItems } from "../data.js";
 import { navIcons } from "../config/navigation-icons.js";
+import { pathForModule } from '../config/routes.js';
+import ModuleLink from '../shared/ui/ModuleLink.jsx';
 
 const GROUP_LABELS = {
   crm: "CRM",
@@ -53,10 +55,10 @@ function SidebarNav({ items, active, onSelect }) {
         if (entry.type === "item") {
           const Icon = navIcons[entry.item.id] || Settings;
           return (
-            <button key={entry.item.id} className={`nav-item ${active === entry.item.id ? "active" : ""}`} onClick={() => onSelect(entry.item.id)}>
+            <ModuleLink key={entry.item.id} to={pathForModule(entry.item.id)} aria-current={active === entry.item.id ? 'page' : undefined} className={`nav-item ${active === entry.item.id ? "active" : ""}`} onSelect={() => onSelect?.(entry.item.id)}>
               <Icon size={17} />
               <span>{entry.item.label}</span>
-            </button>
+            </ModuleLink>
           );
         }
 
@@ -80,10 +82,10 @@ function SidebarNav({ items, active, onSelect }) {
                 {entry.children.map((child) => {
                   const Icon = navIcons[child.id];
                   return (
-                    <button key={child.id} className={`nav-item ${active === child.id ? "active" : ""}`} onClick={() => onSelect(child.id)}>
+                    <ModuleLink key={child.id} to={pathForModule(child.id)} aria-current={active === child.id ? 'page' : undefined} className={`nav-item ${active === child.id ? "active" : ""}`} onSelect={() => onSelect?.(child.id)}>
                       {Icon && <Icon size={15} />}
                       <span>{child.label}</span>
-                    </button>
+                    </ModuleLink>
                   );
                 })}
               </div>

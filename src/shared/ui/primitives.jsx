@@ -1,4 +1,5 @@
 import React from "react";
+export { default as DataTable } from './DataTable.jsx';
 
 const join = (...values) => values.filter(Boolean).join(" ");
 
@@ -51,8 +52,16 @@ export function StatCard({ label, value, tone = "default" }) {
 }
 
 export function Tabs({ items, value, onChange, className }) {
-  return <div className={join("ui-tabs", className)} role="tablist">{items.map(([key, label]) => (
-    <Button key={key} variant="tab" className={value === key ? "active" : ""} role="tab" aria-selected={value === key} onClick={() => onChange(key)}>{label}</Button>
+  const move = (event, index) => {
+    const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + delta + items.length) % items.length;
+    if (!delta && !['Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    event.currentTarget.parentElement.children[next]?.focus();
+    onChange(items[next][0]);
+  };
+  return <div className={join("ui-tabs", className)} role="tablist">{items.map(([key, label], index) => (
+    <Button key={key} variant="tab" className={value === key ? "active" : ""} role="tab" aria-selected={value === key} tabIndex={value === key ? 0 : -1} onKeyDown={event => move(event, index)} onClick={() => onChange(key)}>{label}</Button>
   ))}</div>;
 }
 
@@ -66,35 +75,4 @@ export function Badge({ children, tone = "neutral", className }) {
 
 export function TableActions({ children }) {
   return <div className="ui-table-actions">{children}</div>;
-}
-
-export function DataTable({ columns = [], rows = [], renderCell, emptyText = "Məlumat tapılmadı", rowKey, footer, className }) {
-  if (!rows.length) {
-    return <div className="ui-table-empty">{emptyText}</div>;
-  }
-  return (
-    <div className={join("ui-table-wrap", className)}>
-      <table className="ui-table">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className={column.align === "right" ? "is-numeric" : undefined}>{column.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={rowKey ? rowKey(row, index) : row?.id ?? index}>
-              {columns.map((column) => (
-                <td key={column.key} className={column.align === "right" ? "is-numeric" : undefined}>
-                  {renderCell ? renderCell(row, column, index) : row?.[column.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-        {footer}
-      </table>
-    </div>
-  );
 }

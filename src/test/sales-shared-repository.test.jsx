@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import SalesOrdersPage from '../modules/sales/SalesOrdersPage.jsx';
+import { cashAmount } from '../services/format.js';
 
 vi.mock('../auth/AuthProvider.jsx', () => ({ useAuth: () => ({ activeTenantId: 'tenant', activeMembership: { role: 'admin' } }) }));
 vi.mock('../shared/hooks/useOrders.js', () => ({ useOrders: () => { throw new Error('Duplicate sales reader'); } }));
@@ -19,7 +20,7 @@ it('shows a server-confirmed sale and refreshed payment directly from the creati
   fireEvent.change(screen.getByPlaceholderText('Axtar...'), { target: { value: 'SF-NEW' } });
   expect(screen.getByText('SF-NEW')).toBeVisible();
   view.rerender(<SalesOrdersPage repository={{ ...repository, orders: [{ ...order, paid_amount: 200 }] }} />);
-  expect(screen.getByText('200.00 AZN')).toBeVisible();
+  expect(screen.getByText((_, element) => element.tagName === 'B' && element.textContent === cashAmount(200))).toBeVisible();
   view.rerender(<SalesOrdersPage repository={{ ...repository, orders: [] }} />);
   expect(screen.queryByText('SF-NEW')).toBeNull();
 });

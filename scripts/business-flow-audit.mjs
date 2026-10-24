@@ -173,7 +173,7 @@ async function selectPath(page, path) {
     await group.waitFor();
     if (await group.getAttribute('aria-expanded') !== 'true') await group.click();
   }
-  await sidebar.getByRole('button', { name: item.label, exact: true }).click();
+  await sidebar.getByRole('link', { name: item.label, exact: true }).click();
   await waitForAuditModule(page, path, item.label);
   if (path === '/satinalma') {
     await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: 0 });
@@ -426,7 +426,7 @@ async function auditSalesAndExpenseMutations(browser) {
     const financeScope = { scope: 'finance', accountId: savedAccount.id };
     state = await auditBackend.readState(financeScope);
     const account = state.financeAccounts.find(a => a.name === marker);
-    await page.getByRole('button', { name: 'Xərclər', exact: true }).click();
+    await page.getByRole('tab', { name: 'Xərclər', exact: true }).click();
     await page.getByRole('button', { name: '+ Yeni xərc', exact: true }).click();
     const createForm = page.locator('form').filter({ has: page.getByRole('button', { name: '+ Xərc', exact: true }) });
     await createForm.locator('select').first().selectOption(account.id);
@@ -934,10 +934,10 @@ async function auditFinanceModuleIntegration(browser) {
     await page.locator('.credit-detail-modal-card').waitFor({ state: 'hidden' });
 
     await selectModule(page, 5);
-    await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
+    await page.getByRole('tab', { name: 'Əməliyyatlar', exact: true }).click();
     await page.getByLabel('Kassa əməliyyatlarında axtarış', { exact: true }).fill(sale.contract.id);
     await page.locator('main.main tr').filter({ hasText: receipts[0].transaction_no }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: 'Hesablar', exact: true }).click();
+    await page.getByRole('tab', { name: 'Hesablar', exact: true }).click();
     const marker = 'QA Ledger ' + crypto.randomUUID().slice(0, 8);
     const createAccount = async (name, opening) => {
       await page.getByRole('button', { name: '+ Yeni kassa', exact: true }).click();
@@ -1066,7 +1066,7 @@ async function auditInvoiceAccountingTax(browser) {
     const number = `INV-QA-${suffix}`;
     const read = (table,filter='') => auditBackend.readCanonical(table,'*',filter);
     await selectModule(page,5);
-    await page.getByRole('button',{ name:'Hesablar',exact:true }).click();
+    await page.getByRole('tab',{ name:'Hesablar',exact:true }).click();
     await page.getByRole('button',{ name:'+ Yeni kassa',exact:true }).click();
     const accountForm = page.locator('form').filter({ has:page.getByPlaceholder('Hesab adı', { exact:true }) });
     await accountForm.getByPlaceholder('Hesab adı',{ exact:true }).fill(marker);
@@ -1648,7 +1648,7 @@ async function auditHrStructure(browser) {
     );
 
     const ledgerBeforePayroll = await auditBackend.command('cashbook_ledger_summary', { _tenant_id: auditBackend.tenantId });
-    const hrTabs = page.locator(".hr-platform-toolbar .tabs button");
+    const hrTabs = page.locator(".hr-platform-toolbar").getByRole('tab');
     await hrTabs.nth(3).click();
     await page.locator(".hr-platform-section tbody tr").filter({ hasText: specialistName }).locator(".hr-payroll-actions .text-btn").click();
     await page.waitForTimeout(100);

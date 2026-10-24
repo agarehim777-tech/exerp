@@ -126,6 +126,11 @@ export function pathForModule(moduleId) {
   return moduleRoutes[resolveModule(moduleId)] || moduleRoutes[moduleId] || "/";
 }
 
+export function pathForRecord(moduleId, recordId) {
+  const key = moduleId === 'credits' ? 'credit' : 'order';
+  return `${pathForModule(moduleId)}?${new URLSearchParams({ [key]: String(recordId) })}`;
+}
+
 // Köhnə URL-i kanonik URL-ə çevirir (yönləndirmə lazımdırsa).
 export function canonicalPath(pathname) {
   const p = normalize(pathname);

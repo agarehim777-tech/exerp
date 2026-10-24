@@ -18,17 +18,55 @@
   :root {
     --panel-padding: 12px;
     --content-gap: 10px;
-    --table-row-height: 42px;
+    --table-row-height: 48px;
+    --control-height: 44px;
+    --control-height-compact: 44px;
   }
 
   .main { padding: 12px 10px 24px; }
   .main .page-header h1 { font-size: 21px; }
+  .main .page-header { flex-direction: row; text-align: left; align-items: center; gap: 12px; }
+  .main .page-header > button { width: auto; flex: 0 0 auto; }
   .metric-grid,
   .metric-grid.three,
   .metric-grid.four { grid-template-columns: 1fr; }
   .main :where(.primary-btn, .secondary-btn) { min-height: 44px; height: 44px; }
   .main :where(input:not([type="checkbox"]):not([type="radio"]), select) { min-height: 44px !important; height: 44px !important; }
   .dashboard-page .mobile-operations { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dashboard-page .mobile-operations button { width: 100%; min-width: 0; height: 40px; }
+  .dashboard-page .mobile-operations button { width: 100%; min-width: 0; height: 44px; }
+  .main .icon-btn { min-width: 44px; min-height: 44px; }
+  .main .tabs button, .ui-tabs .ui-button-tab { min-height: 44px; }
+  .main .ui-table :is(th, td) { padding: 10px 8px; }
+  .credit-directory-panel .credit-customer-cell { min-width: 0; max-width: none; gap: 0; }
+  .credit-customer-cell .credit-avatar { display: none; }
+  .credit-directory-panel .credit-customer-copy strong { white-space: normal; overflow-wrap: anywhere; }
+  .credit-directory-panel .credit-customer-copy > span { display: none; }
+  .credit-directory-panel .credit-mobile-contract { display: inline; font-size: var(--font-size-sm); }
+  .credit-mobile-initial { display: block; color: var(--text-primary); margin-top: 4px; }
+  .credit-directory-panel .credit-table-actions { display: grid; gap: 6px; }
+  .credit-directory-panel .credit-table-actions .primary-btn { width: 44px; padding: 0; gap: 0; justify-content: center; }
+  .credit-directory-panel .credit-table-actions .primary-btn:disabled { display: none; }
+  .credit-directory-panel .credit-action-label { display: none; }
+  .credit-directory-panel .ui-table { table-layout: fixed; }
+  .credit-directory-panel .ui-table th:last-child { width: 60px; }
+  .credit-directory-panel .ui-table th.is-numeric:not(.mobile-hidden) { width: 124px; }
+  .credit-directory-panel .two-line { min-width: 0; }
+  .sales-registry-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sales-registry-toolbar > input:first-child, .sales-registry-toolbar > .ui-tabs { grid-column: 1 / -1; }
+  .sales-registry-toolbar > input { width: 100%; min-width: 0 !important; }
+  .sales-registry .ui-table td { overflow-wrap: anywhere; }
+  .credit-workspace .metric-grid.four, .credit-workspace .credit-handover-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .credit-workspace .metric-card { min-height: 90px; padding: 12px; }
+  .credit-workspace .metric-card strong { font-size: 18px; overflow-wrap: anywhere; }
+  .credit-workspace .metric-icon { display: none; }
+  .credit-workspace .credit-handover-item { padding: 10px; }
+  .credit-workspace .credit-handover-item strong { font-size: 15px; overflow-wrap: anywhere; }
+  .credit-directory-head { flex-direction: row; align-items: center; }
+  .credit-directory-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; }
+  .credit-directory-filters > label { width: 100%; min-width: 0; }
+  .credit-directory-filters select { width: 100%; min-width: 0; }
+  .credit-directory-filters .credit-search-field, .credit-directory-filters > label:nth-of-type(5) { grid-column: 1 / -1; }
+  .credit-directory-filters > button { width: 100%; min-width: 0; }
+  .credit-directory-filters .credit-search-field > div { width: 100%; }
 }
 

@@ -2,11 +2,19 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { afterEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import CreditsPage, { StartCreditModal } from '../pages/CreditsPage.jsx';
+import { cashAmount } from '../services/format.js';
 
 vi.mock('../modules/credits/CreditInitialPayments.jsx', () => ({ CreditInitialPaymentsHistory: () => null }));
 afterEach(cleanup);
 const item = paid => ({ credit: { id: 'credit-1', total: 10000, months: 12,
   requiredInitial: 2000, initialPayment: 2000, initialPaid: paid }, plan: { months: 12 } });
+
+it('uses actual collected deposits in the portfolio summary as well as the credit row', () => {
+  const view = render(<CreditsPage credits={[{ ...item(200).credit, customer: 'Test buyer', contractId: 'IN-1', date: '2026-10-19' }]} />);
+  const card = view.getByText('Portfel qalığı').closest('.metric-card');
+  expect(card.querySelector('strong').textContent).toBe(cashAmount(9800));
+  expect(card.textContent).not.toContain(cashAmount(8000));
+});
 
 it('exposes credit read failures and retries instead of presenting a successful empty portfolio', () => {
   const refresh = vi.fn();
