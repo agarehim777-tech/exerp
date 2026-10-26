@@ -32,7 +32,7 @@ it('resolves the patched SDK from the Lovable dependency with a matching locked 
   const sdk = JSON.parse(await readFile(new URL('../../../package.json', sdkPath), 'utf8'));
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
   const lock = JSON.parse(await readFile(new URL('../../package-lock.json', import.meta.url), 'utf8'));
-  expect(sdk.version).toBe('1.31.0');
+  expect(sdk.version).toBe('1.32.2');
   expect(manifest.overrides['@modelcontextprotocol/sdk']).toBe(sdk.version);
   const installed = Object.entries(lock.packages).filter(([path]) => path.endsWith('node_modules/@modelcontextprotocol/sdk'));
   expect(installed).toHaveLength(1);
