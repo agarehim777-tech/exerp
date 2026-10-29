@@ -204,8 +204,11 @@ async function waitForHrState(predicate, message) {
   return waitForState(predicate, message, { scope: 'hr' });
 }
 
+// Server commands on the shared staging tenant can take well over 15s to become readable.
+const canonicalWaitMs = Number(process.env.AUDIT_CANONICAL_TIMEOUT_MS || 45000);
+
 async function waitForState(predicate, message, options) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + canonicalWaitMs;
   do {
     const state = await auditBackend.readState(options || flowReadOptions());
     if (predicate(state)) return state;
@@ -215,7 +218,7 @@ async function waitForState(predicate, message, options) {
 }
 
 async function waitForCanonical(readRows, predicate, message) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + canonicalWaitMs;
   do {
     const rows = await readRows();
     if (predicate(rows)) return rows;
