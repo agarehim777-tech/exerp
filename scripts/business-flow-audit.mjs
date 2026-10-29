@@ -115,7 +115,8 @@ async function createFlowPage(browser) {
       await closeContext();
     }
   };
-  page.setDefaultTimeout(8000);
+  // The shared staging tenant keeps every audit fixture, so list hydration slows down over time.
+  page.setDefaultTimeout(Number(process.env.AUDIT_ACTION_TIMEOUT_MS || 20000));
   const errors = [];
   collectErrors(page, errors);
   await page.addInitScript(() => {
