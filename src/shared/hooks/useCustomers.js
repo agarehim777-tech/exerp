@@ -26,7 +26,8 @@ export const findCustomerDuplicates = (candidate, rows, excludedId = null) => ro
   ['e-poçt', compact(candidate.email), compact(row.email)],
 ].some(([, left, right]) => left && right && left === right));
 
-export function useCustomers(tenantId) {
+export function useCustomers(tenantId, { optionsOnly = false } = {}) {
+  const pageSize = optionsOnly ? 50 : CUSTOMERS_PAGE_SIZE;
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [loadedScope, setLoadedScope] = useState(null);
   const loaded = Boolean(tenantId && loadedScope === scope);
@@ -34,7 +35,7 @@ export function useCustomers(tenantId) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState({ silver: 1000, gold: 5000, platinum: 15000 });
-  const [limit, setLimit] = useState(CUSTOMERS_PAGE_SIZE);
+  const [limit, setLimit] = useState(pageSize);
   const [hasMore, setHasMore] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -42,10 +43,10 @@ export function useCustomers(tenantId) {
     const isCurrent = begin();
     setLoading(true);
     const [customerResult, orderResult, levelResult] = await Promise.all([
-      readTenantPage(() => supabase.from('customers').select('*', { count: 'exact' }).eq('tenant_id', tenantId)
+      readTenantPage(() => supabase.from('customers').select(optionsOnly ? 'id,name' : '*', { count: 'exact' }).eq('tenant_id', tenantId)
         .order('created_at', { ascending: false }).order('id'), limit + 1, isCurrent),
-      supabase.rpc('customer_sales_metrics', { _tenant: tenantId }),
-      supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
+      optionsOnly ? { data: [], error: null } : supabase.rpc('customer_sales_metrics', { _tenant: tenantId }),
+      optionsOnly ? { data: null, error: null } : supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
     if (!isCurrent() || !customerResult) return;
     if (customerResult.error || orderResult.error || levelResult.error) setError(customerResult.error || orderResult.error || levelResult.error);
@@ -60,6 +61,7 @@ export function useCustomers(tenantId) {
       const customerRows = customerResult.data || [];
       setHasMore(customerRows.length > limit);
       setCustomers(customerRows.slice(0, limit).map((customer) => {
+        if (optionsOnly) return customer;
         const meta = readMeta(customer.notes);
         customer = { ...customer, birth_date: customer.birth_date || meta.birth_date || null, customer_level_override: customer.customer_level_override || meta.customer_level_override || null, fin_code: meta.fin_code || (customer.segment !== 'business' && customer.tax_id && !/^\d{10}$/.test(customer.tax_id) ? customer.tax_id : null), identity_card_no: meta.identity_card_no || null };
         const paidTotal = paidByCustomer.get(customer.id) || 0;
@@ -68,13 +70,13 @@ export function useCustomers(tenantId) {
       }));
     }
     setLoading(false);
-  }, [tenantId, limit, scope, begin]);
+  }, [tenantId, limit, scope, begin, optionsOnly]);
 
-  useEffect(() => { setLimit(CUSTOMERS_PAGE_SIZE); setError(null); }, [scope]);
+  useEffect(() => { setLimit(pageSize); setError(null); }, [scope, pageSize]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const loadMore = useCallback(() => setLimit((value) => value + CUSTOMERS_PAGE_SIZE), []);
+  const loadMore = useCallback(() => setLimit((value) => value + pageSize), [pageSize]);
 
   useRealtimeResync(tenantId, ['customers'], fetchAll, { channelPrefix: 'customers' });
 

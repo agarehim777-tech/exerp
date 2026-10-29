@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useCollectionSync } from '../shared/hooks/useCollectionSync';
 
-const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), eq: vi.fn() }));
 vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
-  const query = { select: () => query, eq: () => query, in: () => query, order: () => query,
+  const query = { select: () => query, eq: (...args) => { mocks.eq(...args); return query; }, in: () => query, order: () => query,
     range: mocks.load, upsert: mocks.save };
   return query;
 } } }));
@@ -13,8 +13,26 @@ const collections = ['employees'];
 beforeEach(() => {
   mocks.load.mockReset().mockResolvedValue({ data: [], error: null, count: 0 });
   mocks.save.mockReset();
+  mocks.eq.mockReset();
 });
 afterEach(() => vi.useRealTimers());
+
+it('reads collections separately and publishes no partial state when a later collection fails', async () => {
+  const names = ['employees', 'departments'];
+  mocks.load.mockResolvedValueOnce({ data: [{ collection: 'departments', record_key: 'd1', position: 0, data: { id: 'd1' } }], count: 1 })
+    .mockResolvedValueOnce({ error: { code: '57014', message: 'timeout' } });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [], departments: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections: names, state, setState });
+    return { state, sync };
+  });
+  await waitFor(() => expect(result.current.sync.phase).toBe('error'));
+  expect(mocks.eq).toHaveBeenCalledWith('collection', 'departments');
+  expect(mocks.eq).toHaveBeenCalledWith('collection', 'employees');
+  expect(result.current.sync.ready).toBe(false);
+  expect(result.current.state).toEqual({ employees: [], departments: [] });
+  expect(mocks.save).not.toHaveBeenCalled();
+});
 
 it('keeps collection commands blocked until initial hydration finishes and resets readiness on tenant changes', async () => {
   let finish;

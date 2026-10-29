@@ -34,7 +34,8 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
   const tenantId = activeMembership?.tenant_id;
   const company = { name: activeMembership?.tenant?.name || "ExERP" };
   const ar = useSalesInvoices(tenantId);
-  const { customers } = useCustomers(tenantId);
+  const customerLookup = useCustomers(tenantId, { optionsOnly: true });
+  const { customers } = customerLookup;
   const { products } = useProducts(tenantId);
   const { accounts } = useCashbook(tenantId);
   const [showForm, setShowForm] = useState(false);
@@ -92,6 +93,13 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
 
       {msg && <div style={msgBox}>{msg}</div>}
       {ar.error && <div role="alert" style={msgBox}>{ar.error.message}</div>}
+      {customerLookup.loading && <div role="status">Müştərilər yüklənir...</div>}
+      {customerLookup.error && <div role="alert" style={msgBox}>
+        {customerLookup.error.message}
+        <button type="button" style={secondaryBtn} onClick={customerLookup.refresh}>Yenidən cəhd</button>
+      </div>}
+      <LoadMoreBar hasMore={customerLookup.hasMore} loading={customerLookup.loading}
+        onLoadMore={customerLookup.loadMore} label="Daha çox müştəri yüklə" />
 
       <BillingRunPanel
         key={`billing-${tenantId}`}
