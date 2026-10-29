@@ -1665,7 +1665,8 @@ async function auditHrStructure(browser) {
     );
 
     await hrTabs.nth(2).click();
-    await page.locator(".hr-operation-toolbar .secondary-btn").click();
+    // Target the button by name: right after a tab switch the toolbar can still belong to the previous tab.
+    await page.locator(".hr-operation-toolbar").getByRole("button", { name: "Məzuniyyət qeydi" }).click();
     const leaveModal = page.locator('[role="dialog"]');
     await leaveModal.getByLabel(/^Əməkdaş/).selectOption(updatedEmployee.id);
     const previousLeaveIds = new Set((await readHrState()).leaveRequests?.map(request => request.id) || []);
@@ -1689,8 +1690,8 @@ async function auditHrStructure(browser) {
     );
 
     await hrTabs.nth(4).click();
-    await page.locator(".hr-operation-toolbar .secondary-btn").click();
-    const vacancyModal = page.locator('[role="dialog"]');
+    await page.locator(".hr-operation-toolbar").getByRole("button", { name: "Vakansiya əlavə et" }).click();
+    const vacancyModal = page.locator('[role="dialog"]').filter({ has: page.getByRole("heading", { name: "Yeni vakansiya" }) });
     await vacancyModal.locator("input").nth(0).fill(vacancyRole);
     await vacancyModal.locator("input").nth(1).fill(departmentName);
     await vacancyModal.locator('button[type="submit"]').click();
