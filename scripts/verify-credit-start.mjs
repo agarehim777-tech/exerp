@@ -239,7 +239,8 @@ try {
       await rpc("platform_delete_tenant", { _tenant: tenantId });
       console.log("🧹 Test şirkəti silindi.");
     } catch (error) {
-      console.warn(`⚠️ Test şirkəti silinmədi (${tenantId}): ${error.message}`);
+      // A leftover test tenant means the purge is broken; report it as a failed check, not a warning.
+      check("Test şirkəti silindi", false, `${tenantId}: ${error.message}`);
     }
   }
 }
