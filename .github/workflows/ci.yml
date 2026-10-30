@@ -59,6 +59,9 @@ jobs:
         id: browser_runtime
         run: npx playwright install --with-deps chromium
 
+      - name: Responsive module layout regression tests
+        run: npx playwright test --config tests/layout.playwright.config.ts
+
       - name: Provision restricted staging audit identity
         id: readonly_identity
         run: node scripts/provision-readonly-audit.mjs

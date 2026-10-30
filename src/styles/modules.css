@@ -2,6 +2,23 @@
 .sales-registry-toolbar .ui-tabs { margin: 0; }
 .sales-registry { min-width: 0; }
 .credit-mobile-contract, .credit-mobile-initial { display: none; }
+.credit-workspace {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+}
+.credit-workspace > *, .credit-management-shell { min-width: 0; }
+.credit-workspace .metric-grid.four,
+.credit-workspace .credit-handover-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.credit-workspace .metric-card > div:first-child { min-width: 0; }
+.credit-workspace .metric-card > div > strong { font-size: 22px; white-space: nowrap; }
+.credit-workspace .credit-handover-item :is(span, small, strong) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.credit-workspace .credit-directory-panel { width: 100%; }
 .credit-directory-panel table { width: 100%; min-width: 0; }
 .credit-search-field > div { height: var(--control-height); min-width: 0; }
 .credit-search-field input { min-width: 0; width: 100%; }
