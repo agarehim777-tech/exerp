@@ -16,6 +16,13 @@ import { useKpiLedger } from "./shared/hooks/useFinancialSettlement.js";
 import { kpiPeriodView } from "./services/financialSettlement.js";
 import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
 import { useDbReadBridge } from "./shared/hooks/useDbReadBridge.js";
+import { useLegacyOrderMigrations, useLegacyPayrollExpense } from "./shared/hooks/useLegacyMigrations.js";
+import { useKpiViews } from "./shared/selectors/kpiViews.js";
+import { useFinanceViews } from "./shared/selectors/financeViews.js";
+import { useOperationsViews } from "./shared/selectors/operationsViews.js";
+import { useIntegrationViews } from "./shared/selectors/integrationViews.js";
+import { useMessagingViews } from "./shared/selectors/messagingViews.js";
+import { useSystemReports } from "./shared/selectors/systemReports.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
@@ -135,7 +142,7 @@ import {
   localDbKey,
   localDbSchemaVersion,
 } from "./services/persistence.js";
-import { total } from "./shared/utils/aggregate.js";
+
 import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
@@ -144,8 +151,8 @@ import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { ensureMainCashAccount } from "./services/cashAccounts.js";
 import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 
-import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, buildKpiEmployeeScoreRows, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
-import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, buildSalesBonusRows, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
+import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildInvoiceControlSummary, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getEmployeeManagerName, getHrDocumentHealth, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
+import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, currentBusinessQuarter, dayInMs, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getDepartmentParentName, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
 import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
 
 import {
@@ -205,26 +212,16 @@ import {
   buildAllCreditRecords,
   ensureKpiTargets,
   getKpiActualValue,
-  buildKpiTargetRows,
-  buildKpiPeriodSnapshot,
   buildCreditRiskRows,
   buildCreditAgingBuckets,
   getInvoiceVatRate,
-  buildInvoiceRows,
   buildInvoiceSummary,
-  buildCurrencyExposureRows,
-  buildAccountingData,
-  buildPayrollTaxCalculatorRows,
   getTaxAmountByType,
   buildTaxDueDate,
   buildDefaultTaxCalendarItems,
-  buildTaxCalendarRows,
   ensureApiWebhooks,
   ensureApiSecrets,
   getApiSecretHealth,
-  buildApiSecretRows,
-  buildApiWebhookRows,
-  buildTodayActionRows,
   buildExecutiveInsights,
   flattenWarehouseStock,
   buildReportModuleRows,
@@ -234,8 +231,6 @@ import {
   buildSupportMessageFromComment,
   buildSupportConversation,
   normalizeMessageThread,
-  buildMessageParticipantOptions,
-  buildMessageContextOptions,
   getMessageContextPayload,
   upsertSupportConversation,
   getReceivableAgingBucket,
@@ -243,11 +238,9 @@ import {
   getReceivableCollectionStatus,
   getReceivableNextAction,
   enrichReceivableRow,
-  buildReceivableRows,
   buildProjectPortfolioSource,
   isDateWithinProject,
   getProjectOrderCost,
-  buildProjectRoiRows,
   ensureNotificationProviders,
   ensureNotificationRules,
   getNotificationChannelEnabled,
@@ -256,15 +249,11 @@ import {
   getNotificationLogTime,
   splitNotificationEventsByCooldown,
   getCreditPaymentLeadDays,
-  buildNotificationProviderRows,
   buildNotificationEvent,
   buildNotificationRuleEvents,
-  buildNotificationAutomationRows,
   createNotificationSendLogEntry,
   buildNotificationDeliveriesForRules,
   buildProductionPlanRows,
-  buildOnboardingRows,
-  buildHelpModuleGuides,
   buildHelpArticles,
   buildSellerBonusRows,
   summarizeSellerBonusRows,
@@ -298,7 +287,6 @@ import {
   buildStateIntegrityReport,
   buildGoLiveReadiness,
   buildProductionHardeningReport,
-  buildModuleReadiness,
   addStockToRows,
   buildPayrollExpense,
   hasEffectivePermission,
@@ -307,7 +295,7 @@ import {
   hasPageAction,
 } from "./shared/lib/appHelpers.jsx";
 
-const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === "true";
+import { ENABLE_LEGACY_WRITES } from "./config/legacyWrites.js";
 
 function App() {
 
@@ -320,7 +308,6 @@ function App() {
   const dbSales = useOrders(activeTenantId);
   const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
-  const legacyBonusMigrationRef = useRef("");
   const { ready: tenantStateReady } = useTenantUiPersistence({
     tenantId: activeTenantId, userId: authUser?.id, state, setState, hydrateState,
     localKey: localDbKey, schemaVersion: localDbSchemaVersion,
@@ -346,94 +333,7 @@ function App() {
     onError: useCallback((error) => console.error('[collection-sync]', error), []),
   });
 
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES) return;
-    if (!activeTenantId || !dbOrders.length) return;
-    const used = dbOrders.map(order => String(order.order_no || "").match(/^SF-(\d+)$/u)).filter(Boolean).map(match => Number(match[1]));
-    let next = Math.max(1000, ...used) + 1;
-    dbOrders.filter(order => !/^SF-\d+$/u.test(String(order.order_no || "")))
-      .sort((a, b) => String(a.created_at || a.order_date).localeCompare(String(b.created_at || b.order_date)))
-      .forEach(order => {
-        const orderNo = `SF-${next++}`;
-        updateDbOrder(order.id, { order_no: orderNo }).catch(error => console.error("Sifariş nömrəsi yenilənmədi:", error));
-      });
-  }, [activeTenantId, dbOrders, updateDbOrder]);
-
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES) return;
-    if (!activeTenantId || !dbOrders.length || !(state.cashEntries || []).length) return;
-    const paidByOrder = new Map();
-    (state.cashEntries || []).filter(entry => Number(entry.principal ?? entry.amount ?? 0) > 0).forEach(entry => {
-      let target = dbOrders.find(order => normalize(order.id) === normalize(entry.orderId) || normalize(order.order_no) === normalize(entry.orderId));
-      if (!target && entry.customer) {
-        const matches = dbOrders.filter(order => normalize(order.customer?.name) === normalize(entry.customer));
-        if (matches.length === 1) target = matches[0];
-      }
-      if (target && target.status !== 'cancelled') {
-        paidByOrder.set(target.id, Number(paidByOrder.get(target.id) || 0) + Number(entry.principal ?? entry.amount));
-      }
-    });
-    paidByOrder.forEach((legacyPaid, orderId) => {
-      const order = dbOrders.find(item => item.id === orderId);
-      const currentPaid = Number(order?.paid_amount || 0);
-      const nextPaid = Math.min(Number(order?.total || 0), Math.max(currentPaid, legacyPaid));
-      if (nextPaid > currentPaid) updateDbOrder(orderId, { paid_amount: nextPaid, payment_status: nextPaid >= Number(order.total || 0) ? "paid" : "partial" }).catch(error => console.error("Sifariş ödənişi sinxronlaşdırılmadı:", error));
-    });
-  }, [activeTenantId, dbOrders, state.cashEntries, updateDbOrder]);
-
-  // Older sales stored seller percentages only inside the tenant snapshot.
-  // Recover those assignments before the DB read-bridge replaces legacy rows.
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES) return undefined;
-    if (!activeTenantId || !tenantStateReady || !dbOrders.length) return;
-    const migrationKey = `${activeTenantId}:${dbOrders.map((row) => `${row.id}:${row.bonus_assignments?.length || 0}`).join("|")}`;
-    if (legacyBonusMigrationRef.current === migrationKey) return;
-    legacyBonusMigrationRef.current = migrationKey;
-
-    const legacyOrders = (state.orders || []).filter((order) =>
-      getOrderSellerBonuses(order).some((row) => row?.seller && Number(row.bonus || 0) > 0),
-    );
-    const pending = dbOrders
-      .filter((order) => !(order.bonus_assignments || []).length)
-      .map((dbOrder) => {
-        const exact = legacyOrders.find((order) =>
-          normalize(order.id) === normalize(dbOrder.id)
-          || normalize(order.id) === normalize(dbOrder.order_no)
-          || normalize(order.orderNo) === normalize(dbOrder.order_no),
-        );
-        const candidates = exact ? [exact] : legacyOrders.filter((order) =>
-          normalize(order.customer) === normalize(dbOrder.customer?.name)
-          && String(order.date || "").slice(0, 10) === String(dbOrder.order_date || "").slice(0, 10)
-          && Math.abs(Number(order.amount || 0) - Number(dbOrder.total || 0)) < 0.01,
-        );
-        if (candidates.length !== 1) return null;
-        const allocations = getOrderSellerBonuses(candidates[0])
-          .map((row) => ({ seller_name: String(row.seller || "").trim(), rate: Number(row.bonus || 0) }))
-          .filter((row) => row.seller_name && row.rate > 0);
-        return allocations.length ? { dbOrder, allocations } : null;
-      })
-      .filter(Boolean);
-    if (!pending.length) return;
-
-    let active = true;
-    (async () => {
-      for (const { dbOrder, allocations } of pending) {
-        const { error } = await supabase.rpc("set_order_bonus_assignments", {
-          _order_id: dbOrder.id,
-          _effective_from: dbOrder.order_date || new Date().toISOString().slice(0, 10),
-          _allocations: allocations,
-          _reason: "Əvvəlki satış məlumatından avtomatik bərpa",
-        });
-        if (error) throw error;
-      }
-      if (active) await refreshDbOrders();
-    })().catch((error) => {
-      if (!active) return;
-      legacyBonusMigrationRef.current = "";
-      console.error("[sales-bonus] Köhnə satıcı bölgüsü bərpa edilmədi:", error);
-    });
-    return () => { active = false; };
-  }, [activeTenantId, tenantStateReady, dbOrders, refreshDbOrders, state.orders]);
+  useLegacyOrderMigrations({ activeTenantId, tenantStateReady, dbOrders, updateDbOrder, refreshDbOrders, state });
 
   useDbReadBridge({
     tenantId: activeTenantId, ready: tenantStateReady,
@@ -495,32 +395,7 @@ function App() {
     () => buildAllCreditRecords(creditSourceOrders, state.credits),
     [creditSourceOrders, state.credits],
   );
-  const salesBonusRows = useMemo(() => buildSalesBonusRows(state.orders), [state.orders]);
-  const kpiEmployeeRows = useMemo(
-    () => buildKpiEmployeeScoreRows(state.employees, salesBonusRows),
-    [state.employees, salesBonusRows],
-  );
-  const kpiTargetRows = useMemo(
-    () =>
-      buildKpiTargetRows({
-        targets: state.kpiTargets || [],
-        employees: state.employees,
-        employeeRows: kpiEmployeeRows,
-        salesBonuses: salesBonusRows,
-      }),
-    [state.kpiTargets, state.employees, kpiEmployeeRows, salesBonusRows],
-  );
-  const activeKpiPeriod = useMemo(() => {
-    const period = selectedKpiPeriod;
-    const existing = kpiLedger.data?.periods.find(item => item.period.slice(0, 7) === period);
-    if (existing) return kpiPeriodView(existing);
-    return buildKpiPeriodSnapshot({
-      period,
-      targetRows: kpiTargetRows,
-      employeeRows: kpiEmployeeRows,
-      salesBonuses: salesBonusRows,
-    });
-  }, [selectedKpiPeriod, kpiLedger.data, kpiTargetRows, kpiEmployeeRows, salesBonusRows]);
+  const { salesBonusRows, kpiEmployeeRows, kpiTargetRows, activeKpiPeriod } = useKpiViews({ state, selectedKpiPeriod, kpiLedger });
   const legacyCurrentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
   const activeRoleInfo = useMemo(() => getActiveRole(state.settings), [state.settings]);
   const salesUsers = useMemo(() => {
@@ -575,186 +450,11 @@ function App() {
     [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
   );
 
-  const receivableRows = useMemo(
-    () =>
-      buildReceivableRows({
-        customers: state.customers,
-        orders: state.orders,
-        credits: creditRecords,
-        vendors: state.vendors,
-        purchaseOrders: state.purchaseOrders || [],
-      }),
-    [state.customers, state.orders, creditRecords, state.vendors, state.purchaseOrders],
-  );
-  const projectRoiRows = useMemo(
-    () =>
-      buildProjectRoiRows({
-        projects: state.projects || [],
-        orders: state.orders,
-        expenses: state.expenses,
-        products: state.products || [],
-      }),
-    [state.projects, state.orders, state.expenses, state.products],
-  );
-  const notificationProviderRows = useMemo(
-    () => buildNotificationProviderRows(state.notificationProviders || [], state.settings, state.notificationSendLog || []),
-    [state.notificationProviders, state.settings, state.notificationSendLog],
-  );
-  const notificationAutomationRows = useMemo(
-    () =>
-      buildNotificationAutomationRows({
-        notificationRules: state.notificationRules || [],
-        providers: state.notificationProviders || [],
-        settings: state.settings,
-        sendLog: state.notificationSendLog || [],
-        credits: creditRecords,
-        stock: state.stock,
-        warehouseStock: state.warehouseStock,
-        products: state.products || [],
-        purchaseOrders: state.purchaseOrders || [],
-        expenses: state.expenses,
-        orders: state.orders,
-      }),
-    [state.notificationRules, state.notificationProviders, state.settings, state.notificationSendLog, creditRecords, state.stock, state.warehouseStock, state.products, state.purchaseOrders, state.expenses, state.orders],
-  );
-
-  // External delivery remains disabled until a server provider adapter is configured.
-
-  const productionRows = useMemo(
-    () => buildProductionPlanRows(state.productionPlans || [], state.stock, state.warehouseStock, state.products || [], state.warehouses),
-    [state.productionPlans, state.stock, state.warehouseStock, state.products, state.warehouses],
-  );
-  const onboardingRows = useMemo(() => buildOnboardingRows(state.onboarding, state), [state.onboarding, state]);
-  const invoiceRows = useMemo(
-    () =>
-      buildInvoiceRows({
-        orders: state.orders,
-        settings: state.settings,
-        invoiceSettings: state.invoiceSettings,
-      }),
-    [state.orders, state.settings, state.invoiceSettings],
-  );
-  const payrollTaxRows = useMemo(
-    () => buildPayrollTaxCalculatorRows(buildHrEmployeeRecords(state.employees)),
-    [state.employees],
-  );
-  const messageConversations = useMemo(
-    () => (state.conversations || []).map(normalizeMessageThread),
-    [state.conversations],
-  );
-  const messageParticipantOptions = useMemo(
-    () => buildMessageParticipantOptions(state.settings, state.employees),
-    [state.settings, state.employees],
-  );
-  const messageContextOptions = useMemo(
-    () =>
-      buildMessageContextOptions({
-        customers: state.customers,
-        orders: state.orders,
-        credits: creditRecords,
-        tickets: state.supportTickets || [],
-      }),
-    [state.customers, state.orders, creditRecords, state.supportTickets],
-  );
-  const financeOpeningBalance = useMemo(
-    () => total(state.financeAccounts || [], "openingBalance"),
-    [state.financeAccounts],
-  );
-  const accountingData = useMemo(
-    () =>
-      buildAccountingData({
-        orders: state.orders,
-        expenses: state.expenses,
-        cashEntries: state.cashEntries || [],
-        credits: creditRecords,
-        stock: state.stock,
-        invoices: invoiceRows,
-        openingBalance: financeOpeningBalance,
-      }),
-    [state.orders, state.expenses, state.cashEntries, creditRecords, state.stock, invoiceRows, financeOpeningBalance],
-  );
-  const taxCalendarRows = useMemo(
-    () =>
-      buildTaxCalendarRows({
-        taxCalendar: state.taxCalendar || [],
-        invoices: invoiceRows,
-        payrollTaxRows,
-        accounting: accountingData,
-      }),
-    [state.taxCalendar, invoiceRows, payrollTaxRows, accountingData],
-  );
-  const currencyExposureRows = useMemo(
-    () =>
-      buildCurrencyExposureRows({
-        currencyRates: state.currencyRates || [],
-        orders: state.orders,
-        credits: creditRecords,
-        cashEntries: state.cashEntries || [],
-      }),
-    [state.currencyRates, state.orders, creditRecords, state.cashEntries],
-  );
-  const apiWebhookRows = useMemo(
-    () =>
-      buildApiWebhookRows({
-        apiWebhooks: state.apiWebhooks || [],
-        apiSecrets: state.apiSecrets || [],
-        apiWebhookLogs: state.apiWebhookLogs || [],
-        invoices: invoiceRows,
-        credits: creditRecords,
-        stock: state.stock,
-        products: state.products || [],
-        purchaseOrders: state.purchaseOrders || [],
-        expenses: state.expenses,
-      }),
-    [state.apiWebhooks, state.apiSecrets, state.apiWebhookLogs, invoiceRows, creditRecords, state.stock, state.products, state.purchaseOrders, state.expenses],
-  );
-  const apiSecretRows = useMemo(
-    () => buildApiSecretRows(state.apiSecrets || [], state.apiWebhooks || []),
-    [state.apiSecrets, state.apiWebhooks],
-  );
-  const todayActionRows = useMemo(
-    () =>
-      buildTodayActionRows({
-        credits: creditRecords,
-        orders: state.orders,
-        expenses: state.expenses,
-        stock: state.stock,
-        products: state.products || [],
-        invoices: invoiceRows,
-        taxRows: taxCalendarRows,
-      }),
-    [creditRecords, state.orders, state.expenses, state.stock, state.products, invoiceRows, taxCalendarRows],
-  );
-  const integrityReport = useMemo(
-    () => buildStateIntegrityReport(state, creditRecords),
-    [state, creditRecords],
-  );
-  const goLiveReport = useMemo(
-    () => buildGoLiveReadiness(state, integrityReport),
-    [state, integrityReport],
-  );
-  const productionHardeningReport = useMemo(
-    () =>
-      buildProductionHardeningReport(state, {
-        goLiveReport,
-        apiWebhookRows,
-        apiSecretRows,
-        notificationProviderRows,
-      }),
-    [state, goLiveReport, apiWebhookRows, apiSecretRows, notificationProviderRows],
-  );
-  const moduleReadiness = useMemo(
-    () => buildModuleReadiness(state, integrityReport),
-    [state, integrityReport],
-  );
-  const helpModuleGuides = useMemo(
-    () => buildHelpModuleGuides({ moduleReadiness, onboardingRows }),
-    [moduleReadiness, onboardingRows],
-  );
-  const helpArticles = useMemo(
-    () => buildHelpArticles(state.knowledgeBase || [], helpModuleGuides, onboardingRows),
-    [state.knowledgeBase, helpModuleGuides, onboardingRows],
-  );
+  const { receivableRows, invoiceRows, payrollTaxRows, financeOpeningBalance, accountingData, taxCalendarRows, currencyExposureRows, todayActionRows } = useFinanceViews({ state, creditRecords });
+  const { projectRoiRows, productionRows } = useOperationsViews({ state });
+  const { notificationProviderRows, notificationAutomationRows, apiWebhookRows, apiSecretRows } = useIntegrationViews({ state, creditRecords, invoiceRows });
+  const { messageConversations, messageParticipantOptions, messageContextOptions } = useMessagingViews({ state, creditRecords });
+  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, moduleReadiness, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows });
 
   useEffect(() => {
     if (Number(state.dbMeta?.baselineVersion || 0) >= localDbBaselineVersion) return;
@@ -874,48 +574,7 @@ function App() {
       });
   }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name]);
 
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES || state.employees.length === 0) return;
-
-    setState((current) => {
-      const payrollExpense = buildPayrollExpense(current.employees);
-      const existing = current.expenses.find((expense) => expense.id === payrollExpense.id);
-      const nextExpense = existing
-        ? {
-            ...existing,
-            ...payrollExpense,
-            status: existing.status || payrollExpense.status,
-          }
-        : payrollExpense;
-      const isSame =
-        existing &&
-        Number(existing.amount || 0) === payrollExpense.amount &&
-        Number(existing.grossTotal || 0) === payrollExpense.grossTotal &&
-        Number(existing.deductions || 0) === payrollExpense.deductions &&
-        existing.source === payrollExpense.source &&
-        existing.cashImpact === payrollExpense.cashImpact;
-
-      if (isSame) return current;
-
-      const expenses = existing
-        ? current.expenses.map((expense) => (expense.id === payrollExpense.id ? nextExpense : expense))
-        : [nextExpense, ...current.expenses];
-
-      return appendAudit(
-        {
-          ...current,
-          expenses,
-        },
-        {
-          module: "HR/Maliyyə",
-          action: existing ? "Payroll expense yeniləndi" : "Payroll expense yaradıldı",
-          detail: `${money(payrollExpense.amount)} payroll maliyyəyə avtomatik düşdü`,
-          status: "Avtomatik",
-          role: "System",
-        },
-      );
-    });
-  }, [state.employees]);
+  useLegacyPayrollExpense({ state, setState });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });

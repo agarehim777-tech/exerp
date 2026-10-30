@@ -115,7 +115,8 @@ async function createFlowPage(browser) {
       await closeContext();
     }
   };
-  page.setDefaultTimeout(8000);
+  // The shared staging tenant keeps every audit fixture, so list hydration slows down over time.
+  page.setDefaultTimeout(Number(process.env.AUDIT_ACTION_TIMEOUT_MS || 20000));
   const errors = [];
   collectErrors(page, errors);
   await page.addInitScript(() => {
@@ -203,8 +204,11 @@ async function waitForHrState(predicate, message) {
   return waitForState(predicate, message, { scope: 'hr' });
 }
 
+// Server commands on the shared staging tenant can take well over 15s to become readable.
+const canonicalWaitMs = Number(process.env.AUDIT_CANONICAL_TIMEOUT_MS || 45000);
+
 async function waitForState(predicate, message, options) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + canonicalWaitMs;
   do {
     const state = await auditBackend.readState(options || flowReadOptions());
     if (predicate(state)) return state;
@@ -214,7 +218,7 @@ async function waitForState(predicate, message, options) {
 }
 
 async function waitForCanonical(readRows, predicate, message) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + canonicalWaitMs;
   do {
     const rows = await readRows();
     if (predicate(rows)) return rows;
@@ -1279,10 +1283,8 @@ async function auditHelpOnboardingWorkflow(browser) {
     await selectModule(page, 19);
     await page.locator('[data-testid="help-module-guide-panel"]').waitFor();
     await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(150);
-
-    let state = await readState(page);
-    assert(state.helpGuideSnapshot?.modules >= 15, "Help action did not persist a module guide snapshot");
+    // The UI snapshot is saved on a debounce, so poll the server instead of reading once after a fixed pause.
+    let state = await waitForState((s) => s.helpGuideSnapshot?.modules >= 15, "Help action did not persist a module guide snapshot");
     assert(state.knowledgeBase?.some((article) => article.category === "Təlim"), "Help action did not create the training article");
     const helpText = await page.locator('[data-testid="help-module-guide-panel"]').innerText();
     assert(helpText.includes("Satış") && helpText.includes("Anbar"), "Help page does not show real module guides");
@@ -1664,7 +1666,8 @@ async function auditHrStructure(browser) {
     );
 
     await hrTabs.nth(2).click();
-    await page.locator(".hr-operation-toolbar .secondary-btn").click();
+    // Target the button by name: right after a tab switch the toolbar can still belong to the previous tab.
+    await page.locator(".hr-operation-toolbar").getByRole("button", { name: "Məzuniyyət qeydi" }).click();
     const leaveModal = page.locator('[role="dialog"]');
     await leaveModal.getByLabel(/^Əməkdaş/).selectOption(updatedEmployee.id);
     const previousLeaveIds = new Set((await readHrState()).leaveRequests?.map(request => request.id) || []);
@@ -1688,8 +1691,8 @@ async function auditHrStructure(browser) {
     );
 
     await hrTabs.nth(4).click();
-    await page.locator(".hr-operation-toolbar .secondary-btn").click();
-    const vacancyModal = page.locator('[role="dialog"]');
+    await page.locator(".hr-operation-toolbar").getByRole("button", { name: "Vakansiya əlavə et" }).click();
+    const vacancyModal = page.locator('[role="dialog"]').filter({ has: page.getByRole("heading", { name: "Yeni vakansiya" }) });
     await vacancyModal.locator("input").nth(0).fill(vacancyRole);
     await vacancyModal.locator("input").nth(1).fill(departmentName);
     await vacancyModal.locator('button[type="submit"]').click();
