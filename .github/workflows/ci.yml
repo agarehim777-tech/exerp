@@ -14,12 +14,16 @@ jobs:
   verify:
     name: Test & build
     environment: staging
+    # Every staging job writes to the same audit tenant; run them one at a time across branches.
+    concurrency:
+      group: staging-audit-tenant
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     env:
       E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
       E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
       E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -148,7 +152,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-          AUDIT_FLOW_TIMEOUT_MS: 90000
+          AUDIT_FLOW_TIMEOUT_MS: 150000
           AUDIT_DEFER_NOTIFICATION_PROVIDER: 'true'
 
       - name: Remove ephemeral restricted audit identity
