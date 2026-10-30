@@ -86,7 +86,9 @@ export async function createAuditBackend(env, fetcher = fetch) {
         if (method !== 'GET' || !['TimeoutError', 'AbortError', 'TypeError'].includes(error?.name)) throw error;
         response = await send();
       }
-      if (method === 'GET' && [502, 503, 504].includes(response.status)) response = await send();
+      // 57014 is Postgres cancelling a statement on an overloaded database, not a bad query.
+      const statementTimeout = response.status === 500 && (await response.clone().text()).includes('"57014"');
+      if (method === 'GET' && ([502, 503, 504].includes(response.status) || statementTimeout)) response = await send();
       if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
       const text = await response.text();
       const result = text ? JSON.parse(text) : null;

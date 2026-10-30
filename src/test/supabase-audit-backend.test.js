@@ -301,6 +301,31 @@ it('retries a stalled or dropped read once but never repeats a write', async () 
   expect(calls.command).toBe(1);
 });
 
+it('retries a read the database cancelled for a statement timeout, but not other server errors', async () => {
+  const calls = { products: 0, vendors: 0 };
+  const backend = await createAuditBackend(env, async (url) => {
+    const path = new URL(url).pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/products')) {
+      calls.products += 1;
+      return calls.products === 1
+        ? new Response('{"code":"57014","message":"canceling statement due to statement timeout"}', { status: 500 })
+        : response([{ id: 'p1' }]);
+    }
+    if (path.endsWith('/vendors')) {
+      calls.vendors += 1;
+      return new Response('{"code":"42P01","message":"relation does not exist"}', { status: 500 });
+    }
+    return response([]);
+  });
+  expect(await backend.readCanonical('products')).toEqual([{ id: 'p1' }]);
+  expect(calls.products).toBe(2);
+  await expect(backend.readCanonical('vendors')).rejects.toThrow('42P01');
+  expect(calls.vendors).toBe(1);
+});
+
 it('preserves the server error status and detail instead of masking it with a fetch API error', async () => {
   await expect(createAuditBackend(env, async () => new Response('invalid_credentials', { status: 401 })))
     .rejects.toThrow('POST auth/v1/token: 401 invalid_credentials');
