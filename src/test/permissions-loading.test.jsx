@@ -8,13 +8,57 @@ vi.mock("../integrations/supabase/client", () => ({
     from: () => ({ select: () => ({ eq: () => new Promise((resolve) => mocks.pending.push(resolve)) }) }),
   },
 }));
-import { usePermissions } from "../shared/hooks/usePermissions.js";
+import { PERMISSION_RETRY_DELAYS_MS, usePermissions } from "../shared/hooks/usePermissions.js";
 
 beforeEach(() => {
   mocks.auth = { activeMembership: null, isPlatformAdmin: false, loading: false };
   mocks.pending = [];
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+test("a failed permission read stays closed and retries instead of hiding navigation for good", async () => {
+  vi.useFakeTimers();
+  mocks.auth.activeMembership = { role: "admin" };
+  const { result } = renderHook(() => usePermissions());
+  await act(async () => mocks.pending.shift()({ data: null, error: { message: "fetch failed" } }));
+  expect(result.current.loading).toBe(true);
+  expect(result.current.can("stock")).toBe(false);
+  expect(mocks.pending).toHaveLength(0);
+
+  await act(async () => { vi.advanceTimersByTime(PERMISSION_RETRY_DELAYS_MS[0]); });
+  expect(mocks.pending).toHaveLength(1);
+  await act(async () => mocks.pending.shift()({ data: [{ module: "stock", can_view: true, can_edit: false }], error: null }));
+  expect(result.current.loading).toBe(false);
+  expect(result.current.can("stock")).toBe(true);
+});
+
+test("permissions fail closed once every retry is spent", async () => {
+  vi.useFakeTimers();
+  mocks.auth.activeMembership = { role: "admin" };
+  const { result } = renderHook(() => usePermissions());
+  for (const delay of [...PERMISSION_RETRY_DELAYS_MS, null]) {
+    await act(async () => mocks.pending.shift()({ data: null, error: { message: "timeout" } }));
+    if (delay !== null) await act(async () => { vi.advanceTimersByTime(delay); });
+  }
+  expect(mocks.pending).toHaveLength(0);
+  expect(result.current.loading).toBe(false);
+  expect(result.current.can("stock")).toBe(false);
+});
+
+test("a role change cancels a pending retry of the previous role", async () => {
+  vi.useFakeTimers();
+  mocks.auth.activeMembership = { role: "admin" };
+  const { rerender } = renderHook(() => usePermissions());
+  await act(async () => mocks.pending.shift()({ data: null, error: { message: "fetch failed" } }));
+  mocks.auth.activeMembership = { role: "viewer" };
+  rerender();
+  expect(mocks.pending).toHaveLength(1);
+  await act(async () => { vi.advanceTimersByTime(PERMISSION_RETRY_DELAYS_MS.at(-1)); });
+  expect(mocks.pending).toHaveLength(1);
+});
 
 test("a newly available role stays loading on every render until its matrix arrives", async () => {
   const renders = [];

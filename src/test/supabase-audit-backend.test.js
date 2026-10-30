@@ -275,6 +275,32 @@ it('checks persisted report exports and report audit events without unrelated bu
   expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module')).toBe('eq.Hesabat');
 });
 
+it('retries a stalled or dropped read once but never repeats a write', async () => {
+  const calls = { products: 0, command: 0 };
+  const backend = await createAuditBackend(env, async (url, options) => {
+    const path = new URL(url).pathname;
+    if (path.includes('/auth/')) return response({ access_token: 'test', user: { id: tenant } });
+    if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
+    if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
+    if (path.endsWith('/products')) {
+      calls.products += 1;
+      if (calls.products === 1) throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+      if (calls.products === 2) return new Response('upstream', { status: 504 });
+      return response([{ id: 'p1' }]);
+    }
+    if (path.endsWith('/rpc/post_command')) {
+      calls.command += 1;
+      expect(options.method).toBe('POST');
+      throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+    }
+    return response([]);
+  });
+  expect(await backend.readCanonical('products')).toEqual([{ id: 'p1' }]);
+  expect(calls.products).toBe(3);
+  await expect(backend.command('post_command', {})).rejects.toThrow('aborted due to timeout');
+  expect(calls.command).toBe(1);
+});
+
 it('preserves the server error status and detail instead of masking it with a fetch API error', async () => {
   await expect(createAuditBackend(env, async () => new Response('invalid_credentials', { status: 401 })))
     .rejects.toThrow('POST auth/v1/token: 401 invalid_credentials');
