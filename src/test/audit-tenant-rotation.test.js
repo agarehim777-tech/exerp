@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
-import { COPIED_SETTINGS, rotateAuditTenant, rotationSummary } from '../../scripts/rotate-audit-tenant.mjs';
+import { BASELINE_CUSTOMER, COPIED_SETTINGS, rotateAuditTenant, rotationSummary } from '../../scripts/rotate-audit-tenant.mjs';
 
 const oldTenant = '11111111-1111-4111-8111-111111111111';
 const otherTenant = '22222222-2222-4222-8222-222222222222';
@@ -11,7 +11,7 @@ const env = { E2E_SUPABASE_PROJECT_REF: 'cvjctwgdyzhijhzhhjqd', VITE_SUPABASE_UR
   SUPABASE_ACCESS_TOKEN: 'test-pat', E2E_TEST_USER: 'e2e@example.invalid', E2E_TEST_PASS: 'test-only' };
 
 // Routes requests by method and path so each test only describes the data it cares about.
-function staging({ role = 'admin', memberships = { [oldTenant]: role }, fail = {} } = {}) {
+function staging({ role = 'admin', memberships = { [oldTenant]: role }, customers = {}, fail = {} } = {}) {
   const calls = [];
   const settings = {
     tenant_modules: [{ tenant_id: oldTenant, module: 'sales' }],
@@ -34,6 +34,7 @@ function staging({ role = 'admin', memberships = { [oldTenant]: role }, fail = {
     if (table === 'tenants') return respond([{ id: oldTenant, name: 'E2E Audit', max_users: 10, plan_name: 'starter' }]);
     if (table === 'tenant_members') return respond(memberships[tenantFilter] ? [{ role: memberships[tenantFilter] }] : []);
     if (table === 'profiles') return respond([{ active_tenant_id: oldTenant }]);
+    if (table === 'customers') return respond(customers[tenantFilter] || []);
     return respond(settings[table] || []);
   });
   return { fetcher, calls };
@@ -62,10 +63,14 @@ it('creates a fresh tenant with the same role, copied settings and app seeders',
   expect(writes.find((call) => call.path === '/rest/v1/customer_level_settings').body)
     .toEqual([{ tenant_id: newTenant, silver_min: 1000, gold_min: 5000, platinum_min: 15000 }]);
   const seeders = writes.filter((call) => call.path.startsWith('/rest/v1/rpc/'));
-  expect(seeders.map((call) => call.path)).toEqual(['/rest/v1/rpc/seed_default_coa', '/rest/v1/rpc/seed_default_crm_pipeline']);
+  expect(seeders.map((call) => call.path)).toEqual(['/rest/v1/rpc/seed_default_crm_pipeline']);
   expect(seeders.every((call) => call.headers.authorization === 'Bearer user-token')).toBe(true);
+  const baseline = writes.find((call) => call.path === '/rest/v1/customers');
+  expect(baseline).toMatchObject({ body: { tenant_id: newTenant, name: BASELINE_CUSTOMER } });
+  expect(baseline.headers.authorization).toBe('Bearer user-token');
   expect(calls.some((call) => call.method === 'DELETE' || call.method === 'PATCH')).toBe(false);
-  expect(result).toMatchObject({ newTenantId: newTenant, seeded: { seed_default_coa: 'ok', seed_default_crm_pipeline: 'ok' } });
+  expect(result).toMatchObject({ newTenantId: newTenant,
+    seeded: { seed_default_crm_pipeline: 'ok', baselineCustomer: 'created' } });
   expect(mask).toHaveBeenCalledWith('test-server-key');
   expect(mask).toHaveBeenCalledWith('user-token');
   expect(rotationSummary(result)).toContain(`E2E_TENANT_ID to ${newTenant}`);
@@ -82,8 +87,13 @@ it('switches the active tenant only to a tenant the user belongs to', async () =
   const { fetcher, calls } = staging({ memberships: { [oldTenant]: 'admin', [newTenant]: 'admin' } });
   const activate = { ...env, ROTATION_MODE: 'activate', ROTATION_CONFIRMATION: 'ROTATE', ROTATION_TARGET_TENANT_ID: newTenant };
   expect(await rotateAuditTenant(activate, { fetcher }))
-    .toMatchObject({ previousActiveTenantId: oldTenant, activeTenantId: newTenant });
+    .toMatchObject({ previousActiveTenantId: oldTenant, activeTenantId: newTenant, baselineCustomer: 'created' });
   expect(calls.at(-1)).toMatchObject({ method: 'PATCH', path: '/rest/v1/profiles', body: { active_tenant_id: newTenant } });
+
+  const { fetcher: seededTenant, calls: seededCalls } = staging({
+    memberships: { [oldTenant]: 'admin', [newTenant]: 'admin' }, customers: { [newTenant]: [{ id: 'c1' }] } });
+  expect(await rotateAuditTenant(activate, { fetcher: seededTenant })).toMatchObject({ baselineCustomer: 'present' });
+  expect(seededCalls.some((call) => call.method === 'POST' && call.path === '/rest/v1/customers')).toBe(false);
 
   const { fetcher: strangers } = staging();
   await expect(rotateAuditTenant(activate, { fetcher: strangers })).rejects.toThrow('NOT_A_MEMBERSHIP');
