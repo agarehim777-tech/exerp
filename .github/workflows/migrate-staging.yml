@@ -1,0 +1,58 @@
+name: Migrate Staging Database
+
+# Staging counterpart of "Migrate Production Database". `db push --include-all` applies every
+# migration missing from the staging migration history, so run `plan` first and read the list.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "plan (dry run, lists pending migrations) or apply"
+        type: choice
+        options: [plan, apply]
+        default: plan
+      confirmation:
+        description: "apply only: type MIGRATE STAGING"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    environment: staging
+    # Never change the schema while an audit run is using the staging tenant.
+    concurrency:
+      group: staging-audit-tenant
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STAGING_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Staging-only safety gate
+        env:
+          MODE: ${{ inputs.mode }}
+          MIGRATION_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          [[ "$STAGING_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || { echo "E2E_SUPABASE_PROJECT_REF is not a project ref"; exit 1; }
+          [ "$STAGING_PROJECT_REF" != "tcqdhwtnjrwpfdxoijmv" ] || { echo "Refusing to migrate production from the staging workflow"; exit 1; }
+          if [ "$MODE" = "apply" ]; then test "$MIGRATION_CONFIRMATION" = "MIGRATE STAGING"; fi
+      - name: Require database credentials
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Add SUPABASE_ACCESS_TOKEN to the staging environment"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "Add SUPABASE_DB_PASSWORD (staging database password) to the staging environment"; exit 1; }
+      - name: Link and lint staging schema
+        run: |
+          npx --yes supabase@2.39.2 link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          npx --yes supabase@2.39.2 db lint --linked --level error
+      - name: List pending migrations (dry run)
+        run: npx --yes supabase@2.39.2 db push --linked --include-all --dry-run --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply ordered migrations
+        if: ${{ inputs.mode == 'apply' }}
+        run: npx --yes supabase@2.39.2 db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
