@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
+import { stagingAdminHeaders } from './staging-admin-key.mjs';
 
 export async function provisionReadonlyAudit(env, { fetcher = fetch, exportEnv, mask = () => {} } = {}) {
   const tenantId = assertE2eTarget(env);
@@ -12,28 +13,7 @@ export async function provisionReadonlyAudit(env, { fetcher = fetch, exportEnv, 
     const body = await response.text();
     return body ? JSON.parse(body) : null;
   };
-  async function adminHeaders() {
-    if (!env.SUPABASE_ACCESS_TOKEN) throw new Error('AUDIT_ACCOUNT_PROVISION_TOKEN_REQUIRED');
-    let keys;
-    try {
-      keys = await request(`https://api.supabase.com/v1/projects/${env.E2E_SUPABASE_PROJECT_REF}/api-keys?reveal=true`,
-        { headers: { authorization: `Bearer ${env.SUPABASE_ACCESS_TOKEN}` } });
-    } catch (error) {
-      if (error.message.endsWith('HTTP 401')) {
-        throw new Error('AUDIT_ACCOUNT_MANAGEMENT_TOKEN_REJECTED: update staging SUPABASE_ACCESS_TOKEN or configure E2E_READONLY_USER and E2E_READONLY_PASS');
-      }
-      if (error.message.endsWith('HTTP 403')) {
-        throw new Error('AUDIT_ACCOUNT_MANAGEMENT_SCOPE_REQUIRED: token needs staging project API-key and key-secret read permissions');
-      }
-      throw error;
-    }
-    const key = keys.find(item => item.type === 'secret' && item.api_key)
-      || keys.find(item => item.name === 'service_role' && item.api_key);
-    if (!key) throw new Error('AUDIT_ACCOUNT_ADMIN_KEY_UNAVAILABLE');
-    mask(key.api_key);
-    return { apikey: key.api_key, 'content-type': 'application/json',
-      ...(key.type === 'secret' ? {} : { authorization: `Bearer ${key.api_key}` }) };
-  }
+  const adminHeaders = () => stagingAdminHeaders(env, request, mask);
   if (env.AUDIT_ACCOUNT_ACTION === 'cleanup') {
     if (!env.E2E_EPHEMERAL_USER_ID) return { cleanup: 'not-created' };
     if (!/^[0-9a-f-]{36}$/i.test(env.E2E_EPHEMERAL_USER_ID)) throw new Error('AUDIT_ACCOUNT_INVALID_ID');

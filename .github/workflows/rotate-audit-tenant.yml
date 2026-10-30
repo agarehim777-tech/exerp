@@ -1,0 +1,48 @@
+name: Rotate staging audit tenant
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "plan (read-only), apply (create new tenant) or activate (switch the E2E user's active tenant)"
+        type: choice
+        options: [plan, apply, activate]
+        default: plan
+      target_tenant_id:
+        description: "activate only: tenant to make active (the new one, or the old one to roll back)"
+        required: false
+      confirmation:
+        description: "apply/activate only: type ROTATE"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  rotate:
+    environment: staging
+    # Never rotate while an audit run is writing to the tenant.
+    concurrency:
+      group: staging-audit-tenant
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Rotate audit tenant
+        run: node scripts/rotate-audit-tenant.mjs
+        env:
+          ROTATION_MODE: ${{ inputs.mode }}
+          ROTATION_TARGET_TENANT_ID: ${{ inputs.target_tenant_id }}
+          ROTATION_CONFIRMATION: ${{ inputs.confirmation }}
+          E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
+          E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
+          E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
+          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
