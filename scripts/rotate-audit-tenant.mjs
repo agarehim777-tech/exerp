@@ -13,8 +13,11 @@ import { stagingAdminHeaders } from './staging-admin-key.mjs';
 // Flat per-tenant settings whose only reference is the tenant itself.
 export const COPIED_SETTINGS = ['tenant_modules', 'tenant_limits', 'customer_level_settings',
   'inventory_accounting_settings', 'currencies', 'exchange_rates', 'expense_categories'];
-// Chart of accounts and the CRM pipeline come from the app's own seeders, run as the E2E user.
-export const SEEDERS = ['seed_default_coa', 'seed_default_crm_pipeline'];
+// The CRM pipeline comes from the app's own seeder, run as the E2E user. Ledger accounts need no
+// seeding: the sales and purchasing commands create them through ensure_inventory_accounts.
+export const SEEDERS = ['seed_default_crm_pipeline'];
+// tenant-isolation and the lifecycle specs read "any customer" of the tenant before creating their own data.
+export const BASELINE_CUSTOMER = 'E2E Baseline Customer';
 const SERVER_COLUMNS = ['id', 'created_at', 'updated_at', 'updated_by'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,15 +53,24 @@ export async function rotateAuditTenant(env, { fetcher = fetch, mask = () => {},
   const rest = (path, { method = 'GET', data, prefer } = {}) => request(`${url}/rest/v1/${path}`, {
     method, headers: { ...admin, ...(prefer ? { prefer } : {}) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
   const membership = async (tenantId) => (await rest(`tenant_members?select=role&tenant_id=eq.${tenantId}&user_id=eq.${userId}`))[0];
+  // Written as the E2E user so RLS and the customer audit trigger see a real member.
+  const ensureBaselineCustomer = async (tenantId) => {
+    const existing = await request(`${url}/rest/v1/customers?select=id&tenant_id=eq.${tenantId}&limit=1`, { headers: asUser });
+    if (existing.length) return 'present';
+    await request(`${url}/rest/v1/customers`, { method: 'POST', headers: { ...asUser, prefer: 'return=minimal' },
+      body: JSON.stringify({ tenant_id: tenantId, name: BASELINE_CUSTOMER }) });
+    return 'created';
+  };
 
   if (mode === 'activate') {
     const target = env.ROTATION_TARGET_TENANT_ID;
     if (!UUID.test(target || '')) throw new Error('ROTATION_TARGET_REQUIRED');
     if (target === env.E2E_OTHER_TENANT_ID) throw new Error('ROTATION_TARGET_IS_ISOLATION_TENANT');
     if (!(await membership(target))) throw new Error('ROTATION_TARGET_NOT_A_MEMBERSHIP');
+    const baselineCustomer = await ensureBaselineCustomer(target);
     const [profile] = await rest(`profiles?select=active_tenant_id&id=eq.${userId}`);
     await rest(`profiles?id=eq.${userId}`, { method: 'PATCH', data: { active_tenant_id: target }, prefer: 'return=minimal' });
-    return { mode, userId, previousActiveTenantId: profile?.active_tenant_id ?? null, activeTenantId: target };
+    return { mode, userId, previousActiveTenantId: profile?.active_tenant_id ?? null, activeTenantId: target, baselineCustomer };
   }
 
   const [oldTenant] = await rest(`tenants?select=id,name,max_users,plan_name&id=eq.${oldTenantId}`);
@@ -103,6 +115,7 @@ export async function rotateAuditTenant(env, { fetcher = fetch, mask = () => {},
       seeded[seeder] = error.message;
     }
   }
+  seeded.baselineCustomer = await ensureBaselineCustomer(newId);
   return { mode, oldTenantId, newTenantId: newId, slug: tenant.slug, userId, role, copied: counts, seeded,
     next: [`Set the staging variable E2E_TENANT_ID to ${newId}`,
       `Run this workflow with mode=activate and target ${newId}`,
