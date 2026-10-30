@@ -1283,10 +1283,8 @@ async function auditHelpOnboardingWorkflow(browser) {
     await selectModule(page, 19);
     await page.locator('[data-testid="help-module-guide-panel"]').waitFor();
     await page.locator(".page-header .primary-btn").click();
-    await page.waitForTimeout(150);
-
-    let state = await readState(page);
-    assert(state.helpGuideSnapshot?.modules >= 15, "Help action did not persist a module guide snapshot");
+    // The UI snapshot is saved on a debounce, so poll the server instead of reading once after a fixed pause.
+    let state = await waitForState((s) => s.helpGuideSnapshot?.modules >= 15, "Help action did not persist a module guide snapshot");
     assert(state.knowledgeBase?.some((article) => article.category === "Təlim"), "Help action did not create the training article");
     const helpText = await page.locator('[data-testid="help-module-guide-panel"]').innerText();
     assert(helpText.includes("Satış") && helpText.includes("Anbar"), "Help page does not show real module guides");
