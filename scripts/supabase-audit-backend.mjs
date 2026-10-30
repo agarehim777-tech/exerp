@@ -68,14 +68,27 @@ export async function createAuditBackend(env, fetcher = fetch) {
   if (!apikey || !email || !password) throw new Error('Authenticated Supabase audit credentials are required');
   let activeRequests = 0;
   const waitingRequests = [];
+  const requestTimeoutMs = Number(env.AUDIT_REQUEST_TIMEOUT_MS || 30000);
   const request = async (path, { method = 'GET', data, token, includeCount = false } = {}) => {
     if (activeRequests >= 4) await new Promise(resolve => waitingRequests.push(resolve));
     else activeRequests += 1;
     try {
-      const response = await fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(15000),
+      const send = () => fetcher(`${url}/${path}`, { method, signal: AbortSignal.timeout(requestTimeoutMs),
         headers: { apikey, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}),
           ...(includeCount ? { prefer: 'count=exact' } : {}) },
         ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
+      // Staging reads occasionally stall or drop under load. Reads are idempotent, so one is retried;
+      // writes and commands are never repeated here.
+      let response;
+      try {
+        response = await send();
+      } catch (error) {
+        if (method !== 'GET' || !['TimeoutError', 'AbortError', 'TypeError'].includes(error?.name)) throw error;
+        response = await send();
+      }
+      // 57014 is Postgres cancelling a statement on an overloaded database, not a bad query.
+      const statementTimeout = response.status === 500 && (await response.clone().text()).includes('"57014"');
+      if (method === 'GET' && ([502, 503, 504].includes(response.status) || statementTimeout)) response = await send();
       if (!response.ok) throw new Error(`${method} ${path.split('?')[0]}: ${response.status} ${await response.text()}`);
       const text = await response.text();
       const result = text ? JSON.parse(text) : null;

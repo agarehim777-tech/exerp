@@ -3,6 +3,10 @@ import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { permissionForScreen } from '../../config/permissionModules.js';
 
+// A dropped or timed-out read must not leave the user without navigation until a reload,
+// so failed loads stay closed (loading, nothing allowed) and are retried with backoff.
+export const PERMISSION_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+
 /**
  * DB-based RBAC hook.
  * Reads role_permissions table + current user's role in active tenant.
@@ -18,22 +22,36 @@ export function usePermissions() {
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer;
     if (!role) { setMatrix(null); setLoadedRole(null); setLoading(false); return; }
     setLoading(true);
-    supabase
-      .from("role_permissions")
-      .select("module, can_view, can_edit")
-      .eq("role", role)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error || !data) { setMatrix(null); setLoadedRole(role); setLoading(false); return; }
-        const m = {};
-        for (const r of data) m[r.module] = { view: r.can_view, edit: r.can_edit };
-        setMatrix(m);
-        setLoadedRole(role);
-        setLoading(false);
-      });
-    return () => { cancelled = true; };
+    const load = async (attempt) => {
+      let result;
+      try {
+        result = await supabase
+          .from("role_permissions")
+          .select("module, can_view, can_edit")
+          .eq("role", role);
+      } catch (error) {
+        result = { data: null, error };
+      }
+      if (cancelled) return;
+      const { data, error } = result;
+      if (error || !data) {
+        if (attempt < PERMISSION_RETRY_DELAYS_MS.length) {
+          retryTimer = setTimeout(() => load(attempt + 1), PERMISSION_RETRY_DELAYS_MS[attempt]);
+          return;
+        }
+        setMatrix(null); setLoadedRole(role); setLoading(false); return;
+      }
+      const m = {};
+      for (const r of data) m[r.module] = { view: r.can_view, edit: r.can_edit };
+      setMatrix(m);
+      setLoadedRole(role);
+      setLoading(false);
+    };
+    load(0);
+    return () => { cancelled = true; clearTimeout(retryTimer); };
   }, [role]);
 
   const can = useCallback((module, action = "view") => {
