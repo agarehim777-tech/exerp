@@ -24,7 +24,7 @@ export default function ApiPage({
         <MetricCard label="Endpoint" value={webhooks.length} icon={ShieldCheck} tone="primary" />
         <MetricCard label="Aktiv webhook" value={activeHooks.length} icon={Check} tone="success" />
         <MetricCard label="Göndəriş növbəsi" value={queueTotal} icon={Bell} tone="warning" />
-        <MetricCard label="Retry növbəsi" value={retryTotal} trend={lastLog ? `${lastLog.responseCode} · ${lastLog.result}` : "Test gözləyir"} icon={RefreshCw} tone={retryTotal ? "warning" : "info"} />
+        <MetricCard label="Retry növbəsi" value={retryTotal} trend={lastLog ? lastLog.result : "Yoxlama gözləyir"} icon={RefreshCw} tone={retryTotal ? "warning" : "info"} />
       </section>
 
       <Panel className="api-console-panel" data-testid="api-console-panel">
@@ -62,13 +62,13 @@ export default function ApiPage({
         <div className="api-action-row">
           <button className="primary-btn" data-testid="api-run-webhook-test" onClick={() => onRunTest?.("auto")} disabled={!canManage}>
             <Send size={16} />
-            Webhook test
+            Konfiqurasiyanı yoxla
           </button>
           <button className="secondary-btn" data-testid="api-run-retry-test" onClick={() => onRunTest?.("retry")} disabled={!canManage || retryTotal === 0}>
             <RefreshCw size={16} />
-            Retry işlə
+            Retry qaydasını yoxla
           </button>
-          <span>{lastLog ? `${lastLog.webhookId} · ${lastLog.at}` : "Hələ test nəticəsi yoxdur"}</span>
+          <span>{lastLog ? `${lastLog.webhookId} · ${lastLog.at}` : "Hələ yoxlama yoxdur"} · HTTP sorğusu göndərilmir; real göndəriş İnteqrasiya jurnalındadır</span>
         </div>
       </Panel>
 
@@ -119,8 +119,8 @@ export default function ApiPage({
             rows={logs.slice(0, 8).map((log) => [
               <TwoLine title={log.webhookName || log.webhookId} subtitle={log.event} />,
               log.mode,
-              <TwoLine title={`${log.responseCode} · ${log.result}`} subtitle={log.error || log.target} />,
-              `${log.latencyMs} ms`,
+              <TwoLine title={log.responseCode ? `${log.responseCode} · ${log.result}` : log.result} subtitle={log.error || log.target} />,
+              log.latencyMs != null ? `${log.latencyMs} ms` : "—",
               <TwoLine title={String(log.retryQueue || 0)} subtitle={log.nextRetryAt || "—"} />,
               log.at,
             ])}
@@ -136,7 +136,7 @@ export default function ApiPage({
             <TwoLine title={webhook.name} subtitle={webhook.id} />,
             webhook.lastPayload,
             webhook.lastTestAt || "—",
-            <TwoLine title={webhook.lastResponseCode} subtitle={webhook.lastLatencyMs ? `${webhook.lastLatencyMs} ms` : "—"} />,
+            <TwoLine title={webhook.lastResponseCode || "—"} subtitle={webhook.lastLatencyMs ? `${webhook.lastLatencyMs} ms` : "—"} />,
             webhook.owner,
             <StatusBadge status={webhook.retryState} />,
           ])}

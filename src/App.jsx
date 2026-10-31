@@ -148,6 +148,7 @@ import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { resolveOrderCustomer } from "./shared/lib/orderCustomer.js";
+import { checkWebhookConfiguration } from "./shared/lib/apiWebhookCheck.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { ensureMainCashAccount } from "./services/cashAccounts.js";
@@ -2081,32 +2082,15 @@ function App() {
       return;
     }
 
+    // Configuration check only: these rules have no sender, so no response code, latency or retry
+    // result is reported. Real delivery runs through webhook-dispatch on the Integration ledger.
     const stamp = getActionStamp();
-    let toast = `${targetWebhook.id} webhook testi işlənir.`;
-
+    let check = null;
     setState((current) => {
       const webhooks = ensureApiWebhooks(current.apiWebhooks || []);
       const secrets = ensureApiSecrets(current.apiSecrets || []);
       const sourceWebhook = webhooks.find((webhook) => webhook.id === targetWebhook.id) || targetWebhook;
-      const secret = secrets.find((item) => item.key === sourceWebhook.secretKey);
-      const secretReady = sourceWebhook.authType === "None" || secret?.status === "Aktiv";
-      const isRetry = Number(sourceWebhook.retryQueue || 0) > 0 || mode === "retry";
-      const endpointActive = sourceWebhook.status === "Aktiv";
-      const success = endpointActive && secretReady;
-      const responseCode = success ? 200 : !secretReady ? 401 : 503;
-      const retryMax = Number(sourceWebhook.retryMax || 3);
-      const currentFailures = Number(sourceWebhook.failureCount || 0);
-      const retryQueue = Number(sourceWebhook.retryQueue || 0);
-      const attempt = isRetry ? Math.min(retryMax, currentFailures + 1 || 1) : 1;
-      const nextRetryQueue = success ? Math.max(0, retryQueue - 1) : Math.min(retryMax, retryQueue + 1);
-      const nextFailureCount = success ? 0 : Math.min(retryMax, currentFailures + 1);
-      const result = success ? "Uğurlu" : nextFailureCount >= retryMax ? "Bloklandı" : "Retry gözləyir";
-      const latencyMs = success ? 118 + Math.round(Math.random() * 35) : 620 + Math.round(Math.random() * 120);
-      const error = success
-        ? ""
-        : !secretReady
-          ? "Secret/token aktiv deyil və ya tapılmadı"
-          : "Endpoint cavab vermədi";
+      check = checkWebhookConfiguration(sourceWebhook, secrets);
       const log = {
         id: `API-LOG-${Date.now().toString().slice(-6)}`,
         webhookId: sourceWebhook.id,
@@ -2114,68 +2098,34 @@ function App() {
         event: sourceWebhook.event,
         method: sourceWebhook.method || "POST",
         target: sourceWebhook.target,
-        payload: targetWebhook.lastPayload || sourceWebhook.lastPayloadOverride || sourceWebhook.event,
-        attempt,
-        result,
-        responseCode,
-        latencyMs,
-        retryQueue: nextRetryQueue,
-        error,
-        mode: isRetry ? "Retry test" : "Canlı test",
+        result: check.result,
+        responseCode: null,
+        latencyMs: null,
+        retryQueue: Number(sourceWebhook.retryQueue || 0),
+        error: check.error,
+        mode: mode === "retry" ? "Retry qaydası yoxlaması" : "Konfiqurasiya yoxlaması",
         at: stamp,
-        nextRetryAt: success ? "" : `${sourceWebhook.retryBackoffSeconds || 60}s sonra`,
+        nextRetryAt: "",
       };
-      const nextWebhook = {
-        ...sourceWebhook,
-        status: endpointActive ? "Aktiv" : sourceWebhook.status,
-        processedCount: Number(sourceWebhook.processedCount || 0) + (success && targetWebhook.queueCount > 0 ? 1 : 0),
-        failureCount: nextFailureCount,
-        retryQueue: nextRetryQueue,
-        lastPayloadOverride: `${sourceWebhook.event} test · ${stamp}`,
-        lastTestAt: stamp,
-        lastResponseCode: responseCode,
-        lastLatencyMs: latencyMs,
-        lastError: error,
-        nextRetryAt: log.nextRetryAt,
-      };
-      const nextSecrets = secrets.map((item) =>
-        item.key === sourceWebhook.secretKey
-          ? {
-              ...item,
-              lastUsedAt: stamp,
-            }
-          : item,
-      );
-      const sentCount = success ? 1 : 0;
-
-      toast = success
-        ? `${sourceWebhook.id} webhook testi uğurludur (${responseCode}).`
-        : `${sourceWebhook.id} test uğursuz oldu, retry növbəsinə yazıldı.`;
-
       return auditCurrentState(
         {
           ...current,
-          apiWebhooks: webhooks.map((webhook) => (webhook.id === sourceWebhook.id ? nextWebhook : webhook)),
-          apiSecrets: nextSecrets,
+          apiWebhooks: webhooks.map((webhook) => (webhook.id === sourceWebhook.id ? { ...webhook, lastTestAt: stamp } : webhook)),
           apiWebhookLogs: [log, ...(current.apiWebhookLogs || [])].slice(0, 80),
-          apiIntegrationSnapshot: {
-            at: stamp,
-            webhookId: sourceWebhook.id,
-            result,
-            responseCode,
-            sent: sentCount,
-            retryQueue: nextRetryQueue,
-            failed: success ? 0 : 1,
-          },
         },
         {
           module: "API/Webhook",
-          action: isRetry ? "Webhook retry testi" : "Webhook test nəticəsi",
-          detail: `${sourceWebhook.id} · ${sourceWebhook.event} · ${responseCode} · ${result}`,
+          action: "Webhook konfiqurasiyası yoxlanıldı",
+          detail: `${sourceWebhook.id} · ${sourceWebhook.event} · ${check.result}${check.error ? ` (${check.error})` : ""}`,
         },
       );
     });
-    notify(toast, toast.includes("uğursuz") ? "warning" : "success");
+    notify(
+      check?.ready
+        ? `${targetWebhook.id} göndərişə hazırdır. HTTP sorğusu göndərilmədi; real göndəriş İnteqrasiya jurnalındadır.`
+        : `${targetWebhook.id}: ${check?.error || "konfiqurasiya natamamdır"}. HTTP sorğusu göndərilmədi.`,
+      check?.ready ? "info" : "warning",
+    );
   }
 
   function runNotificationDispatchAction() {
