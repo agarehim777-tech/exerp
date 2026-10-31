@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { expenseStatusToCode } from "./useExpensesSync.js";
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
 import { useTenantRequestScope } from './useTenantRequestScope.js';
@@ -57,7 +58,7 @@ export function useCashbook(tenantId) {
     setError(firstError || null);
     setAccounts(acc.data || []);
     setTransactions(tx.data || []);
-    setExpenses(exp.data || []);
+    setExpenses((exp.data || []).map(row => ({ ...row, status: expenseStatusToCode(row.status) })));
     setCustomers(customerResult.data || []);
     setEmployees(employeeResult.data || []);
     if (categoryResult.error) setError(current => current || categoryResult.error);
