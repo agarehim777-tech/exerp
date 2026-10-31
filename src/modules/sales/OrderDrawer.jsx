@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
+import { toLocalIsoDate } from '../../services/date.js';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
 import { appAlert } from '../../shared/ui/dialogService.js';
 import { createIdempotencyKey } from '../../services/coreOperations.js';
@@ -24,7 +25,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => ({
     customer_id: order.customer_id || order.customer?.id || '',
-    order_date: order.order_date || new Date().toISOString().slice(0, 10),
+    order_date: order.order_date || toLocalIsoDate(),
     currency: order.currency || 'AZN',
     expected_updated_at: order.updated_at,
     request_key: createIdempotencyKey(`sales-edit:${order.id}`),

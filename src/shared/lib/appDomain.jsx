@@ -6,7 +6,7 @@ import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { round2 } from "../utils/invoiceMath.js";
 import { createIdempotencyKey } from "../../services/coreOperations.js";
-import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue } from "../../services/date.js";
+import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue, toLocalIsoDate } from "../../services/date.js";
 import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, isCreditStarted, roundMoney } from "./credit.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
 import { initialState, navItems, stages } from "../../data.js";
@@ -600,7 +600,7 @@ export function exportDeliveryQueueCsv(rows) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `tehvil-reyestri-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `tehvil-reyestri-${toLocalIsoDate()}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -3837,7 +3837,7 @@ export function exportWarehouseBalanceCsv(rows, view) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `anbar-qaliqlari-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `anbar-qaliqlari-${toLocalIsoDate()}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

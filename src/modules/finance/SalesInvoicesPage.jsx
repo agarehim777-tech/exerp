@@ -14,6 +14,7 @@ import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, v
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
+import { toLocalIsoDate } from "../../services/date.js";
 import {
   azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
   statLabel, statTile, statValue, table, td, th,
@@ -349,7 +350,7 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
   const [header, setHeader] = useState({
     invoice_no: `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
     customer_id: "",
-    invoice_date: new Date().toISOString().slice(0, 10),
+    invoice_date: toLocalIsoDate(),
     due_date: "",
     notes: "",
   });

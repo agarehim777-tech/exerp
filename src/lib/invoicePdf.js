@@ -1,3 +1,4 @@
+import { toLocalIsoDate } from "../services/date.js";
 // Faktura PDF/çap ixracı — xarici kitabxana olmadan, brauzerin çap mühərriki ilə.
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -224,7 +225,7 @@ export function exportInvoicesCsv(invoices, { fileName, columns } = {}) {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = fileName || `satis-fakturalari-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = fileName || `satis-fakturalari-${toLocalIsoDate()}.csv`;
   link.click();
   URL.revokeObjectURL(url);
   return rows.length;

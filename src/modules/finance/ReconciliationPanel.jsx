@@ -4,8 +4,9 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { listReconciliations, saveReconciliation } from "../../services/enterpriseWorkflows.js";
 import { money } from "../../services/format.js";
+import { toLocalIsoDate } from "../../services/date.js";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => toLocalIsoDate();
 export function ReconciliationPanel() {
   const { activeTenantId } = useAuth();
   const [rows, setRows] = useState([]);

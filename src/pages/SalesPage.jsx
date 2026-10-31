@@ -5,6 +5,7 @@ import { money } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { WorkflowSteps, buildSalesBonusRows, getOrderBalance, getOrderBonusAmount, getOrderBonusText, getOrderDeliveryStatus, getOrderPaymentMethod, getOrderSellerBonuses, getSalesCashImpact, getSalesOrderRiskStatus, getShortSellerName, matchesSalesDateRange, matchesSalesOrderFilter, matchesSalesOrderSearch, summarizeOrderProducts } from "../shared/lib/appDomain.jsx";
+import { toLocalIsoDate } from "../services/date.js";
 export default function SalesPage({
   orders,
   stock,
@@ -124,7 +125,7 @@ export default function SalesPage({
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `satis-reyestri-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `satis-reyestri-${toLocalIsoDate()}.csv`;
     link.click();
     URL.revokeObjectURL(downloadUrl);
   };

@@ -1,3 +1,4 @@
+import { toLocalIsoDate } from "../../services/date.js";
 const safeFileName = (value) => String(value || "hesabat")
   .toLocaleLowerCase("az")
   .replace(/[əƏ]/g, "e").replace(/[ıİ]/g, "i").replace(/[şŞ]/g, "s")
@@ -76,7 +77,7 @@ export async function downloadReportPdf({ title, period, summary = [], columns =
 
   doc.setProperties({ title, subject: `${period} ExERP hesabatı`, creator: "ExERP" });
   if (!isCurrent()) return false;
-  doc.save(`${safeFileName(title)}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`${safeFileName(title)}-${toLocalIsoDate()}.pdf`);
   return true;
 }
 
@@ -86,7 +87,7 @@ export function downloadReportCsv({ title, columns = [], rows = [] }) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${safeFileName(title)}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `${safeFileName(title)}-${toLocalIsoDate()}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();

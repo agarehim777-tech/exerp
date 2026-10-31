@@ -36,13 +36,14 @@ import { appConfirm } from "../../shared/ui/dialogService.js";
 import { vendorInvoiceLineGross, vendorInvoiceTotal } from "./procurementMath.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
+import { toLocalIsoDate } from "../../services/date.js";
 
 const money = (value, currency = "AZN") =>
   `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 
 const qty = (value) => Number(value || 0).toLocaleString("az-AZ", { maximumFractionDigits: 3 });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => toLocalIsoDate();
 const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase("az-AZ");
 
 const toNumber = (value) => {

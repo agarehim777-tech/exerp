@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
+import { toLocalIsoDate } from '../../services/date.js';
 
 export function useCurrencies(tenantId) {
   const [currencies, setCurrencies] = useState([]);
@@ -55,7 +56,7 @@ export function useCurrencies(tenantId) {
     const { error: err } = await supabase.from('exchange_rates').upsert({
       tenant_id: tenantId,
       currency_code: String(currency_code).toUpperCase(),
-      rate_date: rate_date || new Date().toISOString().slice(0, 10),
+      rate_date: rate_date || toLocalIsoDate(),
       rate: Number(rate),
       source,
     }, { onConflict: 'tenant_id,currency_code,rate_date' });
@@ -66,7 +67,7 @@ export function useCurrencies(tenantId) {
   /** Verilmiş tarixə (və ya ondan əvvəlki ən yaxın tarixə) məzənnə. Tapılmazsa 1. */
   const rateFor = useCallback((code, onDate) => {
     if (!code || (baseCurrency && code === baseCurrency.code)) return 1;
-    const limit = onDate || new Date().toISOString().slice(0, 10);
+    const limit = onDate || toLocalIsoDate();
     const match = rates
       .filter((r) => r.currency_code === code && r.rate_date <= limit)
       .sort((a, b) => (a.rate_date < b.rate_date ? 1 : -1))[0];

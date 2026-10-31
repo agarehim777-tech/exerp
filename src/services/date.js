@@ -14,6 +14,12 @@ export function formatDateInput(date) {
   return `${year}-${month}-${day}`;
 }
 
+// Calendar date (YYYY-MM-DD) in the browser's time zone. toISOString() gives the UTC date,
+// which in Baku (UTC+4) is the previous day before 04:00 and for every local midnight.
+export function toLocalIsoDate(date = new Date()) {
+  return formatDateInput(date);
+}
+
 export function parsePaymentDate(value) {
   const text = String(value ?? "").trim();
   if (!text || text === "—") return null;

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCurrencies } from "../../shared/hooks/useCurrencies.js";
 import { Badge, Button, Card, DataTable, Field, FormGrid, Input, Notice, PageStack, Select } from "../../shared/ui/primitives.jsx";
+import { toLocalIsoDate } from "../../services/date.js";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => toLocalIsoDate();
 
 export default function CurrenciesPage() {
   const { activeMembership } = useAuth();

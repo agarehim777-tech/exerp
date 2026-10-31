@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useFinancialStatements } from "../../shared/hooks/useFinancialStatements";
 import { AGING_BUCKETS, AGING_LABELS } from "../../shared/lib/financialReports.js";
+import { toLocalIsoDate } from "../../services/date.js";
 import {
   azn, badge, card, input, msgBox, primaryBtn,
   statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
@@ -24,7 +25,7 @@ export default function FinancialStatementsPage() {
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
   const { profitAndLoss: pl, balanceSheet: bs, cashFlow: cf, aging } = fs;
-  const applyPeriod = mode => { const now=new Date(); let from; if(mode==='month') from=new Date(now.getFullYear(),now.getMonth(),1); else if(mode==='quarter') from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1); else from=new Date(now.getFullYear(),0,1); fs.setRange({from:from.toISOString().slice(0,10),to:now.toISOString().slice(0,10)}); };
+  const applyPeriod = mode => { const now=new Date(); let from; if(mode==='month') from=new Date(now.getFullYear(),now.getMonth(),1); else if(mode==='quarter') from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1); else from=new Date(now.getFullYear(),0,1); fs.setRange({from:toLocalIsoDate(from),to:toLocalIsoDate(now)}); };
 
   return (
     <div style={{ display: "grid", gap: 16 }}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, LockKeyhole, RotateCcw, TriangleAlert } from "lucide-react";
 import { Panel, PanelHeader, StatusBadge } from "../../../components/ui.jsx";
 import { appPrompt } from "../../../shared/ui/dialogService.js";
+import { toLocalIsoDate } from "../../../services/date.js";
 import {
   listAccountingPeriodLocks,
   lockAccountingPeriod,
@@ -29,7 +30,7 @@ function periodErrorMessage(error, fallback) {
 }
 
 export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = [], notify }) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(toLocalIsoDate());
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [locks, setLocks] = useState([]);

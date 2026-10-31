@@ -1,3 +1,4 @@
+import { toLocalIsoDate } from "../services/date.js";
 // Faktura kəsimi ön baxışı üçün təmiz (DB-yə toxunmayan) sənəd qurucuları.
 
 export function computeDraftTotals(lines) {
@@ -129,8 +130,8 @@ export function draftWarnings(draft) {
 }
 
 
-const today = () => new Date().toISOString().slice(0, 10);
-const addDays = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+const today = () => toLocalIsoDate();
+const addDays = (days) => toLocalIsoDate(new Date(Date.now() + days * 86400000));
 
 export function buildOrderInvoiceDraft(order, { invoice_no, payment_terms_days = 14 } = {}) {
   const lines = (order.items || []).map((item) => ({

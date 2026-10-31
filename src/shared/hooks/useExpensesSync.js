@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTenantRequestScope } from "./useTenantRequestScope";
 import { useRealtimeResync } from "./useRealtimeResync";
 import { supabase } from "../../integrations/supabase/client";
+import { toLocalIsoDate } from "../../services/date.js";
 
 const SELECT_COLUMNS =
   "id,expense_no,description,category,amount,status,expense_date,note,source,currency,vat_amount";
@@ -31,7 +32,7 @@ export function appExpenseToRow(expense, tenantId) {
     vat_amount: Number(expense.vat_amount || 0),
     currency: expense.currency || "AZN",
     status: expense.status || "Təsdiq gözləyir",
-    expense_date: expense.date || new Date().toISOString().slice(0, 10),
+    expense_date: expense.date || toLocalIsoDate(),
     note: expense.note || null,
     source: expense.source || null,
   };

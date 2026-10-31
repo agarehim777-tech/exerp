@@ -5,9 +5,10 @@ import { money, percent } from "../services/format.js";
 import BonusAssignmentsPanel from "./BonusAssignmentsPanel.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useSalesBonusLedger } from "../shared/hooks/useSalesBonusLedger.js";
+import { toLocalIsoDate } from "../services/date.js";
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalIsoDate();
 }
 
 function startOfMonthIso(date = new Date()) {
@@ -21,7 +22,7 @@ function startOfYearIso(date = new Date()) {
 function daysAgoIso(days) {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  return toLocalIsoDate(date);
 }
 
 function formatDateRange(start, end) {

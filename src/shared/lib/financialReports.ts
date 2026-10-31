@@ -1,3 +1,4 @@
+import { toLocalIsoDate } from "../../services/date";
 // Maliyyə hesabatları üçün saf funksiyalar (UI-dan asılı deyil, test olunur).
 // Giriş: trial_balance RPC sətirləri, satış fakturaları, kassa əməliyyatları.
 
@@ -186,7 +187,7 @@ export function buildReceivablesAging(
   invoices: InvoiceLike[] = [],
   asOf: string | Date = new Date(),
 ): ReceivablesAging {
-  const asOfDate = typeof asOf === 'string' ? asOf : asOf.toISOString().slice(0, 10);
+  const asOfDate = typeof asOf === 'string' ? asOf : toLocalIsoDate(asOf);
   const byCustomer = new Map<string, AgingRow>();
   const totals = Object.fromEntries(AGING_BUCKETS.map((key) => [key, 0])) as Record<AgingBucket, number>;
 
