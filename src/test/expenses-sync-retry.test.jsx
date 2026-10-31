@@ -79,7 +79,7 @@ it('does not write client-generated payroll and refreshes only from the server b
   expect(tables).toEqual(['expenses']);
   await act(async () => refresh());
   expect(result.current.state.expenses).toHaveLength(1);
-  expect(result.current.state.expenses[0]).toMatchObject({ id: 'EXP-server', amount: 20, currency: 'USD', vat_amount: 3, status: 'paid' });
+  expect(result.current.state.expenses[0]).toMatchObject({ id: 'EXP-server', amount: 20, currency: 'USD', vat_amount: 3, status: 'Qəbul edildi' });
   expect(mocks.save).not.toHaveBeenCalled();
 });
 
