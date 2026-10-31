@@ -1128,6 +1128,8 @@ function ProcurementWorkspace({ tenantId, user }) {
   async function openInvoicePayment(invoice) {
     const isCurrent = begin('invoice-payment-dialog');
     const hasTax = (invoiceLinesByInvoice.get(invoice.id) || []).some(line => toNumber(line.tax_rate) > 0);
+    // Seeds the standard "1400 Əvəzləşdirilən ƏDV" account if missing (idempotent).
+    if (hasTax) await supabase.rpc('ensure_inventory_accounts', { _tenant: tenantId }).then(() => null, () => null);
     const [accounts, tax] = await Promise.all([
       supabase.from("cash_accounts").select("id,name,currency,gl_account_id")
         .eq("tenant_id", tenantId).eq("is_active", true).eq("currency", invoice.currency),
