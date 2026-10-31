@@ -1140,7 +1140,9 @@ function ProcurementWorkspace({ tenantId, user }) {
     setInvoiceAccountId(accounts.data?.[0]?.id || "");
     setTaxAccounts((tax.data || []).filter(row => !['1000', '1010', '1200', '2050'].includes(row.code)
       && !accounts.data?.some(account => account.gl_account_id === row.id)));
-    setInvoiceTaxAccountId(''); setRecoverableTax(false);
+    const taxCandidates = (tax.data || []).filter(row => !['1000', '1010', '1200', '2050'].includes(row.code)
+      && !accounts.data?.some(account => account.gl_account_id === row.id));
+    setInvoiceTaxAccountId(taxCandidates.find(row => row.code === '1400')?.id || ''); setRecoverableTax(false);
     setPayingInvoice({ ...invoice, hasTax });
   }
 
@@ -1409,6 +1411,10 @@ function ProcurementWorkspace({ tenantId, user }) {
         <form className="modal-card" onSubmit={payInvoice}>
           <h2>{payingInvoice.invoice_number}</h2>
           <strong>{money(invoiceTotals.get(payingInvoice.id), payingInvoice.currency)}</strong>
+          {payingInvoice.hasTax && <small>Məbləğ ƏDV daxil olmaqla göstərilir və kassadan bu məbləğ çıxılacaq.</small>}
+          {payingInvoice.currency !== 'AZN' && <p role="alert">Xarici valyutada ({payingInvoice.currency}) olan fakturaların ödənişi hələ dəstəklənmir. Fakturanı AZN ilə qeyd edin və ya mühasibat jurnalında əl ilə yazılış edin.</p>}
+          {payingInvoice.currency === 'AZN' && !paymentAccounts.length && <p role="alert">AZN valyutasında aktiv kassa/bank hesabı yoxdur. Əvvəlcə Kassa bölməsində hesab yaradın.</p>}
+          {payingInvoice.hasTax && !taxAccounts.length && <p role="alert">Uyğun ƏDV aktiv hesabı tapılmadı. Hesablar planında "1400 · Əvəzləşdirilən ƏDV" hesabını yaradın.</p>}
           <label>Ödəniş hesabı<select aria-label="Ödəniş hesabı" value={invoiceAccountId} disabled={saving}
             onChange={event => setInvoiceAccountId(event.target.value)} required>
             <option value="">Hesab seçin</option>
@@ -1425,7 +1431,7 @@ function ProcurementWorkspace({ tenantId, user }) {
           </>}
           <div className="modal-actions">
             <button type="button" className="secondary-btn" disabled={saving} onClick={() => setPayingInvoice(null)}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={saving || !invoiceAccountId || (payingInvoice.hasTax && (!invoiceTaxAccountId || !recoverableTax))}>{saving ? "Qeydə alınır..." : "Ödənişi təsdiq et"}</button>
+            <button type="submit" className="primary-btn" disabled={saving || payingInvoice.currency !== 'AZN' || !invoiceAccountId || (payingInvoice.hasTax && (!invoiceTaxAccountId || !recoverableTax))}>{saving ? "Qeydə alınır..." : "Ödənişi təsdiq et"}</button>
           </div>
           {error && <p role="alert">{error}</p>}
         </form>
