@@ -306,6 +306,8 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
     onSubmit({
       customer: customerName,
       fin: customerFin,
+      // Only an id for the customer picked from the list; a typed name is resolved (uniquely) later.
+      customerId: selectedCustomer && selectedCustomer.name === customerName ? selectedCustomer.id || "" : "",
       warehouseId,
       productLines: productRows,
       sellers: sellerRows,
@@ -706,6 +708,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
     try {
     await onCreate(type, {
       customer: selectedCustomer?.name || "",
+      customerId: selectedCustomer?.id || "",
       fin: getCustomerIdentity(selectedCustomer).fin || selectedCustomer?.tax_id || "",
       paymentMethod,
       warehouseId,

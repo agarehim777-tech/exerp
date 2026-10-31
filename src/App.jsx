@@ -147,6 +147,7 @@ import {
 import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
+import { resolveOrderCustomer } from "./shared/lib/orderCustomer.js";
 import { buildProjectRoiSummary } from "./shared/analytics/projects.js";
 import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { ensureMainCashAccount } from "./services/cashAccounts.js";
@@ -2352,9 +2353,14 @@ function App() {
 
       // Persist to DB (Supabase). Realtime bridge will merge into state.orders.
       if (activeTenantId && createDbOrder) {
-        const customersByName = new Map(
-          (dbCustomers || []).map((c) => [String(c.name || "").toLowerCase(), c]),
+        const customerRow = resolveOrderCustomer(
+          { customerId: values.customerId, fin: values.fin, name: values.customer },
+          dbCustomers || [],
         );
+        if (!customerRow) {
+          notify("Müştəri dəqiq müəyyən edilmədi (tapılmadı və ya eyni adlı bir neçə müştəri var). Müştərini siyahıdan yenidən seçin.", "warning");
+          return false;
+        }
         const productsBySku = new Map(
           (dbProducts || []).map((p) => [String(p.sku || "").toLowerCase(), p]),
         );
@@ -2385,12 +2391,11 @@ function App() {
               warehouse_id: prod?.id && isUuidWarehouse ? warehouseId : null,
             };
           });
-        const customerRow = customersByName.get(String(values.customer || "").toLowerCase());
         const orderNo = nextSalesOrderNumber(dbOrders);
         const savedOrder = await createDbOrder({
           request_key: createIdempotencyKey("sales-order"),
           order_no: orderNo,
-          customer_id: customerRow?.id || null,
+          customer_id: customerRow.id,
           order_date: values.date || toLocalIsoDate(),
           // Satış ayrıca təsdiq mərhələsi gözləmir. Yaradılan kimi anbarın
           // təhvil növbəsinə düşən təsdiqli sifariş kimi saxlanılır.
@@ -3708,11 +3713,18 @@ function App() {
         "Təhvil verilib": "delivered",
         "Ləğv edilib": "cancelled",
       };
-      const custRow = (dbCustomers || []).find(
-        (c) => String(c.name).toLowerCase() === String(values.customer || existingOrder.customer || "").toLowerCase(),
-      );
+      // Keep the linked customer unless the form picked another one; an unresolved name used to
+      // overwrite customer_id with null and unlink the order.
+      const customerChanged = Boolean(values.customerId && values.customerId !== existingOrder.customerId)
+        || Boolean(values.customer && values.customer !== existingOrder.customer);
+      const custRow = customerChanged
+        ? resolveOrderCustomer({ customerId: values.customerId, fin: values.fin, name: values.customer }, dbCustomers || [])
+        : null;
+      if (customerChanged && !custRow) {
+        notify("Müştəri dəqiq müəyyən edilmədi, sifarişin müştərisi dəyişdirilmədi.", "warning");
+      }
       const patch = {
-        customer_id: custRow?.id ?? null,
+        ...(custRow ? { customer_id: custRow.id } : {}),
         order_date: values.date || existingOrder.date || toLocalIsoDate(),
         notes: values.note ?? existingOrder.note ?? null,
         status: statusMap[values.status || existingOrder.status] || "draft",
