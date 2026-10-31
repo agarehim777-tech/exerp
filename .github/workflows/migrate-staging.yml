@@ -2,8 +2,9 @@ name: Migrate Staging Database
 
 # Staging counterpart of "Migrate Production Database". `db push --include-all` applies every
 # migration missing from the staging migration history, so run `plan` first and read the list.
-# It connects straight to the database (STAGING_DB_URL, the session pooler connection string),
-# so the Management API token needs no extra permissions.
+# It connects straight to the database through the session pooler, so the Management API token
+# needs no extra permissions. The connection string is built from SUPABASE_DB_PASSWORD and the
+# pooler host (scripts/staging-db-url.mjs), which encodes the password for the URL.
 on:
   workflow_dispatch:
     inputs:
@@ -30,12 +31,16 @@ jobs:
     timeout-minutes: 30
     env:
       STAGING_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
-      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Build staging database URL
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          STAGING_DB_POOLER_HOST: ${{ vars.STAGING_DB_POOLER_HOST || 'aws-0-ap-northeast-1.pooler.supabase.com' }}
+        run: node scripts/staging-db-url.mjs
       - name: Staging-only safety gate
         env:
           MODE: ${{ inputs.mode }}
@@ -43,7 +48,7 @@ jobs:
         run: |
           [[ "$STAGING_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || { echo "E2E_SUPABASE_PROJECT_REF is not a project ref"; exit 1; }
           [ "$STAGING_PROJECT_REF" != "tcqdhwtnjrwpfdxoijmv" ] || { echo "Refusing to migrate production from the staging workflow"; exit 1; }
-          [ -n "$STAGING_DB_URL" ] || { echo "Add STAGING_DB_URL (staging session pooler connection string) to the staging environment"; exit 1; }
+          [ -n "$STAGING_DB_URL" ] || { echo "The staging database URL was not built"; exit 1; }
           [[ "$STAGING_DB_URL" == *"$STAGING_PROJECT_REF"* ]] || { echo "STAGING_DB_URL does not point at the staging project"; exit 1; }
           [[ "$STAGING_DB_URL" != *tcqdhwtnjrwpfdxoijmv* ]] || { echo "STAGING_DB_URL points at production"; exit 1; }
           if [ "$MODE" = "apply" ]; then test "$MIGRATION_CONFIRMATION" = "MIGRATE STAGING"; fi
