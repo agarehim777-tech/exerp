@@ -100,7 +100,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
 
   async function completeSelected(order) {
     if (!order || !order.stockCheck.ok) return;
-    if (!acceptance.recipientName.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed) return;
+    if (!acceptance.recipientName.trim() || !acceptance.documentNo.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed) return;
     await onCompleteDelivery(order.id, acceptance);
     setSelectedDeliveryId("");
     setAcceptance({ recipientName: "", documentNo: "", warehouseEmployeeName: "", signatureConfirmed: false, note: "" });
@@ -275,8 +275,8 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                   <input value={acceptance.warehouseEmployeeName} onChange={(event) => setAcceptance({ ...acceptance, warehouseEmployeeName: event.target.value })} placeholder="Əməkdaşın adı və soyadı" />
                 </label>
                 <label>
-                  Sənəd nömrəsi
-                  <input value={acceptance.documentNo} onChange={(event) => setAcceptance({ ...acceptance, documentNo: event.target.value })} placeholder="Ş/V və ya etibarnamə" />
+                  Sənəd nömrəsi *
+                  <input required value={acceptance.documentNo} onChange={(event) => setAcceptance({ ...acceptance, documentNo: event.target.value })} placeholder="Ş/V və ya etibarnamə" />
                 </label>
                 <label className="delivery-acceptance-note">
                   Qeyd
@@ -289,7 +289,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
               </div>
               <button
                 className="primary-btn full"
-                disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed}
+                disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.documentNo.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed}
                 title={selectedOrder.stockCheck.reason}
                 onClick={() => completeSelected(selectedOrder)}
               >

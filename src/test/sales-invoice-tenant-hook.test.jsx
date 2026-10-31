@@ -38,6 +38,6 @@ it('does not let stale billing sources reopen or repopulate a different tenant f
   expect(result.current.orders[0].id).toBe('order-b');
   mocks.sources.mockRejectedValue({ message:'server read failed' });
   await act(async () => { await result.current.refresh(); });
-  expect(result.current.orders).toEqual([]);
+  expect(result.current.orders.map(order => order.id)).toEqual(['order-b']); // keep loaded rows on refresh failure
   expect(result.current.error.message).toBe('server read failed');
 });
