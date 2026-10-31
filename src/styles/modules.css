@@ -20,8 +20,29 @@
 }
 .credit-workspace .credit-directory-panel { width: 100%; }
 .credit-directory-panel table { width: 100%; min-width: 0; }
-.credit-search-field > div { height: var(--control-height); min-width: 0; }
-.credit-search-field input { min-width: 0; width: 100%; }
+.credit-search-field > div {
+  height: var(--control-height);
+  min-width: 0;
+  padding: 0 10px;
+  gap: 8px;
+  box-sizing: border-box;
+}
+.credit-search-field > div > svg { margin: 0; }
+.main .credit-search-field input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--font-size-md);
+  font-weight: 400;
+}
+.main .credit-search-field input:focus,
+.main .credit-search-field input:focus-visible { outline: none; box-shadow: none; }
 .credit-directory-panel :is(.credit-customer-copy strong, .credit-contract-cell strong, .two-line strong) { font-size: var(--font-size-md); }
 .credit-directory-panel :is(.credit-customer-copy span, .credit-contract-cell span, .credit-contract-cell em, .two-line span, .status) { font-size: var(--font-size-sm); line-height: 1.45; }
 .credit-directory-panel .credit-deposit-target { color: var(--text-primary); font-weight: 800; }

@@ -41,6 +41,20 @@ for (const width of [1920, 1440, 1180, 900, 640, 375]) {
     const clipped = await page.locator('.metric-card strong, .credit-handover-item strong').evaluateAll(nodes =>
       nodes.some(node => node.scrollWidth > node.clientWidth + 1));
     expect(clipped).toBe(false);
+    const search = page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...');
+    await search.focus();
+    const searchGeometry = await search.evaluate(input => {
+      const inner = input.getBoundingClientRect();
+      const outer = input.parentElement!.getBoundingClientRect();
+      const style = getComputedStyle(input);
+      return { inside: inner.top >= outer.top && inner.bottom <= outer.bottom,
+        border: style.borderWidth, shadow: style.boxShadow, outline: style.outlineStyle };
+    });
+    expect(searchGeometry).toEqual({ inside: true, border: '0px', shadow: 'none', outline: 'none' });
+    await search.fill('no-matching-customer');
+    await expect(page.locator('.credit-directory-panel tbody')).not.toContainText('Agarahim Rahimov');
+    await search.fill('');
+    await expect(page.locator('.credit-directory-panel tbody')).toContainText('Agarahim Rahimov');
     await page.screenshot({ path: `test-results/credit-workspace-${width}.png` });
   });
 }
