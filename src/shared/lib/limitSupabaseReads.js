@@ -1,3 +1,9 @@
+/**
+ * Limits how many Supabase table reads run at the same time.
+ * @param {(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>} fetcher
+ * @param {number} [limit]
+ * @returns {(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>}
+ */
 export function limitSupabaseReads(fetcher, limit = 4) {
   if (!Number.isInteger(limit) || limit < 1) throw new Error('Invalid read concurrency limit');
   let active = 0;
