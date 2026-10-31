@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { toLocalIsoDate } from '../../services/date.js';
 
 export function useSalesDashboard(tenantId, days = 30) {
   const [data, setData] = useState(null);
@@ -11,7 +12,7 @@ export function useSalesDashboard(tenantId, days = 30) {
     setLoading(true);
     const to = new Date();
     const from = new Date(); from.setDate(from.getDate() - days);
-    const iso = (d) => d.toISOString().slice(0, 10);
+    const iso = (d) => toLocalIsoDate(d);
     const { data: res, error } = await supabase.rpc('sales_dashboard', {
       _tenant: tenantId, _from: iso(from), _to: iso(to),
     });

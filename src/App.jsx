@@ -121,6 +121,7 @@ import {
   formatPaymentDate,
   parsePaymentDate,
   toDateInputValue,
+  toLocalIsoDate,
 } from "./services/date.js";
 import {
   buildModulePermissionCatalog,
@@ -2390,7 +2391,7 @@ function App() {
           request_key: createIdempotencyKey("sales-order"),
           order_no: orderNo,
           customer_id: customerRow?.id || null,
-          order_date: values.date || new Date().toISOString().slice(0, 10),
+          order_date: values.date || toLocalIsoDate(),
           // Satış ayrıca təsdiq mərhələsi gözləmir. Yaradılan kimi anbarın
           // təhvil növbəsinə düşən təsdiqli sifariş kimi saxlanılır.
           status: "confirmed",
@@ -2412,7 +2413,7 @@ function App() {
                 initial_payment: Number(values.depositPaid ?? values.initialPayment ?? 0),
                 required_initial: Number(values.initialPayment || 0),
                 term_months: Number(values.creditMonths || 12),
-                start_date: values.date || new Date().toISOString().slice(0, 10),
+                start_date: values.date || toLocalIsoDate(),
               }
             : null,
         }).catch((err) => {
@@ -3712,7 +3713,7 @@ function App() {
       );
       const patch = {
         customer_id: custRow?.id ?? null,
-        order_date: values.date || existingOrder.date || new Date().toISOString().slice(0, 10),
+        order_date: values.date || existingOrder.date || toLocalIsoDate(),
         notes: values.note ?? existingOrder.note ?? null,
         status: statusMap[values.status || existingOrder.status] || "draft",
       };

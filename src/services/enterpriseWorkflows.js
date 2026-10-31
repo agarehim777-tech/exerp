@@ -1,4 +1,5 @@
 import { supabase } from "../integrations/supabase/client";
+import { toLocalIsoDate } from "./date.js";
 
 const MODULES = new Set(["procurement", "warehouse", "credits", "crm", "finance", "hr", "production", "communications", "reports", "platform"]);
 const unwrap = (result) => { if (result.error) throw result.error; return result.data; };
@@ -101,7 +102,7 @@ export async function listCreditPortfolio({ tenantId }) {
 
 export async function refreshCreditOverdue({ tenantId, asOf }) {
   if (!tenantId) throw new Error("Tenant seçilməyib.");
-  return unwrap(await supabase.rpc("refresh_credit_overdue", { _tenant_id: tenantId, _as_of: asOf || new Date().toISOString().slice(0, 10) }));
+  return unwrap(await supabase.rpc("refresh_credit_overdue", { _tenant_id: tenantId, _as_of: asOf || toLocalIsoDate() }));
 }
 
 export async function updateCreditCollection({ tenantId, credit, stage, reason }) {

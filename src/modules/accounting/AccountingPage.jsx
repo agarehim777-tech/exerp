@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../shared/hooks/useAccounting.js";
 import { ReconciliationPanel } from "../finance/ReconciliationPanel.jsx";
+import { toLocalIsoDate } from "../../services/date.js";
 import { AccountingPeriodPanel } from "../finance/components/AccountingPeriodPanel.jsx";
 import ConfirmActionDialog from "../../shared/components/ConfirmActionDialog.jsx";
 import { appAlert } from "../../shared/ui/dialogService.js";
@@ -73,7 +74,7 @@ function JournalPanel({ isAdmin }) {
   const { entries, loading, createEntry, post, remove, reverse } = useJournalEntries();
   const { accounts } = useChartOfAccounts();
   const [showForm, setShowForm] = useState(false);
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [entryDate, setEntryDate] = useState(toLocalIsoDate());
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState([{ account_id: "", debit: 0, credit: 0, memo: "" }, { account_id: "", debit: 0, credit: 0, memo: "" }]);
@@ -148,8 +149,8 @@ function JournalPanel({ isAdmin }) {
 }
 
 function TrialBalancePanel({ tenantId }) {
-  const [from, setFrom] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10));
-  const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
+  const [from, setFrom] = useState(toLocalIsoDate(new Date(new Date().getFullYear(), 0, 1)));
+  const [to, setTo] = useState(toLocalIsoDate());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 

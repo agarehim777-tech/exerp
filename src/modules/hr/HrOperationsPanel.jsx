@@ -3,6 +3,7 @@ import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "l
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useHrOperations } from "../../shared/hooks/useHrOperations.js";
 import { calcPayroll, periodLabel, workDaysInMonth } from "./payroll.js";
+import { toLocalIsoDate } from "../../services/date.js";
 
 const TABS = [
   { id: "attendance", label: "Davamiyyət", icon: Clock, description: "Əməkdaşın gündəlik işlədiyi saatı qeyd edin və aylıq davamiyyət faizini izləyin." },
@@ -11,8 +12,8 @@ const TABS = [
 ];
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
-const todayIso = () => new Date().toISOString().slice(0, 10);
-const currentPeriod = () => new Date().toISOString().slice(0, 7);
+const todayIso = () => toLocalIsoDate();
+const currentPeriod = () => toLocalIsoDate().slice(0, 7);
 
 export default function HrOperationsPanel({ employees = [], controlledTab = null }) {
   const { activeTenantId } = useAuth();

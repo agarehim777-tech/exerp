@@ -4,8 +4,9 @@ import { useAuth } from "../auth/AuthProvider.jsx";
 import { Panel, PanelHeader, StatusBadge } from "../components/ui.jsx";
 import { useOrders } from "../shared/hooks/useOrders.js";
 import { useSalesBonusLedger } from "../shared/hooks/useSalesBonusLedger.js";
+import { toLocalIsoDate } from "../services/date.js";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => toLocalIsoDate();
 
 export default function BonusAssignmentsPanel({ onRowsChange }) {
   const { activeMembership } = useAuth();

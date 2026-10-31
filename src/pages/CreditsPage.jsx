@@ -6,7 +6,7 @@ import { cashAmount as money } from "../services/format.js";
 import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
 import ModuleLink from '../shared/ui/ModuleLink.jsx';
 import { pathForRecord } from '../config/routes.js';
-import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
+import { formatPaymentDate, parsePaymentDate, toLocalIsoDate } from "../services/date.js";
 import { total } from "../shared/utils/aggregate.js";
 import {
   baseCreditDate,
@@ -223,7 +223,7 @@ function CreditsPage({
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `kreditler-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `kreditler-${toLocalIsoDate()}.csv`;
     link.click();
     URL.revokeObjectURL(downloadUrl);
   };
@@ -484,7 +484,7 @@ function CreditsPage({
 }
 
 export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose }) {
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(toLocalIsoDate());
   const requiredInitial = Number(item.credit.requiredInitial ?? item.credit.initialPayment ?? 0);
   const initialPaid = Number(item.credit.initialPaid ?? 0);
   const initialRemaining = Number(Math.max(0, requiredInitial - initialPaid).toFixed(2));

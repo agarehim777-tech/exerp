@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { toLocalIsoDate } from "../../services/date.js";
 import { useBlobReconciliation } from "../../shared/hooks/useBlobReconciliation.js";
 import { useOperationalHealth } from "../../shared/hooks/useOperationalHealth.js";
 import { useRecoveryStatus } from "../../shared/hooks/useRecoveryStatus.js";
@@ -61,7 +62,7 @@ export default function DataReconciliationPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `barisdirma-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `barisdirma-${toLocalIsoDate()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

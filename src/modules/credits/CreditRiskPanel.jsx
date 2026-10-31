@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { useCreditPortfolio } from "../../shared/hooks/useCreditPortfolio.js";
 import { money } from "../../services/format.js";
+import { toLocalIsoDate } from "../../services/date.js";
 
 const stages = ["current", "reminder", "soft_collection", "hard_collection", "legal", "restructured", "closed"];
 export function CreditRiskPanel() {
@@ -34,7 +35,7 @@ export function CreditRiskPanel() {
       {message && <div className="inline-alert danger">{message}</div>}
       <div className="credit-workflow-grid">
         <form onSubmit={async event => { event.preventDefault(); const values=Object.fromEntries(new FormData(event.currentTarget)); try { await restructure({ creditId:selected.id,term:values.term,startDate:values.startDate,reason:values.reason }); setMessage("Yeni müqavilə və ödəniş cədvəli yaradıldı."); } catch(nextError){setMessage(nextError.message);} }} className="workflow-form">
-          <h3>Restrukturizasiya</h3><label>Müddət<select name="term" defaultValue="12">{[2,3,4,5,6,12,18,24,36,48].map(term=><option key={term} value={term}>{term} ay</option>)}</select></label><label>Başlanğıc tarixi<input required name="startDate" type="date" defaultValue={new Date().toISOString().slice(0,10)}/></label><label>Səbəb<textarea required name="reason" /></label><button className="primary-btn">Yeni cədvəl yarat</button>
+          <h3>Restrukturizasiya</h3><label>Müddət<select name="term" defaultValue="12">{[2,3,4,5,6,12,18,24,36,48].map(term=><option key={term} value={term}>{term} ay</option>)}</select></label><label>Başlanğıc tarixi<input required name="startDate" type="date" defaultValue={toLocalIsoDate()}/></label><label>Səbəb<textarea required name="reason" /></label><button className="primary-btn">Yeni cədvəl yarat</button>
         </form>
         <form onSubmit={async event => { event.preventDefault(); const values=Object.fromEntries(new FormData(event.currentTarget)); try { await requestAdjustment({creditId:selected.id,type:values.type,amount:values.amount,reason:values.reason}); setMessage("Təsdiq gözləyən düzəliş yaradıldı."); setHistory(await audit(selected.id)); } catch(nextError){setMessage(nextError.message);} }} className="workflow-form">
           <h3>Qismən bağlanış / güzəşt</h3><label>Növ<select name="type"><option value="waiver">Güzəşt</option><option value="principal">Qismən bağlanış</option><option value="penalty">Cərimə düzəlişi</option></select></label><label>Məbləğ<input required min="0.01" step="0.01" name="amount" type="number" /></label><label>Səbəb<textarea required name="reason" /></label><button className="secondary-btn">Təsdiqə göndər</button>

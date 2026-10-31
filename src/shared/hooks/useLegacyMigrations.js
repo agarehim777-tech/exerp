@@ -5,6 +5,7 @@ import { money, normalize } from "../../services/format.js";
 import { appendAudit } from "../../services/persistence.js";
 import { getOrderSellerBonuses } from "../lib/appDomain.jsx";
 import { buildPayrollExpense } from "../lib/appHelpers.jsx";
+import { toLocalIsoDate } from "../../services/date.js";
 
 // One-off repairs for tenants that still run with VITE_ENABLE_LEGACY_WRITES.
 // Every effect is a no-op when legacy writes are disabled (the production default).
@@ -87,7 +88,7 @@ export function useLegacyOrderMigrations({ activeTenantId, tenantStateReady, dbO
       for (const { dbOrder, allocations } of pending) {
         const { error } = await supabase.rpc("set_order_bonus_assignments", {
           _order_id: dbOrder.id,
-          _effective_from: dbOrder.order_date || new Date().toISOString().slice(0, 10),
+          _effective_from: dbOrder.order_date || toLocalIsoDate(),
           _allocations: allocations,
           _reason: "Əvvəlki satış məlumatından avtomatik bərpa",
         });

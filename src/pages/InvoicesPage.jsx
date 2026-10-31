@@ -4,6 +4,7 @@ import { money, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { InvoicePrintModal, buildInvoiceAgingRows, buildInvoiceControlSummary } from "../shared/lib/appDomain.jsx";
+import { toLocalIsoDate } from "../services/date.js";
 export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, onExport, onOpenSalesOrder }) {
   const [invoiceFilter, setInvoiceFilter] = useState("Hamısı");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -33,7 +34,7 @@ export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, 
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `fakturalar-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `fakturalar-${toLocalIsoDate()}.csv`;
     link.click();
     URL.revokeObjectURL(downloadUrl);
     onExport?.(`Faktura PDF/Excel (${visibleInvoices.length} faktura)`);

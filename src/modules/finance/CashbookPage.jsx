@@ -6,6 +6,7 @@ import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import { cashAmount } from "../../services/format.js";
 import { DataTable, Tabs } from '../../shared/ui/primitives.jsx';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
+import { toLocalIsoDate } from "../../services/date.js";
 import {
   badge, card, delBtn, input, msgBox, primaryBtn,
   statLabel, statTile, statValue,
@@ -65,7 +66,7 @@ export default function CashbookPage() {
 
 function AccountsPanel({ book }) {
   const [form, setForm] = useState({ name: "", type: "bank", currency: "AZN", account_no: "", opening_balance: "" });
-  const [transfer, setTransfer] = useState({ fromAccountId: "", toAccountId: "", amount: "", occurredAt: new Date().toISOString().slice(0, 10), description: "" });
+  const [transfer, setTransfer] = useState({ fromAccountId: "", toAccountId: "", amount: "", occurredAt: toLocalIsoDate(), description: "" });
   const [openForm, setOpenForm] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -130,7 +131,7 @@ function AccountsPanel({ book }) {
 }
 
 function TransactionsPanel({ book, tenantId }) {
-  const [form, setForm] = useState({ account_id: "", direction: "in", amount: "", category: "", customer_id: "", counterparty: "", description: "", occurred_at: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ account_id: "", direction: "in", amount: "", category: "", customer_id: "", counterparty: "", description: "", occurred_at: toLocalIsoDate() });
   const [msg, setMsg] = useState("");
   const [search, setSearch] = useState("");
   const [hiddenIds, setHiddenIds] = useState(new Set());
@@ -287,7 +288,7 @@ function TransactionsPanel({ book, tenantId }) {
 }
 
 function ExpensesPanel({ book, canApprove }) {
-  const [form, setForm] = useState({ account_id: "", category: "digər", description: "", amount: "", vat_amount: "", expense_date: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ account_id: "", category: "digər", description: "", amount: "", vat_amount: "", expense_date: toLocalIsoDate() });
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(null);
   const [openCreate, setOpenCreate] = useState(false);

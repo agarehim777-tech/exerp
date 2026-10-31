@@ -5,6 +5,7 @@ import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 import { ensureMainCashAccount } from '../../services/cashAccounts';
 import { readOrderById, readOrderPage, readOrderRelations } from '../../services/orderRead.js';
+import { toLocalIsoDate } from '../../services/date.js';
 
 const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
 
@@ -61,7 +62,7 @@ export function buildMissingCreditDraft(order) {
     initialPayment: paid,
     requiredInitial: paid,
     termMonths: 12,
-    orderDate: order.order_date || new Date().toISOString().slice(0, 10),
+    orderDate: order.order_date || toLocalIsoDate(),
   };
 }
 
@@ -175,7 +176,7 @@ export function useOrders(tenantId) {
       _initial_payment: Number(credit.initial_payment || 0),
       _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
       _term_months: Number(credit.term_months || 12),
-      _start_date: credit.start_date || new Date().toISOString().slice(0, 10),
+      _start_date: credit.start_date || toLocalIsoDate(),
     };
     let result = await supabase.rpc('create_credit_contract', params);
     if (result.error && isMissingRpc(result.error)) {
@@ -238,7 +239,7 @@ export function useOrders(tenantId) {
     if (!orderId || !normalized.length) return;
     const { error: bonusError } = await supabase.rpc('set_order_bonus_assignments', {
       _order_id: orderId,
-      _effective_from: effectiveFrom || new Date().toISOString().slice(0, 10),
+      _effective_from: effectiveFrom || toLocalIsoDate(),
       _allocations: normalized,
       _reason: reason || 'Sifariş yaradılarkən təyin edilib',
     });
@@ -287,7 +288,7 @@ export function useOrders(tenantId) {
       try {
         const completeResult = await createSalesOrderComplete({
           tenantId, requestKey, orderNo: header.order_no, customerId: header.customer_id,
-          orderDate: header.order_date || new Date().toISOString().slice(0, 10),
+          orderDate: header.order_date || toLocalIsoDate(),
           currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
           bonusAllocations, initialPayment, accountId: resolvedAccount?.id || null,
         });
@@ -319,7 +320,7 @@ export function useOrders(tenantId) {
         _request_key: requestKey,
         _order_no: header.order_no,
         _customer_id: header.customer_id,
-        _order_date: header.order_date || new Date().toISOString().slice(0, 10),
+        _order_date: header.order_date || toLocalIsoDate(),
         _currency: header.currency || 'AZN',
         _notes: header.notes || null,
         _items: items,
@@ -340,7 +341,7 @@ export function useOrders(tenantId) {
       _tenant_id: tenantId,
       _order_no: header.order_no,
       _customer_id: header.customer_id || null,
-      _order_date: header.order_date || new Date().toISOString().slice(0, 10),
+      _order_date: header.order_date || toLocalIsoDate(),
       _currency: header.currency || 'AZN',
       _notes: header.notes || null,
       _items: items,
@@ -455,7 +456,7 @@ export function useOrders(tenantId) {
       customer_id: order.customer_id || order.customer?.id || null,
       reference: order.order_no,
       description: `${order.order_no} sifarişi üzrə müştəri ödənişi`,
-      occurred_at: new Date().toISOString().slice(0, 10),
+      occurred_at: toLocalIsoDate(),
     }).select('id').single();
     if (cashError) throw cashError;
 

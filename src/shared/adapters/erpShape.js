@@ -1,3 +1,4 @@
+import { toLocalIsoDate } from "../../services/date.js";
 // Adapters bridging Supabase DB shape <-> legacy App.jsx state shape.
 // Non-destructive: fills in fields the 100+ report/build* functions expect.
 
@@ -165,7 +166,7 @@ export function legacyOrderToDb(o, { tenantId, customersByName = new Map() } = {
     tenant_id: tenantId,
     order_no: o.orderNo || `SO-${Date.now()}`,
     customer_id: customerId,
-    order_date: o.date || new Date().toISOString().slice(0, 10),
+    order_date: o.date || toLocalIsoDate(),
     currency: o.currency || "AZN",
     notes: o.notes || null,
     items,

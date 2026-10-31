@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
+import { toLocalIsoDate } from '../../services/date';
 import {
   buildProfitAndLoss,
   buildBalanceSheet,
@@ -107,13 +108,16 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
     const rows = Array.from({ length: 3 }, (_, index) => {
       const start = new Date(today.getFullYear(), today.getMonth() + index + 1, 1);
       const end = new Date(today.getFullYear(), today.getMonth() + index + 2, 0);
+      // Compared as calendar dates: new Date("YYYY-MM-DD") is UTC midnight, 04:00 in Baku, which fell
+      // after `end` (local midnight) and dropped invoices due on the last day of the month.
+      const [from, to] = [toLocalIsoDate(start), toLocalIsoDate(end)];
       const expectedInflow = invoices.filter(invoice => {
-        const due = new Date(invoice.due_date || invoice.invoice_date || "");
-        return due >= start && due <= end && Number(invoice.total || 0) > Number(invoice.paid_amount || 0);
+        const due = String(invoice.due_date || invoice.invoice_date || "").slice(0, 10);
+        return due >= from && due <= to && Number(invoice.total || 0) > Number(invoice.paid_amount || 0);
       }).reduce((sum, invoice) => sum + Math.max(0, Number(invoice.total || 0) - Number(invoice.paid_amount || 0)), 0);
       const expectedOutflow = monthlyOutflow;
       cumulative += expectedInflow - expectedOutflow;
-      return { month: start.toISOString().slice(0, 7), expectedInflow, expectedOutflow, net: expectedInflow - expectedOutflow, cumulative };
+      return { month: toLocalIsoDate(start).slice(0, 7), expectedInflow, expectedOutflow, net: expectedInflow - expectedOutflow, cumulative };
     });
     return { rows, opening: cashFlow.net, monthlyOutflow };
   }, [cashFlow, invoices, range.to]);

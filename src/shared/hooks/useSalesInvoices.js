@@ -5,6 +5,7 @@ import { useTenantRequestScope } from './useTenantRequestScope.js';
 import { createInvoiceCommand, createInvoicePaymentCommand } from '../../services/salesInvoices.js';
 import { financeRpcError } from '../../services/financeLedger.js';
 import { readSalesInvoicePage } from '../../services/billingRead.js';
+import { toLocalIsoDate } from '../../services/date.js';
 
 const INVOICES_PAGE_SIZE = 200;
 
@@ -68,8 +69,8 @@ export function useSalesInvoices(tenantId) {
   // Sifarişdən avtomatik faktura kəsimi (sətirlər sifariş sətirlərindən gəlir).
   const createFromOrder = async (order, { invoice_date, due_date, payment_terms_days = 14 } = {}) => {
     const invoiceNo = await nextInvoiceNo();
-    const issued = invoice_date || new Date().toISOString().slice(0, 10);
-    const due = due_date || new Date(Date.now() + payment_terms_days * 86400000).toISOString().slice(0, 10);
+    const issued = invoice_date || toLocalIsoDate();
+    const due = due_date || toLocalIsoDate(new Date(Date.now() + payment_terms_days * 86400000));
     const lines = (order.items || []).map((item) => ({
       product_id: item.product_id || null,
       description: item.description || null,
@@ -94,8 +95,8 @@ export function useSalesInvoices(tenantId) {
   // Layihədən faktura (mərhələ/faiz üzrə).
   const createFromProject = async (project, { customer_id, percent = 100, vat_rate = 18, invoice_date, due_date, payment_terms_days = 14 } = {}) => {
     const invoiceNo = await nextInvoiceNo();
-    const issued = invoice_date || new Date().toISOString().slice(0, 10);
-    const due = due_date || new Date(Date.now() + payment_terms_days * 86400000).toISOString().slice(0, 10);
+    const issued = invoice_date || toLocalIsoDate();
+    const due = due_date || toLocalIsoDate(new Date(Date.now() + payment_terms_days * 86400000));
     const amount = Number(((Number(project.budget) || 0) * (Number(percent) || 0)) / 100);
     if (amount <= 0) throw new Error('Layihə məbləği sıfırdır — faktura kəsilə bilməz.');
     return create({

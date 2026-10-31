@@ -3,9 +3,10 @@ import { Calculator, CheckCircle2, PackageCheck, Plus, RefreshCw, Save, Ship, Tr
 import { supabase } from '../../integrations/supabase/client';
 import { calculateLandedCost } from './landedCost.js';
 import { getCostingLines, listShipments, recalculateShipment, receiveShipment, removeShipmentCost, removeShipmentLine, saveShipment, saveShipmentCost, saveShipmentLine, updateShipmentWarehouse } from './landedCostService.js';
+import { toLocalIsoDate } from '../../services/date.js';
 import { nextDailyProcurementNo, shortProcurementDocumentNo } from './documentNumbers.js';
 import { appPrompt } from '../../shared/ui/dialogService.js';
-const today=()=>new Date().toISOString().slice(0,10); const money=n=>`${Number(n||0).toFixed(2)} ₼`;
+const today=()=>toLocalIsoDate(); const money=n=>`${Number(n||0).toFixed(2)} ₼`;
 const costTypes={customs_duty:'Gömrük rüsumu',customs_clearance:'Gömrük rəsmiləşdirilməsi',broker:'Broker xidməti',international_freight:'Beynəlxalq nəqliyyat',local_freight:'Yerli nəqliyyat',terminal:'Terminal',insurance:'Sığorta',certification:'Sertifikatlaşdırma',other:'Digər'};
 const methods={invoice_value:'Invoice dəyərinə görə',volume:'Həcmə görə',weight:'Çəkiyə görə',quantity:'Miqdara görə',equal:'Bərabər',direct:'Məhsula birbaşa',manual:'Əl ilə'};
 const statusLabels={draft:'Qaralama',in_transit:'Yoldadır',arrived:'Çatıb',costing:'Maya hesablanır',costed:'Maya təsdiqlənib',received:'Tamamlandı',closed:'Bağlanıb',cancelled:'Ləğv edilib'};
