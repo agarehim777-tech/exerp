@@ -38,6 +38,10 @@ it('always lists pending migrations over the database URL and only pushes them i
   expect(step('Apply ordered migrations')).toContain("if: ${{ inputs.mode == 'apply' }}");
   expect(step('Apply ordered migrations')).not.toContain('--dry-run');
   expect(workflow).not.toContain('supabase@2.39.2 link');
+  expect(workflow).not.toContain('secrets.STAGING_DB_URL');
+  expect(step('Build staging database URL')).toContain('node scripts/staging-db-url.mjs');
+  expect(step('Build staging database URL')).toContain('secrets.SUPABASE_DB_PASSWORD');
+  expect(workflow.indexOf('- name: Build staging database URL')).toBeLessThan(workflow.indexOf('- name: Staging-only safety gate'));
   expect(workflow).toContain('environment: staging');
   expect(workflow).toContain('group: staging-audit-tenant');
 });
