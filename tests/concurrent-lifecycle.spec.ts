@@ -24,8 +24,8 @@ test('@lifecycle stale credit numbers remain unique across concurrent sales and 
     expect(created).toHaveLength(2);
     const credits = await call('get', `credit_contracts?tenant_id=eq.${tenantId}&id=in.(${created.map(row => row.credit_id).join(',')})&select=id,contract_no`);
     expect(credits).toHaveLength(2);
-    expect(new Set(credits.map(row => row.contract_no)).size).toBe(2);
-    expect(credits.every(row => /^İN-[0-9]+$/.test(row.contract_no))).toBe(true);
+    expect(new Set(credits.map((row: { contract_no: string }) => row.contract_no)).size).toBe(2);
+    expect(credits.every((row: { contract_no: string }) => /^İN-[0-9]+$/.test(row.contract_no))).toBe(true);
     for (let index = 0; index < commands.length; index++) {
       expect(await call('post', 'rpc/create_sales_order_complete', commands[index])).toEqual(created[index]);
     }
