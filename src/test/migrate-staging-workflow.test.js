@@ -10,26 +10,34 @@ const gate = step('Staging-only safety gate').split('run: |\n')[1].split('\n').m
 const runGate = (env) => spawnSync('bash', ['-c', gate], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' }).status;
 
 const STAGING = 'cvjctwgdyzhijhzhhjqd';
+const PRODUCTION = 'tcqdhwtnjrwpfdxoijmv';
+const pooler = (ref) => `postgresql://postgres.${ref}:test-only@aws-0-eu-central-1.pooler.supabase.com:5432/postgres`;
+const staging = { STAGING_PROJECT_REF: STAGING, STAGING_DB_URL: pooler(STAGING) };
 
 it('lets a dry run through and gates apply behind the explicit confirmation', () => {
-  expect(runGate({ STAGING_PROJECT_REF: STAGING, MODE: 'plan', MIGRATION_CONFIRMATION: '' })).toBe(0);
-  expect(runGate({ STAGING_PROJECT_REF: STAGING, MODE: 'apply', MIGRATION_CONFIRMATION: '' })).not.toBe(0);
-  expect(runGate({ STAGING_PROJECT_REF: STAGING, MODE: 'apply', MIGRATION_CONFIRMATION: 'MIGRATE' })).not.toBe(0);
-  expect(runGate({ STAGING_PROJECT_REF: STAGING, MODE: 'apply', MIGRATION_CONFIRMATION: 'MIGRATE STAGING' })).toBe(0);
+  expect(runGate({ ...staging, MODE: 'plan', MIGRATION_CONFIRMATION: '' })).toBe(0);
+  expect(runGate({ ...staging, MODE: 'apply', MIGRATION_CONFIRMATION: '' })).not.toBe(0);
+  expect(runGate({ ...staging, MODE: 'apply', MIGRATION_CONFIRMATION: 'MIGRATE' })).not.toBe(0);
+  expect(runGate({ ...staging, MODE: 'apply', MIGRATION_CONFIRMATION: 'MIGRATE STAGING' })).toBe(0);
 });
 
-it('refuses the production project and a missing staging ref even with confirmation', () => {
+it('refuses production, a missing ref and a database URL for another project even with confirmation', () => {
   const confirmed = { MODE: 'apply', MIGRATION_CONFIRMATION: 'MIGRATE STAGING' };
-  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: 'tcqdhwtnjrwpfdxoijmv' })).not.toBe(0);
-  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: '' })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: PRODUCTION, STAGING_DB_URL: pooler(PRODUCTION) })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: '', STAGING_DB_URL: pooler(STAGING) })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: STAGING, STAGING_DB_URL: '' })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: STAGING, STAGING_DB_URL: pooler(PRODUCTION) })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: STAGING, STAGING_DB_URL: pooler('abcdefghijklmnopqrst') })).not.toBe(0);
+  expect(runGate({ ...confirmed, STAGING_PROJECT_REF: STAGING,
+    STAGING_DB_URL: `${pooler(STAGING)}?options=${PRODUCTION}` })).not.toBe(0);
 });
 
-it('always lists pending migrations and only pushes them in apply mode, after the audit queue', () => {
-  expect(step('List pending migrations (dry run)')).toContain('--dry-run');
+it('always lists pending migrations over the database URL and only pushes them in apply mode', () => {
+  expect(step('List pending migrations (dry run)')).toContain('--db-url "$STAGING_DB_URL" --include-all --dry-run');
   expect(step('List pending migrations (dry run)')).not.toContain('if:');
   expect(step('Apply ordered migrations')).toContain("if: ${{ inputs.mode == 'apply' }}");
   expect(step('Apply ordered migrations')).not.toContain('--dry-run');
+  expect(workflow).not.toContain('supabase@2.39.2 link');
   expect(workflow).toContain('environment: staging');
   expect(workflow).toContain('group: staging-audit-tenant');
-  expect(workflow).not.toContain('--project-ref tcqdhwtnjrwpfdxoijmv');
 });
