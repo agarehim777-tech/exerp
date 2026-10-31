@@ -16,14 +16,14 @@ async function readPages(query, limit, isCurrent) {
 
 export function readOrderPage(tenantId, limit, isCurrent) {
   return readPages(() => supabase.from('orders')
-    .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,order_item_id,status)', { count: 'exact' })
+    .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,status)', { count: 'exact' })
     .eq('tenant_id', tenantId).neq('status', 'cancelled')
     .order('order_date', { ascending: false }).order('created_at', { ascending: false }).order('id'), limit, isCurrent);
 }
 
 export async function readOrderById(tenantId, orderId, isCurrent) {
   const { data, error } = await supabase.from('orders')
-    .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,order_item_id,status)')
+    .select('*, customer:customers(id,name), items:order_items(*), reservations:stock_reservations(warehouse_id,status)')
     .eq('tenant_id', tenantId).eq('id', orderId).neq('status', 'cancelled').maybeSingle();
   if (!isCurrent()) return null;
   if (error) throw error;
