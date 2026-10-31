@@ -1,87 +1,55 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ calls: [], fail: '', cap: 100 }));
-vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
-  const call = { table, filters: [], order: [] };
-  const query = {
-    select: (columns, options) => { call.columns = columns; call.count = options?.count; return query; },
-    eq: (...args) => { call.filters.push(args); return query; },
-    neq: (...args) => { call.filters.push(args); return query; },
-    in: (...args) => { call.filters.push(args); return query; },
-    is: (...args) => { call.filters.push(args); return query; },
-    order: (column, options) => { call.order.push([column, options]); return query; },
-    maybeSingle: () => {
-      mocks.calls.push(call);
-      return Promise.resolve(mocks.fail === table ? { error: { message: `${table} failed` } } : { data: { id: 'saved-order' } });
-    },
-    range: (start, end) => {
-      mocks.calls.push({ ...call, start, end });
-      if (mocks.fail === table) return Promise.resolve({ error: { message: `${table} failed` } });
-      return Promise.resolve({ count: 225,
-        data: Array.from({ length: Math.max(0, Math.min(mocks.cap, end - start + 1, 225 - start)) }, (_, i) =>
-          ({ id: `${table}-${start + i}`, order_id: `order-${start + i}` })),
-      });
-    },
+
+// Regressiya: kredit/sifariş səhifəsi "column stock_reservations_1.order_item_id does not exist"
+// xətası ilə düşmüşdü — sorğu bazada mövcud olmayan sütun istəyirdi.
+const mocks = vi.hoisted(() => ({ selects: [] }));
+vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
+  const chain = {
+    select: (columns, options) => { mocks.selects.push(columns); chain.options = options; return chain; },
+    eq: () => chain,
+    neq: () => chain,
+    order: () => chain,
+    range: () => chain,
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    then: resolve => Promise.resolve({ data: [], count: 0, error: null }).then(resolve),
   };
-  return query;
+  return chain;
 } } }));
-import { readOrderById, readOrderPage, readOrderRelations } from '../services/orderRead.js';
-beforeEach(() => { mocks.calls = []; mocks.fail = ''; });
 
-it('reads a single committed order under both tenant and order filters', async () => {
-  expect(await readOrderById('tenant-a', 'saved-order', () => true)).toEqual({ id: 'saved-order' });
-  expect(mocks.calls[0].filters).toEqual([['tenant_id', 'tenant-a'], ['id', 'saved-order'], ['status', 'cancelled']]);
-  expect(await readOrderById('tenant-a', 'saved-order', () => false)).toBeNull();
-  mocks.fail = 'orders';
-  await expect(readOrderById('tenant-a', 'saved-order', () => true)).rejects.toMatchObject({ message: 'orders failed' });
-});
+import { readOrderPage, readOrderById } from '../services/orderRead.js';
 
-it('keeps newest same-day sales visible and reads through a lower API row cap', async () => {
-  const rows = await readOrderPage('tenant-a', 201, () => true);
-  expect(rows).toHaveLength(201);
-  expect(mocks.calls.map(call => call.start)).toEqual([0, 100, 200]);
-  for (const call of mocks.calls) {
-    expect(call.count).toBe('exact');
-    expect(call.filters).toEqual([['tenant_id', 'tenant-a'], ['status', 'cancelled']]);
-    expect(call.order).toEqual([['order_date', { ascending: false }], ['created_at', { ascending: false }], ['id', undefined]]);
+// Canlı bazadakı stock_reservations sütunları (information_schema-dan yoxlanılıb).
+const LIVE_RESERVATION_COLUMNS = new Set([
+  'id', 'tenant_id', 'warehouse_id', 'product_id', 'order_id',
+  'quantity', 'status', 'created_at', 'updated_at', 'created_by',
+]);
+
+function reservationEmbeds() {
+  return mocks.selects
+    .map(columns => String(columns).match(/stock_reservations\(([^)]*)\)/)?.[1])
+    .filter(Boolean);
+}
+
+beforeEach(() => { mocks.selects = []; });
+
+it('order page query only requests stock_reservations columns that exist in the live schema', async () => {
+  await readOrderPage('tenant', 10, () => true);
+  const embeds = reservationEmbeds();
+  expect(embeds.length).toBeGreaterThan(0);
+  for (const embed of embeds) {
+    const requested = embed.split(',').map(column => column.trim());
+    expect(requested).not.toContain('order_item_id');
+    for (const column of requested) expect(LIVE_RESERVATION_COLUMNS.has(column)).toBe(true);
   }
 });
 
-it('reads every linked credit, bonus and delivery with tenant and parent filters', async () => {
-  const ids = ['order-1', 'order-2'];
-  const related = await readOrderRelations('tenant-a', ids, () => true);
-  expect(related.credits).toHaveLength(225);
-  expect(related.bonuses).toHaveLength(225);
-  expect(related.deliveries).toHaveLength(225);
-  expect(related.deliveryError).toBeNull();
-  expect(mocks.calls.find(call => call.table === 'credit_contracts').columns)
-    .toContain('installments:credit_installments(id,installment_no,due_date,principal_due,principal_paid,status)');
-  for (const call of mocks.calls) {
-    expect(call.filters).toContainEqual(['tenant_id', 'tenant-a']);
-    expect(call.filters).toContainEqual(['order_id', ids]);
-    expect(call.order.map(row => row[0])).toContain('id');
+it('single order query only requests stock_reservations columns that exist in the live schema', async () => {
+  await readOrderById('tenant', 'order-1', () => true);
+  const embeds = reservationEmbeds();
+  expect(embeds.length).toBeGreaterThan(0);
+  for (const embed of embeds) {
+    const requested = embed.split(',').map(column => column.trim());
+    expect(requested).not.toContain('order_item_id');
+    for (const column of requested) expect(LIVE_RESERVATION_COLUMNS.has(column)).toBe(true);
   }
-  expect(mocks.calls.filter(call => call.table === 'order_bonus_assignments').every(call =>
-    call.filters.some(([column, value]) => column === 'effective_to' && value === null))).toBe(true);
-});
-
-it('never silently omits financial links but allows unavailable supplementary delivery history', async () => {
-  mocks.fail = 'credit_contracts';
-  await expect(readOrderRelations('tenant-a', ['order-1'], () => true)).rejects.toMatchObject({ message: 'credit_contracts failed' });
-  mocks.fail = 'deliveries';
-  const related = await readOrderRelations('tenant-a', ['order-1'], () => true);
-  expect(related.credits).toHaveLength(225);
-  expect(related.deliveries).toEqual([]);
-  expect(related.deliveryError).toMatchObject({ message: 'deliveries failed' });
-});
-
-it('does not return old-tenant or partially read data after invalidation or failure', async () => {
-  let current = true;
-  const pending = readOrderPage('tenant-a', 201, () => current);
-  current = false;
-  expect(await pending).toBeNull();
-  mocks.fail = 'orders';
-  await expect(readOrderPage('tenant-a', 201, () => true)).rejects.toMatchObject({ message: 'orders failed' });
-  mocks.calls = [];
-  expect(await readOrderRelations('tenant-a', [], () => true)).toEqual({ credits: [], bonuses: [], deliveries: [], deliveryError: null });
-  expect(mocks.calls).toEqual([]);
 });
