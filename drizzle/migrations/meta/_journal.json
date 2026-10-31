@@ -8,6 +8,13 @@
       "when": 1793453860648,
       "tag": "0000_recoverable_vat_account",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793453939988,
+      "tag": "0001_expense_status_canonical",
+      "breakpoints": true
     }
   ]
 }
