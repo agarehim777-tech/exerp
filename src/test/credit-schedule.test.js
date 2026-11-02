@@ -162,4 +162,37 @@ describe("month-end credit schedules", () => {
   });
 });
 
+describe("credit preview matches the server schedule", () => {
+  // Expected values are what start_credit_contract writes: ceil to whole manats for the regular
+  // installments, the cents-exact remainder on the last one.
+  const cases = [
+    { total: 1000, initialPayment: 0, months: 12, balance: 1000, monthly: 84, last: 76 },
+    { total: 2000, initialPayment: 500, months: 18, balance: 1500, monthly: 84, last: 72 },
+    { total: 1234.56, initialPayment: 100.4, months: 12, balance: 1134.16, monthly: 95, last: 89.16 },
+    { total: 999.5, initialPayment: 0, months: 6, balance: 999.5, monthly: 167, last: 164.5 },
+    { total: 1200, initialPayment: 0, months: 12, balance: 1200, monthly: 100, last: 100 },
+  ];
 
+  it.each(cases)("$total - $initialPayment over $months months", ({ balance, monthly, last, ...input }) => {
+    const plan = buildCreditPlan({ ...input, startDate: "2026-01-10" });
+    expect(plan.balance).toBe(balance);
+    expect(plan.installments.slice(0, -1).every((row) => row.amount === monthly)).toBe(true);
+    expect(plan.monthly).toBe(monthly);
+    expect(plan.lastPayment).toBe(last);
+    expect(Math.round(sumInstallments(plan) * 100) / 100).toBe(balance);
+  });
+
+  it("rounds down instead when rounding up would leave no last installment", () => {
+    // ceil(100 / 48) = 3 would need 141 manat over 47 months, so the server uses floor = 2.
+    const plan = buildCreditPlan({ total: 100, months: 48, startDate: "2026-01-10" });
+    expect(plan.monthly).toBe(2);
+    expect(plan.lastPayment).toBe(6);
+    expect(sumInstallments(plan)).toBe(100);
+  });
+
+  it("keeps the cents of the total and the initial payment", () => {
+    const plan = buildCreditPlan({ total: 1234.56, initialPayment: 100.4, months: 12 });
+    expect(plan.total).toBe(1234.56);
+    expect(plan.initialPayment).toBe(100.4);
+  });
+});

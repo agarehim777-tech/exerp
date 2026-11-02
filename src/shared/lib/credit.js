@@ -28,22 +28,26 @@ export function getCreditPlanStartDate(credit) {
 
 export function buildCreditPlan({ total, initialPayment = 0, months = 12, startDate = baseCreditDate }) {
   const term = creditTermOptions.includes(Number(months)) ? Number(months) : 12;
-  const totalAmount = Math.max(0, Math.round(Number(total || 0)));
-  const upfront = Math.min(totalAmount, Math.max(0, Math.round(Number(initialPayment || 0))));
-  const balance = Math.max(0, totalAmount - upfront);
-  let regularPayment = balance > 0 ? Math.round(balance / term) : 0;
+  // Same rule as the server's start_credit_contract, which writes the real schedule: the financed
+  // amount keeps its cents, monthly installments are whole manats rounded up, and the last
+  // installment takes the remainder (rounded down instead if rounding up would leave it at zero).
+  // Worked in cents so the float division cannot nudge ceil/floor.
+  const totalAmount = Math.max(0, round2(Number(total || 0)));
+  const upfront = Math.min(totalAmount, Math.max(0, round2(Number(initialPayment || 0))));
+  const balanceCents = Math.max(0, Math.round((totalAmount - upfront) * 100));
+  const balance = balanceCents / 100;
+  let regularPayment = Math.ceil(balanceCents / (term * 100));
 
-  if (term > 1 && regularPayment * (term - 1) >= balance) {
-    regularPayment = Math.floor(balance / term);
+  if (balanceCents - regularPayment * 100 * (term - 1) <= 0) {
+    regularPayment = Math.floor(balanceCents / (term * 100));
   }
 
+  const lastPaymentCents = balanceCents - regularPayment * 100 * (term - 1);
   const installments = [];
-  let accumulated = 0;
 
   for (let month = 1; month <= term; month += 1) {
     const isLast = month === term;
-    const amount = isLast ? Math.max(0, balance - accumulated) : regularPayment;
-    accumulated += amount;
+    const amount = isLast ? Math.max(0, lastPaymentCents) / 100 : regularPayment;
     installments.push({
       month,
       amount,
