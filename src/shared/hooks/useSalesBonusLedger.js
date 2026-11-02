@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useRealtimeResync } from "./useRealtimeResync";
-import { readAllRows } from "../../services/readAllRows";
+import { readAllRows, readRowsByIds } from "../../services/readAllRows";
 
 export function useSalesBonusLedger(tenantId) {
   const [assignments, setAssignments] = useState([]);
@@ -25,15 +25,15 @@ export function useSalesBonusLedger(tenantId) {
       let ordersById = new Map();
       let customersById = new Map();
       if (orderIds.length) {
-        const { data: orderRows, error: orderError } = await supabase.from("orders")
-          .select("id,order_no,customer_id").eq("tenant_id", tenantId).in("id", orderIds);
+        const { data: orderRows, error: orderError } = await readRowsByIds(orderIds, (chunk) => supabase.from("orders")
+          .select("id,order_no,customer_id").eq("tenant_id", tenantId).in("id", chunk).order("id"));
         if (orderError) setError(orderError);
         else {
           ordersById = new Map((orderRows || []).map((row) => [row.id, row]));
           const customerIds = [...new Set((orderRows || []).map((row) => row.customer_id).filter(Boolean))];
           if (customerIds.length) {
-            const { data: customerRows, error: customerError } = await supabase.from("customers")
-              .select("id,name").eq("tenant_id", tenantId).in("id", customerIds);
+            const { data: customerRows, error: customerError } = await readRowsByIds(customerIds, (chunk) => supabase.from("customers")
+              .select("id,name").eq("tenant_id", tenantId).in("id", chunk).order("id"));
             if (customerError) setError(customerError);
             else customersById = new Map((customerRows || []).map((row) => [row.id, row]));
           }

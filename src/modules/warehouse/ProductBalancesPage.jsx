@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, CircleDollarSign, ExternalLink, History, Package, RotateCcw, ShoppingCart, Users, X } from "lucide-react";
 import { getRecommendedOrderPlan, WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
 import { supabase } from "../../integrations/supabase/client";
+import { readAllRows, readRowsByIds } from "../../services/readAllRows.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { shortProcurementDocumentNo } from "../procurement/documentNumbers.js";
 import ProductReturnsPanel from "./ProductReturnsPanel.jsx";
@@ -167,20 +168,20 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
     if (!activeTenantId) { setLivePurchaseOrders([]); return; }
     let active = true;
     (async () => {
-      const { data: pos, error: poError } = await supabase.from("purchase_orders").select("id,po_number,status,expected_date,currency").eq("tenant_id", activeTenantId).in("status", ["approved", "partial"]);
+      const { data: pos, error: poError } = await readAllRows(() => supabase.from("purchase_orders").select("id,po_number,status,expected_date,currency").eq("tenant_id", activeTenantId).in("status", ["approved", "partial"]).order("id"));
       if (poError) throw poError;
       const poIds = (pos || []).map((po) => po.id);
       if (!poIds.length) { if (active) setLivePurchaseOrders([]); return; }
       const [{ data: lines, error: lineError }, { data: grns, error: grnError }] = await Promise.all([
-        supabase.from("purchase_order_lines").select("id,po_id,product_id,product_sku,description,qty_ordered,unit_price").in("po_id", poIds),
-        supabase.from("goods_receipts").select("id,po_id").eq("tenant_id", activeTenantId).in("po_id", poIds),
+        readRowsByIds(poIds, (chunk) => supabase.from("purchase_order_lines").select("id,po_id,product_id,product_sku,description,qty_ordered,unit_price").in("po_id", chunk).order("id")),
+        readRowsByIds(poIds, (chunk) => supabase.from("goods_receipts").select("id,po_id").eq("tenant_id", activeTenantId).in("po_id", chunk).order("id")),
       ]);
       if (lineError) throw lineError;
       if (grnError) throw grnError;
       const grnIds = (grns || []).map((grn) => grn.id);
       let receiptLines = [];
       if (grnIds.length) {
-        const { data, error } = await supabase.from("goods_receipt_lines").select("grn_id,po_line_id,qty_received,qty_rejected").in("grn_id", grnIds);
+        const { data, error } = await readRowsByIds(grnIds, (chunk) => supabase.from("goods_receipt_lines").select("grn_id,po_line_id,qty_received,qty_rejected").in("grn_id", chunk).order("id"));
         if (error) throw error;
         receiptLines = data || [];
       }
