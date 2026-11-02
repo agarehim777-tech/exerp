@@ -3,6 +3,7 @@ import { expenseStatusToCode } from "./useExpensesSync.js";
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
 import { useTenantRequestScope } from './useTenantRequestScope.js';
+import { readAllRows } from '../../services/readAllRows.js';
 import { createExpenseCommand, createExpenseEditCommand, createTransferCommand, createRefundCommand, financeRpcError } from '../../services/financeLedger.js';
 
 
@@ -47,8 +48,8 @@ export function useCashbook(tenantId) {
         .order('expense_date', { ascending: false })
         .limit(300),
       supabase.from('expense_categories').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
-      supabase.from('customers').select('id,name,fin,phone').eq('tenant_id', tenantId).order('name'),
-      supabase.from('employees').select('id,user_id,full_name,position').eq('tenant_id', tenantId),
+      readAllRows(() => supabase.from('customers').select('id,name,fin,phone').eq('tenant_id', tenantId).order('name').order('id')),
+      readAllRows(() => supabase.from('employees').select('id,user_id,full_name,position').eq('tenant_id', tenantId).order('id')),
       supabase.rpc('cashbook_ledger_summary', { _tenant_id: tenantId }),
     ]);
     if (!isCurrent()) return;
