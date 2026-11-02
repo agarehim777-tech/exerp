@@ -4,6 +4,19 @@ import { useRealtimeResync } from "./useRealtimeResync";
 import { supabase } from "../../integrations/supabase/client";
 import { toLocalIsoDate } from "../../services/date.js";
 
+// The database stores canonical English status codes (shared with the cashbook
+// and the accept/cancel RPCs); the app state uses the Azerbaijani labels.
+const AZ_TO_CODE = {
+  "Təsdiq gözləyir": "pending", "Təsdiq edildi": "approved", "Qəbul edildi": "paid",
+  "Ləğv edildi": "cancelled", "İmtina edildi": "rejected",
+};
+const CODE_TO_AZ = {
+  pending: "Təsdiq gözləyir", draft: "Təsdiq gözləyir", approved: "Təsdiq edildi", paid: "Qəbul edildi",
+  cancelled: "Ləğv edildi", rejected: "İmtina edildi",
+};
+export const expenseStatusToCode = (status) => AZ_TO_CODE[status] || status || "pending";
+export const expenseStatusToLabel = (status) => CODE_TO_AZ[status] || status || "Təsdiq gözləyir";
+
 const SELECT_COLUMNS =
   "id,expense_no,description,category,amount,status,expense_date,note,source,currency,vat_amount";
 
@@ -15,7 +28,7 @@ export function expenseRowToApp(row) {
     amount: Number(row.amount || 0),
     currency: row.currency || "AZN",
     vat_amount: Number(row.vat_amount || 0),
-    status: row.status || "Təsdiq gözləyir",
+    status: expenseStatusToLabel(row.status),
     date: row.expense_date || null,
     note: row.note || "",
     source: row.source || "",
@@ -31,7 +44,7 @@ export function appExpenseToRow(expense, tenantId) {
     amount: Number(expense.amount || 0),
     vat_amount: Number(expense.vat_amount || 0),
     currency: expense.currency || "AZN",
-    status: expense.status || "Təsdiq gözləyir",
+    status: expenseStatusToCode(expense.status),
     expense_date: expense.date || toLocalIsoDate(),
     note: expense.note || null,
     source: expense.source || null,

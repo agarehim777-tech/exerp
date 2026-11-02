@@ -31,7 +31,7 @@ export function useBillingSources(tenantId) {
     setOrders(data.orders.map((o) => ({ ...o, billed: billedOrderIds.has(o.id) })));
     setProjects(data.projects.map((p) => ({ ...p, billed: billedProjectRefs.has(p.id) })));
     setLoadedScope(scope);
-    } catch (err) { if (isCurrent()) { setError(err); setLoadedScope(null); } }
+    } catch (err) { if (isCurrent()) { setError(err); } }
     finally { if (isCurrent()) setLoading(false); }
   }, [tenantId, scope, begin]);
 

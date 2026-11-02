@@ -49,11 +49,11 @@ export function useCustomers(tenantId, { optionsOnly = false } = {}) {
       optionsOnly ? { data: null, error: null } : supabase.from('customer_level_settings').select('silver_min,gold_min,platinum_min').eq('tenant_id', tenantId).maybeSingle(),
     ]);
     if (!isCurrent() || !customerResult) return;
-    if (customerResult.error || orderResult.error || levelResult.error) setError(customerResult.error || orderResult.error || levelResult.error);
+    if (customerResult.error) setError(customerResult.error);
     else {
-      setError(null);
+      // Metrics/level lookups are supplementary: show customers even if they fail.
+      setError(orderResult.error || levelResult.error || null);
       setLoadedScope(scope);
-      if (levelResult.error) setError(levelResult.error);
       const nextLevels = levelResult.data ? { silver: Number(levelResult.data.silver_min), gold: Number(levelResult.data.gold_min), platinum: Number(levelResult.data.platinum_min) } : { silver: 1000, gold: 5000, platinum: 15000 };
       setLevels(nextLevels);
       const paidByCustomer = new Map();

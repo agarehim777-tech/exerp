@@ -517,6 +517,10 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
             </button>
           </div>
 
+          {src.error && <div role="alert" style={msgBox}>
+            Faktura mənbələri yüklənmədi: {src.error.message}
+            <button type="button" style={secondaryBtn} onClick={src.refresh}>Yenidən cəhd</button>
+          </div>}
           {tab === "orders" ? (
             <table style={table}>
               <thead>

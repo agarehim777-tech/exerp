@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createIdempotencyKey } from "../services/coreOperations.js";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../modules/credits/CreditInitialPayments.jsx";
@@ -673,13 +674,15 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
   );
   const [principalAmount, setPrincipalAmount] = useState(Math.round(suggested));
   const [penaltyAmount, setPenaltyAmount] = useState(0);
+  // One idempotent receipt key per modal opening prevents duplicate postings.
+  const [receiptNo] = useState(() => createIdempotencyKey("KRD"));
   const principal = Math.max(0, Math.round(Number(principalAmount || 0)));
   const penalty = Math.max(0, Math.round(Number(penaltyAmount || 0)));
 
   function submit(event) {
     event.preventDefault();
     if (principal <= 0 && penalty <= 0) return;
-    onReceivePayment?.(credit.id, { principalAmount: principal, penaltyAmount: penalty });
+    onReceivePayment?.(credit.id, { principalAmount: principal, penaltyAmount: penalty, receiptNo });
     onClose();
   }
 

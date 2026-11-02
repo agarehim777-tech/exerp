@@ -34,7 +34,7 @@ export function useSalesInvoices(tenantId) {
       setHasMore(rows.length > limit);
       setInvoices(rows.slice(0, limit));
     } catch (err) {
-      if (isCurrent()) { setError(err); setLoadedScope(null); }
+      if (isCurrent()) { setError(err); }
     } finally { if (isCurrent()) setLoading(false); }
   }, [tenantId, limit, scope, begin]);
 
