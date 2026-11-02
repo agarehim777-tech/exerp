@@ -664,7 +664,8 @@ async function auditWarehouseDelivery(browser) {
     const card = page.locator('#delivery-detail-card');
     await card.getByLabel('Təhvil alanın ad-soyadı', { exact: true }).fill('QA Customer');
     await card.getByLabel('Anbardan götürən əməkdaş', { exact: true }).fill('QA Audit Seller');
-    await card.getByLabel('Sənəd nömrəsi', { exact: true }).fill(`QA-${sale.order.orderNo}`);
+    // The field is required, so its label carries a trailing "*".
+    await card.getByLabel(/^Sənəd nömrəsi\s*\*?$/).fill(`QA-${sale.order.orderNo}`);
     await card.getByLabel('Təhvil alan şəxs elektron imzanı təsdiqlədi', { exact: true }).check();
     const fulfillment = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/complete_sales_delivery'),
