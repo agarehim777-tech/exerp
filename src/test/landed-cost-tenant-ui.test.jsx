@@ -11,6 +11,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
     select: columns => { mocks.selects.push({table,columns}); return chain; },
     eq: (column,value) => { mocks.filters.push({table,column,value}); return chain; },
     order: () => chain,
+    range: () => chain,
     then: resolve => Promise.resolve({data: table === 'warehouses' ? [{id:'warehouse',name:'QA Warehouse'}] : [], error: mocks.error }).then(resolve),
   };
   return chain;

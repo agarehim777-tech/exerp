@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
+import { readAllRows } from "../../services/readAllRows.js";
 import { azn, badge, card, input, table, td, th } from "../../shared/ui/tokens.js";
 import { buildAgingRows, isMissingAgingView } from "./stockAging.js";
 
@@ -16,11 +17,17 @@ export default function StockAgingPanel({ tenantId }) {
       setLoading(true);
       setError("");
 
-      const viewResult = await supabase
+      // The view has no id column; these columns together identify a cost layer for paging.
+      const viewResult = await readAllRows(() => supabase
         .from("inventory_aging_v")
         .select("*")
         .eq("tenant_id", tenantId)
-        .order("age_days", { ascending: false });
+        .order("age_days", { ascending: false })
+        .order("received_at")
+        .order("warehouse_id")
+        .order("product_id")
+        .order("unit_cost")
+        .order("remaining_qty"));
 
       if (!viewResult.error) {
         if (active) {
@@ -39,12 +46,13 @@ export default function StockAgingPanel({ tenantId }) {
         return;
       }
 
-      const layerResult = await supabase
+      const layerResult = await readAllRows(() => supabase
         .from("inventory_cost_layers")
         .select("tenant_id, warehouse_id, product_id, received_at, remaining_qty, unit_cost, product:products(name, sku)")
         .eq("tenant_id", tenantId)
         .gt("remaining_qty", 0)
-        .order("received_at", { ascending: true });
+        .order("received_at", { ascending: true })
+        .order("id"));
 
       if (active) {
         setRows(layerResult.error ? [] : buildAgingRows(layerResult.data));

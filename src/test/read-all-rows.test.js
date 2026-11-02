@@ -53,16 +53,20 @@ describe("whole-tenant reads go through readAllRows", () => {
     "src/shared/hooks/useFinancialStatements.ts": ["sales_invoices", "cash_transactions", "stock_balances", "vendor_invoices"],
     "src/shared/hooks/useSalesBonusLedger.js": ["order_bonus_assignments", "sales_bonus_entries"],
     "src/shared/hooks/useCashbook.js": ["employees"],
+    "src/modules/procurement/ProcurementPage.jsx": ["vendors", "products", "purchase_orders", "purchase_order_lines", "goods_receipts", "goods_receipt_lines", "vendor_invoices", "vendor_invoice_lines"],
+    "src/modules/procurement/LandedCostPanel.jsx": ["purchase_order_lines"],
+    "src/modules/warehouse/StockAgingPanel.jsx": ["inventory_aging_v", "inventory_cost_layers"],
   };
 
   it.each(Object.entries(guarded))("%s", (file, tables) => {
     const source = readFileSync(file, "utf8");
     for (const table of tables) {
-      const reads = [...source.matchAll(new RegExp(`\\.from\\(['"]${table}['"]\\)`, "g"))];
+      // Reads only: writes (.insert/.update/.delete) come right after .from() instead of .select().
+      const reads = [...source.matchAll(new RegExp(`\\.from\\(['"]${table}['"]\\)(?=\\s*\\.select\\()`, "g"))];
       expect(reads.length, `${table} read`).toBeGreaterThan(0);
       for (const read of reads) {
         const before = source.slice(Math.max(0, read.index - 60), read.index);
-        expect(before, `${table} must be paged`).toMatch(/readAllRows\(\(\) => supabase\s*$/);
+        expect(before, `${table} must be paged`).toMatch(/readAllRows\(\(\)\s*=>\s*supabase\s*$/);
       }
     }
   });

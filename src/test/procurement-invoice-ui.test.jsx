@@ -23,6 +23,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: {
       select: columns => { mocks.selects.push({ table, columns }); return chain; },
       eq: (column, value) => { filters.push({ column, value }); mocks.filters.push({ table, column, value }); return chain; },
       order: () => chain,
+      range: () => chain,
       then: resolve => (mocks.pending?.(table, filters) || Promise.resolve({ data: mocks.rows[table] || [], error: null })).then(resolve),
     };
     return chain;
