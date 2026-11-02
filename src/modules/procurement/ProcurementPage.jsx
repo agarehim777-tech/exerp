@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { readAllRows } from "../../services/readAllRows.js";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -259,14 +260,14 @@ function ProcurementWorkspace({ tenantId, user }) {
     setError("");
     try {
       const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
-        supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }),
-        supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.from("purchase_order_lines").select("*, purchase_orders!inner(tenant_id)").eq("purchase_orders.tenant_id", tenantId).order("line_no", { ascending: true }),
-        supabase.from("goods_receipts").select("*, purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.from("goods_receipt_lines").select("*, goods_receipts!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("goods_receipts.tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.from("vendor_invoice_lines").select("*, vendor_invoices!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("vendor_invoices.tenant_id", tenantId).order("created_at", { ascending: false }),
+        readAllRows(() => supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
+        readAllRows(() => supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }).order("id")),
+        readAllRows(() => supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
+        readAllRows(() => supabase.from("purchase_order_lines").select("*, purchase_orders!inner(tenant_id)").eq("purchase_orders.tenant_id", tenantId).order("line_no", { ascending: true }).order("id")),
+        readAllRows(() => supabase.from("goods_receipts").select("*, purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
+        readAllRows(() => supabase.from("goods_receipt_lines").select("*, goods_receipts!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("goods_receipts.tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
+        readAllRows(() => supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
+        readAllRows(() => supabase.from("vendor_invoice_lines").select("*, vendor_invoices!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("vendor_invoices.tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
         readLegacyPoPayments(supabase, tenantId, ENABLE_LEGACY_PAYMENTS),
       ]);
       if (!isCurrent()) return;
