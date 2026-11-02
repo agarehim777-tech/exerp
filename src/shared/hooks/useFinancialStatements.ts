@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { toLocalIsoDate } from '../../services/date';
+import { readAllRows } from '../../services/readAllRows';
 import {
   buildProfitAndLoss,
   buildBalanceSheet,
@@ -57,18 +58,20 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
     setLoading(true);
     const [tb, ar, cash, accountResult, stockResult, payableResult] = await Promise.all([
       supabase.rpc('trial_balance', { _tenant: tenantId, _from: range.from, _to: range.to }),
-      supabase
+      readAllRows(() => supabase
         .from('sales_invoices')
         .select('id,status,total,paid_amount,due_date,invoice_date,customer_id,customer:customers(id,name)')
-        .eq('tenant_id', tenantId),
-      supabase
+        .eq('tenant_id', tenantId)
+        .order('id')),
+      readAllRows(() => supabase
         .from('cash_transactions')
         .select('id,amount,direction,category,occurred_at,created_at,description,reversal_of')
         .eq('tenant_id', tenantId)
-        .order('occurred_at', { ascending: true }),
-      supabase.from('cash_accounts').select('id,opening_balance,is_active').eq('tenant_id', tenantId).eq('is_active', true),
-      supabase.from('stock_balances').select('product_id,on_hand,avg_cost').eq('tenant_id', tenantId),
-      supabase.from('vendor_invoices').select('id,status,invoice_date,due_date,lines:vendor_invoice_lines(qty_invoiced,unit_price,tax_rate)').eq('tenant_id', tenantId),
+        .order('occurred_at', { ascending: true })
+        .order('id')),
+      readAllRows(() => supabase.from('cash_accounts').select('id,opening_balance,is_active').eq('tenant_id', tenantId).eq('is_active', true).order('id')),
+      readAllRows(() => supabase.from('stock_balances').select('product_id,on_hand,avg_cost').eq('tenant_id', tenantId).order('warehouse_id').order('product_id')),
+      readAllRows(() => supabase.from('vendor_invoices').select('id,status,invoice_date,due_date,lines:vendor_invoice_lines(qty_invoiced,unit_price,tax_rate)').eq('tenant_id', tenantId).order('id')),
     ]);
     setError(tb.error || ar.error || cash.error || accountResult.error || stockResult.error || payableResult.error || null);
     const journalRows = (tb.data as TrialBalanceRow[]) || [];

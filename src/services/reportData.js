@@ -1,4 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
+import { readAllRows } from './readAllRows';
 
 export const reportTables = Object.freeze(['expenses', 'cash_transactions', 'vendors', 'purchase_orders', 'sales_invoices', 'production_batches']);
 export const emptyReportData = Object.freeze({ expenses: [], cashEntries: [], vendors: [], purchaseOrders: [], invoices: [], productionPlans: [] });
@@ -7,13 +8,9 @@ const expenseStatus = { pending: 'Təsdiq gözləyir', draft: 'Qaralama', approv
 const poStatus = { draft: 'Qaralama', approved: 'Təsdiqlənib', partial: 'Qismən qəbul', received: 'Qəbul edilib', closed: 'Bağlanıb', cancelled: 'Ləğv edilib' };
 
 async function readAll(query) {
-  const rows = [];
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await query().range(offset, offset + 499);
-    if (error) throw error;
-    rows.push(...(data || []));
-    if (!data || data.length < 500) return rows;
-  }
+  const { data, error } = await readAllRows(query);
+  if (error) throw error;
+  return data;
 }
 
 export async function loadReportData(tenantId) {

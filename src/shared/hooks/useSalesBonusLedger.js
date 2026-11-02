@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useRealtimeResync } from "./useRealtimeResync";
+import { readAllRows } from "../../services/readAllRows";
 
 export function useSalesBonusLedger(tenantId) {
   const [assignments, setAssignments] = useState([]);
@@ -12,8 +13,8 @@ export function useSalesBonusLedger(tenantId) {
     if (!tenantId) return;
     setLoading(true);
     const [assignmentResult, entryResult] = await Promise.all([
-      supabase.from("order_bonus_assignments").select("*").eq("tenant_id", tenantId).order("effective_from", { ascending: false }),
-      supabase.from("sales_bonus_entries").select("*").eq("tenant_id", tenantId).order("accrued_on", { ascending: false }),
+      readAllRows(() => supabase.from("order_bonus_assignments").select("*").eq("tenant_id", tenantId).order("effective_from", { ascending: false }).order("id")),
+      readAllRows(() => supabase.from("sales_bonus_entries").select("*").eq("tenant_id", tenantId).order("accrued_on", { ascending: false }).order("id")),
     ]);
     const nextError = assignmentResult.error || entryResult.error;
     setError(nextError || null);
