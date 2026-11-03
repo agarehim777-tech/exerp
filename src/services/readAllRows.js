@@ -15,3 +15,20 @@ export async function readAllRows(query, pageSize = READ_PAGE_SIZE) {
     if (page.length < pageSize) return { data: rows, error: null };
   }
 }
+
+// .in('id', ids) puts every id in the request URL; a few hundred UUIDs exceed what the gateway
+// accepts. Reads the ids in chunks (each chunk paged with readAllRows, so the factory must be
+// ordered on a unique column) and concatenates the rows.
+export const ID_CHUNK_SIZE = 100;
+
+export async function readRowsByIds(ids, queryForChunk, chunkSize = ID_CHUNK_SIZE) {
+  const unique = [...new Set(ids.filter((id) => id !== null && id !== undefined && id !== ""))];
+  const rows = [];
+  for (let offset = 0; offset < unique.length; offset += chunkSize) {
+    const chunk = unique.slice(offset, offset + chunkSize);
+    const { data, error } = await readAllRows(() => queryForChunk(chunk));
+    if (error) return { data: null, error };
+    rows.push(...data);
+  }
+  return { data: rows, error: null };
+}

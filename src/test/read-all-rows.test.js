@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { readAllRows } from "../services/readAllRows.js";
+import { readAllRows, readRowsByIds } from "../services/readAllRows.js";
 
 // Fake PostgREST table that, like the real one, silently caps a response at maxRows.
 function fakeTable(total, maxRows = 1000) {
@@ -43,6 +43,67 @@ describe("readAllRows", () => {
         : { data: null, error: { code: "57014", message: "statement timeout" } }),
     });
     expect(await readAllRows(query)).toEqual({ data: null, error: { code: "57014", message: "statement timeout" } });
+  });
+});
+
+describe("readRowsByIds", () => {
+  // Fake .in() query: records each chunk and returns one row per id.
+  function fakeIdQuery() {
+    const chunks = [];
+    const queryForChunk = (chunk) => {
+      chunks.push(chunk);
+      return { range: async (from, to) => ({ data: chunk.slice(from, to + 1).map((id) => ({ id })), error: null }) };
+    };
+    return { chunks, queryForChunk };
+  }
+
+  it("splits a long id list into URL-sized chunks and returns every row", async () => {
+    const ids = Array.from({ length: 250 }, (_, index) => `id-${index}`);
+    const { chunks, queryForChunk } = fakeIdQuery();
+    const { data, error } = await readRowsByIds(ids, queryForChunk);
+    expect(error).toBeNull();
+    expect(chunks.map((chunk) => chunk.length)).toEqual([100, 100, 50]);
+    expect(data.map((row) => row.id)).toEqual(ids);
+  });
+
+  it("drops duplicate and empty ids and makes no request for an empty list", async () => {
+    const { chunks, queryForChunk } = fakeIdQuery();
+    expect((await readRowsByIds(["a", "a", null, "", undefined, "b"], queryForChunk)).data).toEqual([{ id: "a" }, { id: "b" }]);
+    expect(chunks).toEqual([["a", "b"]]);
+
+    const empty = fakeIdQuery();
+    expect(await readRowsByIds([], empty.queryForChunk)).toEqual({ data: [], error: null });
+    expect(empty.chunks).toHaveLength(0);
+  });
+
+  it("returns the first chunk error instead of a partial list", async () => {
+    const failure = { code: "57014", message: "statement timeout" };
+    let calls = 0;
+    const queryForChunk = (chunk) => ({
+      range: async () => (calls++ === 0 ? { data: chunk.map((id) => ({ id })), error: null } : { data: null, error: failure }),
+    });
+    const ids = Array.from({ length: 150 }, (_, index) => `id-${index}`);
+    expect(await readRowsByIds(ids, queryForChunk)).toEqual({ data: null, error: failure });
+  });
+});
+
+describe("id-list reads are chunked", () => {
+  // .in() with an unbounded, data-derived id list must go through readRowsByIds.
+  const guarded = {
+    "src/shared/hooks/useSalesBonusLedger.js": ["orders", "customers"],
+    "src/modules/warehouse/ProductBalancesPage.jsx": ["purchase_order_lines", "goods_receipts", "goods_receipt_lines"],
+  };
+
+  it.each(Object.entries(guarded))("%s", (file, tables) => {
+    const source = readFileSync(file, "utf8");
+    for (const table of tables) {
+      const reads = [...source.matchAll(new RegExp(`\\.from\\(['"]${table}['"]\\)\\s*\\.select\\([^;]*?\\.in\\(`, "g"))];
+      expect(reads.length, `${table} id-list read`).toBeGreaterThan(0);
+      for (const read of reads) {
+        const before = source.slice(Math.max(0, read.index - 80), read.index);
+        expect(before, `${table} must be chunked`).toMatch(/readRowsByIds\([^,]+,\s*\(chunk\)\s*=>\s*supabase\s*$/);
+      }
+    }
   });
 });
 
