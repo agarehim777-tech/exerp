@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
@@ -38,6 +38,10 @@ export default function RolesPermissionsPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [permissionsReady, setPermissionsReady] = useState(false);
+  const reloadSeq = useRef(0);
+  const loadedTenantRef = useRef(tenantId);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -46,25 +50,47 @@ export default function RolesPermissionsPage({
   const [editDraft, setEditDraft] = useState({ name: "", email: "", role: "", status: "Aktiv" });
 
   const reload = async () => {
+    const seq = ++reloadSeq.current;
+    const isCurrent = () => seq === reloadSeq.current;
+    if (loadedTenantRef.current !== tenantId) {
+      // Never leave the previous company's members on screen if this company's read fails.
+      loadedTenantRef.current = tenantId;
+      setMembers([]);
+      setInvites([]);
+    }
     setLoading(true);
-    const [{ data: perms }, { data: mems }, { data: invs }] = await Promise.all([
-      supabase.from("role_permissions").select("*"),
-      tenantId
-        ? supabase.from("tenant_members")
-            .select("id, user_id, role, profiles:user_id(email, full_name)")
-            .eq("tenant_id", tenantId)
-        : Promise.resolve({ data: [] }),
-      tenantId
-        ? supabase.from("tenant_invites")
-            .select("id, tenant_id, email, role, invited_by, accepted_at, expires_at, created_at")
-            .eq("tenant_id", tenantId).is("accepted_at", null)
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] }),
-    ]);
-    setRows(perms || []);
-    setMembers(mems || []);
-    setInvites(invs || []);
-    setLoading(false);
+    try {
+      const [perms, mems, invs] = await Promise.all([
+        supabase.from("role_permissions").select("*"),
+        tenantId
+          ? supabase.from("tenant_members")
+              .select("id, user_id, role, profiles:user_id(email, full_name)")
+              .eq("tenant_id", tenantId)
+          : Promise.resolve({ data: [] }),
+        tenantId
+          ? supabase.from("tenant_invites")
+              .select("id, tenant_id, email, role, invited_by, accepted_at, expires_at, created_at")
+              .eq("tenant_id", tenantId).is("accepted_at", null)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
+      if (!isCurrent()) return;
+      // A failed read keeps what was last loaded instead of looking like an empty company.
+      if (!perms.error) setRows(perms.data || []);
+      if (!mems.error) setMembers(mems.data || []);
+      if (!invs.error) setInvites(invs.data || []);
+      // Toggles write the next value from the matrix, so they stay off until it has loaded.
+      setPermissionsReady(!perms.error);
+      const failed = [perms.error && "icazə matrisi", mems.error && "üzvlər", invs.error && "dəvətlər"].filter(Boolean);
+      const firstError = perms.error || mems.error || invs.error;
+      setLoadError(failed.length ? `Yüklənmədi: ${failed.join(", ")} — ${firstError.message || "naməlum xəta"}` : "");
+    } catch (error) {
+      if (!isCurrent()) return;
+      setPermissionsReady(false);
+      setLoadError(`Yüklənmədi: ${error?.message || "naməlum xəta"}`);
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
   };
 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [tenantId]);
@@ -156,7 +182,7 @@ export default function RolesPermissionsPage({
   }
 
   const toggle = async (role, module, field) => {
-    if (role === "owner") return;
+    if (role === "owner" || !permissionsReady) return;
     setSaving(true); setMsg("");
     const cur = matrix[role]?.[module] || { view: false, edit: false };
     const next = { ...cur, [field]: !cur[field] };
@@ -277,6 +303,12 @@ export default function RolesPermissionsPage({
           </div>
           {saving && <span style={{ fontSize: 12, color: "#8a6a1e" }}>Saxlanılır…</span>}
         </div>
+        {loadError && (
+          <div role="alert" style={{ background: "#fdecea", color: "#8b1e1e", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 10, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+            <span>{loadError}</span>
+            <button type="button" onClick={() => reload()} disabled={loading} style={{ border: "1px solid #8b1e1e", background: "transparent", color: "#8b1e1e", borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Yenidən yüklə</button>
+          </div>
+        )}
         {msg && <div style={{ background: "#fdecea", color: "#8b1e1e", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 10 }}>{msg}</div>}
         {loading ? <div>Yüklənir…</div> : (
           <div style={{ overflowX: "auto" }}>
@@ -311,11 +343,11 @@ export default function RolesPermissionsPage({
                       return (
                         <>
                           <td key={r.key + mod.id + "v"} style={td}>
-                            <input type="checkbox" checked={!!cell.view || locked} disabled={locked || saving}
+                            <input type="checkbox" checked={!!cell.view || locked} disabled={locked || saving || !permissionsReady}
                               onChange={() => toggle(r.key, mod.id, "view")} />
                           </td>
                           <td key={r.key + mod.id + "e"} style={td}>
-                            <input type="checkbox" checked={!!cell.edit || locked} disabled={locked || saving}
+                            <input type="checkbox" checked={!!cell.edit || locked} disabled={locked || saving || !permissionsReady}
                               onChange={() => toggle(r.key, mod.id, "edit")} />
                           </td>
                         </>
