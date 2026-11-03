@@ -119,6 +119,7 @@ export default function RolesPermissionsPage({
       status: "Aktiv",
       appUser: appUsersByEmail.get(normalizedEmail(member.profiles?.email)) || null,
     }));
+    const invitedEmails = new Set(invites.map((invite) => normalizedEmail(invite.email)));
     const localOnly = appUsers
       .filter((user) => !remoteEmails.has(normalizedEmail(user.email)))
       .map((user) => ({
@@ -129,11 +130,14 @@ export default function RolesPermissionsPage({
         email: user.email || "—",
         role: user.role || "member",
         source: "Tətbiq profili",
-        status: user.status === "Bloklanıb" ? "Bloklanıb" : "Dəvət gözləyir",
+        // A browser-only profile is not an account; it is pending only if an invite was really sent.
+        status: user.status === "Bloklanıb"
+          ? "Bloklanıb"
+          : invitedEmails.has(normalizedEmail(user.email)) ? "Dəvət gözləyir" : "Hesab yoxdur",
         appUser: user,
       }));
     return [...remoteUsers, ...localOnly];
-  }, [members, appUsers]);
+  }, [members, appUsers, invites]);
 
   const selectedUser = unifiedUsers.find((user) => user.id === selectedUserId) || null;
   const selectedAppUser = selectedUser?.appUser || null;
@@ -255,6 +259,11 @@ export default function RolesPermissionsPage({
             <p style={{ margin: 0, color: "#6b7a72", fontSize: 13 }}>
               Anbardar, satıcı, satınalma və maliyyə əməkdaşını yaradıb uyğun sistem rolunu seçin.
             </p>
+            {!requiresPassword && (
+              <p role="note" style={{ margin: "6px 0 0", color: "#8a6a1e", fontSize: 13 }}>
+                Bu versiyada hesab yalnız dəvətlə yaradılır: aşağıdakı "Dəvət et" bölməsindən e-poçta dəvət göndərin.
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -270,7 +279,7 @@ export default function RolesPermissionsPage({
           <label style={fieldLabel}><span>E-poçt</span><input required type="email" value={userDraft.email} onChange={(e) => setUserDraft((v) => ({ ...v, email: e.target.value }))} placeholder="user@sirket.az" style={input} /></label>
           {requiresPassword && <label style={fieldLabel}><span>İlkin parol</span><input required minLength={8} type="password" value={userDraft.password} onChange={(e) => setUserDraft((v) => ({ ...v, password: e.target.value }))} placeholder="Minimum 8 simvol" style={input} /></label>}
           <label style={fieldLabel}><span>Rol</span><select value={userDraft.role} onChange={(e) => setUserDraft((v) => ({ ...v, role: e.target.value }))} style={input}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</select></label>
-          <button type="submit" disabled={!canManageUsers || saving} style={primaryButton}>İstifadəçi yarat</button>
+          <button type="submit" disabled={!canManageUsers || saving || !requiresPassword} style={primaryButton}>İstifadəçi yarat</button>
         </form>
       </div>
 

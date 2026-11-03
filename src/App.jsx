@@ -23,6 +23,7 @@ import { useOperationsViews } from "./shared/selectors/operationsViews.js";
 import { useIntegrationViews } from "./shared/selectors/integrationViews.js";
 import { useMessagingViews } from "./shared/selectors/messagingViews.js";
 import { useSystemReports } from "./shared/selectors/systemReports.js";
+import { AUDIT_SYNC_RETRY_MS, pendingAuditEventRows } from "./services/auditSync.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { syncExpenseCash } from "./services/expenseCash.js";
@@ -389,6 +390,10 @@ function App() {
   const [remoteUser, setRemoteUser] = useState(null);
   const remoteSaveTimer = useRef(null);
   const syncedAuditIds = useRef(new Set());
+  const auditRetryTimer = useRef(null);
+  const auditSessionStart = useRef(new Date().toISOString());
+  const [auditRetryTick, setAuditRetryTick] = useState(0);
+  const [auditServerSyncedAt, setAuditServerSyncedAt] = useState("");
   const notificationAutoRunRef = useRef("");
   const creditSourceOrders = useMemo(
     () => (!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
@@ -457,7 +462,7 @@ function App() {
   const { projectRoiRows, productionRows } = useOperationsViews({ state });
   const { notificationProviderRows, notificationAutomationRows, apiWebhookRows, apiSecretRows } = useIntegrationViews({ state, creditRecords, invoiceRows });
   const { messageConversations, messageParticipantOptions, messageContextOptions } = useMessagingViews({ state, creditRecords });
-  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, moduleReadiness, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows });
+  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, moduleReadiness, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
 
   useEffect(() => {
     if (Number(state.dbMeta?.baselineVersion || 0) >= localDbBaselineVersion) return;
@@ -545,37 +550,35 @@ function App() {
   }, [state, remoteUser?.role, activeTenantId, authUser?.id, tenantStateReady]);
 
   useEffect(() => {
-    const entry = state.auditLog?.[0];
-    if (!entry?.id || !activeTenantId || !authUser?.id || syncedAuditIds.current.has(entry.id)) return;
+    const rows = pendingAuditEventRows(state.auditLog, syncedAuditIds.current, {
+      tenantId: activeTenantId,
+      actorId: authUser?.id,
+      fallbackRole: activeRoleInfo?.name,
+      since: auditSessionStart.current,
+    });
+    if (!rows.length) return;
 
-    syncedAuditIds.current.add(entry.id);
+    rows.forEach((row) => syncedAuditIds.current.add(row.id));
     supabase
       .from("audit_events")
-      .upsert(
-        {
-          id: entry.id,
-          tenant_id: activeTenantId,
-          actor_id: authUser.id,
-          actor_role: entry.role || activeRoleInfo?.name || "System",
-          module: entry.module || "Sistem",
-          action: entry.action || "Əməliyyat",
-          detail: entry.detail || "",
-          status: entry.status || "Tamamlandı",
-          payload: entry,
-          occurred_at: entry.date || new Date().toISOString(),
-        },
-        { onConflict: "id", ignoreDuplicates: true },
-      )
+      .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
       .then(({ error }) => {
-        if (error) {
-          syncedAuditIds.current.delete(entry.id);
-          console.warn("[audit] immutable server log unavailable", {
-            code: error.code,
-            message: error.message,
-          });
+        if (!error) {
+          setAuditServerSyncedAt(new Date().toISOString());
+          return;
         }
+        rows.forEach((row) => syncedAuditIds.current.delete(row.id));
+        console.warn("[audit] immutable server log unavailable", {
+          code: error.code,
+          message: error.message,
+        });
+        // Retry on a timer as well, so a failed batch does not wait for the next audited action.
+        window.clearTimeout(auditRetryTimer.current);
+        auditRetryTimer.current = window.setTimeout(() => setAuditRetryTick((tick) => tick + 1), AUDIT_SYNC_RETRY_MS);
       });
-  }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name]);
+  }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name, auditRetryTick]);
+
+  useEffect(() => () => window.clearTimeout(auditRetryTimer.current), []);
 
   useLegacyPayrollExpense({ state, setState });
 
@@ -860,6 +863,11 @@ function App() {
 
   async function createUser(values) {
     if (!requirePermission("settings.manage", "istifadəçi yaratmaq")) return;
+    if (!remoteApiEnabled) {
+      // Without the account API this would only add a browser record nobody can sign in with.
+      notify("Bu versiyada istifadəçi hesabı yalnız dəvətlə yaradılır. \"Dəvət et\" bölməsindən istifadə edin.", "warning");
+      return;
+    }
 
     const userName = String(values.name || "").trim();
     const email = String(values.email || "").trim();
@@ -5013,6 +5021,7 @@ function App() {
       },
       {
         goLiveReport,
+        auditServerSynced: Boolean(auditServerSyncedAt),
         apiWebhookRows,
         apiSecretRows,
         notificationProviderRows,

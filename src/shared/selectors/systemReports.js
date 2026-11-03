@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { buildGoLiveReadiness, buildHelpArticles, buildHelpModuleGuides, buildModuleReadiness, buildOnboardingRows, buildProductionHardeningReport, buildStateIntegrityReport } from "../lib/appHelpers.jsx";
 
 // Integrity, go-live, hardening and module-readiness reports, plus onboarding and help content built on them.
-export function useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows }) {
+export function useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced = false }) {
   const onboardingRows = useMemo(() => buildOnboardingRows(state.onboarding, state), [state.onboarding, state]);
   const integrityReport = useMemo(
     () => buildStateIntegrityReport(state, creditRecords),
@@ -19,8 +19,9 @@ export function useSystemReports({ state, creditRecords, apiWebhookRows, apiSecr
         apiWebhookRows,
         apiSecretRows,
         notificationProviderRows,
+        auditServerSynced,
       }),
-    [state, goLiveReport, apiWebhookRows, apiSecretRows, notificationProviderRows],
+    [state, goLiveReport, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced],
   );
   const moduleReadiness = useMemo(
     () => buildModuleReadiness(state, integrityReport),
