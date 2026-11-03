@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { moduleFromPath, pathForModule, pathForRecord, canonicalPath } from "./config/routes.js";
-import { resolveModalKind } from "./config/modal-registry.js";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { ProductionLedgerPage } from './config/lazyPages.js';
 import { supabase } from "./integrations/supabase/client";
@@ -28,10 +27,9 @@ import { createUserAdminActions } from "./shared/state/userAdminActions.js";
 import { createHrActions } from "./shared/state/hrActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
-import { syncExpenseCash } from "./services/expenseCash.js";
 import { round2 } from "./shared/utils/invoiceMath.js";
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
-import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
+import { dbCustomerToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
 import {
   BarChart3,
@@ -76,10 +74,8 @@ import {
   X,
 } from "lucide-react";
 import {
-  contractTemplates,
   initialState,
   navItems,
-  stages,
 } from "./data.js";
 import { pageMeta } from "./config/page-meta.js";
 import { ProjectsPage } from "./config/lazyPages.js";
@@ -87,18 +83,14 @@ import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
 import { AccessCheckPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
-  createRemoteCompany,
-  deleteRemoteCompany,
   getRemoteSession,
   getRemoteToken,
   loadRemoteState,
-  listRemoteCompanies,
   loginRemote,
   logoutRemote,
   remoteApiEnabled,
   saveRemoteState,
   setRemoteToken,
-  updateRemoteCompany,
 } from "./remote-api.js";
 import {
   AvatarLine,
@@ -113,30 +105,19 @@ import {
   TwoLine,
 } from "./components/ui.jsx";
 import { money, normalize, percent } from "./services/format.js";
-import { queueNotification, saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
+import { saveWorkflowRecord } from "./services/enterpriseWorkflows.js";
 import { loadReportData } from './services/reportData.js';
 import { useTenantRequestScope } from './shared/hooks/useTenantRequestScope.js';
 import { createIdempotencyKey, postCreditPayment, startCreditContract } from "./services/coreOperations.js";
 import {
-  addMonths,
-  formatDateInput,
   formatPaymentDate,
   parsePaymentDate,
-  toDateInputValue,
   toLocalIsoDate,
 } from "./services/date.js";
 import {
-  buildModulePermissionCatalog,
   createPermissionByType,
   defaultRoles,
-  getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog,
-  getModuleForPermission as getModuleForPermissionFromCatalog,
-  navPermissionByType,
-  normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog,
-  pageActionPermissionByType,
-  pageActionlessModules,
   permissionCatalog,
-  uniquePermissionModuleIds,
 } from "./services/permissions.js";
 import {
   appendAudit,
@@ -146,7 +127,6 @@ import {
   localDbSchemaVersion,
 } from "./services/persistence.js";
 
-import { createClientId } from "./shared/utils/id.js";
 import { serializeOrderNotes } from "./shared/utils/orderNotes.js";
 import { describeStockError, isStockShortageError } from "./shared/lib/stockErrors.js";
 import { resolveOrderCustomer } from "./shared/lib/orderCustomer.js";
@@ -156,37 +136,28 @@ import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { ensureMainCashAccount } from "./services/cashAccounts.js";
 import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 
-import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildInvoiceControlSummary, buildReceivableAgingSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryPlan, getDeliveryRisk, getDeliveryStockCheck, getDeliveryTotalQuantity, getEmployeeKey, getEmployeeLevel, getEmployeeManager, getHrDocumentRows, getInvoiceAgingBucket, getKpiPeriodKey, getOrderBalance, getOrderDeliveryStatus, getOrderPaymentMethod, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
-import { baseCreditDate, buildProductLookup, getBackorderPlan, buildPurchaseOrderCoverage, currentBusinessQuarter, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getOrderSellerBonuses, getReorderPoint, hrLevelOptions, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
-import { Toggle, ensureSettings, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, modulePermissionCatalog, normalizeUserModuleAccess, normalizeVendor, targetDbProvider } from "./shared/lib/appDomain.jsx";
+import { OrderProductLines, baseDeliveryDate, baseFinanceDate, buildReceivableAgingSummary, currentBusinessDate, getDeliveryPlan, getDeliveryStockCheck, getEmployeeKey, getKpiPeriodKey, getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
+import { baseCreditDate, isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
+import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getDefaultModuleAccessForRole, getFreeQuantity, getModuleForPermission, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
 
 import {
-  addDays,
   applyCreditPrincipalPayment,
   buildCreditPlan,
-  creditTermOptions,
-  daysBetween,
   getCreditDebtFormula,
   getCreditDisplayPlan,
   getCreditInitials,
   getCreditManagementStatus,
   getCreditPaidTotal,
   getCreditPaymentState,
-  getCreditPlanStartDate,
-  getCreditRemainingMonths,
-  getCreditRiskLabel,
   getCreditRowDate,
   getCreditSourceLabel,
   getReceivableClosureAmount,
   isCreditClosed,
   isCreditStarted,
-  matchesCreditDashboardFilter,
   matchesCreditManagementFilter,
   matchesCreditSearch,
   matchesCreditSourceFilter,
   monthNamesAz,
-  roundMoney,
-  shiftPaymentDate,
 } from "./shared/lib/credit.js";
 export {
   applyCreditPrincipalPayment,
@@ -210,89 +181,36 @@ export {
 const baseCashBalance = 0;
 
 import {
-  deploymentToolkitReady,
   getCreditIdForOrder,
-  buildSalesCreditRecord,
-  buildSalesCreditRecords,
   buildAllCreditRecords,
-  ensureKpiTargets,
-  getKpiActualValue,
-  buildCreditRiskRows,
-  buildCreditAgingBuckets,
-  getInvoiceVatRate,
   buildInvoiceSummary,
-  getTaxAmountByType,
-  buildTaxDueDate,
-  buildDefaultTaxCalendarItems,
   ensureApiWebhooks,
   ensureApiSecrets,
-  getApiSecretHealth,
   buildExecutiveInsights,
-  flattenWarehouseStock,
-  buildReportModuleRows,
-  buildReportRiskRows,
   buildReportPackage,
   getInitials,
-  buildSupportMessageFromComment,
-  buildSupportConversation,
   normalizeMessageThread,
   getMessageContextPayload,
   upsertSupportConversation,
-  getReceivableAgingBucket,
-  getReceivableRiskCategory,
-  getReceivableCollectionStatus,
-  getReceivableNextAction,
-  enrichReceivableRow,
-  buildProjectPortfolioSource,
-  isDateWithinProject,
-  getProjectOrderCost,
-  ensureNotificationProviders,
-  ensureNotificationRules,
-  getNotificationChannelEnabled,
-  renderNotificationTemplate,
-  getNotificationEventKey,
-  getNotificationLogTime,
-  splitNotificationEventsByCooldown,
-  getCreditPaymentLeadDays,
-  buildNotificationEvent,
-  buildNotificationRuleEvents,
-  createNotificationSendLogEntry,
-  buildNotificationDeliveriesForRules,
   buildHelpArticles,
   buildSellerBonusRows,
   summarizeSellerBonusRows,
   calculateOrderLineTotal,
   productLineSignature,
   buildSalesCreditForOrder,
-  getDeliveryActionLabel,
-  matchesDeliveryFilter,
-  buildDriverDeliveryStats,
-  matchesFinanceFilter,
-  matchesFinanceDateRange,
-  matchesFinanceSearch,
   buildQuantityMap,
-  buildSerialPrefix,
   ensureStockItemSerials,
-  ensureWarehouseSerials,
-  getAvailableSerialsForProduct,
   updateSerialStatuses,
   releaseOrderSerialReservations,
   adjustStockRows,
-  normalizeOperationalLabels,
-  normalizeContractNumbers,
   nextContractNumber,
   nextSalesOrderNumber,
   hydrateState,
-  loadPersistentState,
   getCurrentUser,
-  hasRolePermission,
-  hasUserModuleAccess,
-  getDuplicateValues,
   buildStateIntegrityReport,
   buildGoLiveReadiness,
   buildProductionHardeningReport,
   addStockToRows,
-  buildPayrollExpense,
   hasEffectivePermission,
   canAccessNavItem,
   getPageActionPermission,
@@ -1314,33 +1232,6 @@ function App() {
     }).catch((error) => notify(`Mesaj workflow sinxronlaşmadı: ${error.message}`, "warning"));
   }
 
-  function persistNotificationDeliveries(deliveries = []) {
-    if (!activeTenantId) return;
-    deliveries.forEach((delivery) => {
-      const channelMap = { SMS: "sms", Email: "email", Push: "push" };
-      const wasSent = normalize(delivery.status).includes("nd");
-      void queueNotification({
-        tenantId: activeTenantId,
-        notification: {
-          entity_type: delivery.module || "notifications",
-          recipient: delivery.recipient || "Daxili komanda",
-          channel: channelMap[delivery.channel] || "in_app",
-          provider: delivery.providerName || null,
-          subject: delivery.subject || null,
-          body: delivery.body || delivery.subject || "Bildiriş",
-          status: wasSent ? "sent" : "failed",
-          sent_at: wasSent ? delivery.sentAtIso : null,
-          last_error: wasSent ? null : delivery.status,
-          metadata: {
-            rule_id: delivery.ruleId,
-            dedupe_key: delivery.dedupeKey,
-            priority: delivery.priority,
-            action_target: delivery.actionTarget,
-          },
-        },
-      }).catch((error) => notify(`Bildiriş logu sinxronlaşmadı: ${error.message}`, "warning"));
-    });
-  }
 
   function resolveSupportLink(signal) {
     const signalId = String(signal?.id || "").replace(/^ACT-/, "");
@@ -2560,38 +2451,6 @@ function App() {
     notify(`${currentProduct.name} silindi.`);
   }
 
-  async function deleteCustomer(fin) {
-    if (!requirePermission("crm.manage", "müştəri silmək")) return;
-    const currentCustomer = (state.customers || []).find((c) => c.fin === fin);
-    if (!currentCustomer) {
-      notify("Müştəri tapılmadı.", "warning");
-      return;
-    }
-    if (!(await appConfirm(`${currentCustomer.name} müştərisini silmək istədiyinizə əminsiniz?`, { danger: true }))) return;
-
-    setState((current) =>
-      auditCurrentState(
-        {
-          ...current,
-          customers: (current.customers || []).filter((c) => c.fin !== fin),
-        },
-        { module: "CRM", action: "Müştəri silindi", detail: `${currentCustomer.fin} · ${currentCustomer.name}` },
-      ),
-    );
-
-    if (activeTenantId && deleteDbCustomer) {
-      const dbRow =
-        (dbCustomers || []).find((c) => c.id === currentCustomer.id) ||
-        (dbCustomers || []).find((c) => (c.tax_id || "") === fin) ||
-        (dbCustomers || []).find((c) => normalize(c.name) === normalize(currentCustomer.name));
-      if (dbRow) {
-        deleteDbCustomer(dbRow.id).catch((err) => {
-          notify(`Müştəri DB-dən silinmədi: ${err.message || err}`, "warning");
-        });
-      }
-    }
-    notify(`${currentCustomer.name} silindi.`);
-  }
 
 
 
@@ -2689,25 +2548,6 @@ function App() {
     });
   }
 
-  function advanceOrder(id) {
-    if (!requirePermission("delivery.complete", "təhvil mərhələsini dəyişmək")) return;
-
-    setState((current) => ({
-      ...current,
-      orders: current.orders.map((order) => {
-        if (order.id !== id) return order;
-        const index = stages.indexOf(order.status);
-        if (index < 0 || index === stages.length - 1) return order;
-        return { ...order, status: stages[index + 1] };
-      }),
-    }));
-    notify(`${id} növbəti mərhələyə keçirildi.`);
-    auditOperation({
-      module: "Təhvil",
-      action: "Sifariş mərhələsi dəyişdi",
-      detail: id,
-    });
-  }
 
   async function completeWarehouseDelivery(orderId, acceptance = {}) {
     if (!requirePermission("delivery.complete", "təhvili tamamlamaq")) return;
@@ -2953,34 +2793,6 @@ function App() {
     });
   }
 
-  function setExpenseStatus(id, status) {
-    if (!requirePermission("finance.manage", "xərc statusunu dəyişmək")) return;
-
-    const target = (state.expenses || []).find((expense) => expense.id === id);
-    setState((current) => ({
-      ...current,
-      expenses: current.expenses.map((expense) =>
-        expense.id === id ? { ...expense, status } : expense,
-      ),
-    }));
-    if (activeTenantId && target) {
-      syncExpenseCash(activeTenantId, target, status)
-        .then((result) => {
-          if (result?.reversed) notify("Xərc ləğv edildi, məbləğ kassaya qaytarıldı.", "success");
-          else if (result?.posted) notify("Xərc məbləği Əsas kassadan məxaric edildi.", "success");
-        })
-        .catch((error) => {
-          console.error("[expense-cash]", error);
-          notify(`Kassa yazılışı alınmadı: ${error.message}`, "error");
-        });
-    }
-    notify(`Xərc əməliyyatı: ${status}.`);
-    auditOperation({
-      module: "Maliyyə",
-      action: "Xərc statusu dəyişdi",
-      detail: `${id}: ${status}`,
-    });
-  }
 
   function getSalesOrderLinkedCredit(snapshot, order) {
     if (!order) return null;
@@ -2989,15 +2801,7 @@ function App() {
     );
   }
 
-  function openSalesOrderEditor(orderId) {
-    if (!requirePermission("sales.create", "satış əməliyyatını redaktə etmək")) return;
-    setModal({ type: "salesOperation", orderId });
-  }
 
-  function openSalesOrderDelete(orderId) {
-    if (!requirePermission("sales.create", "satış əməliyyatını silmək")) return;
-    setModal({ type: "salesOperationDelete", orderId });
-  }
 
   function openLinkedSalesOrder(orderId) {
     const normalizedOrderId = normalize(orderId);
@@ -3034,16 +2838,6 @@ function App() {
     });
   }
 
-  function openVendorModule(sourceId = "") {
-    setQuery("");
-    setActive("vendors");
-    setMobileNav(false);
-    auditOperation({
-      module: "Maliyyə/Vendor",
-      action: "PO mənbəyinə keçid edildi",
-      detail: sourceId || "Vendor modulu",
-    });
-  }
 
   function openVendorDelete(vendorKey) {
     if (!requirePermission("vendors.manage", "vendoru silmək")) return;
@@ -3347,15 +3141,7 @@ function App() {
     notify(`${orderId} satış əməliyyatı silindi.`);
   }
 
-  function openExpenseEditor(expenseId) {
-    if (!requirePermission("finance.manage", "xərc əməliyyatını redaktə etmək")) return;
-    setModal({ type: "expenseOperation", expenseId });
-  }
 
-  function openExpenseDelete(expenseId) {
-    if (!requirePermission("finance.manage", "xərc əməliyyatını silmək")) return;
-    setModal({ type: "expenseOperationDelete", expenseId });
-  }
 
   function updateExpense(expenseId, values) {
     if (!requirePermission("finance.manage", "xərc əməliyyatını redaktə etmək")) return;
@@ -5063,12 +4849,6 @@ function App() {
 
 
 import {
-  parseDelimitedCsv,
-  parseWarehouseImportNumber,
-  parseWarehouseImportBoolean,
-  getWarehouseImportCell,
-  parseWarehouseImportCsv,
-  downloadWarehouseImportTemplate,
   ContractPrintModal,
   CreditListRow,
   MessagesPageV2,
