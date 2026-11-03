@@ -3098,13 +3098,12 @@ function buildGoLiveReadiness(snapshot = {}, integrityReport = {}) {
   };
 }
 
-function buildProductionHardeningReport(snapshot = {}, { goLiveReport = {}, apiWebhookRows = [], apiSecretRows = [], notificationProviderRows = [] } = {}) {
+function buildProductionHardeningReport(snapshot = {}, { goLiveReport = {}, apiWebhookRows = [], apiSecretRows = [], notificationProviderRows = [], auditServerSynced = false } = {}) {
   const dbMeta = snapshot.dbMeta || {};
-  const auditLog = snapshot.auditLog || [];
   const isServerRuntime = dbMeta.runtime === "server";
   const providerName = normalize(dbMeta.provider || "");
   const isExternalDb = isServerRuntime && !providerName.includes("local persistent");
-  const immutableAudit = normalize(dbMeta.auditMode || import.meta.env?.VITE_AUDIT_MODE || "").includes("immutable") || auditLog.length > 0;
+  const immutableAudit = normalize(dbMeta.auditMode || import.meta.env?.VITE_AUDIT_MODE || "").includes("immutable") || auditServerSynced;
   const backupReady = Boolean(dbMeta.lastBackupAt || dbMeta.lastRestoreAt || snapshot.productionHardeningSnapshot?.backupCheckedAt);
   const deploymentReady = Boolean(snapshot.goLiveSnapshot || goLiveReport.checkedAt || deploymentToolkitReady);
   const apiReady = apiWebhookRows.length > 0 && apiWebhookRows.some((row) => row.lastTestAt || row.health === "Test OK");
