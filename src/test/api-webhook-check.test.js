@@ -21,7 +21,7 @@ it('names every missing piece of the configuration', () => {
 });
 
 it('the API page no longer invents response codes or latency', () => {
-  const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../shared/state/moduleActions.js', import.meta.url), 'utf8');
   const start = app.indexOf('function runApiAction(');
   const body = app.slice(start, app.indexOf('function runNotificationDispatchAction(', start));
   expect(body).toContain('checkWebhookConfiguration(');
