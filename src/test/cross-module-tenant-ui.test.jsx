@@ -10,7 +10,7 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: {
     const chain = {
       select: () => chain,
       eq: (column, value) => { mocks.filters.push({ table, column, value }); return chain; },
-      order: () => chain, limit: () => chain,
+      order: () => chain, limit: () => chain, range: () => chain,
       then: resolve => Promise.resolve({ data: [], error: null }).then(resolve),
     };
     return chain;
