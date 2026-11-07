@@ -23,9 +23,9 @@ export default function ProductionLedgerPage() {
     const version = ++generation.current;
     if (!tenantId) { setProducts([]); setWarehouses([]); setBatches([]); return; }
     const responses = await Promise.all([
-      // Paged: a tenant can have more than the 1000 rows PostgREST returns per request.
+      // Paged: a tenant can have more than the 1000 products or warehouses PostgREST returns per request.
       readAllRows(() => supabase.from('products').select('id,name,sku').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
-      supabase.from('warehouses').select('id,name').eq('tenant_id', tenantId).eq('is_active', true),
+      readAllRows(() => supabase.from('warehouses').select('id,name').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
       supabase.from('production_batches').select('*').eq('tenant_id', tenantId).order('completed_at', { ascending: false }).limit(100),
     ]);
     if (version !== generation.current || tenantId !== currentTenant.current) return;
