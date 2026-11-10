@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
@@ -49,7 +49,7 @@ export default function RolesPermissionsPage({
   const [userDraft, setUserDraft] = useState({ name: "", email: "", password: "", role: appRoles[0]?.name || "Super Admin" });
   const [editDraft, setEditDraft] = useState({ name: "", email: "", role: "", status: "Aktiv" });
 
-  const reload = async () => {
+  const reload = useCallback(async () => {
     const seq = ++reloadSeq.current;
     const isCurrent = () => seq === reloadSeq.current;
     if (loadedTenantRef.current !== tenantId) {
@@ -91,9 +91,9 @@ export default function RolesPermissionsPage({
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  };
+  }, [tenantId]);
 
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [tenantId]);
+  useEffect(() => { reload(); }, [reload]);
 
   const matrix = useMemo(() => {
     const m = {};
@@ -145,11 +145,6 @@ export default function RolesPermissionsPage({
   const selectedAccess = selectedAppUser
     ? normalizeUserModuleAccess(selectedAppUser, appRoles)
     : [];
-
-  const roleLabel = (roleName) =>
-    ROLES.find((role) => role.key === roleName)?.label ||
-    appRoles.find((role) => role.name === roleName)?.name ||
-    roleName || "—";
 
   const submitUser = async (event) => {
     event.preventDefault();

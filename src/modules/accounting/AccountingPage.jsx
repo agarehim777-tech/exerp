@@ -1,5 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
-import { supabase } from "../../integrations/supabase/client";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { useChartOfAccounts, useJournalEntries, fetchTrialBalance } from "../../shared/hooks/useAccounting.js";
@@ -154,14 +153,14 @@ function TrialBalancePanel({ tenantId }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try { setRows(await fetchTrialBalance(tenantId, from, to)); }
     catch (e) { appAlert(e.message); }
     setLoading(false);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenantId]);
+  }, [tenantId, from, to]);
+  useEffect(() => { load(); }, [load]);
 
   const totals = rows.reduce((a, r) => ({ d: a.d + Number(r.debit), c: a.c + Number(r.credit) }), { d: 0, c: 0 });
 

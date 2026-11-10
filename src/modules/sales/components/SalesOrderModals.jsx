@@ -12,7 +12,6 @@ import {
   normalizeOrderProductLines,
 } from "../../../shared/lib/appDomain.jsx";
 import { createClientId } from "../../../shared/utils/id.js";
-import { serializeOrderNotes } from "../../../shared/utils/orderNotes.js";
 import { calculateOrderFinancials, calculateOrderLineTotal } from "../services/orderCalculations.js";
 
 const MAX_TOTAL_BONUS_RATE = 3;

@@ -7,3 +7,12 @@
 5. [x] Paket bölgüsü yoxlanıldı — PDF və qrafiklər onsuz da yalnız lazım olanda yüklənir; ümumi vendor birləşdirmə daha pis nəticə verdiyi üçün saxlanılmadı
 6. [~] Ümumi komponentlər CSS/token əsaslı vahid kitabxanaya çevrildi; maliyyə, mühasibat, hesabat və dashboard səhifələrinin mərhələli keçidi davam edir
 7. [x] Satış və xərc həyat dövrü integration/E2E testləri ayrıca serial CI qapısı ilə əlavə edildi
+
+## Təsdiqlənmiş yeni mərhələlər
+8. [x] 53 lint xəbərdarlığı aradan qaldırıldı, istifadəsiz import/dəyişənlər təmizləndi; 624 test keçir
+9. [~] Tipli naviqasiya/toast hook-ları və Button/Card/Input/Table təməli əlavə edildi; təhvil məntiqi 266 sətirlik ayrıca modula çıxarıldı. App.jsx və qalan böyük domen fayllarının bölünməsi tamamlanmayıb
+10. [~] Dashboard, CashbookPage, SalesInvoicesPage, FinancialStatementsPage sabit inline stillərdən təmizləndi; ümumi audit 1845 → 1423. Qalan ekranların keçidi açıqdır
+11. [ ] Kadr/maliyyə kolleksiyalarının xüsusi cədvəllərə təhlükəsiz keçidi — canlı sxem yoxlanıldı, dəyişdirilmədi. Maliyyə keçidinin canlı yoxlaması cashbook_ledger_summary/create_cash_expense_atomic/transfer_cash_atomic funksiyalarının bazada olmaması ilə bloklanır
+12. [ ] Qalan TypeScript keçidi, səhifələmə və son canlı yoxlamalar — tam tip keçidi və CI tip qapısı hələ əlavə edilməyib
+
+Yoxlama: dashboard, təhvil, kredit, mühasibat, HR ekranları girişli önizləmədə açıldı; maliyyə hesabatının beş tabı, kassa və faktura formaları masaüstü/390px telefonda yoxlanıldı. Runtime xətası yoxdur. Şirkət dəyişmə regressiyaları avtomatik testlərdə keçdi; canlı hesabda şirkət dəyişmə seçimi olmadığından canlı sınaq edilmədi. Kassa qalıqları mövcud server funksiyası çatışmazlığı səbəbindən yoxlanmış deyil.

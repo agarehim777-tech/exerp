@@ -4,13 +4,9 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useCashbook } from "../../shared/hooks/useCashbook.js";
 import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import { cashAmount } from "../../services/format.js";
-import { DataTable, Tabs } from '../../shared/ui/primitives.jsx';
+import { Button, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import { toLocalIsoDate } from "../../services/date.js";
-import {
-  badge, card, delBtn, input, msgBox, primaryBtn,
-  statLabel, statTile, statValue,
-} from "../../shared/ui/tokens.js";
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
@@ -34,24 +30,24 @@ export default function CashbookPage() {
   const selectedCurrency = currencies.some(item => item.currency === currency) ? currency : currencies[0]?.currency || "AZN";
   const totals = currencies.find(item => item.currency === selectedCurrency) || null;
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <div className="ui-card">Aktiv şirkət seçilməyib.</div>;
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <select aria-label="Hesabat valyutası" value={selectedCurrency} onChange={event => setCurrency(event.target.value)} style={input} disabled={!book.ledgerReady}>
+    <div className="ui-page-stack">
+      <Select aria-label="Hesabat valyutası" value={selectedCurrency} onChange={event => setCurrency(event.target.value)}  disabled={!book.ledgerReady}>
         {(currencies.length ? currencies : [{ currency: "AZN" }]).map(item => <option key={item.currency}>{item.currency}</option>)}
-      </select>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={statTile}><div style={statLabel}>Cari qalıq</div><div style={statValue}>{cashAmount(totals?.balance ?? null, selectedCurrency)}</div></div>
-        <div style={statTile}><div style={statLabel}>Mədaxil</div><div style={statValue}>{cashAmount(totals?.inflow ?? null, selectedCurrency)}</div></div>
-        <div style={statTile}><div style={statLabel}>Məxaric</div><div style={{ ...statValue, color: "#b23a3a" }}>{cashAmount(totals?.outflow ?? null, selectedCurrency)}</div></div>
-        <div style={statTile}><div style={statLabel}>Təsdiq gözləyən xərc</div><div style={statValue}>{totals?.pending ?? "—"}</div></div>
-        <div style={statTile}><div style={statLabel}>Geri qaytarılacaq</div><div style={{ ...statValue, color: totals?.refundPending ? "#b45309" : undefined }}>{cashAmount(totals?.refundPending ?? null, selectedCurrency)}</div></div>
+      </Select>
+      <div className="ui-table-actions ui-spacer-bottom">
+        <div className="ui-stat-card"><div className="ui-stat-label">Cari qalıq</div><div className="ui-stat-value">{cashAmount(totals?.balance ?? null, selectedCurrency)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Mədaxil</div><div className="ui-stat-value">{cashAmount(totals?.inflow ?? null, selectedCurrency)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Məxaric</div><div className="ui-stat-value amount-due">{cashAmount(totals?.outflow ?? null, selectedCurrency)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Təsdiq gözləyən xərc</div><div className="ui-stat-value">{totals?.pending ?? "—"}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Geri qaytarılacaq</div><div className={`ui-stat-value ${totals?.refundPending ? "amount-due" : ""}`}>{cashAmount(totals?.refundPending ?? null, selectedCurrency)}</div></div>
       </div>
 
       <Tabs items={[["accounts", "Hesablar"], ["transactions", "Əməliyyatlar"], ["expenses", "Xərclər"]]} value={tab} onChange={setTab} />
 
-      {book.error && <div style={msgBox}>Xəta: {book.error.message}</div>}
+      {book.error && <div className="ui-notice ui-notice-warning">Xəta: {book.error.message}</div>}
       {tab === "accounts" && <AccountsPanel book={book} />}
       {tab === "transactions" && <TransactionsPanel book={book} tenantId={tenantId} />}
       {tab === "expenses" && (
@@ -81,34 +77,34 @@ function AccountsPanel({ book }) {
   };
 
   return (
-    <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Kassa və bank hesabları ({book.accounts.length})</h3>
-      {msg && <div style={msgBox}>{msg}</div>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button type="button" style={primaryBtn} onClick={() => setOpenForm(current => current === "account" ? "" : "account")}>+ Yeni kassa</button>
-        {book.accounts.length > 1 && <button type="button" style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setOpenForm(current => current === "transfer" ? "" : "transfer")}>↔ Pul transferi</button>}
+    <div className="ui-card">
+      <h3 className="ui-section-title">Kassa və bank hesabları ({book.accounts.length})</h3>
+      {msg && <div className="ui-notice ui-notice-warning">{msg}</div>}
+      <div className="ui-table-actions ui-spacer-bottom">
+        <Button type="button"  onClick={() => setOpenForm(current => current === "account" ? "" : "account")}>+ Yeni kassa</Button>
+        {book.accounts.length > 1 && <Button type="button" variant="secondary" onClick={() => setOpenForm(current => current === "transfer" ? "" : "transfer")}>↔ Pul transferi</Button>}
       </div>
-      {openForm === "account" && <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 12, padding: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <input required placeholder="Hesab adı" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
-        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={input}>
+      {openForm === "account" && <form onSubmit={submit} className="ui-form-grid ui-form-surface">
+        <Input required placeholder="Hesab adı" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}  />
+        <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} >
           {Object.entries(ACCOUNT_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-        </select>
-        <input placeholder="Valyuta" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} style={input} />
-        <input placeholder="Hesab №" value={form.account_no} onChange={(e) => setForm({ ...form, account_no: e.target.value })} style={input} />
-        <input type="number" step="0.01" placeholder="Açılış qalığı" value={form.opening_balance} onChange={(e) => setForm({ ...form, opening_balance: e.target.value })} style={input} />
-        <button type="submit" style={primaryBtn}>+ Hesab</button>
+        </Select>
+        <Input placeholder="Valyuta" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}  />
+        <Input placeholder="Hesab №" value={form.account_no} onChange={(e) => setForm({ ...form, account_no: e.target.value })}  />
+        <Input type="number" step="0.01" placeholder="Açılış qalığı" value={form.opening_balance} onChange={(e) => setForm({ ...form, opening_balance: e.target.value })}  />
+        <Button type="submit" >+ Hesab</Button>
       </form>}
       {openForm === "transfer" && book.accounts.length > 1 && <form onSubmit={async event => {
         event.preventDefault(); setMsg("");
         try { await book.transfer(transfer); setTransfer(current => ({ ...current, amount: "", description: "" })); setOpenForm(""); setMsg("Transfer tamamlandı."); }
         catch (error) { setMsg(`Xəta: ${error.message}`); }
-      }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, padding: 12, marginBottom: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <select required value={transfer.fromAccountId} onChange={event => setTransfer({ ...transfer, fromAccountId: event.target.value })} style={input}><option value="">Haradan</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</select>
-        <select required value={transfer.toAccountId} onChange={event => setTransfer({ ...transfer, toAccountId: event.target.value })} style={input}><option value="">Haraya</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select>
-        <input required type="number" min="0.01" step="0.01" placeholder="Məbləğ" value={transfer.amount} onChange={event => setTransfer({ ...transfer, amount: event.target.value })} style={input} />
-        <input type="date" value={transfer.occurredAt} onChange={event => setTransfer({ ...transfer, occurredAt: event.target.value })} style={input} />
-        <input placeholder="Qeyd" value={transfer.description} onChange={event => setTransfer({ ...transfer, description: event.target.value })} style={input} />
-        <button type="submit" style={primaryBtn}>Transfer et</button>
+      }} className="ui-form-grid ui-form-surface">
+        <Select required value={transfer.fromAccountId} onChange={event => setTransfer({ ...transfer, fromAccountId: event.target.value })} ><option value="">Haradan</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</Select>
+        <Select required value={transfer.toAccountId} onChange={event => setTransfer({ ...transfer, toAccountId: event.target.value })} ><option value="">Haraya</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</Select>
+        <Input required type="number" min="0.01" step="0.01" placeholder="Məbləğ" value={transfer.amount} onChange={event => setTransfer({ ...transfer, amount: event.target.value })}  />
+        <Input type="date" value={transfer.occurredAt} onChange={event => setTransfer({ ...transfer, occurredAt: event.target.value })}  />
+        <Input placeholder="Qeyd" value={transfer.description} onChange={event => setTransfer({ ...transfer, description: event.target.value })}  />
+        <Button type="submit" >Transfer et</Button>
       </form>}
       <DataTable label="Kassa və bank hesabları" rows={book.accounts} emptyText="Hesab yoxdur."
         columns={[{key:'name',label:'Ad',sticky:true},{key:'type',label:'Növ',mobileHidden:true},{key:'currency',label:'Valyuta',mobileHidden:true},{key:'balance',label:'Cari qalıq',align:'right'},{key:'action',label:'Əməl.'}]}
@@ -118,11 +114,11 @@ function AccountsPanel({ book }) {
             case 'type': return ACCOUNT_TYPE[a.type];
             case 'currency': return a.currency;
             case 'balance': return <b className="money-value">{cashAmount(book.balanceOf(a.id), a.currency)}</b>;
-            case 'action': return a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <button type="button" style={delBtn} onClick={async () => {
+            case 'action': return a.name?.trim().toLocaleLowerCase("az") !== "əsas kassa" && <Button type="button" variant="danger" onClick={async () => {
                 if (!(await appConfirm(`${a.name} kassası silinsin?`, { danger: true }))) return;
                 setMsg("");
                 try { await book.removeAccount(a); } catch (error) { setMsg(`Xəta: ${error.message}`); }
-              }}>Sil</button>;
+              }}>Sil</Button>;
             default: return null;
           }
         }} />
@@ -218,35 +214,35 @@ function TransactionsPanel({ book, tenantId }) {
   };
 
   return (
-    <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Kassa əməliyyatları</h3>
-      {msg && <div style={msgBox}>{msg}</div>}
-      <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, marginBottom: 16 }}>
-        <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} style={input}>
+    <div className="ui-card">
+      <h3 className="ui-section-title">Kassa əməliyyatları</h3>
+      {msg && <div className="ui-notice ui-notice-warning">{msg}</div>}
+      <form onSubmit={submit} className="ui-form-grid ui-form-surface">
+        <Select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} >
           <option value="">Hesab seç…</option>
           {book.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-        <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })} style={input}>
+        </Select>
+        <Select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })} >
           <option value="in">Mədaxil</option>
           <option value="out">Məxaric</option>
-        </select>
-        <input required type="number" step="0.01" placeholder="Məbləğ" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={input} />
-        <input placeholder="Kateqoriya" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input} />
-        <select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value, counterparty: "" })} style={input}>
+        </Select>
+        <Input required type="number" step="0.01" placeholder="Məbləğ" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })}  />
+        <Input placeholder="Kateqoriya" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}  />
+        <Select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value, counterparty: "" })} >
           <option value="">Müştəri seç (istəyə bağlı)</option>
           {book.customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}{customer.fin ? ` · ${customer.fin}` : ""}</option>)}
-        </select>
-        <input disabled={Boolean(form.customer_id)} placeholder={form.direction === "in" ? "Ödəyən şəxsin ad-soyadı" : "Ödənişi alanın ad-soyadı"} value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} style={input} />
-        <input placeholder="Qeyd / izah" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={input} />
-        <input type="date" value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })} style={input} />
-        <button type="submit" disabled={!book.accounts.length} style={primaryBtn}>+ Qeyd et</button>
+        </Select>
+        <Input disabled={Boolean(form.customer_id)} placeholder={form.direction === "in" ? "Ödəyən şəxsin ad-soyadı" : "Ödənişi alanın ad-soyadı"} value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })}  />
+        <Input placeholder="Qeyd / izah" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}  />
+        <Input type="date" value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })}  />
+        <Button type="submit" disabled={!book.accounts.length} >+ Qeyd et</Button>
       </form>
-      {!book.accounts.length && <div style={msgBox}>Əvvəlcə «Hesablar» bölməsindən kassa/bank hesabı yaradın.</div>}
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+      {!book.accounts.length && <div className="ui-notice ui-notice-warning">Əvvəlcə «Hesablar» bölməsindən kassa/bank hesabı yaradın.</div>}
+      <div className="ui-toolbar ui-spacer-bottom">
         <b>{visibleTransactions.length} əməliyyat</b>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-          {hiddenIds.size > 0 && <button type="button" className="secondary-btn" onClick={() => setShowHidden(value => !value)}>{showHidden ? "Aktiv siyahı" : `Silinmişləri göstər (${hiddenIds.size})`}</button>}
-          <input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)} style={{ ...input, width: "min(100%, 380px)" }} />
+        <div className="ui-table-actions ui-spacer-bottom">
+          {hiddenIds.size > 0 && <Button type="button" variant="secondary" onClick={() => setShowHidden(value => !value)}>{showHidden ? "Aktiv siyahı" : `Silinmişləri göstər (${hiddenIds.size})`}</Button>}
+          <Input aria-label="Kassa əməliyyatlarında axtarış" placeholder="Ad, sənəd, kateqoriya və ya qeyd üzrə axtar..." value={search} onChange={event => setSearch(event.target.value)}  />
         </div>
       </div>
       <DataTable label="Kassa əməliyyatları" rows={visibleTransactions}
@@ -266,7 +262,7 @@ function TransactionsPanel({ book, tenantId }) {
               case 'date': return new Date(t.occurred_at).toLocaleDateString("az-AZ");
               case 'number': return <b>{t.transaction_no || "—"}</b>;
               case 'account': return t.account?.name || "—";
-              case 'type': return <span style={badge(t.category === "internal_transfer" ? "gray" : t.direction === "in" ? "green" : "red")}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span>;
+              case 'type': return <span className={`ui-badge ui-badge-${t.category === "internal_transfer" ? "neutral" : t.direction === "in" ? "success" : "danger"}`}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span>;
               case 'amount': return <b className="money-value">{cashAmount(t.amount, t.account?.currency || 'AZN')}</b>;
               case 'party': return <><b>{partyName}</b>{t.customer?.fin && <div className="muted">FİN: {t.customer.fin}</div>}</>;
               case 'reference': return t.reference || "—";
@@ -274,12 +270,12 @@ function TransactionsPanel({ book, tenantId }) {
               case 'employee': return <>{employee?.full_name || "Sistem"}{employee?.position && <div className="muted">{employee.position}</div>}</>;
               case 'description': return t.description || "—";
               case 'actions': return showHidden && hiddenIds.has(t.id)
-                ? <button className="secondary-btn" type="button" onClick={() => restoreHidden(t)}>Bərpa et</button>
+                ? <Button variant="secondary" type="button" onClick={() => restoreHidden(t)}>Bərpa et</Button>
                 : t.reversal_of
-                ? <span style={badge("gray")}>Reversal</span>
+                ? <span className={`ui-badge ui-badge-${"neutral"}`}>Reversal</span>
                 : reversedIds.has(t.id)
-                  ? <div style={{display:"grid",gap:5}}><span style={badge("gray")}>Ləğv edilib</span><button style={delBtn} type="button" onClick={() => hideCanceled(t)}>Siyahıdan sil</button></div>
-                  : <button style={delBtn} onClick={() => reverse(t)}>Ləğv et</button>;
+                  ? <div className="ui-page-stack"><span className={`ui-badge ui-badge-${"neutral"}`}>Ləğv edilib</span><Button variant="danger" type="button" onClick={() => hideCanceled(t)}>Siyahıdan sil</Button></div>
+                  : <Button variant="danger" onClick={() => reverse(t)}>Ləğv et</Button>;
               default: return null;
             }
         }} />
@@ -319,56 +315,56 @@ function ExpensesPanel({ book, canApprove }) {
   };
 
   return (
-    <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Xərclər ({book.expenses.length})</h3>
-      {msg && <div style={msgBox}>{msg}</div>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button type="button" style={primaryBtn} onClick={() => setOpenCreate(value => !value)}>+ Yeni xərc</button>
-        <button type="button" style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setOpenCategories(value => !value)}>Kateqoriyalar</button>
+    <div className="ui-card">
+      <h3 className="ui-section-title">Xərclər ({book.expenses.length})</h3>
+      {msg && <div className="ui-notice ui-notice-warning">{msg}</div>}
+      <div className="ui-table-actions ui-spacer-bottom">
+        <Button type="button"  onClick={() => setOpenCreate(value => !value)}>+ Yeni xərc</Button>
+        <Button type="button" variant="secondary" onClick={() => setOpenCategories(value => !value)}>Kateqoriyalar</Button>
       </div>
-      {openCategories && <div style={{ padding: 12, marginBottom: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <form onSubmit={async event => { event.preventDefault(); setMsg(""); try { if (editingCategory) await book.updateExpenseCategory(editingCategory, categoryName); else await book.createExpenseCategory(categoryName); setCategoryName(""); setEditingCategory(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <input required value={categoryName} onChange={event => setCategoryName(event.target.value)} placeholder="Kateqoriya adı" style={{ ...input, flex: 1 }} />
-          <button type="submit" style={primaryBtn}>{editingCategory ? "Yadda saxla" : "+ Kateqoriya"}</button>
-          {editingCategory && <button type="button" style={delBtn} onClick={() => { setEditingCategory(null); setCategoryName(""); }}>Ləğv et</button>}
+      {openCategories && <div className="ui-form-surface">
+        <form onSubmit={async event => { event.preventDefault(); setMsg(""); try { if (editingCategory) await book.updateExpenseCategory(editingCategory, categoryName); else await book.createExpenseCategory(categoryName); setCategoryName(""); setEditingCategory(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} className="ui-table-actions ui-spacer-bottom">
+          <Input required value={categoryName} onChange={event => setCategoryName(event.target.value)} placeholder="Kateqoriya adı"  />
+          <Button type="submit" >{editingCategory ? "Yadda saxla" : "+ Kateqoriya"}</Button>
+          {editingCategory && <Button type="button" variant="danger" onClick={() => { setEditingCategory(null); setCategoryName(""); }}>Ləğv et</Button>}
         </form>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{book.expenseCategories.map(category => <div key={category.id} style={{ display: "flex", gap: 5, alignItems: "center", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" }}><span>{category.name}</span><button type="button" className="text-btn" onClick={() => { setEditingCategory(category); setCategoryName(category.name); }}>Düzəlt</button><button type="button" style={delBtn} onClick={async () => { if (!(await appConfirm(`${category.name} kateqoriyası silinsin?`, { danger: true }))) return; try { await book.removeExpenseCategory(category); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</button></div>)}</div>
+        <div className="ui-table-actions ui-spacer-bottom">{book.expenseCategories.map(category => <div key={category.id} className="ui-category-item"><span>{category.name}</span><Button type="button" variant="ghost" onClick={() => { setEditingCategory(category); setCategoryName(category.name); }}>Düzəlt</Button><Button type="button" variant="danger" onClick={async () => { if (!(await appConfirm(`${category.name} kateqoriyası silinsin?`, { danger: true }))) return; try { await book.removeExpenseCategory(category); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Sil</Button></div>)}</div>
       </div>}
-      {openCreate && <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 16, padding: 12, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} style={input}>
+      {openCreate && <form onSubmit={submit} className="ui-form-grid ui-form-surface">
+        <Select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} >
           <option value="">Kassa seçin</option>
           {book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}
-        </select>
-        <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input}>
+        </Select>
+        <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} >
           {categoryNames.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <input required placeholder="Təsvir" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={input} />
-        <input required type="number" step="0.01" placeholder="Məbləğ" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={input} />
-        <input type="number" step="0.01" placeholder="ƏDV" value={form.vat_amount} onChange={(e) => setForm({ ...form, vat_amount: e.target.value })} style={input} />
-        <input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} style={input} />
-        <button type="submit" style={primaryBtn}>+ Xərc</button>
+        </Select>
+        <Input required placeholder="Təsvir" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}  />
+        <Input required type="number" step="0.01" placeholder="Məbləğ" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })}  />
+        <Input type="number" step="0.01" placeholder="ƏDV" value={form.vat_amount} onChange={(e) => setForm({ ...form, vat_amount: e.target.value })}  />
+        <Input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })}  />
+        <Button type="submit" >+ Xərc</Button>
       </form>}
       {editing && <form onSubmit={async event => {
         event.preventDefault(); setMsg("");
         try { await book.updateExpense(editing.original, editing.values); setEditing(null); setMsg("Xərc və kassa əməliyyatı yeniləndi."); }
         catch (error) { setMsg(`Xəta: ${error.message}`); }
-      }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, padding: 12, marginBottom: 16, border: "1px solid #d8cda8", borderRadius: 10, background: "#faf8ef" }}>
-        <select required value={editing.values.account_id || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, account_id: event.target.value } }))} style={input}><option value="">Kassa seçin</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</select>
-        <select value={editing.values.category} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, category: event.target.value } }))} style={input}>{categoryNames.map(category => <option key={category}>{category}</option>)}</select>
-        <input required value={editing.values.description || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, description: event.target.value } }))} style={input} placeholder="Təsvir" />
-        <input required type="number" min="0.01" step="0.01" value={editing.values.amount} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, amount: event.target.value } }))} style={input} placeholder="Məbləğ" />
-        <input type="number" step="0.01" value={editing.values.vat_amount || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, vat_amount: event.target.value } }))} style={input} placeholder="ƏDV" />
-        <input type="date" value={editing.values.expense_date} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, expense_date: event.target.value } }))} style={input} />
-        <button type="submit" style={primaryBtn}>Dəyişiklikləri saxla</button>
-        <button type="button" style={{ ...primaryBtn, background: "#fff", color: "#475569", border: "1px solid #cbd5e1" }} onClick={() => setEditing(null)}>Bağla</button>
+      }} className="ui-form-grid ui-form-surface">
+        <Select required value={editing.values.account_id || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, account_id: event.target.value } }))} ><option value="">Kassa seçin</option>{book.accounts.map(account => <option key={account.id} value={account.id}>{account.name} — {cashAmount(book.balanceOf(account.id), account.currency)}</option>)}</Select>
+        <Select value={editing.values.category} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, category: event.target.value } }))} >{categoryNames.map(category => <option key={category}>{category}</option>)}</Select>
+        <Input required value={editing.values.description || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, description: event.target.value } }))}  placeholder="Təsvir" />
+        <Input required type="number" min="0.01" step="0.01" value={editing.values.amount} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, amount: event.target.value } }))}  placeholder="Məbləğ" />
+        <Input type="number" step="0.01" value={editing.values.vat_amount || ""} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, vat_amount: event.target.value } }))}  placeholder="ƏDV" />
+        <Input type="date" value={editing.values.expense_date} onChange={event => setEditing(current => ({ ...current, values: { ...current.values, expense_date: event.target.value } }))}  />
+        <Button type="submit" >Dəyişiklikləri saxla</Button>
+        <Button type="button" variant="secondary" onClick={() => setEditing(null)}>Bağla</Button>
       </form>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, marginBottom: 12, width: "100%" }}>
-        <input value={filters.search} onChange={event => setFilters({ ...filters, search: event.target.value })} placeholder="Axtar…" style={{ ...input, minWidth: 0, boxSizing: "border-box" }} />
-        <select value={filters.category} onChange={event => setFilters({ ...filters, category: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün kateqoriyalar</option>{categoryNames.map(category => <option key={category}>{category}</option>)}</select>
-        <select value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }}><option value="">Bütün statuslar</option><option value="pending">Təsdiq gözləyir</option><option value="approved">Təsdiqləndi</option><option value="paid">Qəbul edildi</option><option value="refund_pending">Geri qaytarma gözləyir</option><option value="cancelled">Ləğv edildi</option></select>
-        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 12, color: "#64748b" }}><span>Başlanğıc tarixi</span><input type="date" value={filters.dateFrom} onChange={event => setFilters({ ...filters, dateFrom: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, fontSize: 12, color: "#64748b" }}><span>Bitmə tarixi</span><input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })} style={{ ...input, minWidth: 0, boxSizing: "border-box" }} /></label>
-        <button type="button" style={{ ...primaryBtn, minWidth: 0, alignSelf: "end", background: "#fff", color: "#475569", border: "1px solid #cbd5e1" }} onClick={() => setFilters({ search: "", category: "", status: "", dateFrom: "", dateTo: "" })}>Təmizlə</button>
+      <div className="ui-form-grid ui-form-surface">
+        <Input value={filters.search} onChange={event => setFilters({ ...filters, search: event.target.value })} placeholder="Axtar…"  />
+        <Select value={filters.category} onChange={event => setFilters({ ...filters, category: event.target.value })} ><option value="">Bütün kateqoriyalar</option>{categoryNames.map(category => <option key={category}>{category}</option>)}</Select>
+        <Select value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })} ><option value="">Bütün statuslar</option><option value="pending">Təsdiq gözləyir</option><option value="approved">Təsdiqləndi</option><option value="paid">Qəbul edildi</option><option value="refund_pending">Geri qaytarma gözləyir</option><option value="cancelled">Ləğv edildi</option></Select>
+        <label className="ui-field"><span>Başlanğıc tarixi</span><Input type="date" value={filters.dateFrom} onChange={event => setFilters({ ...filters, dateFrom: event.target.value })}  /></label>
+        <label className="ui-field"><span>Bitmə tarixi</span><Input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })}  /></label>
+        <Button type="button" variant="secondary" onClick={() => setFilters({ search: "", category: "", status: "", dateFrom: "", dateTo: "" })}>Təmizlə</Button>
       </div>
       <DataTable label="Xərclər" rows={visibleExpenses} emptyText="Filterə uyğun xərc yoxdur."
         columns={[
@@ -390,20 +386,20 @@ function ExpensesPanel({ book, canApprove }) {
               case 'category': return e.category;
               case 'description': return e.description || "—";
               case 'amount': return <b className="money-value">{cashAmount(e.amount, currency)}</b>;
-              case 'status': return <span style={badge(isCancelled ? "red" : isApproved ? "green" : e.status === "refund_pending" ? "red" : "amber")}>{isAccepted ? "Qəbul edildi" : e.status === "approved" ? "Təsdiqləndi" : isCancelled ? "Ləğv edildi" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span>;
+              case 'status': return <span className={`ui-badge ui-badge-${isCancelled ? "danger" : isApproved ? "success" : e.status === "refund_pending" ? "danger" : "warning"}`}>{isAccepted ? "Qəbul edildi" : e.status === "approved" ? "Təsdiqləndi" : isCancelled ? "Ləğv edildi" : e.status === "refund_pending" ? "Geri qaytarma gözləyir" : "Təsdiq gözləyir"}</span>;
               case 'approved': return isApproved ? "Bəli" : "—";
               case 'accepted': return isAccepted ? "Bəli" : "—";
               case 'cancelled': return isCancelled ? "Bəli" : "—";
               case 'impact': return <span className={cashImpact ? 'amount-due money-value' : 'muted'}>{cashImpact ? cashAmount(cashImpact, currency) : "Kassaya qaytarılıb"}</span>;
-              case 'actions': return <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              case 'actions': return <div className="ui-table-actions ui-spacer-bottom">
                 {isPending && <>
-                  <button style={{ ...primaryBtn, background: "#fff", color: "#075e4b", border: "1px solid #075e4b" }} onClick={() => setEditing({ original: e, values: { account_id: e.account_id || "", category: e.category, description: e.description || "", amount: e.amount, vat_amount: e.vat_amount || "", expense_date: e.expense_date } })}>Redaktə et</button>
-                  {!canApprove && <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc ləğv edildi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
+                  <Button variant="secondary" onClick={() => setEditing({ original: e, values: { account_id: e.account_id || "", category: e.category, description: e.description || "", amount: e.amount, vat_amount: e.vat_amount || "", expense_date: e.expense_date } })}>Redaktə et</Button>
+                  {!canApprove && <Button variant="danger" onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { await book.removeExpense(e); if (editing?.original?.id === e.id) setEditing(null); setMsg("Xərc ləğv edildi və məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</Button>}
                 </>}
-                {canApprove && isPending && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpense(e); setMsg("Xərc təsdiqləndi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Təsdiqlə</button>}
-                {canApprove && !isAccepted && !isCancelled && <button style={{ ...primaryBtn, background: "#0f766e" }} onClick={async () => { setMsg(""); try { await book.acceptExpense(e); setMsg("Xərc qəbul edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Qəbul et</button>}
-                {canApprove && !isCancelled && <button style={delBtn} onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</button>}
-                {canApprove && e.status === "refund_pending" && <button style={primaryBtn} onClick={async () => { setMsg(""); try { await book.approveExpenseRefund(e); setMsg("Ləğv edilmiş məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Məbləği kassaya qaytar</button>}
+                {canApprove && isPending && <Button  onClick={async () => { setMsg(""); try { await book.approveExpense(e); setMsg("Xərc təsdiqləndi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Təsdiqlə</Button>}
+                {canApprove && !isAccepted && !isCancelled && <Button  onClick={async () => { setMsg(""); try { await book.acceptExpense(e); setMsg("Xərc qəbul edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Qəbul et</Button>}
+                {canApprove && !isCancelled && <Button variant="danger" onClick={async () => { if (!(await appConfirm("Xərc ləğv edilsin və məbləğ kassaya qaytarılsın?", { danger: true }))) return; setMsg(""); try { const res = await book.cancelExpense(e); setMsg(res?.reversed ? "Xərc ləğv edildi, məbləğ kassaya qaytarıldı." : "Xərc ləğv edildi."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Ləğv et</Button>}
+                {canApprove && e.status === "refund_pending" && <Button  onClick={async () => { setMsg(""); try { await book.approveExpenseRefund(e); setMsg("Ləğv edilmiş məbləğ kassaya qaytarıldı."); } catch (error) { setMsg(`Xəta: ${error.message}`); } }}>Məbləği kassaya qaytar</Button>}
                 </div>;
               default: return null;
             }

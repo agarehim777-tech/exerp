@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { moduleFromPath, pathForModule, canonicalPath } from "./config/routes.js";
+import { pathForModule } from "./config/routes.js";
+import { useModuleNavigation } from "./shared/hooks/useModuleNavigation";
+import { useToasts } from "./shared/hooks/useToasts";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { ProductionLedgerPage } from './config/lazyPages.js';
 import { supabase } from "./integrations/supabase/client";
@@ -135,7 +136,8 @@ import { resolveOrderCustomer } from "./shared/lib/orderCustomer.js";
 import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 
-import { OrderProductLines, baseDeliveryDate, currentBusinessDate, getDeliveryPlan, getDeliveryStockCheck, getEmployeeKey, getKpiPeriodKey, isDeliveryQueueOrder, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
+import { currentBusinessDate, getEmployeeKey, getKpiPeriodKey } from "./shared/lib/appDomain.jsx";
+import { OrderProductLines, baseDeliveryDate, getDeliveryPlan, getDeliveryStockCheck, isDeliveryQueueOrder, summarizeOrderProducts } from "./modules/warehouse/deliveryDomain.jsx";
 import { isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
 import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getFreeQuantity, getModuleForPermission, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
 
@@ -176,7 +178,7 @@ export {
   monthNamesAz,
 };
 
-const baseCashBalance = 0;
+
 
 import {
   buildAllCreditRecords,
@@ -207,11 +209,12 @@ function App() {
   const [authError, setAuthError] = useState("");
   const { activeTenantId, isPlatformAdmin, user: authUser, signOut } = useAuth();
   const { begin: beginTenantRequest } = useTenantRequestScope(activeTenantId);
-  const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer, remove: deleteDbCustomer } = useCustomers(activeTenantId);
+  const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const dbSales = useOrders(activeTenantId);
   const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
+  const refreshDbInventory = dbInventory.refresh;
   const { ready: tenantStateReady } = useTenantUiPersistence({
     tenantId: activeTenantId, userId: authUser?.id, state, setState, hydrateState,
     localKey: localDbKey, schemaVersion: localDbSchemaVersion,
@@ -246,25 +249,7 @@ function App() {
     ordersLoaded: dbOrdersLoaded, inventory: dbInventory, setState,
   });
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [active, setActiveState] = useState(() => moduleFromPath(location.pathname));
-  const setActive = useCallback((id) => {
-    setActiveState(id);
-    const target = pathForModule(id);
-    if (location.search || (location.pathname !== target && !location.pathname.startsWith(target + "/"))) {
-      navigate(target);
-    }
-  }, [navigate, location.pathname, location.search]);
-  useEffect(() => {
-    const fromUrl = moduleFromPath(location.pathname);
-    setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-    // Köhnə/alias URL-lərini kanonik yeni ünvana yönləndir.
-    const target = canonicalPath(location.pathname);
-    if (target && target !== "/") {
-      navigate(target + location.search + location.hash, { replace: true });
-    }
-  }, [location.pathname, location.search, location.hash, navigate]);
+  const { active, setActive, navigate } = useModuleNavigation();
 
 
   const [query, setQuery] = useState("");
@@ -274,10 +259,10 @@ function App() {
     if (['sales', 'warehouseImport'].includes(modal?.type) && activeTenantId) {
       refreshDbCustomers();
       refreshDbProducts();
-      dbInventory.refresh();
+      refreshDbInventory();
     }
-  }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, dbInventory.refresh]);
-  const [toasts, setToasts] = useState([]);
+  }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, refreshDbInventory]);
+  const { toasts, notify } = useToasts();
   const [selectedKpiPeriod, setSelectedKpiPeriod] = useState(getKpiPeriodKey);
   const [kpiAccountId, setKpiAccountId] = useState("");
   const kpiLedger = useKpiLedger(active === "kpi" ? activeTenantId : null);
@@ -294,7 +279,7 @@ function App() {
   const auditSessionStart = useRef(new Date().toISOString());
   const [auditRetryTick, setAuditRetryTick] = useState(0);
   const [auditServerSyncedAt, setAuditServerSyncedAt] = useState("");
-  const notificationAutoRunRef = useRef("");
+
   const creditSourceOrders = useMemo(
     () => (!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
     [dbOrders, dbOrdersLoaded, state.orders],
@@ -355,14 +340,14 @@ function App() {
       if (isPlatformAdmin || dbRole === "owner" || dbRole === "admin") return dbOk;
       return legacyOk && dbOk;
     }),
-    [state.settings, remoteUser?.role, dbRole, dbCan, isPlatformAdmin],
+    [state.settings, dbRole, dbCan, isPlatformAdmin],
   );
 
-  const { receivableRows, invoiceRows, payrollTaxRows, financeOpeningBalance, accountingData, taxCalendarRows, currencyExposureRows, todayActionRows } = useFinanceViews({ state, creditRecords });
+  const { receivableRows, invoiceRows, accountingData, taxCalendarRows, currencyExposureRows, todayActionRows } = useFinanceViews({ state, creditRecords });
   const { projectRoiRows, productionRows } = useOperationsViews({ state });
   const { notificationProviderRows, notificationAutomationRows, apiWebhookRows, apiSecretRows } = useIntegrationViews({ state, creditRecords, invoiceRows });
   const { messageConversations, messageParticipantOptions, messageContextOptions } = useMessagingViews({ state, creditRecords });
-  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, moduleReadiness, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
+  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
 
   useEffect(() => {
     if (Number(state.dbMeta?.baselineVersion || 0) >= localDbBaselineVersion) return;
@@ -491,7 +476,7 @@ function App() {
     if (dbPermissionsLoading || !tenantStateReady) return;
     if (visibleNavItems.some((item) => item.id === active)) return;
     setActive(visibleNavItems[0]?.id || "dashboard");
-  }, [active, currentUser, dbPermissionsLoading, tenantStateReady, visibleNavItems]);
+  }, [active, currentUser, dbPermissionsLoading, tenantStateReady, visibleNavItems, setActive]);
 
   const filtered = useMemo(
     () => ({
@@ -535,14 +520,6 @@ function App() {
     ],
   );
 
-  function notify(message, variant = "success") {
-    const id = Date.now() + Math.random();
-    setToasts((items) => [...items, { id, message, variant }]);
-    window.setTimeout(() => {
-      setToasts((items) => items.filter((item) => item.id !== id));
-    }, 3200);
-  }
-
   const handleGitHubPush = useCallback(
     (commit) => {
       notify(`GitHub-a son push uğurlu: ${commit.sha}`, "success");
@@ -550,7 +527,7 @@ function App() {
     [notify]
   );
 
-  const gitHubSync = useGitHubSync({ enabled: true, onPush: handleGitHubPush });
+  useGitHubSync({ enabled: true, onPush: handleGitHubPush });
 
   function can(permission) {
     if (!permission || isPlatformAdmin) return true;

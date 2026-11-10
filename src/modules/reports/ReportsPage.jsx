@@ -245,7 +245,7 @@ export function ReportsPage({
       status: "Xammal riski",
     }));
   const allRiskRows = [...productionRisks, ...reportPackage.riskRows];
-  const riskAreas = useMemo(() => ["Hamısı", ...new Set(allRiskRows.map((row) => row.area))], [allRiskRows]);
+  const riskAreas = ["Hamısı", ...new Set(allRiskRows.map((row) => row.area))];
   const visibleRiskRows = allRiskRows.filter(
     (row) =>
       (riskFilter === "Hamısı" || row.area === riskFilter) &&
@@ -268,7 +268,6 @@ export function ReportsPage({
       .sort((a, b) => b[2] - a[2])
       .slice(0, 5);
   }, [filteredOrders]);
-  const lastExport = exports[0];
 
   const reportPayload = (title) => {
     const common = {

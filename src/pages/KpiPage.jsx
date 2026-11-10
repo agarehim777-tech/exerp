@@ -31,7 +31,6 @@ export default function KpiPage({
     a.localeCompare(b, "az"),
   );
   const visibleBonuses = salesBonuses.filter((row) => bonusFilter === "Hamısı" || row.seller === bonusFilter);
-  const bonusTotal = total(salesBonuses, "bonusAmount");
   const visibleBonusTotal = total(visibleBonuses, "bonusAmount");
   const payoutRows = rankingSource.filter((row) => Number(row.payoutAmount || 0) > 0);
   const periodHistory = [...periods].sort((a, b) => String(b.period).localeCompare(String(a.period)));

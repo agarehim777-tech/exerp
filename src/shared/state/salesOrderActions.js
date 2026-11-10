@@ -1,7 +1,8 @@
 import { pathForRecord } from "../../config/routes.js";
+import { normalizeOrderProductLines, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import { toLocalIsoDate } from "../../services/date.js";
 import { money, normalize } from "../../services/format.js";
-import { currentBusinessDate, getAvailableQuantity, normalizeOrderProductLines, summarizeOrderProducts } from "../lib/appDomain.jsx";
+import { currentBusinessDate, getAvailableQuantity } from "../lib/appDomain.jsx";
 import { adjustStockRows, buildQuantityMap, buildSalesCreditForOrder, buildSellerBonusRows, calculateOrderLineTotal, getCreditIdForOrder, nextContractNumber, productLineSignature, releaseOrderSerialReservations, summarizeSellerBonusRows, updateSerialStatuses } from "../lib/appHelpers.jsx";
 import { buildCreditPlan } from "../lib/credit.js";
 import { resolveOrderCustomer } from "../lib/orderCustomer.js";

@@ -147,5 +147,5 @@ export function useLegacyPayrollExpense({ state, setState }) {
         },
       );
     });
-  }, [state.employees]);
+  }, [state.employees, setState]);
 }

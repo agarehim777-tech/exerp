@@ -207,7 +207,7 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [tab, setTab] = useState("dashboard");
   const [query, setQuery] = useState("");
   const [poStatus, setPoStatusFilter] = useState("all");
-  const [invoiceStatus, setInvoiceStatusFilter] = useState("all");
+  const [invoiceStatus] = useState("all");
   const [loading, setLoading] = useState(true);
   const [registryLoaded, setRegistryLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -807,7 +807,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   }
 
   function editPayment(payment) {
-    const po = purchaseOrders.find((item) => item.id === payment.po_id);
     setPaymentPoId(payment.po_id);
     setEditingPaymentId(payment.id);
     setPaymentForm({

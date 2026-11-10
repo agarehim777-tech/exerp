@@ -50,7 +50,7 @@ export default function InsightsPage() {
     if (historyError) { setError(historyError.message); return; }
     setHistory(rows || []);
     setHistoryScope(scope);
-  }, [activeTenantId, begin]);
+  }, [activeTenantId, begin, scope]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
@@ -75,7 +75,7 @@ export default function InsightsPage() {
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [activeTenantId, begin]);
+  }, [activeTenantId, begin, scope]);
 
   const react = async (insight, action) => {
     if (!activeTenantId || pendingFeedback[insight.key]) return;
