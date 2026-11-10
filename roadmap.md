@@ -32,3 +32,10 @@ Yoxlama: 141 fayl üzrə 631 test keçdi; tip qapısı keçir; son önizləmə y
 - [x] Son yoxlama: 624 test keçdi, lint xətasızdır; girişli real müştəri/sifariş panelləri masaüstü və 390px telefonda açıldı, runtime xətası və üfüqi daşma yoxdur. Bu üç faylda inline style və yerli HTML düymə/input/select/table qalmadı; maliyyə əməliyyatları dəyişdirilmədi.
 
 Yoxlama: dashboard, təhvil, kredit, mühasibat, HR ekranları girişli önizləmədə açıldı; maliyyə hesabatının beş tabı, kassa və faktura formaları masaüstü/390px telefonda yoxlanıldı. Runtime xətası yoxdur. Şirkət dəyişmə regressiyaları avtomatik testlərdə keçdi; canlı hesabda şirkət dəyişmə seçimi olmadığından canlı sınaq edilmədi. Kassa qalıqları mövcud server funksiyası çatışmazlığı səbəbindən yoxlanmış deyil.
+
+## 10 noyabr: kod təmizliyi
+- [ ] Pul formatı və satışa yararlı qalıq üçün vahid funksiya
+- [ ] Səssiz limitlər əvəzinə hissə-hissə tam oxuma
+- [ ] appDomain.jsx-in anbar/satış/hesabat üzrə bölünməsi
+- [ ] ProcurementPage.jsx-in hissələrə bölünməsi
+- [ ] Hesabat cəmlərinin bazada hesablanması
