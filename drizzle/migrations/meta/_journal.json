@@ -15,6 +15,13 @@
       "when": 1793453939988,
       "tag": "0001_expense_status_canonical",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794301673260,
+      "tag": "0002_reverse_sales_order_reservation_status_fix",
+      "breakpoints": true
     }
   ]
 }
