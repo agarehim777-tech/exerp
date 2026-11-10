@@ -6,6 +6,7 @@ import { useInventoryUnits } from "../../shared/hooks/useInventoryUnits.js";
 import { money } from "../../services/format.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
+import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 
 const emptyUnit = {
   warehouse_id: "", product_id: "", serial_no: "", imei: "", batch_no: "", expiry_date: "",
@@ -44,7 +45,7 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
         title="Seriya, partiya və lokasiya reyestri"
         subtitle={`${visibleUnits.length} stok vahidi · IMEI, batch, rəf və bin izləmə`}
         icon={Boxes}
-        action={<button className="primary-btn" onClick={openCreate} disabled={!warehouses.length || !products.length}><Plus size={16} /> Stok vahidi</button>}
+        action={<Button variant="primary"  onClick={openCreate} disabled={!warehouses.length || !products.length}><Plus size={16} /> Stok vahidi</Button>}
       />
       {(notice || error) && <div className={error ? "inline-alert danger" : "inline-alert success"}>{error?.message || notice}</div>}
       {loading ? <EmptyState title="Stok vahidləri yüklənir" /> : (
@@ -60,8 +61,8 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
             money(unit.unit_cost),
             <StatusBadge status={unit.status} />,
             <div className="table-actions">
-              <button className="icon-btn" title="Redaktə et" onClick={() => setEditor({ ...unit })}><Pencil size={15} /></button>
-              <button className="icon-btn danger" title="Sil" onClick={() => removeUnit(unit)}><Trash2 size={15} /></button>
+              <Button variant="ghost" className="icon-btn" title="Redaktə et" onClick={() => setEditor({ ...unit })}><Pencil size={15} /></Button>
+              <Button variant="ghost" className="icon-btn danger" title="Sil" onClick={() => removeUnit(unit)}><Trash2 size={15} /></Button>
             </div>,
           ])}
         />
@@ -70,22 +71,22 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
       {editor && (
         <div className="modal-backdrop" role="presentation">
           <form className="modal-card inventory-unit-modal" onSubmit={submit}>
-            <div className="modal-head"><div><h2>{editor.id ? "Stok vahidini redaktə et" : "Yeni stok vahidi"}</h2><p>Seriya və ya partiya izləmə məlumatlarını daxil edin.</p></div><button type="button" className="icon-btn" onClick={() => setEditor(null)}><X size={18} /></button></div>
+            <div className="modal-head"><div><h2>{editor.id ? "Stok vahidini redaktə et" : "Yeni stok vahidi"}</h2><p>Seriya və ya partiya izləmə məlumatlarını daxil edin.</p></div><Button variant="ghost" type="button" className="icon-btn" onClick={() => setEditor(null)}><X size={18} /></Button></div>
             <div className="production-form-grid">
-              <label><span>Anbar</span><select value={editor.warehouse_id} onChange={(event) => setEditor({ ...editor, warehouse_id: event.target.value })} required>{warehouses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label><span>Anbar</span><Select value={editor.warehouse_id} onChange={(event) => setEditor({ ...editor, warehouse_id: event.target.value })} required>{warehouses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
               <label><span>Məhsul</span><ProductSearchSelect products={products} value={editor.product_id} onChange={(productId) => setEditor({ ...editor, product_id: productId })} /></label>
-              <label><span>IMEI</span><input value={editor.imei || ""} onChange={(event) => setEditor({ ...editor, imei: event.target.value })} /></label>
-              <label><span>Serial</span><input value={editor.serial_no || ""} onChange={(event) => setEditor({ ...editor, serial_no: event.target.value })} /></label>
-              <label><span>Partiya</span><input value={editor.batch_no || ""} onChange={(event) => setEditor({ ...editor, batch_no: event.target.value })} /></label>
-              <label><span>Son istifadə</span><input type="date" value={editor.expiry_date || ""} onChange={(event) => setEditor({ ...editor, expiry_date: event.target.value })} /></label>
-              <label><span>Zona</span><input value={editor.location_code || ""} onChange={(event) => setEditor({ ...editor, location_code: event.target.value })} /></label>
-              <label><span>Rəf</span><input value={editor.rack_code || ""} onChange={(event) => setEditor({ ...editor, rack_code: event.target.value })} /></label>
-              <label><span>Bin</span><input value={editor.bin_code || ""} onChange={(event) => setEditor({ ...editor, bin_code: event.target.value })} /></label>
-              <label><span>Miqdar</span><input type="number" min="0" step="0.001" value={editor.quantity} onChange={(event) => setEditor({ ...editor, quantity: event.target.value })} required /></label>
-              <label><span>Vahid maya</span><input type="number" min="0" step="0.01" value={editor.unit_cost} onChange={(event) => setEditor({ ...editor, unit_cost: event.target.value })} /></label>
-              <label><span>Status</span><select value={editor.status} onChange={(event) => setEditor({ ...editor, status: event.target.value })}>{["available","reserved","quarantine","issued","sold","written_off"].map((status) => <option key={status}>{status}</option>)}</select></label>
+              <label><span>IMEI</span><Input value={editor.imei || ""} onChange={(event) => setEditor({ ...editor, imei: event.target.value })} /></label>
+              <label><span>Serial</span><Input value={editor.serial_no || ""} onChange={(event) => setEditor({ ...editor, serial_no: event.target.value })} /></label>
+              <label><span>Partiya</span><Input value={editor.batch_no || ""} onChange={(event) => setEditor({ ...editor, batch_no: event.target.value })} /></label>
+              <label><span>Son istifadə</span><Input type="date" value={editor.expiry_date || ""} onChange={(event) => setEditor({ ...editor, expiry_date: event.target.value })} /></label>
+              <label><span>Zona</span><Input value={editor.location_code || ""} onChange={(event) => setEditor({ ...editor, location_code: event.target.value })} /></label>
+              <label><span>Rəf</span><Input value={editor.rack_code || ""} onChange={(event) => setEditor({ ...editor, rack_code: event.target.value })} /></label>
+              <label><span>Bin</span><Input value={editor.bin_code || ""} onChange={(event) => setEditor({ ...editor, bin_code: event.target.value })} /></label>
+              <label><span>Miqdar</span><Input type="number" min="0" step="0.001" value={editor.quantity} onChange={(event) => setEditor({ ...editor, quantity: event.target.value })} required /></label>
+              <label><span>Vahid maya</span><Input type="number" min="0" step="0.01" value={editor.unit_cost} onChange={(event) => setEditor({ ...editor, unit_cost: event.target.value })} /></label>
+              <label><span>Status</span><Select value={editor.status} onChange={(event) => setEditor({ ...editor, status: event.target.value })}>{["available","reserved","quarantine","issued","sold","written_off"].map((status) => <option key={status}>{status}</option>)}</Select></label>
             </div>
-            <div className="modal-actions"><button type="button" className="secondary-btn" onClick={() => setEditor(null)}>Ləğv et</button><button className="primary-btn" type="submit"><Save size={16} /> Saxla</button></div>
+            <div className="modal-actions"><Button variant="secondary" type="button"  onClick={() => setEditor(null)}>Ləğv et</Button><Button variant="primary"  type="submit"><Save size={16} /> Saxla</Button></div>
           </form>
         </div>
       )}

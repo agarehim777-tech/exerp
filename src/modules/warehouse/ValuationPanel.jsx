@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
 import { azn, badgeClass } from "../../shared/ui/tokens.js";
+import { Select, Table } from "../../shared/ui/primitives.tsx";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
@@ -48,10 +49,10 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
     <div className="ui-tok-card">
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h3 className="u-margin-top-0 u-margin-bottom-0">Dəyərləmə və maya dəyəri</h3>
-        <select value={method} onChange={(e) => setMethod(e.target.value)} className="ui-tok-input sx-69e6838">
+        <Select value={method} onChange={(e) => setMethod(e.target.value)} className="ui-tok-input sx-69e6838">
           <option value="fifo">FIFO (ilk giriş — ilk çıxış)</option>
           <option value="average">Çəkili orta maya</option>
-        </select>
+        </Select>
       </div>
 
       <div className="u-display-flex u-gap-12px u-flex-wrap-wrap u-margin-14px_0">
@@ -81,7 +82,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
         </div>
       )}
 
-      <table className="ui-tok-table">
+      <Table className="ui-tok-table">
         <thead>
           <tr>
             <th className="ui-tok-th">Məhsul</th><th className="ui-tok-th">SKU</th><th className="ui-tok-th">Qalıq</th>
@@ -119,7 +120,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
             <tr><td className="ui-tok-td" colSpan={7}>{loading ? "Yüklənir…" : "Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin."}</td></tr>
           )}
         </tbody>
-      </table>
+      </Table>
       <div className="u-font-size-12px u-opacity-0_7 u-margin-top-8px">
         Qeyd: hesablama bütün anbar hərəkətləri ({movements.length.toLocaleString("az-AZ")}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
       </div>

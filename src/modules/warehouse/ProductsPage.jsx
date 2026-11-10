@@ -5,6 +5,7 @@ import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
+import { Input, Select, Table } from "../../shared/ui/primitives.tsx";
 
 const emptyProduct = { id: "", sku: "", name: "", description: "", unit: "ədəd", price: "", currency: "AZN", vat_rate: 18, is_active: true };
 
@@ -111,19 +112,19 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
     </div>
     {msg && <div className="ui-tok-msg-box">{msg}</div>}{error && <div className="ui-tok-msg-box">Xəta: {error.message}</div>}
     {isAdmin && <form onSubmit={submit} className="ui-tok-card sx-998b746 sx-b9153b9 sx-114b3e2 sx-ede8748">
-      <input required placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className="ui-tok-input" />
-      <input required placeholder="Məhsulun adı" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="ui-tok-input" />
-      <input placeholder="Təsvir" value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="ui-tok-input" />
-      <input placeholder="Vahid" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="ui-tok-input" />
-      <input required type="number" min="0" step="0.01" placeholder="Qiymət" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="ui-tok-input" />
+      <Input required placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className="ui-tok-input" />
+      <Input required placeholder="Məhsulun adı" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="ui-tok-input" />
+      <Input placeholder="Təsvir" value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="ui-tok-input" />
+      <Input placeholder="Vahid" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="ui-tok-input" />
+      <Input required type="number" min="0" step="0.01" placeholder="Qiymət" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="ui-tok-input" />
       <button type="submit" className="ui-tok-primary-btn">{form.id ? "Yadda saxla" : "+ Məhsul"}</button>
       {form.id && <button type="button" className="ui-tok-secondary-btn" onClick={() => setForm(emptyProduct)}>Ləğv et</button>}
     </form>}
-    <div className="ui-tok-card"><div className="u-display-flex u-justify-content-space_between u-align-items-center u-gap-12px u-margin-bottom-14px u-flex-wrap-wrap"><h2 className="u-margin-0 u-font-size-19px u-color-12372c">Məhsullar ({filtered.length})</h2><div className="u-display-flex u-gap-8px u-flex-wrap-wrap"><input placeholder="SKU, ad və ya təsvir üzrə axtar…" value={query} onChange={(e) => setQuery(e.target.value)} className="ui-tok-input sx-291674d" /><select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)} className="ui-tok-input"><option value="all">Bütün məhsullar</option><option value="available">Satışa uyğun</option><option value="reserved">Rezervdə olanlar</option><option value="low">Aşağı stok</option><option value="out">Stokda yoxdur</option></select></div></div>
-      <table className="ui-tok-table"><thead><tr><th className="ui-tok-th">SKU</th><th className="ui-tok-th">Məhsul</th><th className="ui-tok-th">Qalıq</th><th className="ui-tok-th">Rezerv olunmuş</th><th className="ui-tok-th">Satışa uyğun</th><th className="ui-tok-th">Qiymət</th><th className="ui-tok-th">Status</th>{isAdmin && <th className="ui-tok-th">Əməliyyat</th>}</tr></thead><tbody>
+    <div className="ui-tok-card"><div className="u-display-flex u-justify-content-space_between u-align-items-center u-gap-12px u-margin-bottom-14px u-flex-wrap-wrap"><h2 className="u-margin-0 u-font-size-19px u-color-12372c">Məhsullar ({filtered.length})</h2><div className="u-display-flex u-gap-8px u-flex-wrap-wrap"><Input placeholder="SKU, ad və ya təsvir üzrə axtar…" value={query} onChange={(e) => setQuery(e.target.value)} className="ui-tok-input sx-291674d" /><Select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)} className="ui-tok-input"><option value="all">Bütün məhsullar</option><option value="available">Satışa uyğun</option><option value="reserved">Rezervdə olanlar</option><option value="low">Aşağı stok</option><option value="out">Stokda yoxdur</option></Select></div></div>
+      <Table className="ui-tok-table"><thead><tr><th className="ui-tok-th">SKU</th><th className="ui-tok-th">Məhsul</th><th className="ui-tok-th">Qalıq</th><th className="ui-tok-th">Rezerv olunmuş</th><th className="ui-tok-th">Satışa uyğun</th><th className="ui-tok-th">Qiymət</th><th className="ui-tok-th">Status</th>{isAdmin && <th className="ui-tok-th">Əməliyyat</th>}</tr></thead><tbody>
         {filtered.map((product) => <tr key={`${product._catalogSource}-${product.id}`}><td className="ui-tok-td"><b>{product.sku}</b></td><td className="ui-tok-td">{product.name}<div className="u-font-size-12px u-color-7a8782">{product.description || (product._catalogSource === "db" ? "—" : "Əvvəlki anbar məlumatından bərpa edilib")}</div></td><td className="ui-tok-td sx-83e4487">{product.totalStock.toLocaleString("az-AZ")}</td><td className={`ui-tok-td ${product.reservedStock > 0 ? "sx-80b150b" : "sx-51a53ff"} sx-4777d93`}>{product.reservedStock.toLocaleString("az-AZ")}</td><td className={`ui-tok-td ${product.availableStock > 0 ? "sx-528f6ad" : "sx-a69329c"} sx-9463d77`}>{product.availableStock.toLocaleString("az-AZ")}</td><td className="ui-tok-td">{azn(product.price)}</td><td className="ui-tok-td"><span className={`${badgeClass(product.availableStock <= 0 ? "red" : product.is_active ? "green" : "gray")}`}>{product.availableStock <= 0 ? "Stokda yoxdur" : product.is_active ? "Aktiv" : "Passiv"}</span></td>{isAdmin && <td className="ui-tok-td sx-4ddbe90"><button className="ui-tok-secondary-btn" onClick={() => edit(product)}>{product._catalogSource === "db" ? "Redaktə et" : "Kataloqa köçür"}</button>{product._catalogSource === "db" && <button className="ui-tok-del-btn" onClick={() => deleteProduct(product)}>Sil</button>}</td>}</tr>)}
         {!filtered.length && <tr><td className="ui-tok-td" colSpan={8}>{loading ? "Yüklənir…" : "Məhsul yoxdur."}</td></tr>}
-      </tbody></table>
+      </tbody></Table>
       <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={loading} />
     </div>
   </div>;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, ImagePlus, Trash2, X } from "lucide-react";
+import { Button, Input, Select } from "../../../shared/ui/primitives.tsx";
 
 export function WarehouseFormModal({ mode, warehouse, onClose, onSubmit }) {
   const [values, setValues] = useState({
@@ -30,55 +31,55 @@ export function WarehouseFormModal({ mode, warehouse, onClose, onSubmit }) {
             <h2>{mode === "edit" ? "Anbarı redaktə et" : "Yeni anbar yarat"}</h2>
             <p>Anbar adı, kodu, ünvanı, məsul şəxsi və tutum məlumatlarını daxil edin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
+          <Button variant="ghost" className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
             <X size={18} />
-          </button>
+          </Button>
         </div>
         <form onSubmit={submit} className="modal-form">
           <label>
             <span>Anbar kodu</span>
-            <input value={values.code} required onChange={(event) => updateValue("code", event.target.value)} />
+            <Input value={values.code} required onChange={(event) => updateValue("code", event.target.value)} />
           </label>
           <label>
             <span>Anbar adı</span>
-            <input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
+            <Input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
           </label>
           <label>
             <span>Şəhər</span>
-            <input value={values.city} required onChange={(event) => updateValue("city", event.target.value)} />
+            <Input value={values.city} required onChange={(event) => updateValue("city", event.target.value)} />
           </label>
           <label>
             <span>Məsul şəxs</span>
-            <input value={values.manager} required onChange={(event) => updateValue("manager", event.target.value)} />
+            <Input value={values.manager} required onChange={(event) => updateValue("manager", event.target.value)} />
           </label>
           <label>
             <span>Növ</span>
-            <select value={values.type} onChange={(event) => updateValue("type", event.target.value)}>
+            <Select value={values.type} onChange={(event) => updateValue("type", event.target.value)}>
               <option>Mərkəzi</option>
               <option>Regional</option>
               <option>Təhvil</option>
               <option>Servis</option>
-            </select>
+            </Select>
           </label>
           <label>
             <span>Tutum</span>
-            <input type="number" min="0" value={values.capacity} required onChange={(event) => updateValue("capacity", event.target.value)} />
+            <Input type="number" min="0" value={values.capacity} required onChange={(event) => updateValue("capacity", event.target.value)} />
           </label>
           <label>
             <span>Status</span>
-            <select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
+            <Select value={values.status} onChange={(event) => updateValue("status", event.target.value)}>
               <option>Aktiv</option>
               <option>Passiv</option>
               <option>Təmir</option>
-            </select>
+            </Select>
           </label>
           <label className="full">
             <span>Ünvan</span>
-            <input value={values.address} required onChange={(event) => updateValue("address", event.target.value)} />
+            <Input value={values.address} required onChange={(event) => updateValue("address", event.target.value)} />
           </label>
           <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn">{mode === "edit" ? "Yadda saxla" : "Anbar yarat"}</button>
+            <Button variant="secondary" type="button"  onClick={onClose}>Ləğv et</Button>
+            <Button variant="primary" type="submit" >{mode === "edit" ? "Yadda saxla" : "Anbar yarat"}</Button>
           </div>
         </form>
       </div>
@@ -150,9 +151,9 @@ export function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
             <h2>{product ? "Məhsulu redaktə et" : "Yeni məhsul"}</h2>
             <p>SKU, qiymət, minimum stok və serial izləmə qaydasını təyin edin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
+          <Button variant="ghost" className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
             <X size={18} />
-          </button>
+          </Button>
         </div>
         <form onSubmit={submit} className="modal-form">
           <div className="product-image-editor full">
@@ -167,74 +168,74 @@ export function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
                   <ImagePlus size={16} /> {values.imagePreview ? "Şəkli dəyiş" : "Şəkil əlavə et"}
                   <input type="file" accept="image/jpeg,image/png,image/webp" onChange={selectImage} />
                 </label>
-                {values.imagePreview && <button type="button" className="secondary-btn danger-outline" onClick={clearImage}><Trash2 size={15} /> Şəkli sil</button>}
+                {values.imagePreview && <Button variant="danger" type="button"  onClick={clearImage}><Trash2 size={15} /> Şəkli sil</Button>}
               </div>
               {imageError && <small className="product-image-error">{imageError}</small>}
             </div>
           </div>
           <label>
             <span>Məhsul adı</span>
-            <input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
+            <Input value={values.name} required onChange={(event) => updateValue("name", event.target.value)} />
           </label>
           <label>
             <span>SKU</span>
-            <input value={values.sku} required onChange={(event) => updateValue("sku", event.target.value)} />
+            <Input value={values.sku} required onChange={(event) => updateValue("sku", event.target.value)} />
           </label>
           <label>
             <span>Kateqoriya</span>
-            <select value={values.category} onChange={(event) => updateValue("category", event.target.value)}>
+            <Select value={values.category} onChange={(event) => updateValue("category", event.target.value)}>
               <option>Elektronika</option>
               <option>Məişət texnikası</option>
               <option>Aksesuar</option>
               <option>Xidmət</option>
               <option>Digər</option>
-            </select>
+            </Select>
           </label>
           <label>
             <span>Ölçü vahidi</span>
-            <select value={values.unit} onChange={(event) => updateValue("unit", event.target.value)}>
+            <Select value={values.unit} onChange={(event) => updateValue("unit", event.target.value)}>
               <option>ədəd</option>
               <option>qutu</option>
               <option>kg</option>
               <option>metr</option>
               <option>litr</option>
-            </select>
+            </Select>
           </label>
           <label>
             <span>Minimum stok</span>
-            <input type="number" min="0" value={values.reorderLevel} onChange={(event) => updateValue("reorderLevel", event.target.value)} />
+            <Input type="number" min="0" value={values.reorderLevel} onChange={(event) => updateValue("reorderLevel", event.target.value)} />
           </label>
           <label>
             <span>Baza tövsiyə sifariş sayı</span>
-            <input type="number" min="0" value={values.recommendedOrderQty} onChange={(event) => updateValue("recommendedOrderQty", event.target.value)} />
+            <Input type="number" min="0" value={values.recommendedOrderQty} onChange={(event) => updateValue("recommendedOrderQty", event.target.value)} />
             <small>Qalıq minimuma çatanda bu say və yaranmış çatışmazlıq birlikdə hesablanır.</small>
           </label>
           <label>
             <span>Alış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.costPrice} onChange={(event) => updateValue("costPrice", event.target.value)} />
+            <Input type="number" min="0" step="0.01" value={values.costPrice} onChange={(event) => updateValue("costPrice", event.target.value)} />
           </label>
           <label>
             <span>Satış qiyməti</span>
-            <input type="number" min="0" step="0.01" value={values.salePrice} onChange={(event) => updateValue("salePrice", event.target.value)} />
+            <Input type="number" min="0" step="0.01" value={values.salePrice} onChange={(event) => updateValue("salePrice", event.target.value)} />
           </label>
           <label className="full">
             <span>IMEI / serial izləmə</span>
-            <select value={values.serialTracked} onChange={(event) => updateValue("serialTracked", event.target.value)}>
+            <Select value={values.serialTracked} onChange={(event) => updateValue("serialTracked", event.target.value)}>
               <option>Bəli</option>
               <option>Xeyr</option>
-            </select>
+            </Select>
           </label>
           <div className="modal-actions">
             {onDelete && (
-              <button type="button" className="secondary-btn danger-outline" onClick={onDelete}>
+              <Button variant="danger" type="button"  onClick={onDelete}>
                 <Trash2 size={16} /> Sil
-              </button>
+              </Button>
             )}
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={saving}>
+            <Button variant="secondary" type="button"  onClick={onClose}>Ləğv et</Button>
+            <Button variant="primary" type="submit"  disabled={saving}>
               <Check size={16} />
               {saving ? "Saxlanılır…" : product ? "Yadda saxla" : "Məhsul yarat"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

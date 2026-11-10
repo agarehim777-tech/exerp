@@ -7,6 +7,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { shortProcurementDocumentNo } from "../procurement/documentNumbers.js";
 import ProductReturnsPanel from "./ProductReturnsPanel.jsx";
 import { buildAverageCostHistory, movementKind } from "./inventory360.js";
+import { Button, Table } from "../../shared/ui/primitives.tsx";
 
 const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
@@ -100,8 +101,8 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
             </div>
           </div>
           <div className="u-display-flex u-gap-8px">
-            <button type="button" className="secondary-btn" onClick={() => onEdit(product.id)}>Redaktə et</button>
-            <button type="button" className="secondary-btn" onClick={onClose} aria-label="Bağla"><X size={18} /></button>
+            <Button variant="secondary" type="button"  onClick={() => onEdit(product.id)}>Redaktə et</Button>
+            <Button variant="secondary" type="button"  onClick={onClose} aria-label="Bağla"><X size={18} /></Button>
           </div>
         </div>
         <div className="product-360-body">
@@ -145,9 +146,9 @@ function HistoryTable({ title, headers, rows, empty, loading }) {
   return <section>
     <h3 className="u-margin-0_0_12px u-color-173a30 u-font-size-17px">{title}</h3>
     <div className="warehouse-balance-table-wrap">
-      <table className="warehouse-balance-table"><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
+      <Table className="warehouse-balance-table"><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
         <tbody>{loading ? <tr><td colSpan={headers.length}>Tarixçə yüklənir…</td></tr> : rows.length ? rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>) : <tr><td colSpan={headers.length} className="warehouse-balance-empty">{empty}</td></tr>}</tbody>
-      </table>
+      </Table>
     </div>
   </section>;
 }
