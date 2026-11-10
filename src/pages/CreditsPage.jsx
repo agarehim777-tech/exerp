@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createIdempotencyKey } from "../services/coreOperations.js";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
@@ -196,7 +197,7 @@ function CreditsPage({
     setSearchTerm(searchTerm.trim());
   };
   const exportVisibleCredits = () => {
-    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const escapeCsv = (value) => csvCell(value);
     const rows = [
       ["Kod", "Müştəri", "FIN", "Müqavilə", "Cihaz", "Məbləğ", "Qalıq", "Aylıq", "Növbəti tarix", "Status", "Gecikmə", "Mənbə"],
       ...visibleCredits.map((item) => {

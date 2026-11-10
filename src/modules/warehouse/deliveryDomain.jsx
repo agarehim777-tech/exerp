@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { stages } from "../../data.js";
 import { normalize } from "../../services/format.js";
 import { parsePaymentDate, toLocalIsoDate } from "../../services/date.js";
@@ -121,7 +122,7 @@ export function summarizeOrderProducts(order) {
 
 export function exportDeliveryQueueCsv(rows) {
   const headers = ["Sifariş", "Müqavilə", "Kredit", "Müştəri", "FIN", "Məhsul", "Miqdar", "Anbar", "Ödəniş", "Qalıq", "Stok statusu", "Qeyd"];
-  const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const escapeValue = (value) => csvCell(value);
   const csvRows = rows.map((order) => [
     order.orderNo || order.id,
     order.contractId || "",

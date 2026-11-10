@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { BarChart3, CalendarClock, CircleAlert, Download, FileText, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";
@@ -11,7 +12,7 @@ export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, 
   const agingRows = useMemo(() => buildInvoiceAgingRows(invoices), [invoices]);
   const maxAgingBalance = Math.max(1, ...agingRows.map((row) => row.balance));
   const exportInvoices = () => {
-    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const escapeCsv = (value) => csvCell(value);
     const rows = [
       ["Faktura", "Sifaris", "Musteri", "FIN", "Mehsullar", "Net", "EDV", "Cemi", "Qaliq", "E-qaimə"],
       ...visibleInvoices.map((invoice) => [

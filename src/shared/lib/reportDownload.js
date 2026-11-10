@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { toLocalIsoDate } from "../../services/date.js";
 const safeFileName = (value) => String(value || "hesabat")
   .toLocaleLowerCase("az")
@@ -82,7 +83,7 @@ export async function downloadReportPdf({ title, period, summary = [], columns =
 }
 
 export function downloadReportCsv({ title, columns = [], rows = [] }) {
-  const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const escape = (value) => csvCell(value);
   const csv = `\uFEFF${[columns, ...rows].map((row) => row.map(escape).join(";")).join("\n")}`;
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");

@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 /**
  * Blob (tenant_states) ↔ real cədvəllər barışdırması (reconciliation).
  *
@@ -278,7 +279,7 @@ export function buildReconciliationReport(input = {}) {
 export function reconciliationToCsv(report) {
   const lines = [['bolme', 'acar', 'problem', 'blob', 'db', 'ciddilik'].join(',')];
   const push = (section, key, kind, blob, db, severity) =>
-    lines.push([section, key, kind, blob ?? '', db ?? '', severity].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    lines.push([section, key, kind, blob ?? '', db ?? '', severity].map((v) => csvCell(v)).join(','));
 
   report.serials.issues.forEach((i) => push('serial', i.imei, i.kind, i.blobStatus, i.dbStatus, i.severity));
   report.reservations.rows.filter((r) => r.diff !== 0).forEach((r) => push('rezerv', r.product, 'reserved_diff', r.activeReserved, r.balanceReserved, r.severity));
