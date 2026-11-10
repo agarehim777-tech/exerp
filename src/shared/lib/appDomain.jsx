@@ -2811,7 +2811,7 @@ export function buildAggregateWarehouseStock(warehouses, warehouseStock) {
       current.distribution.push({
         warehouse: warehouse?.name || warehouseId,
         total: Number(item.total || 0),
-        available: Number(item.total || 0) - Number(item.reserved || 0),
+        available: Number(item.total || 0) - Number(item.reserved || 0) - Number(item.problemQty ?? item.problem_qty ?? 0),
       });
       byProduct.set(item.product, current);
     });
