@@ -3,7 +3,6 @@ import { CreditCard, FileText, Package, Users, Wallet, X } from "lucide-react";
 import { DataTable, EmptyState, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { useMemo } from "react";
 import { money, normalize } from "../../services/format.js";
-import { total } from "../../shared/utils/aggregate.js";
 import { currentBusinessDate } from "./businessDate";
 import { parsePaymentDate } from "../../services/date.js";
 import { getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditSourceLabel, isCreditClosed } from "./credit.js";

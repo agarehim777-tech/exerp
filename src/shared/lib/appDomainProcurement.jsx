@@ -1,5 +1,4 @@
 import { normalize } from "../../services/format.js";
-import { total } from "../../shared/utils/aggregate.js";
 import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { getAvailableQuantity } from "./appDomainWarehouse.jsx";
 
