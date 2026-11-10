@@ -4,6 +4,18 @@ import { useTenantRequestScope } from "./useTenantRequestScope";
 import type { Dispatch, SetStateAction } from "react";
 import type { AppRecord, CollectionRow } from "../adapters/dedicatedCollections";
 import { definitionFor, fromDedicatedRow, toDedicatedRow } from "../adapters/dedicatedCollections";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+interface WireResult { data: Record<string, unknown>[] | null; error: PostgrestError | null; count: number | null }
+interface CollectionQuery extends PromiseLike<WireResult> {
+  select(columns: string, options: { count: "exact" }): CollectionQuery;
+  upsert(rows: Record<string, unknown>[], options: { onConflict: string }): CollectionQuery;
+  delete(): CollectionQuery;
+  eq(column: string, value: string): CollectionQuery;
+  order(column: string): CollectionQuery;
+  range(start: number, end: number): CollectionQuery;
+}
+const tableFor = (name: string) => supabase.from(definitionFor(name).table as "employees") as unknown as CollectionQuery;
 
 export const recordKey = (item: AppRecord, index: number) => String(item?.id ?? item?.key ?? item?.code ?? `idx-${index}`);
 
@@ -30,7 +42,7 @@ export function collectionRows(state: AppState, names: string[], tenantId: strin
 
 export function collectionChanges(baseline: Map<string, CollectionRow>, next: Map<string, CollectionRow>) {
   return {
-    upserts: [...next].filter(([key, row]) => !baseline.has(key) || signature(row) !== signature(baseline.get(key))).map(([, row]) => row),
+    upserts: [...next].filter(([key, row]) => { const previous = baseline.get(key); return !previous || signature(row) !== signature(previous); }).map(([, row]) => row),
     deletes: [...baseline].filter(([key]) => !next.has(key)).map(([, row]) => row),
   };
 }
@@ -63,7 +75,7 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
           for (const name of names) {
             const batch = upserts.filter(row => row.collection === name);
             if (!batch.length) continue;
-            const { error } = await (supabase.from as (table: string) => ReturnType<typeof supabase.from>)(definitionFor(name).table).upsert(batch.map(toDedicatedRow), { onConflict: "tenant_id,record_key" });
+            const { error } = await tableFor(name).upsert(batch.map(toDedicatedRow), { onConflict: "tenant_id,record_key" });
             if (error) throw error;
             if (!session.alive) return;
             batch.forEach(row => session.baseline.set(identity(row), row));
@@ -71,7 +83,7 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
         }
         for (const row of deletes) {
           if (!session.alive) return;
-          const { error } = await (supabase.from as (table: string) => ReturnType<typeof supabase.from>)(definitionFor(row.collection).table).delete()
+          const { error } = await tableFor(row.collection).delete()
             .eq("tenant_id", tenantId).eq("record_key", row.record_key);
           if (error) throw error;
           session.baseline.delete(identity(row));
@@ -99,12 +111,12 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
       // sort every collection while loading later pages of a large tenant.
       for (const name of names) {
         for (let offset = 0; ;) {
-          const { data, error, count } = await (supabase.from as (table: string) => ReturnType<typeof supabase.from>)(definitionFor(name).table).select("*", { count: "exact" })
+          const { data, error, count } = await tableFor(name).select("*", { count: "exact" })
             .eq("tenant_id", tenantId)
             .order("sort_position").order("record_key").range(offset, offset + 499);
           if (error) throw error;
           if (!session.alive) return;
-          if (!Number.isInteger(count)) throw new Error("Collection read requires an exact count");
+          if (typeof count !== 'number' || !Number.isInteger(count)) throw new Error("Collection read requires an exact count");
           if (!data?.length && offset < count) throw new Error("Collection read ended before all records were loaded");
           rows.push(...(data || []).map(row => fromDedicatedRow(row, name)));
           offset += data?.length || 0;
@@ -155,7 +167,7 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
 
   useEffect(() => {
     const session = sessionRef.current;
-    if (!ready || !session?.hydrated || flushTimer.current !== null) return;
+    if (!tenantId || !ready || !session?.hydrated || flushTimer.current !== null) return;
     const changes = collectionChanges(session.baseline, collectionRows(state, names, tenantId));
     if (!changes.upserts.length && !changes.deletes.length) return;
     // Background reads must not postpone an already queued user edit indefinitely.
