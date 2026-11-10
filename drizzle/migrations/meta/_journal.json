@@ -92,6 +92,13 @@
       "when": 1794304837466,
       "tag": "0012_restrict_finance_reversals_and_internal_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794304900443,
+      "tag": "0013_server_receivable_kpi_settlement",
+      "breakpoints": true
     }
   ]
 }

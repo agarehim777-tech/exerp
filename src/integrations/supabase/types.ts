@@ -2755,6 +2755,76 @@ export type Database = {
           },
         ]
       }
+      kpi_periods: {
+        Row: {
+          account_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          closed_at: string
+          closed_by: string
+          expense_id: string | null
+          id: string
+          paid_at: string | null
+          payout_amount: number
+          period: string
+          snapshot: Json
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string
+          closed_by: string
+          expense_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount: number
+          period: string
+          snapshot: Json
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string
+          closed_by?: string
+          expense_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount?: number
+          period?: string
+          snapshot?: Json
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_periods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_periods_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: true
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_periods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_deliveries: {
         Row: {
           attempts: number
@@ -4354,6 +4424,93 @@ export type Database = {
           },
           {
             foreignKeyName: "quotes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receivable_settlements: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          created_by: string
+          credit_id: string | null
+          currency: string
+          id: string
+          invoice_id: string | null
+          order_id: string | null
+          receipt_id: string
+          result: Json
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          created_by: string
+          credit_id?: string | null
+          currency: string
+          id?: string
+          invoice_id?: string | null
+          order_id?: string | null
+          receipt_id: string
+          result: Json
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string
+          credit_id?: string | null
+          currency?: string
+          id?: string
+          invoice_id?: string | null
+          order_id?: string | null
+          receipt_id?: string
+          result?: Json
+          source_id?: string
+          source_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receivable_settlements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credit_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6409,6 +6566,10 @@ export type Database = {
         Args: { _approve?: boolean; _shipment: string }
         Returns: number
       }
+      receivable_ledger_snapshot: {
+        Args: { _tenant_id: string }
+        Returns: Json
+      }
       receive_landed_cost_shipment: {
         Args: { _receipt_date?: string; _shipment: string; _warehouse: string }
         Returns: string
@@ -6522,6 +6683,10 @@ export type Database = {
         Args: { _payment: string; _reason: string }
         Returns: Json
       }
+      run_kpi_period_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: Json
@@ -6537,6 +6702,10 @@ export type Database = {
           _reason?: string
         }
         Returns: undefined
+      }
+      settle_receivable_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       start_credit_contract: {
         Args: { _credit_id: string; _start_date: string; _tenant_id: string }
