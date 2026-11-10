@@ -6,18 +6,12 @@ import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import {
-  azn, badge, card as baseCard, delBtn, input, msgBox, primaryBtn,
-  statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
-} from "../../shared/ui/tokens.js";
+import { azn, badge, card as baseCard, input, msgBox, primaryBtn, statValue, tabBtn, td } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
 const card = { ...baseCard, minWidth: 0 };
-const sectionTitle = { margin: 0, fontSize: 19, lineHeight: 1.3, color: "#12372c" };
-const sectionSubtitle = { margin: "5px 0 18px", fontSize: 13, lineHeight: 1.5, color: "#66756f" };
 const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#334b43" };
-const formGrid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(220px, 1fr))", gap: 14 };
 const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 function useTablePage(rows) {
@@ -34,8 +28,8 @@ function TablePages({ value, label }) {
   return <nav aria-label={label} className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-margin-top-12px">
     <span>{value.page * 50 + 1}–{Math.min((value.page + 1) * 50, value.total)} / {value.total}</span>
     <div className="u-display-flex u-gap-8px">
-      <button type="button" style={secondaryActionBtn} title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={value.page === 0} onClick={() => value.setPage(value.page - 1)}><ChevronLeft size={16} /></button>
-      <button type="button" style={secondaryActionBtn} title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={value.page === value.pages - 1} onClick={() => value.setPage(value.page + 1)}><ChevronRight size={16} /></button>
+      <button type="button" className="stock-page-secondary-action-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={value.page === 0} onClick={() => value.setPage(value.page - 1)}><ChevronLeft size={16} /></button>
+      <button type="button" className="stock-page-secondary-action-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={value.page === value.pages - 1} onClick={() => value.setPage(value.page + 1)}><ChevronRight size={16} /></button>
     </div>
   </nav>;
 }
@@ -69,33 +63,33 @@ export default function StockPage({ inventory: stock, products = [] }) {
         </p>
       </div>
       <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
-        <div style={statTile}>
-          <div style={statLabel}>Anbarlar</div>
-          <div style={statValue}>{stock.warehouses.length}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Anbarlar</div>
+          <div className="ui-tok-stat-value">{stock.warehouses.length}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>Ümumi qalıq</div>
-          <div style={statValue}>{totals.qty.toLocaleString("az-AZ")}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Ümumi qalıq</div>
+          <div className="ui-tok-stat-value">{totals.qty.toLocaleString("az-AZ")}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>Anbar dəyəri (orta maya)</div>
-          <div style={statValue}>{azn(totals.value)}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Anbar dəyəri (orta maya)</div>
+          <div className="ui-tok-stat-value">{azn(totals.value)}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>Kritik səviyyə</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Kritik səviyyə</div>
           <div style={{ ...statValue, color: totals.low ? "#b23a3a" : "#064e3b" }}>{totals.low}</div>
         </div>
       </div>
 
-      <div style={tabBar}>
+      <div className="ui-tok-tab-bar">
         {[["warehouses", "Anbarlar"], ["balances", "Anbarlar üzrə qalıqlar"], ["transfer", "Daxili transfer"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["aging", "Stok yaşlandırması"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
         ))}
       </div>
 
-      {stock.error && <div style={msgBox}>Xəta: {stock.error.message}</div>}
+      {stock.error && <div className="ui-tok-msg-box">Xəta: {stock.error.message}</div>}
       {stock.degraded && (
-        <div style={msgBox}>Canlı yenilənmə kəsildi — məlumatlar avtomatik yenidən sinxronlaşdırılır…</div>
+        <div className="ui-tok-msg-box">Canlı yenilənmə kəsildi — məlumatlar avtomatik yenidən sinxronlaşdırılır…</div>
       )}
 
       {tab === "balances" && <BalancesPanel stock={stock} />}
@@ -164,11 +158,11 @@ function BalancesPanel({ stock }) {
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h3 className="u-margin-0">Anbar qalıqları ({filteredBalances.length}/{stock.balances.length})</h3>
         {(filters.warehouseId || filters.query || filters.status !== "all") && (
-          <button type="button" style={secondaryActionBtn} onClick={resetFilters}>Filtrləri təmizlə</button>
+          <button type="button" className="stock-page-secondary-action-btn" onClick={resetFilters}>Filtrləri təmizlə</button>
         )}
       </div>
       <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_190px_1fr u-gap-10px u-margin-16px_0">
-        <select value={filters.warehouseId} onChange={(event) => setFilters((current) => ({ ...current, warehouseId: event.target.value }))} style={input}>
+        <select value={filters.warehouseId} onChange={(event) => setFilters((current) => ({ ...current, warehouseId: event.target.value }))} className="ui-tok-input">
           <option value="">Bütün anbarlar</option>
           {stock.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}
         </select>
@@ -177,9 +171,9 @@ function BalancesPanel({ stock }) {
           placeholder="Məhsul adı və ya SKU axtar…"
           value={filters.query}
           onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
-          style={input}
-        />
-        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} style={input}>
+ className="ui-tok-input"
+ />
+        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="ui-tok-input">
           <option value="all">Bütün statuslar</option>
           <option value="low">Sifariş tələb edən</option>
           <option value="normal">Normal qalıq</option>
@@ -188,11 +182,11 @@ function BalancesPanel({ stock }) {
       {editError && <div style={{ ...msgBox, marginBottom: 12 }}>{editError}</div>}
       {stock.loading && <div>Yüklənir…</div>}
       <div className="u-overflow-x-auto">
-      <table style={table}>
+      <table className="ui-tok-table">
         <thead>
           <tr>
-            <th style={th}>Anbar</th><th style={th}>Məhsul</th><th style={th}>SKU</th>
-            <th style={th}>Fiziki qalıq</th><th style={th}>Rezerv</th><th style={th}>Problemli</th><th style={th}>Satışa uyğun</th><th style={th}>Kritik həd</th><th style={th}>Status</th>
+            <th className="ui-tok-th">Anbar</th><th className="ui-tok-th">Məhsul</th><th className="ui-tok-th">SKU</th>
+            <th className="ui-tok-th">Fiziki qalıq</th><th className="ui-tok-th">Rezerv</th><th className="ui-tok-th">Problemli</th><th className="ui-tok-th">Satışa uyğun</th><th className="ui-tok-th">Kritik həd</th><th className="ui-tok-th">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -203,14 +197,14 @@ function BalancesPanel({ stock }) {
             const isEditing = editingKey === key;
             return (
               <tr key={key}>
-                <td style={td}>{b.warehouse?.name || "—"}</td>
-                <td style={td}>{b.product?.name || b.sku || "—"}</td>
-                <td style={td}>{b.product?.sku || b.sku || "—"}</td>
+                <td className="ui-tok-td">{b.warehouse?.name || "—"}</td>
+                <td className="ui-tok-td">{b.product?.name || b.sku || "—"}</td>
+                <td className="ui-tok-td">{b.product?.sku || b.sku || "—"}</td>
                 <td style={{ ...td, fontWeight: 600 }}>{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
-                <td style={td}>{Number(b.reserved || 0).toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td">{Number(b.reserved || 0).toLocaleString("az-AZ")}</td>
                 <td style={{ ...td, color: Number(b.problem_qty || 0) > 0 ? "#b23a3a" : undefined, fontWeight: 650 }}>{Number(b.problem_qty || 0).toLocaleString("az-AZ")}</td>
                 <td style={{ ...td, fontWeight: 650 }}>{saleable.toLocaleString("az-AZ")}</td>
-                <td style={td}>
+                <td className="ui-tok-td">
                   {isEditing ? (
                     <div className="u-display-flex u-align-items-center u-gap-6px">
                       <input
@@ -225,7 +219,7 @@ function BalancesPanel({ stock }) {
                           if (event.key === "Escape") cancelEditing();
                         }}
                         style={{ ...input, width: 88 }}
-                      />
+ />
                       <button type="button" disabled={editBusy} onClick={() => saveCriticalLevel(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi yadda saxla"><Check size={16} /></button>
                       <button type="button" disabled={editBusy} onClick={cancelEditing} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Redaktəni ləğv et"><X size={16} /></button>
                     </div>
@@ -236,17 +230,17 @@ function BalancesPanel({ stock }) {
                     </div>
                   )}
                 </td>
-                <td style={td}>
+                <td className="ui-tok-td">
                   <span style={badge(low ? "red" : "green")}>{low ? "Sifariş et" : "Normal"}</span>
                 </td>
               </tr>
             );
           })}
           {!stock.balances.length && !stock.loading && (
-            <tr><td style={td} colSpan={9}>Qalıq yoxdur — «Hərəkətlər» bölməsindən mədaxil edin.</td></tr>
+            <tr><td className="ui-tok-td" colSpan={9}>Qalıq yoxdur — «Hərəkətlər» bölməsindən mədaxil edin.</td></tr>
           )}
           {!!stock.balances.length && !filteredBalances.length && !stock.loading && (
-            <tr><td style={td} colSpan={9}>Seçilmiş filtrlərə uyğun qalıq tapılmadı.</td></tr>
+            <tr><td className="ui-tok-td" colSpan={9}>Seçilmiş filtrlərə uyğun qalıq tapılmadı.</td></tr>
           )}
         </tbody>
       </table>
@@ -282,42 +276,42 @@ function MovementsPanel({ stock, products }) {
       <h3 className="u-margin-top-0">
         Anbar hərəkətləri ({stock.movementsTotal.toLocaleString("az-AZ")})
       </h3>
-      {msg && <div style={msgBox}>{msg}</div>}
+      {msg && <div className="ui-tok-msg-box">{msg}</div>}
       <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_130px_1fr u-gap-8px u-margin-bottom-16px">
-        <select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })} style={input}>
+        <select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })} className="ui-tok-input">
           <option value="">Anbar seç…</option>
           {stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
         <ProductSearchSelect products={products} value={form.product_id} onChange={(productId) => setForm({ ...form, product_id: productId })} />
-        <select value={form.move_type} onChange={(e) => setForm({ ...form, move_type: e.target.value })} style={input}>
+        <select value={form.move_type} onChange={(e) => setForm({ ...form, move_type: e.target.value })} className="ui-tok-input">
           {Object.entries(MANUAL_MOVE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <input required type="number" step="0.001" placeholder="Say" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} />
-        <input type="number" step="0.01" placeholder="Maya dəyəri" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} style={input} />
-        <input placeholder="Sənəd №" value={form.doc_no} onChange={(e) => setForm({ ...form, doc_no: e.target.value })} style={input} />
-        <button type="submit" disabled={busy || !stock.warehouses.length} style={primaryBtn}>+ Qeyd et</button>
+        <input required type="number" step="0.001" placeholder="Say" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="ui-tok-input" />
+        <input type="number" step="0.01" placeholder="Maya dəyəri" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} className="ui-tok-input" />
+        <input placeholder="Sənəd №" value={form.doc_no} onChange={(e) => setForm({ ...form, doc_no: e.target.value })} className="ui-tok-input" />
+        <button type="submit" disabled={busy || !stock.warehouses.length} className="ui-tok-primary-btn">+ Qeyd et</button>
       </form>
-      {!stock.warehouses.length && <div style={msgBox}>Əvvəlcə «Anbarlar» bölməsindən anbar yaradın.</div>}
-      <table style={table}>
+      {!stock.warehouses.length && <div className="ui-tok-msg-box">Əvvəlcə «Anbarlar» bölməsindən anbar yaradın.</div>}
+      <table className="ui-tok-table">
         <thead>
           <tr>
-            <th style={th}>Tarix</th><th style={th}>Anbar</th><th style={th}>Məhsul</th>
-            <th style={th}>Növ</th><th style={th}>Say</th><th style={th}>Sənəd</th>
+            <th className="ui-tok-th">Tarix</th><th className="ui-tok-th">Anbar</th><th className="ui-tok-th">Məhsul</th>
+            <th className="ui-tok-th">Növ</th><th className="ui-tok-th">Say</th><th className="ui-tok-th">Sənəd</th>
           </tr>
         </thead>
         <tbody>
           {stock.movements.map((m) => (
             <tr key={m.id}>
-              <td style={td}>{new Date(m.moved_at).toLocaleDateString("az-AZ")}</td>
-              <td style={td}>{m.warehouse?.name || "—"}</td>
-              <td style={td}>{m.product?.name || m.sku || "—"}</td>
-              <td style={td}><span style={badge(m.move_type === "out" ? "red" : "green")}>{MOVE_LABEL[m.move_type]}</span></td>
-              <td style={td}>{Number(m.qty).toLocaleString("az-AZ")}</td>
-              <td style={td}>{m.doc_no || "—"}</td>
+              <td className="ui-tok-td">{new Date(m.moved_at).toLocaleDateString("az-AZ")}</td>
+              <td className="ui-tok-td">{m.warehouse?.name || "—"}</td>
+              <td className="ui-tok-td">{m.product?.name || m.sku || "—"}</td>
+              <td className="ui-tok-td"><span style={badge(m.move_type === "out" ? "red" : "green")}>{MOVE_LABEL[m.move_type]}</span></td>
+              <td className="ui-tok-td">{Number(m.qty).toLocaleString("az-AZ")}</td>
+              <td className="ui-tok-td">{m.doc_no || "—"}</td>
             </tr>
           ))}
           {!stock.movements.length && (
-            <tr><td style={td} colSpan={6}>{stock.movementsLoading ? "Yüklənir…" : "Hərəkət yoxdur."}</td></tr>
+            <tr><td className="ui-tok-td" colSpan={6}>{stock.movementsLoading ? "Yüklənir…" : "Hərəkət yoxdur."}</td></tr>
           )}
         </tbody>
       </table>
@@ -328,18 +322,18 @@ function MovementsPanel({ stock, products }) {
         <div className="u-display-flex u-gap-8px">
           <button
             type="button"
-            style={primaryBtn}
+ className="ui-tok-primary-btn"
             disabled={stock.movementsPage === 0 || stock.movementsLoading}
             onClick={() => stock.setMovementsPage((page) => Math.max(0, page - 1))}
-          >
+ >
             ← Əvvəlki
           </button>
           <button
             type="button"
-            style={primaryBtn}
+ className="ui-tok-primary-btn"
             disabled={stock.movementsPage + 1 >= stock.movementsPageCount || stock.movementsLoading}
             onClick={() => stock.setMovementsPage((page) => page + 1)}
-          >
+ >
             Növbəti →
           </button>
         </div>
@@ -367,16 +361,16 @@ function TransferPanel({ stock }) {
 
   return (
     <div style={card}>
-      <h2 style={sectionTitle}>Daxili anbar transferi</h2>
-      <p style={sectionSubtitle}>Məhsulu bir anbardan digərinə köçürün. Çıxış və giriş birlikdə qeydə alınır.</p>
-      {msg && <div style={msgBox}>{msg}</div>}
-      <form onSubmit={submit} style={formGrid}>
-        <label style={fieldLabel}>Mənbə anbar<select required value={form.fromWarehouseId} onChange={(e) => setForm({ ...form, fromWarehouseId: e.target.value, productId: "" })} style={input}><option value="">Seçin…</option>{stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
-        <label style={fieldLabel}>Hədəf anbar<select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} style={input}><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
-        <label style={fieldLabel}>Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
-        <label style={fieldLabel}>Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} /></label>
-        <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" style={input} /></label>
-        <div className="u-grid-column-1_1 u-display-flex u-justify-content-flex_end"><button type="submit" disabled={busy || stock.warehouses.length < 2} style={primaryBtn}>{busy ? "Köçürülür…" : "Transfer et"}</button></div>
+      <h2 className="stock-page-section-title">Daxili anbar transferi</h2>
+      <p className="stock-page-section-subtitle">Məhsulu bir anbardan digərinə köçürün. Çıxış və giriş birlikdə qeydə alınır.</p>
+      {msg && <div className="ui-tok-msg-box">{msg}</div>}
+      <form onSubmit={submit} className="stock-page-form-grid">
+        <label className="stock-page-field-label">Mənbə anbar<select required value={form.fromWarehouseId} onChange={(e) => setForm({ ...form, fromWarehouseId: e.target.value, productId: "" })} className="ui-tok-input"><option value="">Seçin…</option>{stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
+        <label className="stock-page-field-label">Hədəf anbar<select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} className="ui-tok-input"><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
+        <label className="stock-page-field-label">Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
+        <label className="stock-page-field-label">Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="ui-tok-input" /></label>
+        <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" className="ui-tok-input" /></label>
+        <div className="u-grid-column-1_1 u-display-flex u-justify-content-flex_end"><button type="submit" disabled={busy || stock.warehouses.length < 2} className="ui-tok-primary-btn">{busy ? "Köçürülür…" : "Transfer et"}</button></div>
       </form>
       {stock.warehouses.length < 2 && <div style={{ ...msgBox, marginTop: 12 }}>Transfer üçün ən azı iki anbar yaradılmalıdır.</div>}
     </div>
@@ -440,38 +434,38 @@ function WarehousesPanel({ stock, isAdmin }) {
   return (
     <div style={card}>
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
-        <h2 style={sectionTitle}>Anbarlar ({stock.warehouses.length})</h2>
+        <h2 className="stock-page-section-title">Anbarlar ({stock.warehouses.length})</h2>
         {isAdmin && (
           <button type="button" style={isFormOpen ? secondaryActionBtn : primaryBtn} onClick={toggleForm}>
             {isFormOpen ? "Formanı bağla ↑" : "+ Yeni anbar"}
           </button>
         )}
       </div>
-      <p style={sectionSubtitle}>Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
+      <p className="stock-page-section-subtitle">Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
       <input type="search" aria-label="Anbar axtarışı" placeholder="Anbar axtar..." value={query} onChange={event => setQuery(event.target.value)} style={{ ...input, marginBottom: 14 }} />
-      {msg && <div style={msgBox}>{msg}</div>}
+      {msg && <div className="ui-tok-msg-box">{msg}</div>}
       {isAdmin && isFormOpen && (
         <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_min_100_140px_1fr u-gap-10px u-margin-bottom-18px u-align-items-end">
-          <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
-          <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
-          <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={input} />
-          <button type="submit" style={primaryBtn}>{form.id ? "Yadda saxla" : "+ Anbar"}</button>
-          {form.id && <button type="button" style={secondaryActionBtn} onClick={() => { setForm(emptyForm); setIsFormOpen(false); }}>Ləğv et</button>}
+          <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="ui-tok-input" />
+          <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="ui-tok-input" />
+          <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="ui-tok-input" />
+          <button type="submit" className="ui-tok-primary-btn">{form.id ? "Yadda saxla" : "+ Anbar"}</button>
+          {form.id && <button type="button" className="stock-page-secondary-action-btn" onClick={() => { setForm(emptyForm); setIsFormOpen(false); }}>Ləğv et</button>}
         </form>
       )}
       <div className="u-overflow-x-auto">
-      <table style={table}>
-        <thead><tr><th style={th}>Kod</th><th style={th}>Ad</th><th style={th}>Ünvan</th>{isAdmin && <th style={th} />}</tr></thead>
+      <table className="ui-tok-table">
+        <thead><tr><th className="ui-tok-th">Kod</th><th className="ui-tok-th">Ad</th><th className="ui-tok-th">Ünvan</th>{isAdmin && <th className="ui-tok-th" />}</tr></thead>
         <tbody>
           {warehousePage.rows.map((w) => (
             <tr key={w.id}>
-              <td style={td}><b>{w.code}</b></td>
-              <td style={td}>{w.name}</td>
-              <td style={td}>{w.address || "—"}</td>
-              {isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button style={secondaryActionBtn} onClick={() => edit(w)}>Redaktə et</button><button style={delBtn} onClick={() => remove(w)}>Sil</button></td>}
+              <td className="ui-tok-td"><b>{w.code}</b></td>
+              <td className="ui-tok-td">{w.name}</td>
+              <td className="ui-tok-td">{w.address || "—"}</td>
+              {isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button className="stock-page-secondary-action-btn" onClick={() => edit(w)}>Redaktə et</button><button className="ui-tok-del-btn" onClick={() => remove(w)}>Sil</button></td>}
             </tr>
           ))}
-          {!filteredWarehouses.length && <tr><td style={td} colSpan={4}>Anbar yoxdur.</td></tr>}
+          {!filteredWarehouses.length && <tr><td className="ui-tok-td" colSpan={4}>Anbar yoxdur.</td></tr>}
         </tbody>
       </table>
       </div>

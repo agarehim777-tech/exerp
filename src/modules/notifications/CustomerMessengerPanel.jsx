@@ -78,36 +78,36 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
   };
 
   return (
-    <div style={S.wrap}>
-      <div style={S.head}>
+    <div className="customer-messenger-panel--s-wrap">
+      <div className="customer-messenger-panel--s-head">
         <MessageCircle size={18} color="#0f766e" />
         <div>
-          <div style={S.title}>Müştəri bildirişləri — WhatsApp / Telegram</div>
-          <div style={S.sub}>Sifariş statusu və ödəniş xatırlatmalarını müştəriyə birbaşa göndərin.</div>
+          <div className="customer-messenger-panel--s-title">Müştəri bildirişləri — WhatsApp / Telegram</div>
+          <div className="customer-messenger-panel--s-sub">Sifariş statusu və ödəniş xatırlatmalarını müştəriyə birbaşa göndərin.</div>
         </div>
       </div>
 
-      <div style={S.row}>
-        <div style={S.tabs}>
+      <div className="customer-messenger-panel--s-row">
+        <div className="customer-messenger-panel--s-tabs">
           <button onClick={() => setChannel("whatsapp")} style={{ ...S.tab, ...(channel === "whatsapp" ? S.tabOn : {}) }}>WhatsApp</button>
           <button onClick={() => setChannel("telegram")} style={{ ...S.tab, ...(channel === "telegram" ? S.tabOn : {}) }}>Telegram</button>
         </div>
-        <select value={customerId} onChange={(event) => { setCustomerId(event.target.value); setOrderId(""); }} style={S.input}>
+        <select value={customerId} onChange={(event) => { setCustomerId(event.target.value); setOrderId(""); }} className="customer-messenger-panel--s-input">
           <option value="">Müştəri seçin</option>
           {customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
         </select>
-        <select value={orderId} onChange={(event) => setOrderId(event.target.value)} style={S.input}>
+        <select value={orderId} onChange={(event) => setOrderId(event.target.value)} className="customer-messenger-panel--s-input">
           <option value="">Sifariş (istəyə bağlı)</option>
           {customerOrders.map((row) => <option key={row.id} value={row.id}>№{row.order_no}</option>)}
         </select>
-        <select value={templateCode} onChange={(event) => setTemplateCode(event.target.value)} style={S.input}>
+        <select value={templateCode} onChange={(event) => setTemplateCode(event.target.value)} className="customer-messenger-panel--s-input">
           {NOTIFICATION_TEMPLATES.map((row) => <option key={row.code} value={row.code}>{row.label}</option>)}
         </select>
       </div>
 
-      <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} style={S.textarea} placeholder="Mesaj mətni" />
+      <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} className="customer-messenger-panel--s-textarea" placeholder="Mesaj mətni" />
 
-      <div style={S.actions}>
+      <div className="customer-messenger-panel--s-actions">
         <span style={{ fontSize: 12, color: recipient ? "#475569" : "#b91c1c" }}>
           {recipient
             ? `Alıcı: ${recipient}`
@@ -116,9 +116,9 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
               : "Müştərinin telefon nömrəsi qeyd olunmayıb."}
         </span>
         {whatsappLink && (
-          <a href={whatsappLink} target="_blank" rel="noreferrer" style={S.link}><ExternalLink size={14} /> Linki aç</a>
+          <a href={whatsappLink} target="_blank" rel="noreferrer" className="customer-messenger-panel--s-link"><ExternalLink size={14} /> Linki aç</a>
         )}
-        <button onClick={send} disabled={busy || !recipient || !text.trim() || !activeTenantId} style={S.primary}>
+        <button onClick={send} disabled={busy || !recipient || !text.trim() || !activeTenantId} className="customer-messenger-panel--s-primary">
           <Send size={15} /> {channel === "whatsapp" ? "WhatsApp-da aç və qeyd et" : "Telegram-a göndər"}
         </button>
       </div>
@@ -130,7 +130,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
           <div className="u-font-size-13px u-font-weight-700 u-margin-bottom-6px">Son göndərişlər</div>
           <div className="u-display-grid u-gap-4px">
             {deliveries.map((row) => (
-              <div key={row.id} style={S.logRow}>
+              <div key={row.id} className="customer-messenger-panel--s-log-row">
                 <span className="u-font-weight-600 u-text-transform-capitalize">{row.channel}</span>
                 <span className="u-color-text_secondary">{row.recipient}</span>
                 <span style={{ color: row.status === "sent" ? "#15803d" : row.status === "failed" ? "#b91c1c" : "#b45309" }}>{row.status}</span>

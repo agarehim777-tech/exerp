@@ -20,7 +20,7 @@ export default function ProductPicker({ products = [], value, onPick }) {
         onChange={e => setQ(e.target.value)}
         placeholder="Məhsul seç..."
         style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13 }}
-      />
+ />
       {open && filtered.length > 0 && (
         <div className="u-position-absolute u-top-100 u-left-0 u-right-0 u-background-surface u-border-1px_solid_border u-border-radius-8px u-margin-top-2px u-max-height-240px u-overflow-auto u-z-index-50 u-box-shadow-0_8px_24px_rgba_0_0_0_0_1">
           {filtered.map(p => (

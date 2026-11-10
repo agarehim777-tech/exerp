@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../shared/lib/csvCell.js";
 import { toLocalIsoDate } from "../services/date.js";
 // Faktura PDF/çap ixracı — xarici kitabxana olmadan, brauzerin çap mühərriki ilə.
 const escapeHtml = (value) =>

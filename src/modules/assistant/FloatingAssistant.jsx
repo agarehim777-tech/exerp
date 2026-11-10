@@ -118,15 +118,15 @@ export default function FloatingAssistant() {
 
           <form
             onSubmit={(e) => { e.preventDefault(); submit(); }}
-            className="floating-assistant-composer"
-          >
+ className="floating-assistant-composer"
+ >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={activeTenantId ? "Sual yazın..." : "Şirkət seçin"}
               disabled={!activeTenantId || !session?.access_token}
-              className="floating-assistant-input"
-            />
+ className="floating-assistant-input"
+ />
             {busy ? (
               <button type="button" onClick={stop} className="floating-assistant-stop">
                 <X size={14} />
@@ -143,9 +143,9 @@ export default function FloatingAssistant() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="floating-assistant-toggle"
+ className="floating-assistant-toggle"
         aria-label={open ? "AI köməkçini bağla" : "AI köməkçini aç"}
-      >
+ >
         {open ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 

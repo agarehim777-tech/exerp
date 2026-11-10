@@ -34,8 +34,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <main style={wrap}>
-      <div style={card}>
+    <main className="reset-password-wrap">
+      <div className="reset-password-card">
         <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
           Şifrəni yenilə
         </h1>
@@ -56,9 +56,9 @@ export default function ResetPassword() {
               placeholder="Yeni şifrə (min 8)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={input}
-            />
-            <button disabled={busy} type="submit" style={btn}>
+ className="reset-password-input"
+ />
+            <button disabled={busy} type="submit" className="reset-password-btn">
               {busy ? "Yenilənir…" : "Şifrəni yadda saxla"}
             </button>
           </form>
@@ -69,7 +69,3 @@ export default function ResetPassword() {
   );
 }
 
-const wrap = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f0e0", fontFamily: "Manrope, system-ui" };
-const card = { background: "#fff", padding: 28, borderRadius: 22, boxShadow: "0 18px 44px rgba(6,78,59,0.14)", width: "min(420px, 92vw)", border: "1px solid #e6dfc9" };
-const input = { padding: "12px 14px", border: "1px solid #d4c9a3", borderRadius: 12, fontSize: 14, fontFamily: "inherit" };
-const btn = { padding: "12px 14px", borderRadius: 12, background: "linear-gradient(135deg,#0d7a5f,#064e3b)", color: "#f5f0e0", border: 0, cursor: "pointer", fontWeight: 700, fontFamily: "Sora, sans-serif" };

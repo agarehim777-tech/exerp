@@ -21,7 +21,7 @@ export default function LoadMoreBar({ hasMore, onLoadMore, loading, label = "Dah
           fontWeight: 700,
           fontSize: 13,
         }}
-      >
+ >
         {loading ? "Yüklənir…" : label}
       </button>
     </div>

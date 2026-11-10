@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "./csvCell.js";
 import { toLocalIsoDate } from "../../services/date.js";
 const safeFileName = (value) => String(value || "hesabat")
   .toLocaleLowerCase("az")

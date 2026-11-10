@@ -33,7 +33,7 @@ export default function ShipmentsPage() {
                   <div className="u-display-inline_flex u-gap-6px">
                     {NEXT[s.status] && (
                       <button onClick={() => setStatus(s.id, NEXT[s.status])}
-                        className="u-background-action u-color-surface u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px u-font-weight-600">
+ className="u-background-action u-color-surface u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px u-font-weight-600">
                         → {NEXT[s.status]}
                       </button>
                     )}

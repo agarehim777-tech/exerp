@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "./csvCell.js";
 /**
  * Blob (tenant_states) ↔ real cədvəllər barışdırması (reconciliation).
  *

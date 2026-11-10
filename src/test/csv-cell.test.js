@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../shared/lib/csvCell.js";
 
 describe("csvCell", () => {
   it("neutralizes formula-leading text", () => {

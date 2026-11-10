@@ -42,9 +42,9 @@ export default function CrmTasksPage() {
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border u-flex-wrap-wrap">
         <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Nə etmək lazımdır?"
-          className="u-flex-1 u-min-width-200px u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-14px" />
+ className="u-flex-1 u-min-width-200px u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-14px" />
         <input type="datetime-local" value={due} onChange={e => setDue(e.target.value)}
-          className="u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px" />
+ className="u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px" />
         <select value={pri} onChange={e => setPri(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
           <option value="low">Aşağı</option><option value="medium">Orta</option><option value="high">Yüksək</option>
         </select>

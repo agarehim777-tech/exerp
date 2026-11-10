@@ -105,19 +105,19 @@ export default function InsightsPage() {
 
   return (
     <div className="stack u-padding-24px u-max-width-1100px u-margin-0_auto u-width-100" >
-      <div style={S.header}>
-        <div style={S.headerIcon}><Brain size={20} /></div>
+      <div className="insights-page--s-header">
+        <div className="insights-page--s-header-icon"><Brain size={20} /></div>
         <div className="u-flex-1">
-          <div style={S.title}>AI Agent v2 — Ağıllı tövsiyələr</div>
-          <div style={S.sub}>Satış, satınalma, anbar qalıqları və vaxtı keçmiş borclar üzrə avtomatik təhlil. Rəyləriniz növbəti təhlildə nəzərə alınır.</div>
+          <div className="insights-page--s-title">AI Agent v2 — Ağıllı tövsiyələr</div>
+          <div className="insights-page--s-sub">Satış, satınalma, anbar qalıqları və vaxtı keçmiş borclar üzrə avtomatik təhlil. Rəyləriniz növbəti təhlildə nəzərə alınır.</div>
         </div>
-        <button onClick={generate} disabled={loading || !activeTenantId} style={S.primaryBtn}>
+        <button onClick={generate} disabled={loading || !activeTenantId} className="insights-page--s-primary-btn">
           {loading ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />} Təhlil et
         </button>
       </div>
 
       {signals && (
-        <div style={S.signalGrid}>
+        <div className="insights-page--s-signal-grid">
           <Signal label="Az qalan məhsul" value={signals.lowStockCount} tone="#b45309" />
           <Signal label="Vaxtı keçmiş kredit" value={`${Number(signals.overdueCreditTotal || 0).toFixed(2)} ₼`} tone="#b91c1c" />
           <Signal label="Vaxtı keçmiş faktura" value={`${Number(signals.overdueInvoiceTotal || 0).toFixed(2)} ₼`} tone="#b91c1c" />
@@ -126,10 +126,10 @@ export default function InsightsPage() {
         </div>
       )}
 
-      {error && <div style={S.error}><AlertTriangle size={16} /> {error}</div>}
+      {error && <div className="insights-page--s-error"><AlertTriangle size={16} /> {error}</div>}
 
       {!data && !loading && (
-        <div style={S.empty}>
+        <div className="insights-page--s-empty">
           <Zap size={28} color="#94a3b8" />
           <div className="u-font-weight-700 u-color-text_primary u-margin-top-8px">Hələ təhlil aparılmayıb</div>
           <div className="u-font-size-13px u-color-text_secondary">“Təhlil et” düyməsi ilə şirkət datası üzrə tövsiyələr yaradın.</div>
@@ -141,15 +141,15 @@ export default function InsightsPage() {
         const state = feedback[insight.key];
         return (
           <div key={insight.key || index} style={{ ...S.card, borderColor: tone.border }}>
-            <div style={S.cardHead}>
+            <div className="insights-page--s-card-head">
               <span style={{ ...S.badge, background: tone.bg, color: tone.color, borderColor: tone.border }}>{tone.label}</span>
-              <span style={S.category}>{CATEGORY_LABELS[insight.category] || insight.category || "Ümumi"}</span>
-              {insight.impact && <span style={S.impact}>{insight.impact}</span>}
+              <span className="insights-page--s-category">{CATEGORY_LABELS[insight.category] || insight.category || "Ümumi"}</span>
+              {insight.impact && <span className="insights-page--s-impact">{insight.impact}</span>}
             </div>
-            <div style={S.cardTitle}>{insight.title}</div>
-            <div style={S.cardDetail}>{insight.detail}</div>
-            {insight.action && <div style={S.action}><strong>Addım:</strong> {insight.action}</div>}
-            <div style={S.cardActions}>
+            <div className="insights-page--s-card-title">{insight.title}</div>
+            <div className="insights-page--s-card-detail">{insight.detail}</div>
+            {insight.action && <div className="insights-page--s-action"><strong>Addım:</strong> {insight.action}</div>}
+            <div className="insights-page--s-card-actions">
               <button onClick={() => react(insight, "accepted")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "accepted" ? S.smallBtnOn : {}) }}>
                 <Check size={14} /> Qəbul et
               </button>
@@ -166,15 +166,15 @@ export default function InsightsPage() {
       })}
 
       {data && !data.insights?.length && (
-        <div style={S.empty}>Model struktur cavab qaytarmadı. Yenidən cəhd edin.</div>
+        <div className="insights-page--s-empty">Model struktur cavab qaytarmadı. Yenidən cəhd edin.</div>
       )}
 
       {history.length > 0 && (
-        <div style={S.card}>
-          <div style={S.cardTitle}>Öyrənmə tarixçəsi</div>
+        <div className="insights-page--s-card">
+          <div className="insights-page--s-card-title">Öyrənmə tarixçəsi</div>
           <div className="u-display-grid u-gap-6px u-margin-top-8px">
             {history.map((row, index) => (
-              <div key={index} style={S.historyRow}>
+              <div key={index} className="insights-page--s-history-row">
                 <span className="u-font-weight-600">{row.title || row.insight_key}</span>
                 <span style={{ color: row.action === "dismissed" ? "#b91c1c" : "#15803d" }}>
                   {row.action === "dismissed" ? "rədd edildi" : row.action === "done" ? "icra olundu" : "qəbul edildi"}
@@ -192,7 +192,7 @@ export default function InsightsPage() {
 
 function Signal({ label, value, tone }) {
   return (
-    <div style={S.signal}>
+    <div className="insights-page--s-signal">
       <span className="u-font-size-12px u-color-text_secondary">{label}</span>
       <strong style={{ fontSize: 18, color: tone }}>{value}</strong>
     </div>

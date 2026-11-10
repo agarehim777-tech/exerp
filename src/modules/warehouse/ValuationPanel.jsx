@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
-import { azn, badge, card, input, statLabel, statTile, statValue, table, td, th } from "../../shared/ui/tokens.js";
+import { azn, badge, input, statValue, td } from "../../shared/ui/tokens.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
@@ -45,7 +45,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
   const hasQuantityMismatch = Math.abs(ledgerQty - currentQty) > 0.0001;
 
   return (
-    <div style={card}>
+    <div className="ui-tok-card">
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h3 className="u-margin-top-0 u-margin-bottom-0">Dəyərləmə və maya dəyəri</h3>
         <select value={method} onChange={(e) => setMethod(e.target.value)} style={{ ...input, width: 220 }}>
@@ -55,20 +55,20 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
       </div>
 
       <div className="u-display-flex u-gap-12px u-flex-wrap-wrap u-margin-14px_0">
-        <div style={statTile}>
-          <div style={statLabel}>{method === "fifo" ? "FIFO qalıq dəyəri" : "Çəkili orta qalıq dəyəri"}</div>
-          <div style={statValue}>{azn(totals.inventoryValue)}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">{method === "fifo" ? "FIFO qalıq dəyəri" : "Çəkili orta qalıq dəyəri"}</div>
+          <div className="ui-tok-stat-value">{azn(totals.inventoryValue)}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>COGS (satılan malın mayası)</div>
-          <div style={statValue}>{azn(totals.cogs)}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">COGS (satılan malın mayası)</div>
+          <div className="ui-tok-stat-value">{azn(totals.cogs)}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>Məhsul sayı</div>
-          <div style={statValue}>{totals.productCount}</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Məhsul sayı</div>
+          <div className="ui-tok-stat-value">{totals.productCount}</div>
         </div>
-        <div style={statTile}>
-          <div style={statLabel}>Çatışmazlıq (backorder)</div>
+        <div className="ui-tok-stat-tile">
+          <div className="ui-tok-stat-label">Çatışmazlıq (backorder)</div>
           <div style={{ ...statValue, color: totals.shortageQty ? "#b23a3a" : "#064e3b" }}>
             {totals.shortageQty.toLocaleString("az-AZ")}
           </div>
@@ -81,11 +81,11 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
         </div>
       )}
 
-      <table style={table}>
+      <table className="ui-tok-table">
         <thead>
           <tr>
-            <th style={th}>Məhsul</th><th style={th}>SKU</th><th style={th}>Qalıq</th>
-            <th style={th}>Vahid maya</th><th style={th}>Qalıq dəyəri</th><th style={th}>COGS</th><th style={th}>Status</th>
+            <th className="ui-tok-th">Məhsul</th><th className="ui-tok-th">SKU</th><th className="ui-tok-th">Qalıq</th>
+            <th className="ui-tok-th">Vahid maya</th><th className="ui-tok-th">Qalıq dəyəri</th><th className="ui-tok-th">COGS</th><th className="ui-tok-th">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -95,15 +95,15 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
             const quantityMismatch = Math.abs(Number(row.qtyOnHand) - currentProductQty) > 0.0001;
             return (
               <tr key={row.productId || "unknown"}>
-                <td style={td}>{product.name || "Naməlum məhsul"}</td>
-                <td style={td}>{product.sku || "—"}</td>
+                <td className="ui-tok-td">{product.name || "Naməlum məhsul"}</td>
+                <td className="ui-tok-td">{product.sku || "—"}</td>
                 <td style={{ ...td, fontWeight: 600, color: row.qtyOnHand < 0 ? "#b23a3a" : undefined }}>
                   {row.qtyOnHand.toLocaleString("az-AZ")}
                 </td>
-                <td style={td}>{azn(row.unitCost)}</td>
-                <td style={td}>{azn(row.inventoryValue)}</td>
-                <td style={td}>{azn(row.cogs)}</td>
-                <td style={td}>
+                <td className="ui-tok-td">{azn(row.unitCost)}</td>
+                <td className="ui-tok-td">{azn(row.inventoryValue)}</td>
+                <td className="ui-tok-td">{azn(row.cogs)}</td>
+                <td className="ui-tok-td">
                   <span style={badge(row.shortageQty || quantityMismatch ? "red" : "green")}>
                     {row.shortageQty
                       ? `Çatışmazlıq ${row.shortageQty}`
@@ -116,7 +116,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
             );
           })}
           {!rows.length && (
-            <tr><td style={td} colSpan={7}>{loading ? "Yüklənir…" : "Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin."}</td></tr>
+            <tr><td className="ui-tok-td" colSpan={7}>{loading ? "Yüklənir…" : "Hərəkət yoxdur — dəyərləmə üçün mədaxil/məxaric qeyd edin."}</td></tr>
           )}
         </tbody>
       </table>
