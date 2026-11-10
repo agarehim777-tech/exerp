@@ -14,7 +14,7 @@ export interface ReportTotals {
 // Maps the report period labels to an inclusive date range; "Hamısı" means unbounded.
 export function reportPeriodRange(period: string, snapshotDate: string): { from: string | null; to: string | null } {
   if (period === "Hamısı") return { from: null, to: null };
-  const snap = new Date(snapshotDate);
+  const snap = snapshotDate ? new Date(snapshotDate) : new Date();
   const year = snap.getFullYear();
   let startMonth = 0;
   let months = 12;
