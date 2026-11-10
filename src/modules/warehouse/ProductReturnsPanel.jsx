@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
@@ -15,16 +15,17 @@ export default function ProductReturnsPanel({ product, warehouses = [] }) {
   const [busyRow, setBusyRow] = useState("");
   const [form, setForm] = useState({ warehouse_id: "", quantity: 1, disposition: "quarantine", reason: "" });
 
-  const load = async () => {
-    if (!activeTenantId || !product?.id) return;
+  const productId = product?.id;
+  const load = useCallback(async () => {
+    if (!activeTenantId || !productId) return;
     const { data, error } = await supabase.from("inventory_return_lines")
       .select("*, return:inventory_returns!inner(id,return_no,return_type,status,reason,created_at,warehouse:warehouses(name),order:orders(order_no))")
-      .eq("product_id", product.id).eq("return.tenant_id", activeTenantId).order("created_at", { ascending: false });
+      .eq("product_id", productId).eq("return.tenant_id", activeTenantId).order("created_at", { ascending: false });
     if (error) { setMessage(error.code === "42P01" ? "Qaytarma migration-ı hələ bazaya tətbiq edilməyib." : error.message); return; }
     setRows(data || []);
-  };
+  }, [activeTenantId, productId]);
 
-  useEffect(() => { load(); }, [activeTenantId, product?.id]);
+  useEffect(() => { load(); }, [load]);
 
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setMessage("");

@@ -80,7 +80,7 @@ export function useCreditInitialPayments(creditId, orderId, orderNo) {
     } finally {
       setLoading(false);
     }
-  }, [creditId, orderId, orderNo]);
+  }, [creditId]);
 
   useEffect(() => {
     refresh();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, LockKeyhole, RotateCcw, TriangleAlert } from "lucide-react";
 import { Panel, PanelHeader, StatusBadge } from "../../../components/ui.jsx";
 import { appPrompt } from "../../../shared/ui/dialogService.js";
@@ -47,7 +47,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
     && range?.end <= item.period_end
   ));
 
-  async function loadLocks() {
+  const loadLocks = useCallback(async () => {
     if (!tenantId) return;
     try {
       setError("");
@@ -55,9 +55,9 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
     } catch (loadError) {
       setError(periodErrorMessage(loadError, "Period tarixçəsi yüklənmədi"));
     }
-  }
+  }, [tenantId]);
 
-  useEffect(() => { loadLocks(); }, [tenantId]);
+  useEffect(() => { loadLocks(); }, [loadLocks]);
 
   async function closePeriod() {
     if (!range || !confirmed || reason.trim().length < 3) return;

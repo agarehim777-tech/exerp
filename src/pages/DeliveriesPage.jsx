@@ -1,7 +1,7 @@
 import { CalendarClock, Check, CircleAlert, Download, Filter, Search, Truck } from "lucide-react";
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
-import { lazy, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { money, normalize } from "../services/format.js";
 import { OrderProductLines, currentBusinessDate, enrichDeliveryOrder, exportDeliveryQueueCsv, getDeliveryDisplayStage, getDeliveryStockCheck, getDeliveryTotalQuantity, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../shared/lib/appDomain.jsx";
 
@@ -17,7 +17,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
   const [acceptance, setAcceptance] = useState({ recipientName: "", documentNo: "", warehouseEmployeeName: "", signatureConfirmed: false, note: "" });
   const warehouseById = useMemo(() => new Map(warehouses.map((warehouse) => [warehouse.id, warehouse])), [warehouses]);
 
-  function decorateDeliveryOrder(order) {
+  const decorateDeliveryOrder = useCallback((order) => {
     const warehouseId = order.warehouseId || warehouses[0]?.id || "";
     const warehouse = warehouseById.get(warehouseId);
     const orderWithWarehouse = { ...order, warehouseId };
@@ -32,14 +32,14 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
       displayStage: getDeliveryDisplayStage(order),
       deliveryQty: getDeliveryTotalQuantity(order),
     };
-  }
+  }, [warehouses, warehouseById, warehouseStock]);
 
   const deliveryOrders = useMemo(
     () =>
       orders
         .filter(isDeliveryQueueOrder)
         .map(decorateDeliveryOrder),
-    [orders, warehouseStock, warehouses, warehouseById],
+    [orders, decorateDeliveryOrder],
   );
 
   const completedOrders = useMemo(
@@ -49,7 +49,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
         .map(decorateDeliveryOrder)
         .sort((a, b) => (parsePaymentDate(b.deliveredAt)?.getTime() || 0) - (parsePaymentDate(a.deliveredAt)?.getTime() || 0))
         .slice(0, 6),
-    [orders, warehouseStock, warehouses, warehouseById],
+    [orders, decorateDeliveryOrder],
   );
 
   const readyOrders = deliveryOrders.filter((order) => order.stockCheck.ok);

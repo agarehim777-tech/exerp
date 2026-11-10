@@ -13,8 +13,8 @@ export function useSalesInvoices(tenantId) {
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [loadedScope, setLoadedScope] = useState(null);
   const loaded = Boolean(tenantId && loadedScope === scope);
-  const postCreate = useMemo(() => createInvoiceCommand(tenantId), [scope]);
-  const postPayment = useMemo(() => createInvoicePaymentCommand(tenantId), [scope]);
+  const postCreate = useMemo(() => createInvoiceCommand(tenantId), [tenantId, scope]);
+  const postPayment = useMemo(() => createInvoicePaymentCommand(tenantId), [tenantId, scope]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

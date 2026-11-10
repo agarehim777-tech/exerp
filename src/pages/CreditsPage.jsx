@@ -8,7 +8,6 @@ import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
 import ModuleLink from '../shared/ui/ModuleLink.jsx';
 import { pathForRecord } from '../config/routes.js';
 import { formatPaymentDate, parsePaymentDate, toLocalIsoDate } from "../services/date.js";
-import { total } from "../shared/utils/aggregate.js";
 import {
   baseCreditDate,
   currentBusinessYear,
@@ -184,7 +183,7 @@ function CreditsPage({
     if (credits.some((credit) => credit.id === selectedCreditId)) {
       setDetailCreditId(selectedCreditId);
     }
-  }, [credits, selectedCreditId]);
+  }, [credits, selectedCreditId, detailCreditId, setDetailCreditId]);
 
   const closeDetail = () => {
     setDetailCreditId("");

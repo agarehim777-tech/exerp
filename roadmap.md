@@ -7,3 +7,10 @@
 5. [x] Paket bölgüsü yoxlanıldı — PDF və qrafiklər onsuz da yalnız lazım olanda yüklənir; ümumi vendor birləşdirmə daha pis nəticə verdiyi üçün saxlanılmadı
 6. [~] Ümumi komponentlər CSS/token əsaslı vahid kitabxanaya çevrildi; maliyyə, mühasibat, hesabat və dashboard səhifələrinin mərhələli keçidi davam edir
 7. [x] Satış və xərc həyat dövrü integration/E2E testləri ayrıca serial CI qapısı ilə əlavə edildi
+
+## Təsdiqlənmiş yeni mərhələlər
+8. [ ] İstifadəsiz qalıqlar və 53 lint xəbərdarlığının aradan qaldırılması
+9. [ ] TypeScript təməli və böyük tətbiq/domen fayllarının bölünməsi
+10. [ ] Bütün ekranlarda vahid komponent və stil keçidi
+11. [ ] Kadr/maliyyə kolleksiyalarının xüsusi cədvəllərə təhlükəsiz keçidi
+12. [ ] Qalan TypeScript keçidi, səhifələmə və son canlı yoxlamalar
