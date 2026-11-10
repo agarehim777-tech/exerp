@@ -148,6 +148,13 @@
       "when": 1794314375254,
       "tag": "0020_report_module_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794314423330,
+      "tag": "0021_report_module_summary_cash_fix",
+      "breakpoints": true
     }
   ]
 }
