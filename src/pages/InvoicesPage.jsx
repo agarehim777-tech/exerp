@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../shared/lib/csvCell.js";
 import { BarChart3, CalendarClock, CircleAlert, Download, FileText, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";

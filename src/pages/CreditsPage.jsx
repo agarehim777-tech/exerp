@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../shared/lib/csvCell.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createIdempotencyKey } from "../services/coreOperations.js";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";

@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../shared/lib/csvCell.js";
 import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { Check, ChevronRight, CircleAlert, Download, Filter, Pencil, RefreshCw, Search, ShoppingCart, Trash2, Wallet } from "lucide-react";
 import { buildCreditPlan, getCreditInitials } from "../shared/lib/credit.js";

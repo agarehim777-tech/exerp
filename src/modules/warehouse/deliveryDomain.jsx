@@ -1,4 +1,4 @@
-import { csvCell } from "@/shared/lib/csvCell";
+import { csvCell } from "../../shared/lib/csvCell.js";
 import { stages } from "../../data.js";
 import { normalize } from "../../services/format.js";
 import { parsePaymentDate, toLocalIsoDate } from "../../services/date.js";
