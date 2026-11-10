@@ -51,3 +51,44 @@ export function useReportTotals(tenantId: string | null | undefined, period: str
   }, [tenantId, period, snapshotDate]);
   return totals;
 }
+
+export interface ReportTrendRow { label: string; revenue: number; expense: number }
+export interface ReportRiskRow { id: string; area: string; title: string; amount: number; owner: string; action: string; priority: string; status: string }
+
+export function mapTrendRows(raw: unknown): ReportTrendRow[] {
+  const fmt = new Intl.DateTimeFormat("az-AZ", { month: "short" });
+  return (Array.isArray(raw) ? raw : []).map((row: Record<string, unknown>) => ({
+    label: fmt.format(new Date(`${String(row.month)}T00:00:00`)),
+    revenue: Number(row.revenue) || 0,
+    expense: Number(row.expense) || 0,
+  }));
+}
+
+export function mapRiskRows(raw: unknown): ReportRiskRow[] {
+  return (Array.isArray(raw) ? raw : []).map((row: Record<string, unknown>) => ({
+    id: String(row.id ?? ""), area: String(row.area ?? ""), title: String(row.title ?? ""),
+    amount: Number(row.amount) || 0, owner: String(row.owner ?? ""), action: String(row.action ?? ""),
+    priority: String(row.priority ?? ""), status: String(row.status ?? ""),
+  }));
+}
+
+// Six-month chart and current risk register computed in the database; null while loading or on failure.
+export function useReportSeries(tenantId: string | null | undefined, snapshotDate: string) {
+  const [series, setSeries] = useState<{ trend: ReportTrendRow[]; risks: ReportRiskRow[] } | null>(null);
+  useEffect(() => {
+    let current = true;
+    setSeries(null);
+    if (!tenantId) return undefined;
+    const anchor = snapshotDate || toLocalIsoDate(new Date());
+    Promise.all([
+      supabase.rpc("report_monthly_trend", { _tenant_id: tenantId, _anchor: anchor, _months: 6 }),
+      supabase.rpc("report_risk_rows", { _tenant_id: tenantId, _limit: 8 }),
+    ]).then(([trend, risks]) => {
+      if (!current) return;
+      if (trend.error || risks.error) { console.warn("report series failed", trend.error || risks.error); return; }
+      setSeries({ trend: mapTrendRows(trend.data), risks: mapRiskRows(risks.data) });
+    });
+    return () => { current = false; };
+  }, [tenantId, snapshotDate]);
+  return series;
+}
