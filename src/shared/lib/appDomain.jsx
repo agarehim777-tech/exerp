@@ -3698,7 +3698,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
               <td className={row.problem > 0 ? "balance-qty risk" : ""}>{row.problem || 0}</td>
               <td className={row.shortage > 0 || row.status !== "Normal" ? "balance-qty risk" : "balance-qty good"}>
                 {row.shortage > 0 ? `-${row.shortage}` : row.available}
-                {row.shortage > 0 && <small style={{ display: "block", opacity: 0.75 }}>sifariş gözləyir</small>}
+                {row.shortage > 0 && <small className="u-display-block u-opacity-0_75">sifariş gözləyir</small>}
               </td>
               <td>{row.orderedQty > 0 ? <TwoLine title={`${row.orderedQty} ədəd`} subtitle={row.latestPoId || `${row.openPoCount} PO`} /> : "—"}</td>
               <td>{row.recommendedQty > 0 ? <TwoLine title={`${row.recommendedQty} ədəd`} subtitle={row.additionalQty > 0 ? `əlavə ${row.additionalQty} alınmalı` : "açıq PO qarşılayır"} /> : "—"}</td>
@@ -3709,7 +3709,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
               <td><StatusBadge status={row.status} /></td>
               {view === "products" && <td>
                 {row.productId ? (
-                  <span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+                  <span className="u-display-inline_flex u-gap-10px u-align-items-center">
                     {onOpenProduct && <button className="text-btn" onClick={() => onOpenProduct(row.productId)}>360 baxış</button>}
                     <button className="text-btn" onClick={() => onEditProduct(row.productId)}>Redaktə</button>
                   </span>
@@ -3729,7 +3729,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
           </tfoot>
         )}
       </table>
-      {pageCount > 1 && <nav aria-label="Stok cədvəlinin səhifələri" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, padding: 12 }}>
+      {pageCount > 1 && <nav aria-label="Stok cədvəlinin səhifələri" className="u-display-flex u-align-items-center u-justify-content-flex_end u-gap-12px u-padding-12px">
         <span>{currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, rows.length)} / {rows.length}</span>
         <button type="button" className="secondary-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button>
         <button type="button" className="secondary-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage === pageCount - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button>

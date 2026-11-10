@@ -84,12 +84,12 @@ export default function SalesOrdersPage({ repository, customers = [], products =
     <div className="ui-page-stack sales-registry">
       {detailLoading && <p role="status">Sifariş yüklənir...</p>}
       {ordersError && <div role="alert" className="form-error">{ordersError.message || 'Satış məlumatları oxunmadı.'}</div>}
-      {actionError && <div role="alert" style={{ padding: '10px 14px', border: '1px solid #fecaca', borderRadius: 10, background: '#fff1f2', color: '#b91c1c', fontSize: 13 }}>{actionError}</div>}
+      {actionError && <div role="alert" className="u-padding-10px_14px u-border-1px_solid_fecaca u-border-radius-10px u-background-fff1f2 u-color-danger u-font-size-13px">{actionError}</div>}
       <div className="ui-toolbar sales-registry-toolbar">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
-          style={{ flex: 1, minWidth: 200, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8 }} />
-        <input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
-        <input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} style={{ height: 38, border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 8px' }} />
+          className="u-flex-1 u-min-width-200px u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px" />
+        <input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
+        <input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
         <button type="button" onClick={exportRegistry} disabled={!filtered.length || ordersLoading} className="secondary-btn" title="Görünən satışları CSV formatında ixrac et"><Download size={16} /> CSV ixrac</button>
         <Tabs items={[["table", "Cədvəl"], ["kanban", "Kanban"]]} value={view} onChange={value => setPageQuery({ view: value })} />
       </div>
@@ -125,23 +125,23 @@ export default function SalesOrdersPage({ repository, customers = [], products =
           <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={ordersLoading} />
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
+        <div className="u-display-flex u-gap-12px u-overflow-x-auto u-padding-bottom-12px">
           {KANBAN_STATUSES.map(st => {
             const col = filtered.filter(o => canonicalStatus(o.status) === st);
             const sum = col.reduce((s, o) => s + Number(o.total || 0), 0);
             return (
-              <div key={st} style={{ minWidth: 260, background: '#f8fafc', borderRadius: 12, padding: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div key={st} className="u-min-width-260px u-background-surface_subtle u-border-radius-12px u-padding-10px">
+                <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-8px">
                   <StatusBadge status={STATUS_LABELS[st]} />
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{col.length} · {sum.toFixed(0)} ₼</div>
+                  <div className="u-font-size-11px u-color-text_secondary u-font-weight-600">{col.length} · {sum.toFixed(0)} ₼</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="u-display-flex u-flex-direction-column u-gap-8px">
                   {col.filter(o => pageRows.includes(o)).map(o => (
                     <div key={o.id}
-                      style={{ background: '#fff', padding: 10, borderRadius: 10, cursor: 'pointer', border: '1px solid #e2e8f0' }}>
+                      className="u-background-surface u-padding-10px u-border-radius-10px u-cursor-pointer u-border-1px_solid_border">
                       <ModuleLink className="record-link" to={pathForRecord('sales', o.id)} onSelect={() => openOrder(o)}>{o.order_no}</ModuleLink>
-                      <div style={{ fontSize: 12, color: '#64748b', margin: '2px 0' }}>{o.customer?.name || '—'}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                      <div className="u-font-size-12px u-color-text_secondary u-margin-2px_0">{o.customer?.name || '—'}</div>
+                      <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-top-6px">
                         <b className="money-value amount-positive">{cashAmount(o.total, o.currency || 'AZN')}</b>
                         <StatusBadge status={o.payment_status} />
                       </div>
@@ -154,9 +154,9 @@ export default function SalesOrdersPage({ repository, customers = [], products =
         </div>
       )}
 
-      <nav aria-label="Satış reyestri səhifələri" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <nav aria-label="Satış reyestri səhifələri" className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <span>{filtered.length} sifariş · {currentPage + 1} / {pageCount}</span>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="u-display-flex u-gap-8px">
           <button type="button" className="icon-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18} /></button>
           <button type="button" className="icon-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18} /></button>
         </div>

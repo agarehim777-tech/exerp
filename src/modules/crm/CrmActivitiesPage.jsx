@@ -20,21 +20,21 @@ export default function CrmActivitiesPage() {
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Aktivliklər</h1>
+    <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
+      <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">Aktivliklər</h1>
 
-      <div style={{ display: 'flex', gap: 8, background: '#fff', padding: 12, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-        <select value={type} onChange={e => setType(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+      <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border">
+        <select value={type} onChange={e => setType(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
           <option value="note">📝 Qeyd</option><option value="call">📞 Zəng</option><option value="meeting">🤝 Görüş</option>
           <option value="email">✉️ E-poçt</option><option value="sms">💬 SMS</option>
         </select>
         <input value={subject} onChange={e => setSubject(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Sürətli aktivlik əlavə et..."
-          style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }} />
-        <button onClick={add} style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Əlavə et</button>
+          className="u-flex-1 u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-14px" />
+        <button onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">Əlavə et</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div className="u-display-flex u-gap-6px u-flex-wrap-wrap">
         {['all', 'call', 'meeting', 'email', 'note', 'sms'].map(t => (
           <button key={t} onClick={() => setFilter(t)}
             style={{
@@ -45,17 +45,17 @@ export default function CrmActivitiesPage() {
         ))}
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-padding-16px u-display-flex u-flex-direction-column u-gap-8px">
         {filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Aktivlik yoxdur</div>
+          <div className="u-padding-40px u-text-align-center u-color-text_secondary">Aktivlik yoxdur</div>
         ) : filtered.map(a => (
-          <div key={a.id} style={{ display: 'flex', gap: 12, padding: 12, background: '#f8fafc', borderRadius: 10 }}>
-            <span style={{ fontSize: 20 }}>{icon[a.type] || '•'}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600 }}>{a.subject}</div>
-              {a.body && <div style={{ fontSize: 13, color: '#475569', marginTop: 2 }}>{a.body}</div>}
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                {a.customer?.name && <b style={{ color: '#10b981' }}>{a.customer.name} · </b>}
+          <div key={a.id} className="u-display-flex u-gap-12px u-padding-12px u-background-surface_subtle u-border-radius-10px">
+            <span className="u-font-size-20px">{icon[a.type] || '•'}</span>
+            <div className="u-flex-1">
+              <div className="u-font-weight-600">{a.subject}</div>
+              {a.body && <div className="u-font-size-13px u-color-text_secondary u-margin-top-2px">{a.body}</div>}
+              <div className="u-font-size-11px u-color-text_secondary u-margin-top-4px">
+                {a.customer?.name && <b className="u-color-action">{a.customer.name} · </b>}
                 {new Date(a.occurred_at).toLocaleString('az-AZ')}
               </div>
             </div>

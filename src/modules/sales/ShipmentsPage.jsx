@@ -11,29 +11,29 @@ export default function ShipmentsPage() {
   const { shipments, setStatus, remove } = useShipments(activeTenantId);
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead style={{ background: '#f8fafc' }}>
+    <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
+      <div className="u-background-surface u-border-radius-14px u-border-1px_solid_border u-overflow-hidden">
+        <table className="u-width-100 u-border-collapse-collapse u-font-size-13px">
+          <thead className="u-background-surface_subtle">
             <tr>
               <Th>№</Th><Th>Sifariş</Th><Th>Müştəri</Th><Th>Daşıyıcı</Th><Th>Tracking</Th><Th>Status</Th><Th>Göndərilmə</Th><Th align="right">Əməliyyat</Th>
             </tr>
           </thead>
           <tbody>
             {shipments.map(s => (
-              <tr key={s.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+              <tr key={s.id} className="u-border-top-1px_solid_surface_subtle">
                 <Td><b>{s.shipment_no}</b></Td>
                 <Td>{s.order?.order_no || '—'}</Td>
                 <Td>{s.order?.customer?.name || '—'}</Td>
                 <Td>{s.carrier || '—'}</Td>
-                <Td style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.tracking_no || '—'}</Td>
+                <Td className="u-font-family-monospace u-font-size-12px">{s.tracking_no || '—'}</Td>
                 <Td><StatusBadge status={s.status} /></Td>
                 <Td>{s.shipped_at ? new Date(s.shipped_at).toLocaleDateString('az-AZ') : '—'}</Td>
                 <Td align="right">
-                  <div style={{ display: 'inline-flex', gap: 6 }}>
+                  <div className="u-display-inline_flex u-gap-6px">
                     {NEXT[s.status] && (
                       <button onClick={() => setStatus(s.id, NEXT[s.status])}
-                        style={{ background: '#10b981', color: '#fff', border: 0, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                        className="u-background-action u-color-surface u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px u-font-weight-600">
                         → {NEXT[s.status]}
                       </button>
                     )}
@@ -43,7 +43,7 @@ export default function ShipmentsPage() {
                 </Td>
               </tr>
             ))}
-            {shipments.length === 0 && <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Çatdırılma yoxdur — sifarişdən yaradın</td></tr>}
+            {shipments.length === 0 && <tr><td colSpan={8} className="u-padding-40px u-text-align-center u-color-text_secondary">Çatdırılma yoxdur — sifarişdən yaradın</td></tr>}
           </tbody>
         </table>
       </div>

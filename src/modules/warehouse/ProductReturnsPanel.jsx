@@ -66,7 +66,7 @@ export default function ProductReturnsPanel({ product, warehouses = [] }) {
 
   return <section className="product-return-workspace">
     <h3><RotateCcw size={17} /> Problemli məhsul və silinmə</h3>
-    <p style={{ margin: "-4px 0 14px", color: "#66756f", fontSize: 13 }}>Anbarda olan məhsulu problemli stoka keçirin və ya fiziki qalıqdan silin.</p>
+    <p className="u-margin-4px_0_14px u-color-66756f u-font-size-13px">Anbarda olan məhsulu problemli stoka keçirin və ya fiziki qalıqdan silin.</p>
     <form onSubmit={submit} className="product-return-form">
       <label>Anbar<select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}><option value="">Seçin</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select></label>
       <label>Miqdar<input required type="number" min="0.001" step="0.001" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></label>
@@ -78,7 +78,7 @@ export default function ProductReturnsPanel({ product, warehouses = [] }) {
     <div className="warehouse-balance-table-wrap"><table className="warehouse-balance-table"><thead><tr><th>Nömrə</th><th>Miqdar</th><th>Əməliyyat</th><th>Səbəb</th><th>Anbar</th><th>Təmir statusu</th><th>İdarəetmə</th></tr></thead><tbody>
       {rows.map((row) => <tr key={row.id}><td>{row.return?.return_no}</td><td>{number(row.quantity)}</td><td>{dispositionLabel[row.disposition]}</td><td>{row.return?.reason || "—"}</td><td>{row.return?.warehouse?.name || "—"}</td><td>{repairStatusLabel[row.repair_status] || (row.disposition === "quarantine" ? "Təmir gözləyir" : "Tələb olunmur")}</td><td>
         {row.disposition === "quarantine" && row.return?.status === "completed" && !["repaired", "not_repairable"].includes(row.repair_status) ? (
-          <span style={{ display: "inline-flex", gap: 8 }}>
+          <span className="u-display-inline_flex u-gap-8px">
             {(row.repair_status === "pending" || !row.repair_status) && <button type="button" className="secondary-btn" disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "start")}>Təmirə başla</button>}
             <button type="button" className="primary-btn" disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "complete")}>Təmiri tamamla</button>
           </span>

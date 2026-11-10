@@ -18,7 +18,7 @@ export default function BirthDateInput({ value, onChange }) {
   };
   const selectStyle = { minWidth: 0, width: '100%', height: 38, border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '0 8px', fontSize: 14 };
   const currentYear = new Date().getFullYear();
-  return <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1fr', gap: 8, marginTop: 4 }}>
+  return <div className="u-display-grid u-grid-template-columns-0_8fr_1_2fr_1fr u-gap-8px u-margin-top-4px">
     <select aria-label="Gün" value={day} onChange={e => setPart('day', e.target.value)} style={selectStyle}>
       <option value="">Gün</option>{Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(v => <option key={v} value={v}>{Number(v)}</option>)}
     </select>

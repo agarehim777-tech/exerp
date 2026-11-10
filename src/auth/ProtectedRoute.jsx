@@ -7,7 +7,7 @@ export default function ProtectedRoute({ children }) {
   const location = useLocation();
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "Manrope, system-ui" }}>
+      <div className="u-display-flex u-align-items-center u-justify-content-center u-min-height-100vh u-font-family-Manrope_system_ui">
         Yüklənir…
       </div>
     );

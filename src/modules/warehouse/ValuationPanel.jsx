@@ -46,15 +46,15 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <h3 style={{ marginTop: 0, marginBottom: 0 }}>Dəyərləmə və maya dəyəri</h3>
+      <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
+        <h3 className="u-margin-top-0 u-margin-bottom-0">Dəyərləmə və maya dəyəri</h3>
         <select value={method} onChange={(e) => setMethod(e.target.value)} style={{ ...input, width: 220 }}>
           <option value="fifo">FIFO (ilk giriş — ilk çıxış)</option>
           <option value="average">Çəkili orta maya</option>
         </select>
       </div>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "14px 0" }}>
+      <div className="u-display-flex u-gap-12px u-flex-wrap-wrap u-margin-14px_0">
         <div style={statTile}>
           <div style={statLabel}>{method === "fifo" ? "FIFO qalıq dəyəri" : "Çəkili orta qalıq dəyəri"}</div>
           <div style={statValue}>{azn(totals.inventoryValue)}</div>
@@ -76,7 +76,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
       </div>
 
       {hasQuantityMismatch && !loading && (
-        <div style={{ color: "#b91c1c", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 8, padding: "9px 12px", marginBottom: 12 }}>
+        <div className="u-color-danger u-background-fff1f2 u-border-1px_solid_fecdd3 u-border-radius-8px u-padding-9px_12px u-margin-bottom-12px">
           Hərəkət tarixçəsi ilə cari stok uyğun deyil: tarixçə {ledgerQty.toLocaleString("az-AZ")}, cari qalıq {currentQty.toLocaleString("az-AZ")}. Dəyər hesabatı yoxlanmalıdır.
         </div>
       )}
@@ -120,7 +120,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
           )}
         </tbody>
       </table>
-      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+      <div className="u-font-size-12px u-opacity-0_7 u-margin-top-8px">
         Qeyd: hesablama bütün anbar hərəkətləri ({movements.length.toLocaleString("az-AZ")}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
       </div>
     </div>

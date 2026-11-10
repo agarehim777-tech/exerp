@@ -31,9 +31,9 @@ function useTablePage(rows) {
 
 function TablePages({ value, label }) {
   if (value.total <= 50) return null;
-  return <nav aria-label={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12 }}>
+  return <nav aria-label={label} className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-margin-top-12px">
     <span>{value.page * 50 + 1}–{Math.min((value.page + 1) * 50, value.total)} / {value.total}</span>
-    <div style={{ display: "flex", gap: 8 }}>
+    <div className="u-display-flex u-gap-8px">
       <button type="button" style={secondaryActionBtn} title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={value.page === 0} onClick={() => value.setPage(value.page - 1)}><ChevronLeft size={16} /></button>
       <button type="button" style={secondaryActionBtn} title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={value.page === value.pages - 1} onClick={() => value.setPage(value.page + 1)}><ChevronRight size={16} /></button>
     </div>
@@ -61,14 +61,14 @@ export default function StockPage({ inventory: stock, products = [] }) {
   if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
 
   return (
-    <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
+    <div className="u-display-grid u-gap-16px u-min-width-0">
       <div>
-        <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.2, color: "#12372c" }}>Anbar idarəetməsi</h1>
-        <p style={{ margin: "6px 0 0", fontSize: 14, color: "#66756f" }}>
+        <h1 className="u-margin-0 u-font-size-26px u-line-height-1_2 u-color-12372c">Anbar idarəetməsi</h1>
+        <p className="u-margin-6px_0_0 u-font-size-14px u-color-66756f">
           Anbarları, qalıqları, daxili transferləri və stok hərəkətlərini bir yerdən idarə edin.
         </p>
       </div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
         <div style={statTile}>
           <div style={statLabel}>Anbarlar</div>
           <div style={statValue}>{stock.warehouses.length}</div>
@@ -161,13 +161,13 @@ function BalancesPanel({ stock }) {
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <h3 style={{ margin: 0 }}>Anbar qalıqları ({filteredBalances.length}/{stock.balances.length})</h3>
+      <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
+        <h3 className="u-margin-0">Anbar qalıqları ({filteredBalances.length}/{stock.balances.length})</h3>
         {(filters.warehouseId || filters.query || filters.status !== "all") && (
           <button type="button" style={secondaryActionBtn} onClick={resetFilters}>Filtrləri təmizlə</button>
         )}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, margin: "16px 0" }}>
+      <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_190px_1fr u-gap-10px u-margin-16px_0">
         <select value={filters.warehouseId} onChange={(event) => setFilters((current) => ({ ...current, warehouseId: event.target.value }))} style={input}>
           <option value="">Bütün anbarlar</option>
           {stock.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}
@@ -187,7 +187,7 @@ function BalancesPanel({ stock }) {
       </div>
       {editError && <div style={{ ...msgBox, marginBottom: 12 }}>{editError}</div>}
       {stock.loading && <div>Yüklənir…</div>}
-      <div style={{ overflowX: "auto" }}>
+      <div className="u-overflow-x-auto">
       <table style={table}>
         <thead>
           <tr>
@@ -212,7 +212,7 @@ function BalancesPanel({ stock }) {
                 <td style={{ ...td, fontWeight: 650 }}>{saleable.toLocaleString("az-AZ")}</td>
                 <td style={td}>
                   {isEditing ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className="u-display-flex u-align-items-center u-gap-6px">
                       <input
                         type="number"
                         min="0"
@@ -230,8 +230,8 @@ function BalancesPanel({ stock }) {
                       <button type="button" disabled={editBusy} onClick={cancelEditing} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Redaktəni ləğv et"><X size={16} /></button>
                     </div>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ minWidth: 28, fontWeight: 650 }}>{Number(b.reorder_point || 0).toLocaleString("az-AZ")}</span>
+                    <div className="u-display-flex u-align-items-center u-gap-8px">
+                      <span className="u-min-width-28px u-font-weight-650">{Number(b.reorder_point || 0).toLocaleString("az-AZ")}</span>
                       <button type="button" onClick={() => startEditing(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi redaktə et"><Pencil size={15} /></button>
                     </div>
                   )}
@@ -279,11 +279,11 @@ function MovementsPanel({ stock, products }) {
 
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>
+      <h3 className="u-margin-top-0">
         Anbar hərəkətləri ({stock.movementsTotal.toLocaleString("az-AZ")})
       </h3>
       {msg && <div style={msgBox}>{msg}</div>}
-      <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 16 }}>
+      <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_130px_1fr u-gap-8px u-margin-bottom-16px">
         <select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })} style={input}>
           <option value="">Anbar seç…</option>
           {stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -321,11 +321,11 @@ function MovementsPanel({ stock, products }) {
           )}
         </tbody>
       </table>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 13, opacity: 0.75 }}>
+      <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-margin-top-12px u-flex-wrap-wrap">
+        <div className="u-font-size-13px u-opacity-0_75">
           Səhifə {stock.movementsPage + 1} / {stock.movementsPageCount} · səhifədə {stock.movementsPageSize} qeyd
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="u-display-flex u-gap-8px">
           <button
             type="button"
             style={primaryBtn}
@@ -376,7 +376,7 @@ function TransferPanel({ stock }) {
         <label style={fieldLabel}>Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
         <label style={fieldLabel}>Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} style={input} /></label>
         <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" style={input} /></label>
-        <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}><button type="submit" disabled={busy || stock.warehouses.length < 2} style={primaryBtn}>{busy ? "Köçürülür…" : "Transfer et"}</button></div>
+        <div className="u-grid-column-1_1 u-display-flex u-justify-content-flex_end"><button type="submit" disabled={busy || stock.warehouses.length < 2} style={primaryBtn}>{busy ? "Köçürülür…" : "Transfer et"}</button></div>
       </form>
       {stock.warehouses.length < 2 && <div style={{ ...msgBox, marginTop: 12 }}>Transfer üçün ən azı iki anbar yaradılmalıdır.</div>}
     </div>
@@ -439,7 +439,7 @@ function WarehousesPanel({ stock, isAdmin }) {
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h2 style={sectionTitle}>Anbarlar ({stock.warehouses.length})</h2>
         {isAdmin && (
           <button type="button" style={isFormOpen ? secondaryActionBtn : primaryBtn} onClick={toggleForm}>
@@ -451,7 +451,7 @@ function WarehousesPanel({ stock, isAdmin }) {
       <input type="search" aria-label="Anbar axtarışı" placeholder="Anbar axtar..." value={query} onChange={event => setQuery(event.target.value)} style={{ ...input, marginBottom: 14 }} />
       {msg && <div style={msgBox}>{msg}</div>}
       {isAdmin && isFormOpen && (
-        <form onSubmit={submit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 10, marginBottom: 18, alignItems: "end" }}>
+        <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_min_100_140px_1fr u-gap-10px u-margin-bottom-18px u-align-items-end">
           <input required placeholder="Kod" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={input} />
           <input required placeholder="Ad" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
           <input placeholder="Ünvan" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={input} />
@@ -459,7 +459,7 @@ function WarehousesPanel({ stock, isAdmin }) {
           {form.id && <button type="button" style={secondaryActionBtn} onClick={() => { setForm(emptyForm); setIsFormOpen(false); }}>Ləğv et</button>}
         </form>
       )}
-      <div style={{ overflowX: "auto" }}>
+      <div className="u-overflow-x-auto">
       <table style={table}>
         <thead><tr><th style={th}>Kod</th><th style={th}>Ad</th><th style={th}>Ünvan</th>{isAdmin && <th style={th} />}</tr></thead>
         <tbody>

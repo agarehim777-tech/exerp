@@ -89,16 +89,16 @@ export default function DataReconciliationPage() {
   };
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div className="u-display-grid u-gap-16px">
       <div style={card}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="u-display-flex u-gap-12px u-align-items-center u-flex-wrap-wrap">
           <button type="button" style={primaryBtn} onClick={() => { refresh(); operations.refresh(); runServerScan(); }} disabled={loading || operations.loading || serverBusy}>
             {loading || operations.loading || serverBusy ? "Yoxlanılır…" : "Sistemi yoxla"}
           </button>
           <button type="button" style={secondaryBtn} onClick={downloadCsv} disabled={!report}>
             CSV ixrac
           </button>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>
+          <span className="u-font-size-12px u-opacity-0_7">
             {lastRunAt ? `Son yoxlama: ${new Date(lastRunAt).toLocaleString("az-AZ")}` : "—"}
           </span>
         </div>
@@ -109,7 +109,7 @@ export default function DataReconciliationPage() {
       {serverError && <div style={msgBox}>Server reconciliation: {serverError}</div>}
 
       {report && (
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
           <div style={statTile}>
             <div style={statLabel}>Uyğunsuz (kritik)</div>
             <div style={{ ...statValue, color: s.errorCount ? "#b23a3a" : "#064e3b" }}>{s.errorCount}</div>
@@ -138,15 +138,15 @@ export default function DataReconciliationPage() {
       {!report && !loading && <div style={card}>Məlumat yoxdur.</div>}
 
       {tab === "operations" && operations.report && (
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div className="u-display-grid u-gap-16px">
+          <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
             <div style={statTile}><div style={statLabel}>Sistem statusu</div><div style={{ ...statValue, color: operations.report.summary.healthy ? "#047857" : "#b23a3a" }}>{operations.report.summary.healthy ? "Sağlam" : "Diqqət"}</div></div>
             <div style={statTile}><div style={statLabel}>Kritik</div><div style={statValue}>{operations.report.summary.critical}</div></div>
             <div style={statTile}><div style={statLabel}>Xəbərdarlıq</div><div style={statValue}>{operations.report.summary.warnings}</div></div>
             <div style={statTile}><div style={statLabel}>Yoxlama vaxtı</div><div style={{ ...statValue, fontSize: 14 }}>{new Date(operations.report.checkedAt).toLocaleString("az-AZ")}</div></div>
           </div>
           <div style={card}>
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>Satış, kredit, maliyyə və anbar əlaqələri</div>
+            <div className="u-font-weight-700 u-margin-bottom-10px">Satış, kredit, maliyyə və anbar əlaqələri</div>
             <table style={table}>
               <thead><tr><th style={th}>Modul</th><th style={th}>Problem</th><th style={th}>Detallar</th><th style={th}>Tövsiyə edilən düzəliş</th><th style={th}>Ciddilik</th></tr></thead>
               <tbody>
@@ -157,9 +157,9 @@ export default function DataReconciliationPage() {
           </div>
           {serverReport && (
             <div style={card}>
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>Database lifecycle preview</div>
-              <p style={{ opacity: 0.72 }}>Yoxlama məlumatı dəyişmir. Düzəliş yalnız səbəb yazıldıqdan və ayrıca düymə basıldıqdan sonra tətbiq edilir.</p>
-              <input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" style={{ width: "100%", marginBottom: 10 }} />
+              <div className="u-font-weight-700 u-margin-bottom-10px">Database lifecycle preview</div>
+              <p className="u-opacity-0_72">Yoxlama məlumatı dəyişmir. Düzəliş yalnız səbəb yazıldıqdan və ayrıca düymə basıldıqdan sonra tətbiq edilir.</p>
+              <input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" className="u-width-100 u-margin-bottom-10px" />
               <table style={table}>
                 <thead><tr><th style={th}>Sifariş</th><th style={th}>Uyğunsuzluq</th><th style={th}>Say</th><th style={th}>Əməliyyat</th></tr></thead>
                 <tbody>
@@ -259,7 +259,7 @@ export default function DataReconciliationPage() {
       )}
 
       {report && tab === "notifications" && (
-        <div style={{ display: "grid", gap: 16 }}>
+        <div className="u-display-grid u-gap-16px">
           <div style={card}>
             <table style={table}>
               <thead>
@@ -291,7 +291,7 @@ export default function DataReconciliationPage() {
           </div>
           {report.notifications.orphanDeliveries.length > 0 && (
             <div style={card}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Qaydası tapılmayan göndərişlər</div>
+              <div className="u-font-weight-600 u-margin-bottom-8px">Qaydası tapılmayan göndərişlər</div>
               <table style={table}>
                 <thead>
                   <tr>
@@ -314,8 +314,8 @@ export default function DataReconciliationPage() {
       )}
 
       {tab === "recovery" && (
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div className="u-display-grid u-gap-16px">
+          <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
             <RecoveryTile title="Avtomatik backup" run={recovery.backup} loading={recovery.loading} />
             <RecoveryTile title="Restore drill" run={recovery.restore} loading={recovery.loading} />
             <div style={statTile}><div style={statLabel}>Saxlama müddəti</div><div style={statValue}>30 gün</div></div>
@@ -323,9 +323,9 @@ export default function DataReconciliationPage() {
           </div>
           {recovery.error && <div style={msgBox}>{recovery.error}</div>}
           <div style={card}>
-            <div style={{ fontWeight: 700 }}>Bərpa hazırlığı</div>
-            <p style={{ opacity: 0.72, marginBottom: 14 }}>Backup checksum ilə yoxlanılır; restore yalnız ayrıca staging bazasına icazə verir.</p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="u-font-weight-700">Bərpa hazırlığı</div>
+            <p className="u-opacity-0_72 u-margin-bottom-14px">Backup checksum ilə yoxlanılır; restore yalnız ayrıca staging bazasına icazə verir.</p>
+            <div className="u-display-flex u-gap-8px u-flex-wrap-wrap">
               <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/backup-supabase.yml" target="_blank" rel="noreferrer">Backup tarixçəsi</a>
               <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/restore-drill.yml" target="_blank" rel="noreferrer">Restore drill başladın</a>
             </div>

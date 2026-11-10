@@ -361,7 +361,7 @@ export default function Login() {
                   <div className="xp-kpi"><small>Stok riski</small><strong>7 məhsul</strong><i>Minimum qalıq</i></div>
                 </div>
                 <div className="xp-product-grid">
-                  <div className="xp-chart"><div className="xp-panel-title">Gəlir və xərc dinamikası</div><div className="xp-bars"><span style={{height:'42%'}}/><span style={{height:'28%'}}/><span style={{height:'58%'}}/><span style={{height:'36%'}}/><span style={{height:'72%'}}/><span style={{height:'45%'}}/><span style={{height:'88%'}}/><span style={{height:'54%'}}/></div></div>
+                  <div className="xp-chart"><div className="xp-panel-title">Gəlir və xərc dinamikası</div><div className="xp-bars"><span className="u-height-42"/><span className="u-height-28"/><span className="u-height-58"/><span className="u-height-36"/><span className="u-height-72"/><span className="u-height-45"/><span className="u-height-88"/><span className="u-height-54"/></div></div>
                   <div className="xp-activity"><div className="xp-panel-title">Son əməliyyatlar</div><ul><li>Satış sifarişi təsdiqləndi</li><li>Kredit ödənişi kassaya düşdü</li><li>Anbar təhvili tamamlandı</li><li>Satınalma mədaxili yaradıldı</li></ul></div>
                 </div>
               </div>

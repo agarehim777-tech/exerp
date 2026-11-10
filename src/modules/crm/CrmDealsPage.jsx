@@ -23,9 +23,9 @@ export default function CrmDealsPage() {
   }, [activeTenantId, pipelines.length, seedDefault]);
 
   if (!activePipeline) {
-    return <div style={{ padding: 40, textAlign: 'center' }}>
+    return <div className="u-padding-40px u-text-align-center">
       <p>Pipeline hazırlanır...</p>
-      <button onClick={seedDefault} style={{ background: '#10b981', color: '#fff', border: 0, padding: '10px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>Standart pipeline yarat</button>
+      <button onClick={seedDefault} className="u-background-action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-cursor-pointer u-font-weight-700">Standart pipeline yarat</button>
     </div>;
   }
 
@@ -45,18 +45,18 @@ export default function CrmDealsPage() {
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+    <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px u-height-100">
+      <header className="u-display-flex u-justify-content-space_between u-align-items-center u-flex-wrap-wrap u-gap-12px">
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>{activePipeline.name}</h1>
-          <div style={{ color: '#64748b', fontSize: 14 }}>Açıq: <b style={{ color: '#10b981' }}>{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
+          <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">{activePipeline.name}</h1>
+          <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
         </div>
         <button onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
           style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 0, padding: '10px 18px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>+ Sövdələşmə</button>
       </header>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12, flex: 1 }}>
+        <div className="u-display-flex u-gap-12px u-overflow-x-auto u-padding-bottom-12px u-flex-1">
           {stages.map(stage => {
             const stageDeals = deals.filter(d => d.stage_id === stage.id);
             const sum = stageDeals.reduce((s, d) => s + Number(d.amount || 0), 0);
@@ -91,16 +91,16 @@ function StageColumn({ stage, count, sum, onAdd, children }) {
       display: 'flex', flexDirection: 'column', border: `2px solid ${isOver ? stage.color : 'transparent'}`,
       transition: 'all 0.2s',
     }}>
-      <div style={{ padding: 12, borderBottom: '1px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="u-padding-12px u-border-bottom-1px_solid_border">
+        <div className="u-display-flex u-align-items-center u-gap-8px">
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color }} />
-          <b style={{ flex: 1 }}>{stage.name}</b>
-          <span style={{ background: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, color: '#64748b' }}>{count}</span>
+          <b className="u-flex-1">{stage.name}</b>
+          <span className="u-background-surface u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{count}</span>
         </div>
-        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{sum.toFixed(0)} ₼</div>
-        <button onClick={onAdd} style={{ marginTop: 6, width: '100%', background: 'transparent', border: '1px dashed #cbd5e1', padding: 6, borderRadius: 8, cursor: 'pointer', color: '#64748b', fontSize: 12 }}>+ əlavə et</button>
+        <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{sum.toFixed(0)} ₼</div>
+        <button onClick={onAdd} className="u-margin-top-6px u-width-100 u-background-transparent u-border-1px_dashed_line_strong u-padding-6px u-border-radius-8px u-cursor-pointer u-color-text_secondary u-font-size-12px">+ əlavə et</button>
       </div>
-      <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 100, flex: 1 }}>
+      <div className="u-padding-8px u-display-flex u-flex-direction-column u-gap-8px u-min-height-100px u-flex-1">
         {children}
       </div>
     </div>
@@ -116,11 +116,11 @@ function DealCard({ deal }) {
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <div style={{ fontWeight: 600, fontSize: 14 }}>{deal.title}</div>
-      {deal.customer && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{deal.customer.name}</div>}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <span style={{ fontWeight: 700, color: '#10b981' }}>{Number(deal.amount).toFixed(0)} {deal.currency}</span>
-        {deal.expected_close && <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(deal.expected_close).toLocaleDateString('az-AZ')}</span>}
+      <div className="u-font-weight-600 u-font-size-14px">{deal.title}</div>
+      {deal.customer && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{deal.customer.name}</div>}
+      <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-top-8px">
+        <span className="u-font-weight-700 u-color-action">{Number(deal.amount).toFixed(0)} {deal.currency}</span>
+        {deal.expected_close && <span className="u-font-size-11px u-color-text_secondary">{new Date(deal.expected_close).toLocaleDateString('az-AZ')}</span>}
       </div>
     </div>
   );
@@ -145,10 +145,10 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
 
   const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 };
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+    <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_0_5 u-display-flex u-align-items-center u-justify-content-center u-z-index-100">
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
-        style={{ background: '#fff', borderRadius: 16, padding: 24, width: 480, maxWidth: '92vw', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Yeni sövdələşmə</h2>
+        className="u-background-surface u-border-radius-16px u-padding-24px u-width-480px u-max-width-92vw u-display-flex u-flex-direction-column u-gap-12px">
+        <h2 className="u-margin-0">Yeni sövdələşmə</h2>
         <label>Başlıq *<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={inp} required /></label>
         <label>Müştəri
           <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} style={inp}>
@@ -156,7 +156,7 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
             {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+        <div className="u-display-grid u-grid-template-columns-2fr_1fr u-gap-8px">
           <label>Məbləğ<input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} style={inp} /></label>
           <label>Valyuta
             <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} style={inp}>
@@ -170,9 +170,9 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
           </select>
         </label>
         <label>Gözlənilən bağlanma<input type="date" value={form.expected_close} onChange={e => setForm({ ...form, expected_close: e.target.value })} style={inp} /></label>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', background: '#fff' }}>Ləğv</button>
-          <button type="submit" disabled={busy} style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{busy ? '...' : 'Yarat'}</button>
+        <div className="u-display-flex u-justify-content-flex_end u-gap-8px">
+          <button type="button" onClick={onClose} className="u-padding-8px_16px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</button>
+          <button type="submit" disabled={busy} className="u-background-action u-color-surface u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-700">{busy ? '...' : 'Yarat'}</button>
         </div>
       </form>
     </div>

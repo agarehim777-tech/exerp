@@ -44,14 +44,14 @@ export default class ErrorBoundary extends React.Component {
       return (
         <main style={wrap}>
           <div style={card}>
-            <h1 style={{ fontFamily: "Sora, sans-serif", color: "#b23a3a", margin: 0, fontSize: 22 }}>
+            <h1 className="u-font-family-Sora_sans_serif u-color-b23a3a u-margin-0 u-font-size-22px">
               Bir problem yarandı
             </h1>
-            <p style={{ color: "#5f7a70", marginTop: 10, fontSize: 14 }}>
+            <p className="u-color-5f7a70 u-margin-top-10px u-font-size-14px">
               Xəta qeydə alındı və komandaya bildirilib.
             </p>
             <pre style={pre}>{String(this.state.error?.message || this.state.error)}</pre>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <div className="u-display-flex u-gap-10px u-margin-top-14px">
               <button onClick={this.reset} style={btn}>Yenidən cəhd</button>
               <button onClick={() => (window.location.href = import.meta.env.BASE_URL || "/")} style={{ ...btn, background: "#fff", color: "#064e3b", border: "1px solid #d4c9a3" }}>Ana səhifə</button>
             </div>

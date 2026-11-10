@@ -34,9 +34,9 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
 
   return (
     <div>
-      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
-          <thead style={{ background: '#f8fafc' }}>
+      <div className="u-overflow-x-auto u-border-1px_solid_border u-border-radius-10px">
+        <table className="u-width-100 u-border-collapse-collapse u-min-width-720px">
+          <thead className="u-background-surface_subtle">
             <tr>
               <th style={{ ...cell, width: 200, textAlign: 'left' }}>Məhsul</th>
               <th style={{ ...cell, textAlign: 'left' }}>Təsvir</th>
@@ -63,7 +63,7 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
                 <td style={cell}><input type="number" step="0.01" style={{ ...inp, textAlign: 'right' }} value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
                 <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>{lineTotal(it).toFixed(2)} ₼</td>
                 <td style={cell}>
-                  <button type="button" onClick={() => remove(i)} style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#ef4444', fontSize: 18 }}>×</button>
+                  <button type="button" onClick={() => remove(i)} className="u-border-0 u-background-transparent u-cursor-pointer u-color-danger u-font-size-18px">×</button>
                 </td>
               </tr>
             ))}
@@ -73,13 +73,13 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
           </tbody>
         </table>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 12 }}>
-        <button type="button" onClick={add} style={{ background: '#f1f5f9', border: '1px dashed #cbd5e1', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>+ Sətir əlavə et</button>
-        <div style={{ minWidth: 260, background: '#f8fafc', padding: 12, borderRadius: 10, fontSize: 13 }}>
+      <div className="u-display-flex u-justify-content-space_between u-align-items-flex_start u-margin-top-12px">
+        <button type="button" onClick={add} className="u-background-surface_subtle u-border-1px_dashed_line_strong u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-size-13px">+ Sətir əlavə et</button>
+        <div className="u-min-width-260px u-background-surface_subtle u-padding-12px u-border-radius-10px u-font-size-13px">
           <Row label="Aralıq cəm" value={totals.sub} />
           <Row label="Endirim" value={-totals.disc} />
           <Row label="ƏDV" value={totals.tax} />
-          <div style={{ height: 1, background: '#e2e8f0', margin: '6px 0' }} />
+          <div className="u-height-1px u-background-border u-margin-6px_0" />
           <Row label="ÜMUMİ" value={grand} bold />
         </div>
       </div>
