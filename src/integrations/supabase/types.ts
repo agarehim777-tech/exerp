@@ -1382,6 +1382,7 @@ export type Database = {
           acceptance_signature: string | null
           accepted_at: string | null
           created_at: string
+          created_by: string | null
           delivered_at: string | null
           delivered_by: string | null
           delivery_no: string | null
@@ -1402,6 +1403,7 @@ export type Database = {
           acceptance_signature?: string | null
           accepted_at?: string | null
           created_at?: string
+          created_by?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
           delivery_no?: string | null
@@ -1422,6 +1424,7 @@ export type Database = {
           acceptance_signature?: string | null
           accepted_at?: string | null
           created_at?: string
+          created_by?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
           delivery_no?: string | null

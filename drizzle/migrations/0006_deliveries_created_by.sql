@@ -1,0 +1,1 @@
+ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS created_by uuid;
