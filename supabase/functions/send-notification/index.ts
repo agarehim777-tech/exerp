@@ -51,6 +51,17 @@ Deno.serve(async (req) => {
     }
     const input = parsed.data;
 
+    // Recipient must be a customer of this tenant (RLS scopes the read to the caller's tenants).
+    const recipientColumn = input.channel === "telegram" ? "telegram_chat_id" : "phone";
+    const { data: knownRecipient } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("tenant_id", input.tenantId)
+      .eq(recipientColumn, input.recipient)
+      .limit(1)
+      .maybeSingle();
+    if (!knownRecipient) return json({ error: "Alıcı bu şirkətin müştərisi deyil" }, 403);
+
     // Növbəyə yaz (RLS: yalnız öz şirkəti üçün)
     const { data: delivery, error: insertError } = await supabase
       .from("notification_deliveries")

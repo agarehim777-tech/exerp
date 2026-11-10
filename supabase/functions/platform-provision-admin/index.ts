@@ -52,13 +52,9 @@ Deno.serve(async (req) => {
     const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
     const existing = list?.users?.find((u) => (u.email || "").toLowerCase() === normalizedEmail);
     if (existing) {
+      // Never reset an existing account's password: only grant tenant membership.
       userId = existing.id;
-      password = tempPassword();
-      const { error: updErr } = await admin.auth.admin.updateUserById(userId, {
-        password,
-        email_confirm: true,
-      });
-      if (updErr) return json({ error: updErr.message }, 400);
+      password = null;
     } else {
       password = tempPassword();
       const { data: cu, error: cErr } = await admin.auth.admin.createUser({
