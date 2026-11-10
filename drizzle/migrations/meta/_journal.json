@@ -127,6 +127,13 @@
       "when": 1794311988955,
       "tag": "0017_problem_stock_excluded_from_reservation_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794313077092,
+      "tag": "0018_report_totals_rpc",
+      "breakpoints": true
     }
   ]
 }

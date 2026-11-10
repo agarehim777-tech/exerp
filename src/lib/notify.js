@@ -1,6 +1,7 @@
+import { formatAmount } from "../services/format.js";
 import { supabase } from "../integrations/supabase/client";
 
-const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
+const money = (value) => formatAmount(value);
 
 export const ORDER_STATUS_LABELS = {
   draft: "qeydə alındı",

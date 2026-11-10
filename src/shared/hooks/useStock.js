@@ -1,3 +1,4 @@
+import { sellableQty } from '../lib/stockMath.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
@@ -316,7 +317,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     const source = balances.find(
       (row) => row.warehouse_id === fromWarehouseId && row.product_id === productId,
     );
-    const available = Number(source?.on_hand ?? source?.qty ?? 0) - Number(source?.reserved ?? 0) - Number(source?.problem_qty ?? 0);
+    const available = sellableQty(source || {});
     if (!source || available < amount) {
       throw new Error(`Mənbə anbarda yalnız ${available.toLocaleString('az-AZ')} ədəd mövcuddur.`);
     }

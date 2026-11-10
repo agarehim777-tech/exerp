@@ -32,3 +32,10 @@ Yoxlama: 141 fayl üzrə 631 test keçdi; tip qapısı keçir; son önizləmə y
 - [x] Son yoxlama: 624 test keçdi, lint xətasızdır; girişli real müştəri/sifariş panelləri masaüstü və 390px telefonda açıldı, runtime xətası və üfüqi daşma yoxdur. Bu üç faylda inline style və yerli HTML düymə/input/select/table qalmadı; maliyyə əməliyyatları dəyişdirilmədi.
 
 Yoxlama: dashboard, təhvil, kredit, mühasibat, HR ekranları girişli önizləmədə açıldı; maliyyə hesabatının beş tabı, kassa və faktura formaları masaüstü/390px telefonda yoxlanıldı. Runtime xətası yoxdur. Şirkət dəyişmə regressiyaları avtomatik testlərdə keçdi; canlı hesabda şirkət dəyişmə seçimi olmadığından canlı sınaq edilmədi. Kassa qalıqları mövcud server funksiyası çatışmazlığı səbəbindən yoxlanmış deyil.
+
+## 10 noyabr: kod təmizliyi
+- [x] Pul formatı (formatAmount) və satışa yararlı qalıq (stockMath.sellableQty) vahid funksiyaya yığıldı
+- [x] Uyğunluq, sağlamlıq və kadr oxumaları hissə-hissə tam oxunur (limit 1000/5000 kəsilmələri silindi)
+- [x] appDomain.jsx 6 bölməyə bölündü (Finance/Hr/Platform/Procurement/Sales/Warehouse); köhnə fayl yalnız ötürücüdür
+- [x] ProcurementPage 2252 → 1248 sətir; tablar və ortaq hissələr ayrı fayllarda
+- [x] Hesabatın əsas kartları (gəlir, xərc, istehsal, müştəri, sifariş sayı) bazadakı report_totals ilə hesablanır; anbar filtri seçiləndə köhnə hesablamaya keçir

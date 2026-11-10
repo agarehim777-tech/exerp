@@ -1,3 +1,4 @@
+import { sellableQty } from '../shared/lib/stockMath.js';
 import { supabase } from '../integrations/supabase/client';
 
 const PAGE_SIZE = 500;
@@ -68,7 +69,7 @@ export async function readSaleStockShortages(tenantId, warehouseId, lines, produ
     for (const row of rows) {
       const values = [row.on_hand, row.reserved, row.problem_qty ?? 0].map(Number);
       if (!values.every(Number.isFinite)) throw new Error('SALES_STOCK_READ_INVALID');
-      balances.set(row.product_id, values[0] - values[1] - values[2]);
+      balances.set(row.product_id, sellableQty(row));
     }
   }
   return [...required].flatMap(([id, line]) => {
