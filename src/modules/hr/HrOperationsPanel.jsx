@@ -1,3 +1,4 @@
+import { Button, Input, Select } from '../../shared/ui/primitives';
 import React, { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
@@ -77,48 +78,48 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
   const periodLeaveRows = ops.byType.leave.filter((row) => (row.start_date || "").slice(0, 7) === period);
 
   return (
-    <div style={S.wrap}>
-      <div style={S.head}>
+    <div className={"ui-page-stack"}>
+      <div className={"ui-toolbar"}>
         <div>
-          <div style={S.title}>HR əməliyyatları</div>
-          <div style={S.sub}>Davamiyyət, məzuniyyət və əmək haqqı əməliyyatlarının vahid idarəetmə sahəsi</div>
+          <div className={"ui-section-title"}>HR əməliyyatları</div>
+          <div className={"ui-help-text"}>Davamiyyət, məzuniyyət və əmək haqqı əməliyyatlarının vahid idarəetmə sahəsi</div>
         </div>
-        <input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} style={S.input} />
+        <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} className={"ui-input"} />
       </div>
 
-      {!controlledTab && <div style={S.tabs}>
+      {!controlledTab && <div className={"ui-tabs"}>
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setInternalTab(id)} style={{ ...S.tab, ...(tab === id ? S.tabOn : {}) }}>
+          <Button key={id} onClick={() => setInternalTab(id)} className={["ui-button ui-button-tab",tab === id ? "active" : [].filter(Boolean).join(' ')].filter(Boolean).join(' ')}>
             <Icon size={15} /> {label}
-          </button>
+          </Button>
         ))}
       </div>}
 
-      <div style={S.guide}>
+      <div className={"ui-notice"}>
         <ActiveTabIcon size={19} />
-        <div style={S.guideText}><strong>{activeTab.label}</strong><span>{activeTab.description}</span></div>
-        <div style={S.source}><Info size={13} /> Məlumat mənbəyi: employee_events</div>
+        <div className={"ui-detail-stack"}><strong>{activeTab.label}</strong><span>{activeTab.description}</span></div>
+        <div className={"ui-help-text"}><Info size={13} /> Məlumat mənbəyi: employee_events</div>
       </div>
 
-      {message && <div style={message.tone === "ok" ? S.ok : S.err}>{message.text}</div>}
-      {ops.error && <div style={S.err}>{ops.error.message}</div>}
-      {ops.loading && <div style={S.loading}>Əməkdaş reyestri yenilənir...</div>}
+      {message && <div className={message.tone === "ok" ? "ui-notice ui-notice-success" : "ui-notice ui-notice-danger"}>{message.text}</div>}
+      {ops.error && <div className={"ui-notice ui-notice-danger"}>{ops.error.message}</div>}
+      {ops.loading && <div className={"ui-notice ui-notice-info"}>Əməkdaş reyestri yenilənir...</div>}
 
       {tab === "attendance" && (
         <>
-          <div className="hr-ops-form" style={S.form}>
+          <div className={["hr-ops-form","ui-form-grid ui-form-surface"].filter(Boolean).join(' ')} >
             <Field label="Əməkdaş" hint="Davamiyyəti qeydə alınacaq şəxs">
-            <select value={attendance.employeeId} onChange={(e) => setAttendance({ ...attendance, employeeId: e.target.value })} style={S.input}>
+            <Select value={attendance.employeeId} onChange={(e) => setAttendance({ ...attendance, employeeId: e.target.value })} className={"ui-input"}>
               <option value="">Əməkdaş seçin</option>
               {ops.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
-            </select>
+            </Select>
             </Field>
-            <Field label="İş günü" hint="Faktiki iş tarixi"><input type="date" value={attendance.date} onChange={(e) => setAttendance({ ...attendance, date: e.target.value })} style={S.input} /></Field>
-            <Field label="İşlənmiş saat" hint="0–24 saat aralığı"><div style={S.unitInput}><input type="number" min="0" max="24" step="0.5" value={attendance.hours} onChange={(e) => setAttendance({ ...attendance, hours: e.target.value })} style={{ ...S.input, paddingRight: 44 }} /><span style={S.unit}>saat</span></div></Field>
-            <Field label="Qeyd" hint="İstəyə bağlı izah"><input value={attendance.note} onChange={(e) => setAttendance({ ...attendance, note: e.target.value })} style={S.input} placeholder="Məsələn, yarım iş günü" /></Field>
-            <button
+            <Field label="İş günü" hint="Faktiki iş tarixi"><Input type="date" value={attendance.date} onChange={(e) => setAttendance({ ...attendance, date: e.target.value })} className={"ui-input"} /></Field>
+            <Field label="İşlənmiş saat" hint="0–24 saat aralığı"><div className={"ui-unit-input"}><Input type="number" min="0" max="24" step="0.5" value={attendance.hours} onChange={(e) => setAttendance({ ...attendance, hours: e.target.value })} className={["ui-input",'ui-unit-field'].filter(Boolean).join(' ')} /><span className={"ui-unit-label"}>saat</span></div></Field>
+            <Field label="Qeyd" hint="İstəyə bağlı izah"><Input value={attendance.note} onChange={(e) => setAttendance({ ...attendance, note: e.target.value })} className={"ui-input"} placeholder="Məsələn, yarım iş günü" /></Field>
+            <Button
               disabled={busy || !attendance.employeeId}
-              style={S.primary}
+              className={"ui-button ui-button-primary"}
               onClick={() => guard(() => ops.createEvent({
                 employeeId: attendance.employeeId,
                 eventType: "attendance",
@@ -127,9 +128,9 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 amount: Number(attendance.hours || 0),
                 payload: { hours: Number(attendance.hours || 0), note: attendance.note },
               }))}
-            ><Plus size={15} /> Davamiyyəti qeyd et</button>
+            ><Plus size={15} /> Davamiyyəti qeyd et</Button>
           </div>
-          <div style={S.totals}>
+          <div className={"ui-stat-grid"}>
             <Total label="Hesabat dövrü" value={periodLabel(period)} />
             <Total label="Əməkdaş sayı" value={`${ops.employees.length} nəfər`} />
             <Total label="Qeyd olunmuş iş günü" value={`${attendanceTotals.days} gün`} tone="#0f766e" />
@@ -140,7 +141,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
             columns={["Əməkdaş", "Şöbə", "İş günü", `Norma (${norm})`, "Saat", "Faiz"]}
             rows={attendanceSummary.map(({ employee, days, hours, rate }) => [
               employee.full_name, employee.department || "—", days, norm, hours.toFixed(1),
-              <span key="r" style={{ color: rate >= 90 ? "#15803d" : rate >= 60 ? "#b45309" : "#b91c1c", fontWeight: 700 }}>{rate}%</span>,
+              <span key="r" className={[(rate >= 90 ? 'amount-due' : 'amount-positive'),'ui-emphasis'].filter(Boolean).join(' ')}>{rate}%</span>,
             ])}
           />
         </>
@@ -148,22 +149,22 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
 
       {tab === "leave" && (
         <>
-          <div className="hr-ops-form" style={S.form}>
-            <Field label="Əməkdaş" hint="Sorğunu yaradan şəxs"><select value={leave.employeeId} onChange={(e) => setLeave({ ...leave, employeeId: e.target.value })} style={S.input}>
+          <div className={["hr-ops-form","ui-form-grid ui-form-surface"].filter(Boolean).join(' ')} >
+            <Field label="Əməkdaş" hint="Sorğunu yaradan şəxs"><Select value={leave.employeeId} onChange={(e) => setLeave({ ...leave, employeeId: e.target.value })} className={"ui-input"}>
               <option value="">Əməkdaş seçin</option>
               {ops.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
-            </select></Field>
-            <Field label="Məzuniyyət növü" hint="Ödəniş qaydasını müəyyən edir"><select value={leave.kind} onChange={(e) => setLeave({ ...leave, kind: e.target.value })} style={S.input}>
+            </Select></Field>
+            <Field label="Məzuniyyət növü" hint="Ödəniş qaydasını müəyyən edir"><Select value={leave.kind} onChange={(e) => setLeave({ ...leave, kind: e.target.value })} className={"ui-input"}>
               <option>Əmək məzuniyyəti</option>
               <option>Ödənişsiz</option>
               <option>Xəstəlik</option>
               <option>Təhsil</option>
-            </select></Field>
-            <Field label="Başlanğıc tarixi" hint="İlk məzuniyyət günü"><input type="date" value={leave.startDate} onChange={(e) => setLeave({ ...leave, startDate: e.target.value })} style={S.input} /></Field>
-            <Field label="Bitiş tarixi" hint="Son məzuniyyət günü"><input type="date" min={leave.startDate} value={leave.endDate} onChange={(e) => setLeave({ ...leave, endDate: e.target.value })} style={S.input} /></Field>
-            <button
+            </Select></Field>
+            <Field label="Başlanğıc tarixi" hint="İlk məzuniyyət günü"><Input type="date" value={leave.startDate} onChange={(e) => setLeave({ ...leave, startDate: e.target.value })} className={"ui-input"} /></Field>
+            <Field label="Bitiş tarixi" hint="Son məzuniyyət günü"><Input type="date" min={leave.startDate} value={leave.endDate} onChange={(e) => setLeave({ ...leave, endDate: e.target.value })} className={"ui-input"} /></Field>
+            <Button
               disabled={busy || !leave.employeeId}
-              style={S.primary}
+              className={"ui-button ui-button-primary"}
               onClick={() => guard(() => ops.createEvent({
                 employeeId: leave.employeeId,
                 eventType: "leave",
@@ -172,9 +173,9 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 endDate: leave.endDate,
                 payload: { kind: leave.kind },
               }))}
-            ><Plus size={15} /> Sorğu yarat</button>
+            ><Plus size={15} /> Sorğu yarat</Button>
           </div>
-          <div style={S.totals}>
+          <div className={"ui-stat-grid"}>
             <Total label="Bu ay sorğu" value={`${periodLeaveRows.length} sorğu`} />
             <Total label="Təsdiq gözləyir" value={`${periodLeaveRows.filter((row) => row.status === "draft").length} sorğu`} tone="#b45309" />
             <Total label="Təsdiqlənib" value={`${periodLeaveRows.filter((row) => row.status === "approved").length} sorğu`} tone="#15803d" />
@@ -196,8 +197,8 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 <StatusChip key="s" status={row.status} />,
                 row.status === "draft" ? (
                   <div key="a" className="u-display-flex u-gap-6px">
-                    <button style={S.mini} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "approved"))}>Təsdiq</button>
-                    <button style={{ ...S.mini, color: "#b91c1c" }} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "rejected"))}>İmtina</button>
+                    <Button className={"ui-button ui-button-secondary ui-button-compact"} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "approved"))}>Təsdiq</Button>
+                    <Button className={["ui-button ui-button-secondary ui-button-compact",'amount-due'].filter(Boolean).join(' ')} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "rejected"))}>İmtina</Button>
                   </div>
                 ) : "",
               ];
@@ -209,7 +210,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
       {tab === "payroll" && (
         <>
           <SectionTitle title="Aylıq əmək haqqı hesablaması" subtitle="Davamiyyət günləri, vergi və məcburi ayırmalar avtomatik hesablanır" />
-          <div style={S.totals}>
+          <div className={"ui-stat-grid"}>
             <Total label={`Dövr: ${periodLabel(period)}`} value={`${payrollRows.length} əməkdaş`} />
             <Total label="Brutto fond" value={money(payrollTotals.gross)} />
             <Total label="Netto ödəniş" value={money(payrollTotals.net)} tone="#15803d" />
@@ -228,9 +229,9 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
               <strong key="n">{money(row.net)}</strong>,
               row.posted
                 ? <span key="p" className="u-color-15803d u-display-inline_flex u-gap-4px u-align-items-center"><CheckCircle2 size={14} /> Bağlanıb</span>
-                : <button
+                : <Button
                     key="b"
-                    style={S.mini}
+                    className={"ui-button ui-button-secondary ui-button-compact"}
                     disabled={busy}
                     onClick={() => guard(() => ops.createEvent({
                       employeeId: row.employee.id,
@@ -240,7 +241,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                       amount: row.net,
                       payload: { period, gross: row.gross, incomeTax: row.incomeTax, social: row.socialEmployee, net: row.net },
                     }))}
-                  >Bağla</button>,
+                  >Bağla</Button>,
             ])}
           />
         </>
@@ -261,35 +262,35 @@ function StatusChip({ status }) {
 
 function Total({ label, value, tone }) {
   return (
-    <div style={S.total}>
+    <div className={"ui-stat-card"}>
       <span className="u-font-size-12px u-color-text_secondary">{label}</span>
-      <strong style={{ fontSize: 16, color: tone || "#0f172a" }}>{value}</strong>
+      <strong className={['ui-small-value','amount-due'].filter(Boolean).join(' ')}>{value}</strong>
     </div>
   );
 }
 
 function Field({ label, hint, children }) {
-  return <label style={S.field}><span style={S.fieldLabel}>{label}</span>{children}<small style={S.fieldHint}>{hint}</small></label>;
+  return <label className={"ui-field"}><span className={"ui-stat-label"}>{label}</span>{children}<small className={"ui-help-text"}>{hint}</small></label>;
 }
 
 function SectionTitle({ title, subtitle }) {
-  return <div style={S.sectionTitle}><div><strong>{title}</strong><span>{subtitle}</span></div></div>;
+  return <div className={"ui-toolbar"}><div><strong>{title}</strong><span>{subtitle}</span></div></div>;
 }
 
 function Table({ columns, rows }) {
-  if (!rows.length) return <div style={S.empty}>Qeyd yoxdur</div>;
+  if (!rows.length) return <div className={"ui-empty-box"}>Qeyd yoxdur</div>;
   return (
     <div className="u-overflow-x-auto">
-      <table style={S.table}>
+      <Table className={"ui-table"}>
         <thead>
-          <tr>{columns.map((column) => <th key={column} style={S.th}>{column}</th>)}</tr>
+          <tr>{columns.map((column) => <th key={column} className={""}>{column}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex} style={S.td}>{cell}</td>)}</tr>
+            <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex} className={""}>{cell}</td>)}</tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }

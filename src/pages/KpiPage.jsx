@@ -98,30 +98,30 @@ export default function KpiPage({
             </div>
           </div>
           <div className="kpi-period-actions">
-            <button
+            <Button
               className="secondary-btn"
               data-testid="kpi-close-period"
               disabled={!canClose}
               onClick={() => onRunPeriodAction?.("close")}
             >
               Periodu bağla
-            </button>
-            <button
+            </Button>
+            <Button
               className="secondary-btn"
               data-testid="kpi-approve-period"
               disabled={!canApprove}
               onClick={() => onRunPeriodAction?.("approve")}
             >
               Təsdiq et
-            </button>
-            <button
+            </Button>
+            <Button
               className="primary-btn"
               data-testid="kpi-payout-period"
               disabled={!canPayout}
               onClick={() => onRunPeriodAction?.("payout")}
             >
               Payout et
-            </button>
+            </Button>
           </div>
           {lastPayout && (
             <div className="kpi-last-payout">
@@ -187,13 +187,13 @@ export default function KpiPage({
         <div className="kpi-bonus-toolbar">
           <div className="tabs" aria-label="Satış bonusu filtri">
             {["Hamısı", ...bonusSellers].map((filter) => (
-              <button
+              <Button
                 key={filter}
                 className={bonusFilter === filter ? "active" : ""}
                 onClick={() => setBonusFilter(filter)}
               >
                 {filter}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="kpi-bonus-total">

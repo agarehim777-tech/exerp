@@ -1,3 +1,4 @@
+import { Button, Input, Select, Table } from '../../shared/ui/primitives';
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { toLocalIsoDate } from "../../services/date.js";
@@ -37,7 +38,7 @@ function SevBadge({ severity }) {
 function EmptyRow({ colSpan, text = "Uyğunsuzluq tapılmadı." }) {
   return (
     <tr>
-      <td style={{ ...td, opacity: 0.6 }} colSpan={colSpan}>{text}</td>
+      <td className={["",'ui-muted'].filter(Boolean).join(' ')} colSpan={colSpan}>{text}</td>
     </tr>
   );
 }
@@ -54,7 +55,7 @@ export default function DataReconciliationPage() {
   const [serverBusy, setServerBusy] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <div className={"ui-card"}>Aktiv şirkət seçilməyib.</div>;
 
   const downloadCsv = () => {
     if (!report) return;
@@ -90,224 +91,224 @@ export default function DataReconciliationPage() {
 
   return (
     <div className="u-display-grid u-gap-16px">
-      <div style={card}>
+      <div className={"ui-card"}>
         <div className="u-display-flex u-gap-12px u-align-items-center u-flex-wrap-wrap">
-          <button type="button" style={primaryBtn} onClick={() => { refresh(); operations.refresh(); runServerScan(); }} disabled={loading || operations.loading || serverBusy}>
+          <Button type="button" className={"ui-button ui-button-primary"} onClick={() => { refresh(); operations.refresh(); runServerScan(); }} disabled={loading || operations.loading || serverBusy}>
             {loading || operations.loading || serverBusy ? "Yoxlanılır…" : "Sistemi yoxla"}
-          </button>
-          <button type="button" style={secondaryBtn} onClick={downloadCsv} disabled={!report}>
+          </Button>
+          <Button type="button" className={"ui-button ui-button-secondary"} onClick={downloadCsv} disabled={!report}>
             CSV ixrac
-          </button>
+          </Button>
           <span className="u-font-size-12px u-opacity-0_7">
             {lastRunAt ? `Son yoxlama: ${new Date(lastRunAt).toLocaleString("az-AZ")}` : "—"}
           </span>
         </div>
       </div>
 
-      {error && <div style={msgBox}>Xəta: {error}</div>}
-      {operations.error && <div style={msgBox}>Əməliyyat yoxlaması: {operations.error}</div>}
-      {serverError && <div style={msgBox}>Server reconciliation: {serverError}</div>}
+      {error && <div className={"ui-notice ui-notice-warning"}>Xəta: {error}</div>}
+      {operations.error && <div className={"ui-notice ui-notice-warning"}>Əməliyyat yoxlaması: {operations.error}</div>}
+      {serverError && <div className={"ui-notice ui-notice-warning"}>Server reconciliation: {serverError}</div>}
 
       {report && (
         <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
-          <div style={statTile}>
-            <div style={statLabel}>Uyğunsuz (kritik)</div>
-            <div style={{ ...statValue, color: s.errorCount ? "#b23a3a" : "#064e3b" }}>{s.errorCount}</div>
+          <div className={"ui-stat-card"}>
+            <div className={"ui-stat-label"}>Uyğunsuz (kritik)</div>
+            <div className={["ui-stat-value",(s.errorCount ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{s.errorCount}</div>
           </div>
-          <div style={statTile}>
-            <div style={statLabel}>Diqqət tələb edən</div>
-            <div style={{ ...statValue, color: s.warnCount ? "#a16207" : "#064e3b" }}>{s.warnCount}</div>
+          <div className={"ui-stat-card"}>
+            <div className={"ui-stat-label"}>Diqqət tələb edən</div>
+            <div className={["ui-stat-value",(s.warnCount ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{s.warnCount}</div>
           </div>
-          <div style={statTile}>
-            <div style={statLabel}>Serial (blob / baza)</div>
-            <div style={statValue}>{report.serials.blobCount} / {report.serials.dbCount}</div>
+          <div className={"ui-stat-card"}>
+            <div className={"ui-stat-label"}>Serial (blob / baza)</div>
+            <div className={"ui-stat-value"}>{report.serials.blobCount} / {report.serials.dbCount}</div>
           </div>
-          <div style={statTile}>
-            <div style={statLabel}>Rezerv (aktiv / anbar)</div>
-            <div style={statValue}>{report.reservations.totalActiveReserved} / {report.reservations.totalBalanceReserved}</div>
+          <div className={"ui-stat-card"}>
+            <div className={"ui-stat-label"}>Rezerv (aktiv / anbar)</div>
+            <div className={"ui-stat-value"}>{report.reservations.totalActiveReserved} / {report.reservations.totalBalanceReserved}</div>
           </div>
         </div>
       )}
 
-      <div style={tabBar}>
+      <div className={"ui-tabs"}>
         {TABS.map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setTab(key)} style={tabBtn(tab === key)}>{label}</button>
+          <Button key={key} type="button" onClick={() => setTab(key)} className={tab === key ? 'ui-button ui-button-tab active' : 'ui-button ui-button-tab'}>{label}</Button>
         ))}
       </div>
 
-      {!report && !loading && <div style={card}>Məlumat yoxdur.</div>}
+      {!report && !loading && <div className={"ui-card"}>Məlumat yoxdur.</div>}
 
       {tab === "operations" && operations.report && (
         <div className="u-display-grid u-gap-16px">
           <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
-            <div style={statTile}><div style={statLabel}>Sistem statusu</div><div style={{ ...statValue, color: operations.report.summary.healthy ? "#047857" : "#b23a3a" }}>{operations.report.summary.healthy ? "Sağlam" : "Diqqət"}</div></div>
-            <div style={statTile}><div style={statLabel}>Kritik</div><div style={statValue}>{operations.report.summary.critical}</div></div>
-            <div style={statTile}><div style={statLabel}>Xəbərdarlıq</div><div style={statValue}>{operations.report.summary.warnings}</div></div>
-            <div style={statTile}><div style={statLabel}>Yoxlama vaxtı</div><div style={{ ...statValue, fontSize: 14 }}>{new Date(operations.report.checkedAt).toLocaleString("az-AZ")}</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Sistem statusu</div><div className={["ui-stat-value",(operations.report.summary.healthy ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{operations.report.summary.healthy ? "Sağlam" : "Diqqət"}</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Kritik</div><div className={"ui-stat-value"}>{operations.report.summary.critical}</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Xəbərdarlıq</div><div className={"ui-stat-value"}>{operations.report.summary.warnings}</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Yoxlama vaxtı</div><div className={["ui-stat-value",'ui-small-value'].filter(Boolean).join(' ')}>{new Date(operations.report.checkedAt).toLocaleString("az-AZ")}</div></div>
           </div>
-          <div style={card}>
+          <div className={"ui-card"}>
             <div className="u-font-weight-700 u-margin-bottom-10px">Satış, kredit, maliyyə və anbar əlaqələri</div>
-            <table style={table}>
-              <thead><tr><th style={th}>Modul</th><th style={th}>Problem</th><th style={th}>Detallar</th><th style={th}>Tövsiyə edilən düzəliş</th><th style={th}>Ciddilik</th></tr></thead>
+            <Table className={"ui-table"}>
+              <thead><tr><th className={""}>Modul</th><th className={""}>Problem</th><th className={""}>Detallar</th><th className={""}>Tövsiyə edilən düzəliş</th><th className={""}>Ciddilik</th></tr></thead>
               <tbody>
                 {!operations.report.issues.length && <EmptyRow colSpan={5} text="Bütün əməliyyat əlaqələri uyğundur." />}
-                {operations.report.issues.map((issue) => <tr key={issue.id}><td style={td}>{issue.domain}</td><td style={td}>{issue.title}</td><td style={td}>{issue.detail}</td><td style={td}>{issue.remedy}</td><td style={td}><SevBadge severity={issue.severity} /></td></tr>)}
+                {operations.report.issues.map((issue) => <tr key={issue.id}><td className={""}>{issue.domain}</td><td className={""}>{issue.title}</td><td className={""}>{issue.detail}</td><td className={""}>{issue.remedy}</td><td className={""}><SevBadge severity={issue.severity} /></td></tr>)}
               </tbody>
-            </table>
+            </Table>
           </div>
           {serverReport && (
-            <div style={card}>
+            <div className={"ui-card"}>
               <div className="u-font-weight-700 u-margin-bottom-10px">Database lifecycle preview</div>
               <p className="u-opacity-0_72">Yoxlama məlumatı dəyişmir. Düzəliş yalnız səbəb yazıldıqdan və ayrıca düymə basıldıqdan sonra tətbiq edilir.</p>
-              <input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" className="u-width-100 u-margin-bottom-10px" />
-              <table style={table}>
-                <thead><tr><th style={th}>Sifariş</th><th style={th}>Uyğunsuzluq</th><th style={th}>Say</th><th style={th}>Əməliyyat</th></tr></thead>
+              <Input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" className="u-width-100 u-margin-bottom-10px" />
+              <Table className={"ui-table"}>
+                <thead><tr><th className={""}>Sifariş</th><th className={""}>Uyğunsuzluq</th><th className={""}>Say</th><th className={""}>Əməliyyat</th></tr></thead>
                 <tbody>
                   {!(serverReport.issues || []).length && <EmptyRow colSpan={4} text="Database səviyyəsində kritik uyğunsuzluq yoxdur." />}
-                  {(serverReport.issues || []).map((issue) => <tr key={`${issue.type}:${issue.order_id}`}><td style={td}>{issue.order_no}</td><td style={td}>{issue.type}</td><td style={td}>{issue.count}</td><td style={td}><button type="button" style={secondaryBtn} disabled={serverBusy} onClick={() => repairIssue(issue)}>Təsdiqli düzəliş</button></td></tr>)}
+                  {(serverReport.issues || []).map((issue) => <tr key={`${issue.type}:${issue.order_id}`}><td className={""}>{issue.order_no}</td><td className={""}>{issue.type}</td><td className={""}>{issue.count}</td><td className={""}><Button type="button" className={"ui-button ui-button-secondary"} disabled={serverBusy} onClick={() => repairIssue(issue)}>Təsdiqli düzəliş</Button></td></tr>)}
                 </tbody>
-              </table>
+              </Table>
             </div>
           )}
         </div>
       )}
 
       {report && tab === "serials" && (
-        <div style={card}>
-          <table style={table}>
+        <div className={"ui-card"}>
+          <Table className={"ui-table"}>
             <thead>
               <tr>
-                <th style={th}>IMEI / Serial</th>
-                <th style={th}>Problem</th>
-                <th style={th}>Blob statusu</th>
-                <th style={th}>Baza statusu</th>
-                <th style={th}>Ciddilik</th>
+                <th className={""}>IMEI / Serial</th>
+                <th className={""}>Problem</th>
+                <th className={""}>Blob statusu</th>
+                <th className={""}>Baza statusu</th>
+                <th className={""}>Ciddilik</th>
               </tr>
             </thead>
             <tbody>
               {report.serials.issues.length === 0 && <EmptyRow colSpan={5} />}
               {report.serials.issues.map((i) => (
                 <tr key={`${i.kind}-${i.key}`}>
-                  <td style={td}>{i.imei}</td>
-                  <td style={td}>{KIND_LABELS[i.kind] || i.kind}</td>
-                  <td style={td}>{i.blobStatus || "—"}</td>
-                  <td style={td}>{i.dbStatus || "—"}</td>
-                  <td style={td}><SevBadge severity={i.severity} /></td>
+                  <td className={""}>{i.imei}</td>
+                  <td className={""}>{KIND_LABELS[i.kind] || i.kind}</td>
+                  <td className={""}>{i.blobStatus || "—"}</td>
+                  <td className={""}>{i.dbStatus || "—"}</td>
+                  <td className={""}><SevBadge severity={i.severity} /></td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
 
       {report && tab === "reservations" && (
-        <div style={card}>
-          <table style={table}>
+        <div className={"ui-card"}>
+          <Table className={"ui-table"}>
             <thead>
               <tr>
-                <th style={th}>Məhsul</th>
-                <th style={th}>Aktiv rezerv</th>
-                <th style={th}>Anbar rezervi</th>
-                <th style={th}>Bağlı sifariş</th>
-                <th style={th}>Fərq</th>
-                <th style={th}>Ciddilik</th>
+                <th className={""}>Məhsul</th>
+                <th className={""}>Aktiv rezerv</th>
+                <th className={""}>Anbar rezervi</th>
+                <th className={""}>Bağlı sifariş</th>
+                <th className={""}>Fərq</th>
+                <th className={""}>Ciddilik</th>
               </tr>
             </thead>
             <tbody>
               {report.reservations.rows.length === 0 && <EmptyRow colSpan={6} />}
               {report.reservations.rows.map((r) => (
                 <tr key={r.productId}>
-                  <td style={td}>{r.product}</td>
-                  <td style={td}>{r.activeReserved}</td>
-                  <td style={td}>{r.balanceReserved}</td>
-                  <td style={td}>{r.orderNos.length ? r.orderNos.join(', ') : '—'}</td>
-                  <td style={{ ...td, color: r.diff ? "#b23a3a" : undefined }}>{r.diff}</td>
-                  <td style={td}><SevBadge severity={r.severity} /></td>
+                  <td className={""}>{r.product}</td>
+                  <td className={""}>{r.activeReserved}</td>
+                  <td className={""}>{r.balanceReserved}</td>
+                  <td className={""}>{r.orderNos.length ? r.orderNos.join(', ') : '—'}</td>
+                  <td className={["",(r.diff ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{r.diff}</td>
+                  <td className={""}><SevBadge severity={r.severity} /></td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
 
       {report && tab === "production" && (
-        <div style={card}>
-          <table style={table}>
+        <div className={"ui-card"}>
+          <Table className={"ui-table"}>
             <thead>
               <tr>
-                <th style={th}>Plan</th>
-                <th style={th}>Problem</th>
-                <th style={th}>Blob statusu</th>
-                <th style={th}>Baza statusu</th>
-                <th style={th}>Ciddilik</th>
+                <th className={""}>Plan</th>
+                <th className={""}>Problem</th>
+                <th className={""}>Blob statusu</th>
+                <th className={""}>Baza statusu</th>
+                <th className={""}>Ciddilik</th>
               </tr>
             </thead>
             <tbody>
               {report.production.issues.length === 0 && <EmptyRow colSpan={5} />}
               {report.production.issues.map((i) => (
                 <tr key={`${i.kind}-${i.key}`}>
-                  <td style={td}>{i.name}</td>
-                  <td style={td}>{KIND_LABELS[i.kind] || i.kind}</td>
-                  <td style={td}>{i.blobStatus || "—"}</td>
-                  <td style={td}>{i.dbStatus || "—"}</td>
-                  <td style={td}><SevBadge severity={i.severity} /></td>
+                  <td className={""}>{i.name}</td>
+                  <td className={""}>{KIND_LABELS[i.kind] || i.kind}</td>
+                  <td className={""}>{i.blobStatus || "—"}</td>
+                  <td className={""}>{i.dbStatus || "—"}</td>
+                  <td className={""}><SevBadge severity={i.severity} /></td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
 
       {report && tab === "notifications" && (
         <div className="u-display-grid u-gap-16px">
-          <div style={card}>
-            <table style={table}>
+          <div className={"ui-card"}>
+            <Table className={"ui-table"}>
               <thead>
                 <tr>
-                  <th style={th}>Qayda</th>
-                  <th style={th}>Kanal</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Blob göndərişləri</th>
-                  <th style={th}>Bazada göndəriş</th>
-                  <th style={th}>Uğursuz</th>
-                  <th style={th}>Ciddilik</th>
+                  <th className={""}>Qayda</th>
+                  <th className={""}>Kanal</th>
+                  <th className={""}>Status</th>
+                  <th className={""}>Blob göndərişləri</th>
+                  <th className={""}>Bazada göndəriş</th>
+                  <th className={""}>Uğursuz</th>
+                  <th className={""}>Ciddilik</th>
                 </tr>
               </thead>
               <tbody>
                 {report.notifications.rows.length === 0 && <EmptyRow colSpan={7} text="Qayda tapılmadı." />}
                 {report.notifications.rows.map((r) => (
                   <tr key={r.id}>
-                    <td style={td}>{r.name}</td>
-                    <td style={td}>{r.channel}</td>
-                    <td style={td}>{r.status}</td>
-                    <td style={td}>{r.blobSends}</td>
-                    <td style={td}>{r.dbDeliveries}</td>
-                    <td style={td}>{r.dbFailed}</td>
-                    <td style={td}><SevBadge severity={r.severity} /></td>
+                    <td className={""}>{r.name}</td>
+                    <td className={""}>{r.channel}</td>
+                    <td className={""}>{r.status}</td>
+                    <td className={""}>{r.blobSends}</td>
+                    <td className={""}>{r.dbDeliveries}</td>
+                    <td className={""}>{r.dbFailed}</td>
+                    <td className={""}><SevBadge severity={r.severity} /></td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
           {report.notifications.orphanDeliveries.length > 0 && (
-            <div style={card}>
+            <div className={"ui-card"}>
               <div className="u-font-weight-600 u-margin-bottom-8px">Qaydası tapılmayan göndərişlər</div>
-              <table style={table}>
+              <Table className={"ui-table"}>
                 <thead>
                   <tr>
-                    <th style={th}>Şablon kodu</th>
-                    <th style={th}>Sayı</th>
+                    <th className={""}>Şablon kodu</th>
+                    <th className={""}>Sayı</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.notifications.orphanDeliveries.map((o) => (
                     <tr key={o.templateCode}>
-                      <td style={td}>{o.templateCode}</td>
-                      <td style={td}>{o.count}</td>
+                      <td className={""}>{o.templateCode}</td>
+                      <td className={""}>{o.count}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
           )}
         </div>
@@ -318,16 +319,16 @@ export default function DataReconciliationPage() {
           <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
             <RecoveryTile title="Avtomatik backup" run={recovery.backup} loading={recovery.loading} />
             <RecoveryTile title="Restore drill" run={recovery.restore} loading={recovery.loading} />
-            <div style={statTile}><div style={statLabel}>Saxlama müddəti</div><div style={statValue}>30 gün</div></div>
-            <div style={statTile}><div style={statLabel}>Backup qrafiki</div><div style={{ ...statValue, fontSize: 15 }}>Hər gün 05:17</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Saxlama müddəti</div><div className={"ui-stat-value"}>30 gün</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Backup qrafiki</div><div className={["ui-stat-value",'ui-small-value'].filter(Boolean).join(' ')}>Hər gün 05:17</div></div>
           </div>
-          {recovery.error && <div style={msgBox}>{recovery.error}</div>}
-          <div style={card}>
+          {recovery.error && <div className={"ui-notice ui-notice-warning"}>{recovery.error}</div>}
+          <div className={"ui-card"}>
             <div className="u-font-weight-700">Bərpa hazırlığı</div>
             <p className="u-opacity-0_72 u-margin-bottom-14px">Backup checksum ilə yoxlanılır; restore yalnız ayrıca staging bazasına icazə verir.</p>
             <div className="u-display-flex u-gap-8px u-flex-wrap-wrap">
-              <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/backup-supabase.yml" target="_blank" rel="noreferrer">Backup tarixçəsi</a>
-              <a style={secondaryBtn} href="https://github.com/agarehim777-tech/exerp/actions/workflows/restore-drill.yml" target="_blank" rel="noreferrer">Restore drill başladın</a>
+              <a className={"ui-button ui-button-secondary"} href="https://github.com/agarehim777-tech/exerp/actions/workflows/backup-supabase.yml" target="_blank" rel="noreferrer">Backup tarixçəsi</a>
+              <a className={"ui-button ui-button-secondary"} href="https://github.com/agarehim777-tech/exerp/actions/workflows/restore-drill.yml" target="_blank" rel="noreferrer">Restore drill başladın</a>
             </div>
           </div>
         </div>
@@ -338,6 +339,6 @@ export default function DataReconciliationPage() {
 
 function RecoveryTile({ title, run, loading }) {
   const ok = run?.conclusion === "success";
-  return <div style={statTile}><div style={statLabel}>{title}</div><div style={{ ...statValue, color: ok ? "#047857" : run ? "#b23a3a" : undefined }}>{loading ? "Yüklənir" : run ? (ok ? "Uğurlu" : run.status === "in_progress" ? "İşləyir" : "Uğursuz") : "Hələ yoxdur"}</div>{run?.created_at && <small>{new Date(run.created_at).toLocaleString("az-AZ")}</small>}</div>;
+  return <div className={"ui-stat-card"}><div className={"ui-stat-label"}>{title}</div><div className={["ui-stat-value",(ok ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{loading ? "Yüklənir" : run ? (ok ? "Uğurlu" : run.status === "in_progress" ? "İşləyir" : "Uğursuz") : "Hələ yoxdur"}</div>{run?.created_at && <small>{new Date(run.created_at).toLocaleString("az-AZ")}</small>}</div>;
 }
 
