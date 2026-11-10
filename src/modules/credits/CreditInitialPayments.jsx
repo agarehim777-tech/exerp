@@ -13,7 +13,7 @@ function formatStamp(value) {
  * Kredit üzrə beh və ilkin ödənişlərin ayrı-ayrı tarixçəsi.
  * Mənbə: audit_events (credits modulu) — hər sətir tarix, məbləğ və qeyd göstərir.
  */
-export function useCreditInitialPayments(creditId, orderId, orderNo) {
+export function useCreditInitialPayments(creditId) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

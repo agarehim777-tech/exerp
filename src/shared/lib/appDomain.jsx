@@ -1,7 +1,7 @@
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronLeft, ChevronRight, CreditCard, Download, FileText, Filter, LayoutDashboard, MessageSquare, Package, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Truck, Upload, UserCog, Users, Wallet, Warehouse, X } from "lucide-react";
 import { AvatarLine, DataTable, EmptyState, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { CreditInitialPaymentsHistory } from "../../modules/credits/CreditInitialPayments.jsx";
-import { lazy, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { round2 } from "../utils/invoiceMath.js";
@@ -1351,12 +1351,11 @@ export function HrStructureBuilder({ employees, departments: departmentRecords =
 export function HrStructureTree({ structure, employees, onSelectEmployee }) {
   const departmentTree = useMemo(() => buildHrDepartmentTree(structure), [structure]);
   const departmentIds = useMemo(() => getHrDepartmentIds(departmentTree), [departmentTree]);
-  const departmentTreeKey = departmentIds.join("|");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [expandedDepartments, setExpandedDepartments] = useState(() => new Set(departmentIds));
   useEffect(() => {
     setExpandedDepartments(new Set(departmentIds));
-  }, [departmentTreeKey]);
+  }, [departmentIds]);
   const departmentScope = useMemo(
     () => getHrDepartmentScope(departmentTree, selectedDepartment),
     [departmentTree, selectedDepartment],
@@ -4013,7 +4012,6 @@ export function getShortageQuantity(item) {
 
 export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onReceivePayment, onOpenSalesOrder }) {
   const { credit, plan, paymentState, progress } = item;
-  const debt = getCreditDebtFormula(item);
   const started = isCreditStarted(credit);
   const requiredInitial = Number(credit.requiredInitial ?? plan.initialPayment ?? credit.initialPayment ?? 0);
   const initialPaid = Math.min(requiredInitial, Number(credit.initialPaid ?? credit.paid ?? 0));
@@ -4148,7 +4146,7 @@ export function CreditContext({ credit, onOpenSalesOrder }) {
 }
 
 export function CreditContractSnapshot({ item }) {
-  const { credit, plan, paymentState } = item;
+  const { credit, paymentState } = item;
   const debt = getCreditDebtFormula(item);
 
   return (

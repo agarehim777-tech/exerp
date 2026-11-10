@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, PackageCheck, Plus, RefreshCw, Save, Ship, Trash2 } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
 import { calculateLandedCost } from './landedCost.js';
@@ -12,12 +12,14 @@ const costTypes={customs_duty:'Gömrük rüsumu',customs_clearance:'Gömrük rə
 const methods={invoice_value:'Invoice dəyərinə görə',volume:'Həcmə görə',weight:'Çəkiyə görə',quantity:'Miqdara görə',equal:'Bərabər',direct:'Məhsula birbaşa',manual:'Əl ilə'};
 const statusLabels={draft:'Qaralama',in_transit:'Yoldadır',arrived:'Çatıb',costing:'Maya hesablanır',costed:'Maya təsdiqlənib',received:'Tamamlandı',closed:'Bağlanıb',cancelled:'Ləğv edilib'};
 export default function LandedCostPanel({tenantId}){
- const [shipments,setShipments]=useState([]),[poLines,setPoLines]=useState([]),[warehouses,setWarehouses]=useState([]),[selected,setSelected]=useState(null),[costing,setCosting]=useState([]),[message,setMessage]=useState('');
+ const [shipments,setShipments]=useState([]),[poLines,setPoLines]=useState([]),[warehouses,setWarehouses]=useState([]),[selected,setSelected]=useState(null),[,setCosting]=useState([]),[message,setMessage]=useState('');
  const [header,setHeader]=useState({shipment_no:'Avtomatik',container_no:'',shipment_date:today(),expected_arrival_date:'',origin_country:'',destination_country:'Azərbaycan',transport_mode:'Dəniz',carrier:'',currency:'AZN',status:'draft',notes:''});
  const [line,setLine]=useState({po_line_id:'',shipped_qty:1,received_qty:1,lot_no:''});
  const [cost,setCost]=useState({cost_type:'international_freight',amount:'',currency:'AZN',exchange_rate:1,allocation_method:'volume',document_no:'',cost_date:today(),notes:''});
- const load=async selectedId=>{try{const keepId=selectedId||selected?.id;const [s,p,w]=await Promise.all([listShipments(tenantId),readAllRows(()=>supabase.from('purchase_order_lines').select('*, po:purchase_orders!inner(id,tenant_id,po_number,currency,exchange_rate,status)').eq('po.tenant_id',tenantId).order('created_at',{ascending:false}).order('id')),readAllRows(()=>supabase.from('warehouses').select('*').eq('tenant_id',tenantId).eq('is_active',true).order('name').order('id'))]);if(p.error)throw p.error;if(w.error)throw w.error;setShipments(s||[]);setPoLines(p.data||[]);setWarehouses(w.data||[]);if(keepId){const next=(s||[]).find(x=>x.id===keepId);setSelected(next||null);}}catch(e){setMessage(e.message)}};
- useEffect(()=>{load()},[tenantId]);
+ const selectedRef = useRef(selected);
+ selectedRef.current = selected;
+ const load=useCallback(async selectedId=>{try{const keepId=selectedId||selectedRef.current?.id;const [s,p,w]=await Promise.all([listShipments(tenantId),readAllRows(()=>supabase.from('purchase_order_lines').select('*, po:purchase_orders!inner(id,tenant_id,po_number,currency,exchange_rate,status)').eq('po.tenant_id',tenantId).order('created_at',{ascending:false}).order('id')),readAllRows(()=>supabase.from('warehouses').select('*').eq('tenant_id',tenantId).eq('is_active',true).order('name').order('id'))]);if(p.error)throw p.error;if(w.error)throw w.error;setShipments(s||[]);setPoLines(p.data||[]);setWarehouses(w.data||[]);if(keepId){const next=(s||[]).find(x=>x.id===keepId);setSelected(next||null);}}catch(e){setMessage(e.message)}},[tenantId]);
+ useEffect(()=>{load()},[load]);
  const shippedByPo=useMemo(()=>{const totals=new Map();shipments.flatMap(s=>s.lines||[]).forEach(item=>totals.set(item.po_line_id,(totals.get(item.po_line_id)||0)+Number(item.shipped_qty||0)));return totals},[shipments]);
  const availablePoLines=useMemo(()=>poLines.filter(item=>Number(item.qty_ordered)-Number(shippedByPo.get(item.id)||0)>0.000001),[poLines,shippedByPo]);
  const selectedPoLine=poLines.find(item=>item.id===line.po_line_id);
