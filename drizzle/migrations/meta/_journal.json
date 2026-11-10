@@ -43,6 +43,48 @@
       "when": 1794301823451,
       "tag": "0005_reverse_procurement_receipt",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794302091814,
+      "tag": "0006_atomic_cash_expense_commands",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794302210408,
+      "tag": "0007_credit_restructure_and_adjustment_decisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794302284018,
+      "tag": "0008_problem_stock_returns_and_repairs",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794302356449,
+      "tag": "0009_material_production_and_stock_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794302493948,
+      "tag": "0010_atomic_sales_invoice_commands",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794302558254,
+      "tag": "0011_fix_reverse_cash_transaction_direction_cast",
+      "breakpoints": true
     }
   ]
 }
