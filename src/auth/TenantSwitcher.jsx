@@ -33,13 +33,13 @@ export default function TenantSwitcher() {
 
   return (
     <div className="u-position-fixed u-bottom-16px u-right-16px u-z-index-40 u-font-family-Manrope_system_ui">
-      <button onClick={() => setOpen(!open)} style={btn}>
+      <button onClick={() => setOpen(!open)} className="tenant-switcher-btn">
         🏢 {active?.tenants?.name || "Şirkət"}
-        {active?.role && <span style={roleBadge}>{roleLabel(active.role)}</span>}
+        {active?.role && <span className="tenant-switcher-role-badge">{roleLabel(active.role)}</span>}
         <span className="u-margin-left-4px">▾</span>
       </button>
       {open && (
-        <div style={panel}>
+        <div className="tenant-switcher-panel">
           <div className="u-font-size-11px u-color-5f7a70 u-padding-6px_10px u-text-transform-uppercase u-letter-spacing-0_5px">
             Şirkətləriniz ({memberships.length})
           </div>
@@ -51,13 +51,13 @@ export default function TenantSwitcher() {
                   onClick={() => !isActive && switchTo(m.tenant_id)}
                   disabled={isActive || busy === m.tenant_id}
                   style={{ ...rowBtn, fontWeight: isActive ? 700 : 500, color: isActive ? "#064e3b" : "#0f2a20" }}
-                >
+ >
                   {isActive ? "✓ " : ""}{m.tenants?.name}
                   <span className="u-color-8a9a92 u-font-size-11px u-margin-left-6px">/{m.tenants?.slug}</span>
-                  <span style={inlineRoleBadge}>{roleLabel(m.role)}</span>
+                  <span className="tenant-switcher-inline-role-badge">{roleLabel(m.role)}</span>
                 </button>
                 {m.role === "owner" && !isActive && (
-                  <button onClick={() => remove(m.tenant_id)} disabled={busy === m.tenant_id} style={delBtn} title="Sil">
+                  <button onClick={() => remove(m.tenant_id)} disabled={busy === m.tenant_id} className="tenant-switcher-del-btn" title="Sil">
                     ✕
                   </button>
                 )}

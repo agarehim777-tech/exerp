@@ -392,7 +392,7 @@ export function ReportsPage({
           rows={moduleRows.map((row) => [
             <strong>{row.module}</strong>, row.metric, row.count, row.signal, <StatusBadge status={row.status} />,
           ])}
-        />
+ />
       </Panel>
 
       <Panel className="report-risk-panel" data-testid="report-risk-panel">
@@ -417,7 +417,7 @@ export function ReportsPage({
               <StatusBadge status={row.priority} />,
               <StatusBadge status={row.status} />,
             ])}
-          />
+ />
         ) : <EmptyState title="Seçilmiş filtr üzrə risk yoxdur" />}
       </Panel>
 
@@ -457,7 +457,7 @@ export function ReportsPage({
             row.at, row.rows, row.score !== undefined ? `${row.score}/100` : "—",
             row.riskCount ?? row.snapshot?.riskCount ?? "—", row.owner, <StatusBadge status={row.status} />,
           ])}
-        />
+ />
         {!exports.length && <EmptyState title="Hələ export yaradılmayıb" />}
       </Panel>
     </div>

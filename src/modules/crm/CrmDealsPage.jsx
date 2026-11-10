@@ -77,7 +77,7 @@ export default function CrmDealsPage() {
           customers={customers}
           onClose={() => setShowNew(false)}
           onCreate={async (v) => { await create(v); setShowNew(false); }}
-        />
+ />
       )}
     </div>
   );
@@ -147,7 +147,7 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
   return (
     <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_0_5 u-display-flex u-align-items-center u-justify-content-center u-z-index-100">
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
-        className="u-background-surface u-border-radius-16px u-padding-24px u-width-480px u-max-width-92vw u-display-flex u-flex-direction-column u-gap-12px">
+ className="u-background-surface u-border-radius-16px u-padding-24px u-width-480px u-max-width-92vw u-display-flex u-flex-direction-column u-gap-12px">
         <h2 className="u-margin-0">Yeni sövdələşmə</h2>
         <label>Başlıq *<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={inp} required /></label>
         <label>Müştəri

@@ -53,8 +53,8 @@ export default function TenantBootstrap() {
   // are NOT allowed to create tenants — only platform administrators can.
   if (!isPlatformAdmin) {
     return (
-      <main style={wrap}>
-        <div style={card}>
+      <main className="tenant-bootstrap-wrap">
+        <div className="tenant-bootstrap-card">
           <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
             Şirkət təyinatı gözlənilir
           </h1>
@@ -71,8 +71,8 @@ export default function TenantBootstrap() {
   }
 
   return (
-    <main style={wrap}>
-      <div style={card}>
+    <main className="tenant-bootstrap-wrap">
+      <div className="tenant-bootstrap-card">
         <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
           İlk şirkətinizi yaradın
         </h1>
@@ -88,20 +88,20 @@ export default function TenantBootstrap() {
               setName(e.target.value);
               if (!slug) setSlug(slugify(e.target.value));
             }}
-            style={input}
-          />
+ className="tenant-bootstrap-input"
+ />
           <input
             placeholder="URL adı (slug)"
             value={slug}
             onChange={(e) => setSlug(slugify(e.target.value))}
-            style={input}
-          />
-          <button disabled={busy || !name.trim()} type="submit" style={btn}>
+ className="tenant-bootstrap-input"
+ />
+          <button disabled={busy || !name.trim()} type="submit" className="tenant-bootstrap-btn">
             {busy ? "Yaradılır…" : "Yarat və davam et"}
           </button>
         </form>
         {error && <p className="u-color-b23a3a u-margin-top-12px u-font-size-13px">{error}</p>}
-        <button onClick={signOut} style={link}>Çıxış</button>
+        <button onClick={signOut} className="tenant-bootstrap-link">Çıxış</button>
       </div>
     </main>
   );

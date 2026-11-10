@@ -19,12 +19,12 @@ export default function AppDialogProvider({ children }) {
 
   return <>
     {children}
-    {dialog && <div role="presentation" style={backdrop} onMouseDown={() => dialog.kind !== "alert" && close(false)}>
-      <section role="dialog" aria-modal="true" aria-labelledby="app-dialog-title" style={panel} onMouseDown={(event) => event.stopPropagation()}>
-        <h2 id="app-dialog-title" style={title}>{dialog.title || (dialog.kind === "confirm" ? "Təsdiq" : dialog.kind === "prompt" ? "Məlumat daxil edin" : "Bildiriş")}</h2>
-        <p style={message}>{dialog.message}</p>
-        {dialog.kind === "prompt" && <input autoFocus value={value} onChange={(event) => setValue(event.target.value)} style={input} onKeyDown={(event) => { if (event.key === "Enter") close(true); }} />}
-        <div style={actions}>
+    {dialog && <div role="presentation" className="app-dialog-provider-backdrop" onMouseDown={() => dialog.kind !== "alert" && close(false)}>
+      <section role="dialog" aria-modal="true" aria-labelledby="app-dialog-title" className="app-dialog-provider-panel" onMouseDown={(event) => event.stopPropagation()}>
+        <h2 id="app-dialog-title" className="app-dialog-provider-title">{dialog.title || (dialog.kind === "confirm" ? "Təsdiq" : dialog.kind === "prompt" ? "Məlumat daxil edin" : "Bildiriş")}</h2>
+        <p className="app-dialog-provider-message">{dialog.message}</p>
+        {dialog.kind === "prompt" && <input autoFocus value={value} onChange={(event) => setValue(event.target.value)} className="app-dialog-provider-input" onKeyDown={(event) => { if (event.key === "Enter") close(true); }} />}
+        <div className="app-dialog-provider-actions">
           {dialog.kind !== "alert" && <button type="button" style={secondary} onClick={() => close(false)}>Ləğv et</button>}
           <button type="button" autoFocus={dialog.kind !== "prompt"} style={dialog.danger ? danger : primary} onClick={() => close(true)}>{dialog.confirmLabel || (dialog.kind === "alert" ? "Bağla" : "Təsdiqlə")}</button>
         </div>

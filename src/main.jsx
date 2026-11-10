@@ -36,7 +36,7 @@ const fullPage = {
 };
 
 function Loading({ label = "Yüklənir…" }) {
-  return <div style={fullPage}>{label}</div>;
+  return <div className="main-full-page">{label}</div>;
 }
 
 function ProtectedApp() {
@@ -72,7 +72,7 @@ function AppRoutes() {
               <ProtectedApp />
             </ProtectedRoute>
           }
-        />
+ />
       </Routes>
     </Suspense>
   );

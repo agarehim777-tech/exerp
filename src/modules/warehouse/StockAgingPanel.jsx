@@ -80,7 +80,7 @@ export default function StockAgingPanel({ tenantId }) {
   const slowValue = slow.reduce((sum, row) => sum + Number(row.stock_value || 0), 0);
 
   return (
-    <div style={card}>
+    <div className="ui-tok-card">
       <div className="u-display-flex u-justify-content-space_between u-gap-12px u-align-items-center u-flex-wrap-wrap">
         <div>
           <h3 className="u-margin-0">Stok yaşlandırması</h3>
@@ -99,28 +99,28 @@ export default function StockAgingPanel({ tenantId }) {
       {error && <div className="u-color-danger u-margin-bottom-12px">Stok yaşlandırması yüklənmədi: {error}</div>}
 
       <div className="u-overflow-x-auto">
-        <table style={table}>
+        <table className="ui-tok-table">
           <thead>
             <tr>
-              <th style={th}>Məhsul</th>
-              <th style={th}>SKU</th>
-              <th style={th}>Yaş</th>
-              <th style={th}>Qalıq</th>
-              <th style={th}>Vahid maya</th>
-              <th style={th}>Dəyər</th>
-              <th style={th}>Status</th>
+              <th className="ui-tok-th">Məhsul</th>
+              <th className="ui-tok-th">SKU</th>
+              <th className="ui-tok-th">Yaş</th>
+              <th className="ui-tok-th">Qalıq</th>
+              <th className="ui-tok-th">Vahid maya</th>
+              <th className="ui-tok-th">Dəyər</th>
+              <th className="ui-tok-th">Status</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((row) => (
               <tr key={`${row.product_id}-${row.warehouse_id}-${row.received_at}`}>
-                <td style={td}><b>{row.product_name}</b></td>
-                <td style={td}>{row.sku || "—"}</td>
-                <td style={td}>{row.age_days} gün</td>
-                <td style={td}>{Number(row.remaining_qty).toLocaleString("az-AZ")}</td>
-                <td style={td}>{azn(row.unit_cost)}</td>
-                <td style={td}>{azn(row.stock_value)}</td>
-                <td style={td}>
+                <td className="ui-tok-td"><b>{row.product_name}</b></td>
+                <td className="ui-tok-td">{row.sku || "—"}</td>
+                <td className="ui-tok-td">{row.age_days} gün</td>
+                <td className="ui-tok-td">{Number(row.remaining_qty).toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td">{azn(row.unit_cost)}</td>
+                <td className="ui-tok-td">{azn(row.stock_value)}</td>
+                <td className="ui-tok-td">
                   <span style={badge(Number(row.age_days) > 180 ? "red" : Number(row.age_days) > 90 ? "yellow" : "green")}>
                     {Number(row.age_days) > 180 ? "Donmuş" : Number(row.age_days) > 90 ? "Yavaş" : "Normal"}
                   </span>
@@ -128,7 +128,7 @@ export default function StockAgingPanel({ tenantId }) {
               </tr>
             ))}
             {!visible.length && (
-              <tr><td style={td} colSpan={7}>{loading ? "Yüklənir…" : "Yaşlandırma məlumatı yoxdur."}</td></tr>
+              <tr><td className="ui-tok-td" colSpan={7}>{loading ? "Yüklənir…" : "Yaşlandırma məlumatı yoxdur."}</td></tr>
             )}
           </tbody>
         </table>

@@ -82,8 +82,8 @@ export default function AccessCheckPage() {
           <button
             onClick={load}
             disabled={loading}
-            className="u-padding-6px_12px u-border-radius-8px u-border-1px_solid_d1d5db u-background-f9fafb u-font-size-13px u-cursor-pointer"
-          >
+ className="u-padding-6px_12px u-border-radius-8px u-border-1px_solid_d1d5db u-background-f9fafb u-font-size-13px u-cursor-pointer"
+ >
             {loading ? "Yoxlanılır…" : "Yenilə"}
           </button>
         </div>
@@ -139,13 +139,13 @@ export default function AccessCheckPage() {
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
             placeholder="Layihə UUID"
-            className="u-flex-1 u-padding-8px_10px u-border-1px_solid_d1d5db u-border-radius-8px u-font-size-13px u-font-family-ui_monospace_monospace"
-          />
+ className="u-flex-1 u-padding-8px_10px u-border-1px_solid_d1d5db u-border-radius-8px u-font-size-13px u-font-family-ui_monospace_monospace"
+ />
           <button
             onClick={() => runProjectCheck(projectId)}
             disabled={!projectId || projectLoading}
-            className="u-padding-8px_14px u-border-radius-8px u-border-0 u-background-111827 u-color-surface u-font-size-13px u-cursor-pointer"
-          >
+ className="u-padding-8px_14px u-border-radius-8px u-border-0 u-background-111827 u-color-surface u-font-size-13px u-cursor-pointer"
+ >
             {projectLoading ? "…" : "Yoxla"}
           </button>
         </div>
@@ -160,7 +160,7 @@ export default function AccessCheckPage() {
                   onClick={() => { setProjectId(p.id); runProjectCheck(p.id); }}
                   style={{ padding: "4px 10px", fontSize: 12, borderRadius: 999, border: "1px solid #d1d5db", background: p.user_id === user?.id ? "#ecfdf5" : "#f9fafb", cursor: "pointer" }}
                   title={p.user_id === user?.id ? "Sizin layihəniz" : "Başqasının layihəsi"}
-                >
+ >
                   {p.name || p.id.slice(0, 8)}
                 </button>
               ))}

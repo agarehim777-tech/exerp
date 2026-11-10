@@ -48,29 +48,29 @@ export default function AuditLogPage() {
     deletes: logs.filter((l) => l.action === "DELETE").length,
   }), [logs]);
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
-  if (!isAdmin) return <div style={card}>Audit izinə yalnız şirkət adminləri baxa bilər.</div>;
+  if (!tenantId) return <div className="ui-tok-card">Aktiv şirkət seçilməyib.</div>;
+  if (!isAdmin) return <div className="ui-tok-card">Audit izinə yalnız şirkət adminləri baxa bilər.</div>;
 
   return (
     <div className="u-display-grid u-gap-16px">
       <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
-        <div style={statTile}><div style={statLabel}>Qeyd</div><div style={statValue}>{stats.total}</div></div>
-        <div style={statTile}><div style={statLabel}>Yaradılıb</div><div style={statValue}>{stats.inserts}</div></div>
-        <div style={statTile}><div style={statLabel}>Dəyişib</div><div style={statValue}>{stats.updates}</div></div>
-        <div style={statTile}><div style={statLabel}>Silinib</div><div style={statValue}>{stats.deletes}</div></div>
+        <div className="ui-tok-stat-tile"><div className="ui-tok-stat-label">Qeyd</div><div className="ui-tok-stat-value">{stats.total}</div></div>
+        <div className="ui-tok-stat-tile"><div className="ui-tok-stat-label">Yaradılıb</div><div className="ui-tok-stat-value">{stats.inserts}</div></div>
+        <div className="ui-tok-stat-tile"><div className="ui-tok-stat-label">Dəyişib</div><div className="ui-tok-stat-value">{stats.updates}</div></div>
+        <div className="ui-tok-stat-tile"><div className="ui-tok-stat-label">Silinib</div><div className="ui-tok-stat-value">{stats.deletes}</div></div>
       </div>
 
-      {error && <div style={msgBox}>Xəta: {error.message}</div>}
+      {error && <div className="ui-tok-msg-box">Xəta: {error.message}</div>}
 
-      <div style={card}>
+      <div className="ui-tok-card">
         <div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-align-items-center u-margin-bottom-12px">
-          <select style={input} value={tableFilter} onChange={(e) => setTableFilter(e.target.value)}>
+          <select className="ui-tok-input" value={tableFilter} onChange={(e) => setTableFilter(e.target.value)}>
             <option value="">Bütün cədvəllər</option>
             {Object.entries(TABLE_LABEL).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
-          <select style={input} value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+          <select className="ui-tok-input" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
             <option value="">Bütün əməliyyatlar</option>
             <option value="INSERT">Yaradıldı</option>
             <option value="UPDATE">Dəyişdirildi</option>
@@ -81,15 +81,15 @@ export default function AuditLogPage() {
             placeholder="Axtar…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-          />
-          <button style={secondaryBtn} onClick={refresh}>Yenilə</button>
+ />
+          <button className="ui-tok-secondary-btn" onClick={refresh}>Yenilə</button>
         </div>
 
-        <table style={table}>
+        <table className="ui-tok-table">
           <thead>
             <tr>
-              <th style={th}>Vaxt</th><th style={th}>Cədvəl</th><th style={th}>Əməliyyat</th>
-              <th style={th}>Qeyd</th><th style={th}>Dəyişən sahələr</th>
+              <th className="ui-tok-th">Vaxt</th><th className="ui-tok-th">Cədvəl</th><th className="ui-tok-th">Əməliyyat</th>
+              <th className="ui-tok-th">Qeyd</th><th className="ui-tok-th">Dəyişən sahələr</th>
             </tr>
           </thead>
           <tbody>
@@ -97,7 +97,7 @@ export default function AuditLogPage() {
               <AuditRow key={log.id} log={log} />
             ))}
             {!filtered.length && !loading && (
-              <tr><td style={td} colSpan={5}>Audit qeydi yoxdur.</td></tr>
+              <tr><td className="ui-tok-td" colSpan={5}>Audit qeydi yoxdur.</td></tr>
             )}
           </tbody>
         </table>
@@ -113,18 +113,18 @@ function AuditRow({ log }) {
   return (
     <>
       <tr className="u-cursor-pointer" onClick={() => setOpen((v) => !v)}>
-        <td style={td}>{new Date(log.created_at).toLocaleString("az-AZ")}</td>
-        <td style={td}>{TABLE_LABEL[log.table_name] || log.table_name}</td>
-        <td style={td}><span style={badge(ACTION_TONE[log.action])}>{ACTION_LABEL[log.action] || log.action}</span></td>
+        <td className="ui-tok-td">{new Date(log.created_at).toLocaleString("az-AZ")}</td>
+        <td className="ui-tok-td">{TABLE_LABEL[log.table_name] || log.table_name}</td>
+        <td className="ui-tok-td"><span style={badge(ACTION_TONE[log.action])}>{ACTION_LABEL[log.action] || log.action}</span></td>
         <td style={{ ...td, fontFamily: "monospace", fontSize: 11 }}>{String(log.record_id || "—").slice(0, 8)}</td>
-        <td style={td}>{changed.length ? changed.join(", ") : "—"}</td>
+        <td className="ui-tok-td">{changed.length ? changed.join(", ") : "—"}</td>
       </tr>
       {open && (
         <tr>
-          <td style={td} colSpan={5}>
+          <td className="ui-tok-td" colSpan={5}>
             <div className="u-display-flex u-gap-16px u-flex-wrap-wrap">
-              <pre style={preStyle}>{JSON.stringify(log.old_data, null, 2) || "—"}</pre>
-              <pre style={preStyle}>{JSON.stringify(log.new_data, null, 2) || "—"}</pre>
+              <pre className="audit-log-page-pre-style">{JSON.stringify(log.old_data, null, 2) || "—"}</pre>
+              <pre className="audit-log-page-pre-style">{JSON.stringify(log.new_data, null, 2) || "—"}</pre>
             </div>
           </td>
         </tr>

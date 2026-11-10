@@ -64,22 +64,22 @@ export default function AssistantPage() {
   };
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.header}>
-        <div style={styles.headerIcon}><Sparkles size={20} /></div>
+    <div className="assistant-page-styles-wrap">
+      <div className="assistant-page-styles-header">
+        <div className="assistant-page-styles-header-icon"><Sparkles size={20} /></div>
         <div>
-          <div style={styles.headerTitle}>ExERP AI köməkçisi</div>
-          <div style={styles.headerSub}>Şirkət datası ilə birbaşa danışın — müştəri, məhsul, satış, statistika.</div>
+          <div className="assistant-page-styles-header-title">ExERP AI köməkçisi</div>
+          <div className="assistant-page-styles-header-sub">Şirkət datası ilə birbaşa danışın — müştəri, məhsul, satış, statistika.</div>
         </div>
       </div>
 
-      <div ref={scrollRef} style={styles.thread}>
+      <div ref={scrollRef} className="assistant-page-styles-thread">
         {messages.length === 0 && (
-          <div style={styles.empty}>
-            <div style={styles.emptyTitle}>Nə soruşmaq istərdiniz?</div>
-            <div style={styles.suggestGrid}>
+          <div className="assistant-page-styles-empty">
+            <div className="assistant-page-styles-empty-title">Nə soruşmaq istərdiniz?</div>
+            <div className="assistant-page-styles-suggest-grid">
               {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => submit(s)} style={styles.suggestion}>
+                <button key={s} onClick={() => submit(s)} className="assistant-page-styles-suggestion">
                   {s}
                 </button>
               ))}
@@ -94,32 +94,32 @@ export default function AssistantPage() {
         {status === "submitted" && (
           <div style={{ ...styles.row, justifyContent: "flex-start" }}>
             <Avatar role="assistant" />
-            <div style={styles.thinking}><Loader2 size={14} className="spin" /> Düşünürəm…</div>
+            <div className="assistant-page-styles-thinking"><Loader2 size={14} className="spin" /> Düşünürəm…</div>
           </div>
         )}
 
         {error && (
-          <div style={styles.errorBox}>Xəta: {assistantErrorMessage(error)}</div>
+          <div className="assistant-page-styles-error-box">Xəta: {assistantErrorMessage(error)}</div>
         )}
       </div>
 
       <form
         onSubmit={(e) => { e.preventDefault(); submit(); }}
-        style={styles.composer}
-      >
+ className="assistant-page-styles-composer"
+ >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={activeTenantId ? "Sual yazın..." : "Əvvəlcə şirkət seçin"}
           disabled={!activeTenantId || !session?.access_token}
-          style={styles.input}
-        />
+ className="assistant-page-styles-input"
+ />
         {busy ? (
           <button type="button" onClick={stop} style={{ ...styles.send, background: "#ef4444" }}>
             Dayandır
           </button>
         ) : (
-          <button type="submit" disabled={!input.trim() || !activeTenantId} style={styles.send}>
+          <button type="submit" disabled={!input.trim() || !activeTenantId} className="assistant-page-styles-send">
             <Send size={16} /> Göndər
           </button>
         )}
@@ -144,12 +144,12 @@ function MessageBubble({ m }) {
             const name = p.type.replace(/^tool-/, "");
             const state = p.state;
             return (
-              <details key={i} style={styles.tool}>
-                <summary style={styles.toolSummary}>
+              <details key={i} className="assistant-page-styles-tool">
+                <summary className="assistant-page-styles-tool-summary">
                   <Wrench size={12} /> {name} · <span className="u-color-text_secondary">{state}</span>
                 </summary>
-                {p.input && <pre style={styles.pre}>Input: {JSON.stringify(p.input, null, 2)}</pre>}
-                {p.output && <pre style={styles.pre}>{JSON.stringify(p.output, null, 2).slice(0, 2000)}</pre>}
+                {p.input && <pre className="assistant-page-styles-pre">Input: {JSON.stringify(p.input, null, 2)}</pre>}
+                {p.output && <pre className="assistant-page-styles-pre">{JSON.stringify(p.output, null, 2).slice(0, 2000)}</pre>}
               </details>
             );
           }

@@ -56,14 +56,14 @@ export default function OAuthConsent() {
 
   if (error)
     return (
-      <main style={wrap}>
-        <h1 style={h1}>Bağlantı yaradıla bilmədi</h1>
+      <main className="consent-wrap">
+        <h1 className="consent-h1">Bağlantı yaradıla bilmədi</h1>
         <p className="u-color-danger">{error}</p>
       </main>
     );
   if (!details)
     return (
-      <main style={wrap}>
+      <main className="consent-wrap">
         <p>Yüklənir…</p>
       </main>
     );
@@ -72,8 +72,8 @@ export default function OAuthConsent() {
   const scopes = Array.isArray(details.scopes) ? details.scopes : String(details.scope || "").split(/\s+/).filter(Boolean);
 
   return (
-    <main style={wrap}>
-      <h1 style={h1}>{clientName} hesabınıza qoşulsun?</h1>
+    <main className="consent-wrap">
+      <h1 className="consent-h1">{clientName} hesabınıza qoşulsun?</h1>
       <p className="u-color-374151">
         Bu, <strong>{clientName}</strong>-ə ERPAZ-ı sizin kimi istifadə etməyə imkan verəcək.
       </p>
@@ -94,8 +94,8 @@ export default function OAuthConsent() {
         Bu icazə tətbiqin öz permissions və backend qaydalarını dəyişmir.
       </p>
       <div className="u-display-flex u-gap-10px u-margin-top-18px">
-        <button disabled={busy} onClick={() => decide(true)} style={primaryBtn}>Təsdiqlə</button>
-        <button disabled={busy} onClick={() => decide(false)} style={secondaryBtn}>Ləğv et</button>
+        <button disabled={busy} onClick={() => decide(true)} className="consent-primary-btn">Təsdiqlə</button>
+        <button disabled={busy} onClick={() => decide(false)} className="consent-secondary-btn">Ləğv et</button>
       </div>
     </main>
   );

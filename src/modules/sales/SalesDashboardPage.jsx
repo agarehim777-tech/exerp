@@ -105,7 +105,7 @@ export default function SalesDashboardPage() {
               { key: 'orders_count', label: 'Sifariş', align: 'right' },
               { key: 'amount', label: 'Məbləğ', align: 'right', format: money },
             ]}
-          />
+ />
         </Card>
         <Card title="Top 5 məhsul" subtitle="Ən çox satılan məhsullar">
           <MiniTable
@@ -115,7 +115,7 @@ export default function SalesDashboardPage() {
               { key: 'qty', label: 'Miqdar', align: 'right', format: (value) => Number(value || 0).toLocaleString('az-AZ') },
               { key: 'amount', label: 'Məbləğ', align: 'right', format: money },
             ]}
-          />
+ />
         </Card>
       </section>
     </main>

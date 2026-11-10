@@ -34,8 +34,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <main style={wrap}>
-      <div style={card}>
+    <main className="reset-password-wrap">
+      <div className="reset-password-card">
         <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
           Şifrəni yenilə
         </h1>
@@ -56,9 +56,9 @@ export default function ResetPassword() {
               placeholder="Yeni şifrə (min 8)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={input}
-            />
-            <button disabled={busy} type="submit" style={btn}>
+ className="reset-password-input"
+ />
+            <button disabled={busy} type="submit" className="reset-password-btn">
               {busy ? "Yenilənir…" : "Şifrəni yadda saxla"}
             </button>
           </form>

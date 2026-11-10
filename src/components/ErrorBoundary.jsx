@@ -42,17 +42,17 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <main style={wrap}>
-          <div style={card}>
+        <main className="error-boundary-wrap">
+          <div className="error-boundary-card">
             <h1 className="u-font-family-Sora_sans_serif u-color-b23a3a u-margin-0 u-font-size-22px">
               Bir problem yarandı
             </h1>
             <p className="u-color-5f7a70 u-margin-top-10px u-font-size-14px">
               Xəta qeydə alındı və komandaya bildirilib.
             </p>
-            <pre style={pre}>{String(this.state.error?.message || this.state.error)}</pre>
+            <pre className="error-boundary-pre">{String(this.state.error?.message || this.state.error)}</pre>
             <div className="u-display-flex u-gap-10px u-margin-top-14px">
-              <button onClick={this.reset} style={btn}>Yenidən cəhd</button>
+              <button onClick={this.reset} className="error-boundary-btn">Yenidən cəhd</button>
               <button onClick={() => (window.location.href = import.meta.env.BASE_URL || "/")} style={{ ...btn, background: "#fff", color: "#064e3b", border: "1px solid #d4c9a3" }}>Ana səhifə</button>
             </div>
           </div>
