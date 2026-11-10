@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+const selectStyle = { minWidth: 0, width: '100%', height: 38, border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '0 8px', fontSize: 14 };
 
 export default function BirthDateInput({ value, onChange }) {
   const initial = String(value || '').split('-');
@@ -16,7 +17,6 @@ export default function BirthDateInput({ value, onChange }) {
     if (part === 'year') setYear(next);
     onChange(parts.day && parts.month && parts.year ? `${parts.year}-${parts.month}-${parts.day}` : '');
   };
-  const selectStyle = { minWidth: 0, width: '100%', height: 38, border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '0 8px', fontSize: 14 };
   const currentYear = new Date().getFullYear();
   return <div className="u-display-grid u-grid-template-columns-0_8fr_1_2fr_1fr u-gap-8px u-margin-top-4px">
     <select aria-label="Gün" value={day} onChange={e => setPart('day', e.target.value)} style={selectStyle}>

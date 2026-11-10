@@ -116,7 +116,7 @@ function groupBy(rows, key) {
 function StatusPill({ status, type = "po" }) {
   const meta = type === "invoice" ? INVOICE_STATUS[status] : PO_STATUS[status];
   const label = meta?.label || status || "Naməlum";
-  return <span style={{ ...styles.badge, ...styles[`badge_${meta?.tone || "neutral"}`] }}>{label}</span>;
+  return <span className={`procurement-page-styles-badge procurement-page-styles-badge-${meta?.tone || "neutral"}`}>{label}</span>;
 }
 
 function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = false, submit = false }) {
@@ -125,7 +125,7 @@ function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = fal
       type={submit ? "submit" : "button"}
       onClick={onClick}
       disabled={disabled}
-      style={{ ...styles.iconButton, ...styles[`button_${tone}`], opacity: disabled ? 0.5 : 1 }}
+      className={`procurement-page-styles-icon-button procurement-page-styles-button-${tone}`}
  >
       <Icon size={15} />
       <span>{label}</span>
@@ -1487,7 +1487,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
               <TwoLine title={line?.description || "—"} subtitle={`${qty(line?.quantity)} vahid`} />,
               <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
               rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "—",
-              <span style={{ ...styles.badge, ...(rfq.status === "approved" ? styles.badge_success : rfq.status === "rejected" ? styles.badge_danger : styles.badge_info) }}>{rfq.status}</span>,
+              <span className={`procurement-page-styles-badge procurement-page-styles-badge-${rfq.status === "approved" ? "success" : rfq.status === "rejected" ? "danger" : "info"}`}>{rfq.status}</span>,
               <div className="procurement-page-styles-row-actions">
                 {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="Təsdiq" tone="success" onClick={() => onApprove(rfq)} />}
                 {rfq.status === "sent" && <IconButton icon={XCircle} label="Rədd" tone="danger" onClick={() => onReject(rfq)} />}
@@ -1504,7 +1504,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
 function Metric({ icon: Icon, label, value, hint, tone }) {
   return (
     <article className="procurement-page-styles-metric-card">
-      <div style={{ ...styles.metricIcon, ...styles[`metric_${tone}`] }}>
+      <div className={`procurement-page-styles-metric-icon procurement-page-styles-metric-${tone}`}>
         <Icon size={20} />
       </div>
       <div>

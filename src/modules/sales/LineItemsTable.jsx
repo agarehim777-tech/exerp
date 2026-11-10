@@ -1,5 +1,7 @@
 import React from 'react';
 import ProductPicker from './ProductPicker.jsx';
+const cell = { padding: '6px 8px', border: '1px solid #e2e8f0', fontSize: 13 };
+const inp = { width: '100%', border: 0, outline: 0, padding: 4, background: 'transparent', fontSize: 13 };
 
 function lineNet(it) {
   const qty = Number(it.qty) || 0;
@@ -29,8 +31,6 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
   }, { sub: 0, disc: 0, tax: 0 });
   const grand = totals.sub - totals.disc + totals.tax;
 
-  const cell = { padding: '6px 8px', border: '1px solid #e2e8f0', fontSize: 13 };
-  const inp = { width: '100%', border: 0, outline: 0, padding: 4, background: 'transparent', fontSize: 13 };
 
   return (
     <div>

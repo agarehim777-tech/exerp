@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthProvider.jsx';
 import { usePipelines } from '../../shared/hooks/usePipelines.js';
 import { useDeals } from '../../shared/hooks/useDeals.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
+const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 };
 
 export default function CrmDealsPage() {
   const { activeTenantId } = useAuth();
@@ -139,7 +140,6 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
     } finally { setBusy(false); }
   };
 
-  const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 };
   return (
     <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_0_5 u-display-flex u-align-items-center u-justify-content-center u-z-index-100">
       <form onClick={e => e.stopPropagation()} onSubmit={submit}

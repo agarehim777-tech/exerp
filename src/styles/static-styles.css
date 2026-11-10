@@ -1777,3 +1777,62 @@
 .sx-0352431.sx-0352431 { padding: 6px 12px; }
 
 .sx-534bc5a.sx-534bc5a { background: #10b981; }
+
+.procurement-page-styles-metric-blue {
+  background: #dff3e9;
+  color: #08745a;
+}
+
+.procurement-page-styles-metric-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.procurement-page-styles-metric-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.procurement-page-styles-metric-rose {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.procurement-page-styles-button-primary {
+  background: #08745a;
+  color: #fff;
+  border-color: #08745a;
+}
+
+.procurement-page-styles-button-success {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+
+.procurement-page-styles-button-danger {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.procurement-page-styles-button-ghost {
+
+}
+
+.procurement-page-styles-badge-danger {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.procurement-page-styles-badge-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.procurement-page-styles-badge-dark {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.procurement-page-styles-icon-button:disabled { opacity: 0.5; }
