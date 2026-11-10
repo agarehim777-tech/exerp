@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
+import { Button, Card, DataTable, Input, Select } from '../../shared/ui/primitives.tsx';
 import StatusBadge from './StatusBadge.jsx';
 import { toLocalIsoDate } from '../../services/date.js';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
@@ -95,8 +97,8 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
               </div>
             </div>
             <div className="u-display-flex u-gap-8px">
-              {canManageOrder && <button onClick={() => setEditing(value => !value)} style={{ background: editing ? '#f1f5f9' : '#0b7a5c', color: editing ? '#334155' : '#fff', border: 0, padding: '8px 13px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{editing ? 'Ləğv et' : 'Redaktə et'}</button>}
-              <button onClick={onClose} aria-label="Sifariş kartını bağla" className="u-background-transparent u-border-0 u-font-size-24px u-cursor-pointer u-color-text_secondary">×</button>
+              {canManageOrder && <Button onClick={() => setEditing(value => !value)} variant={editing ? 'secondary' : 'primary'}>{editing ? 'Ləğv et' : 'Redaktə et'}</Button>}
+              <Button onClick={onClose} variant="ghost" className="ui-icon-button" aria-label="Sifariş kartını bağla"><X size={20} /></Button>
             </div>
           </div>
         </header>
@@ -105,50 +107,38 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
           {!canManageOrder && <div className="u-padding-10px_12px u-border-radius-9px u-color-text_secondary u-background-surface_subtle u-border-1px_solid_border u-font-size-12px">Baxış rejimi — bu sifarişi yalnız onu yaradan satıcı və administrator redaktə və ya silə bilər.</div>}
           <Section title="Müştəri">
             {editing ? <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_150px_1fr u-gap-10px">
-              <select value={draft.customer_id} onChange={e => setDraft(current => ({ ...current, customer_id: e.target.value }))} style={inputStyle}><option value="">Müştəri seçin</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select>
-              <input type="date" value={draft.order_date} onChange={e => setDraft(current => ({ ...current, order_date: e.target.value }))} style={inputStyle} />
-              <select value={draft.currency} disabled={priceEditOnly} onChange={e => setDraft(current => ({ ...current, currency: e.target.value }))} style={inputStyle}><option>AZN</option><option>USD</option><option>EUR</option></select>
+              <Select value={draft.customer_id} onChange={e => setDraft(current => ({ ...current, customer_id: e.target.value }))} ><option value="">Müştəri seçin</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</Select>
+              <Input type="date" value={draft.order_date} onChange={e => setDraft(current => ({ ...current, order_date: e.target.value }))}  />
+              <Select value={draft.currency} disabled={priceEditOnly} onChange={e => setDraft(current => ({ ...current, currency: e.target.value }))} ><option>AZN</option><option>USD</option><option>EUR</option></Select>
             </div> : <><div className="u-font-weight-600">{order.customer?.name || '—'}</div><div className="u-font-size-12px u-color-text_secondary">Tarix: {new Date(order.order_date || order.created_at).toLocaleDateString('az-AZ')}</div></>}
           </Section>
 
           <Section title={`Sətrlər (${items.length})`}>
-            {!editing && <table className="u-width-100 u-font-size-12px u-border-collapse-collapse">
-              <thead><tr className="u-background-surface_subtle">
-                <th style={cell}>Təsvir</th><th style={{ ...cell, textAlign: 'right' }}>Miq</th><th style={{ ...cell, textAlign: 'right' }}>Qiymət</th><th style={{ ...cell, textAlign: 'right' }}>Cəm</th>
-              </tr></thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr key={it.id}>
-                    <td style={cell}>{it.description || '—'}</td>
-                    <td style={{ ...cell, textAlign: 'right' }}>{Number(it.qty).toFixed(2)}</td>
-                    <td style={{ ...cell, textAlign: 'right' }}>{Number(it.unit_price).toFixed(2)}</td>
-                    <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>{Number(it.line_total).toFixed(2)}</td>
-                  </tr>
-                ))}
-                {!items.length && <tr><td colSpan={4} style={{ ...cell, textAlign: 'center', color: '#94a3b8' }}>—</td></tr>}
-              </tbody>
-            </table>}
+            {!editing && <DataTable label="Sifariş sətrləri" rows={items} emptyText="—"
+              columns={[{ key: 'description', label: 'Təsvir' }, { key: 'qty', label: 'Miq', align: 'right' }, { key: 'unit_price', label: 'Qiymət', align: 'right' }, { key: 'line_total', label: 'Cəm', align: 'right' }]}
+              renderCell={(item, column) => column.key === 'description' ? (item.description || '—') : column.key === 'line_total' ? <strong>{Number(item.line_total).toFixed(2)}</strong> : Number(item[column.key]).toFixed(2)} />}
+
             {editing ? <div className="u-display-flex u-flex-direction-column u-gap-10px">
               {draft.items.map((it, index) => {
                 const net = Number(it.qty || 0) * Number(it.unit_price || 0);
                 const lineTotal = net * (1 + Number(it.vat_rate || 0) / 100);
-                return <div key={it.id || `draft-${index}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, alignItems: 'end', padding: 12, background: '#fff', border: '1px solid #dbe4e1', borderRadius: 10 }}>
-                  <EditField label="Məhsul"><select value={it.product_id || ''} disabled={priceEditOnly} onChange={e => { const product = products.find(row => row.id === e.target.value); setDraft(current => ({ ...current, items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, product_id: e.target.value, description: product?.name || item.description, unit_price: product?.price ?? item.unit_price } : item) })); }} style={inputStyle}><option value="">Məhsul seçin</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></EditField>
-                  <EditField label="Miqdar"><input type="number" min="0.01" step="0.01" value={it.qty} readOnly={priceEditOnly} onChange={e => changeItem(index, 'qty', e.target.value)} style={inputStyle} /></EditField>
-                  <EditField label="Qiymət"><input type="number" min="0" step="0.01" value={it.unit_price} onChange={e => changeItem(index, 'unit_price', e.target.value)} style={inputStyle} /></EditField>
-                  <EditField label="ƏDV"><select value={Number(it.vat_rate || 0)} onChange={e => changeItem(index, 'vat_rate', Number(e.target.value))} style={inputStyle}><option value="0">ƏDV yoxdur</option><option value="18">18% ƏDV</option></select></EditField>
-                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <button onClick={() => removeItem(index)} className="u-border-1px_solid_fecaca u-border-radius-7px u-padding-7px_10px u-background-surface u-color-danger u-cursor-pointer">Sil</button>}</div>
-                </div>;
+                return <Card key={it.id || `draft-${index}`} className="ui-card-compact ui-form-grid">
+                  <EditField label="Məhsul"><Select value={it.product_id || ''} disabled={priceEditOnly} onChange={e => { const product = products.find(row => row.id === e.target.value); setDraft(current => ({ ...current, items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, product_id: e.target.value, description: product?.name || item.description, unit_price: product?.price ?? item.unit_price } : item) })); }} ><option value="">Məhsul seçin</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</Select></EditField>
+                  <EditField label="Miqdar"><Input type="number" min="0.01" step="0.01" value={it.qty} readOnly={priceEditOnly} onChange={e => changeItem(index, 'qty', e.target.value)}  /></EditField>
+                  <EditField label="Qiymət"><Input type="number" min="0" step="0.01" value={it.unit_price} onChange={e => changeItem(index, 'unit_price', e.target.value)}  /></EditField>
+                  <EditField label="ƏDV"><Select value={Number(it.vat_rate || 0)} onChange={e => changeItem(index, 'vat_rate', Number(e.target.value))} ><option value="0">ƏDV yoxdur</option><option value="18">18% ƏDV</option></Select></EditField>
+                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <Button variant="danger" onClick={() => removeItem(index)}>Sil</Button>}</div>
+                </Card>;
               })}
-              {!priceEditOnly && <button type="button" onClick={addItem} className="u-border-1px_dashed_0b7a5c u-color-0b7a5c u-background-surface u-padding-9px_12px u-border-radius-8px u-cursor-pointer u-font-weight-700">+ Məhsul əlavə et</button>}
+              {!priceEditOnly && <Button variant="secondary" type="button" onClick={addItem}>+ Məhsul əlavə et</Button>}
             </div> : <Totals order={order} />}
           </Section>
 
-          {editing && <Section title="Qeyd"><textarea value={draft.notes} onChange={e => setDraft(current => ({ ...current, notes: e.target.value }))} rows={3} style={{ ...inputStyle, width: '100%', resize: 'vertical' }} /><button onClick={saveChanges} disabled={busy} className="u-width-100 u-margin-top-10px u-background-0b7a5c u-color-surface u-border-0 u-padding-10px u-border-radius-8px u-cursor-pointer u-font-weight-800">{busy ? 'Yadda saxlanılır…' : 'Dəyişiklikləri yadda saxla'}</button></Section>}
+          {editing && <Section title="Qeyd"><textarea value={draft.notes} onChange={e => setDraft(current => ({ ...current, notes: e.target.value }))} rows={3} className="ui-input ui-textarea" /><Button onClick={saveChanges} disabled={busy}>{busy ? 'Yadda saxlanılır…' : 'Dəyişiklikləri yadda saxla'}</Button></Section>}
 
           {!editing && (parsedOrderNotes.general || parsedOrderNotes.internalNotes.length > 0) && <Section title="Sifariş qeydləri">
-            {parsedOrderNotes.general && <div style={{ padding: '9px 11px', marginBottom: parsedOrderNotes.internalNotes.length ? 9 : 0, borderRadius: 8, background: '#fff', border: '1px solid #e2e8f0' }}><strong className="u-display-block u-margin-bottom-4px u-font-size-11px u-color-text_secondary">ÜMUMİ QEYD</strong>{parsedOrderNotes.general}</div>}
-            <div className="u-display-grid u-gap-8px">{parsedOrderNotes.internalNotes.map((item, index) => <div key={`${item.recipient}-${index}`} style={{ display: 'grid', gridTemplateColumns: '140px minmax(0, 1fr)', gap: 10, alignItems: 'start', padding: '9px 11px', borderRadius: 8, background: '#fff', border: '1px solid #dbe4e1' }}><span className="u-color-0b7a5c u-font-weight-800 u-font-size-11px">{item.recipient}</span><span>{item.text}</span></div>)}</div>
+            {parsedOrderNotes.general && <div className="ui-notice ui-spacer-bottom"><strong className="u-display-block u-margin-bottom-4px u-font-size-11px u-color-text_secondary">ÜMUMİ QEYD</strong>{parsedOrderNotes.general}</div>}
+            <div className="u-display-grid u-gap-8px">{parsedOrderNotes.internalNotes.map((item, index) => <div key={`${item.recipient}-${index}`} className="ui-notice ui-note-row"><span className="u-color-0b7a5c u-font-weight-800 u-font-size-11px">{item.recipient}</span><span>{item.text}</span></div>)}</div>
           </Section>}
 
           {canManageOrder && <Section title="Status axını">
@@ -158,8 +148,8 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                 <StatusBadge status={salesStatus.label} size="md" />
               </div>
               <div className="u-display-flex u-gap-8px u-flex-wrap-wrap">
-                {salesStatus.next && <button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy} className="u-padding-9px_14px u-border-radius-8px u-border-0 u-background-0b7a5c u-color-surface u-cursor-pointer u-font-weight-700">{busy ? 'Yenilənir…' : salesStatus.nextLabel}</button>}
-                {!['delivered', 'cancelled'].includes(order.status) && <button type="button" onClick={() => onDelete(order.id)} disabled={busy} className="u-padding-9px_14px u-border-radius-8px u-border-1px_solid_fecaca u-background-surface u-color-danger u-cursor-pointer u-font-weight-700">Ləğv et</button>}
+                {salesStatus.next && <Button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy}>{busy ? 'Yenilənir…' : salesStatus.nextLabel}</Button>}
+                {!['delivered', 'cancelled'].includes(order.status) && <Button variant="danger" type="button" onClick={() => onDelete(order.id)} disabled={busy}>Ləğv et</Button>}
                 {!salesStatus.next && <span className="u-color-text_secondary u-font-size-12px">{order.status === 'delivered' ? 'Sifariş müştəriyə təhvil verilib.' : order.status === 'cancelled' ? 'Satış ləğv edilib.' : 'Sifariş təsdiqlənib və anbar təhvili gözləyir.'}</span>}
               </div>
             </div>
@@ -170,39 +160,36 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
               <span>Ödənilib: <b>{Number(order.paid_amount || 0).toFixed(2)} ₼</b></span>
               <span>Qalıq: <b className="u-color-danger">{(Number(order.total) - Number(order.paid_amount || 0)).toFixed(2)} ₼</b></span>
             </div>
-            <div className="u-display-grid u-grid-template-columns-minmax_150px_1fr_minmax_120px_1fr_auto u-gap-8px">
-              <select value={cashAccountId} onChange={e => setCashAccountId(e.target.value)} style={inputStyle}>
+            <div className="ui-form-grid">
+              <Select aria-label="Kassa hesabı" value={cashAccountId} onChange={e => setCashAccountId(e.target.value)} >
                 <option value="">Kassa hesabını seçin</option>
                 {cashAccounts.map(account => <option key={account.id} value={account.id}>{account.name} ({account.currency})</option>)}
-              </select>
-              <input type="number" step="0.01" value={paidInput} onChange={e => setPaidInput(e.target.value)}
-                placeholder="Məbləğ" className="u-flex-1 u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px" />
-              <button onClick={registerPayment} disabled={busy || !paidInput}
-                className="u-background-action u-color-surface u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-700">
+              </Select>
+              <Input aria-label="Ödəniş məbləği" type="number" step="0.01" value={paidInput} onChange={e => setPaidInput(e.target.value)}
+                placeholder="Məbləğ"  />
+              <Button onClick={registerPayment} disabled={busy || !paidInput}
+               >
                 Qeyd et
-              </button>
+              </Button>
             </div>
             {!cashAccounts.length && <div className="u-margin-top-8px u-color-text_secondary u-font-size-12px">Hesab seçilməyibsə ödəniş zamanı “Əsas kassa” avtomatik yaradılacaq.</div>}
           </Section>}
 
-          {canManageOrder && <button onClick={() => onDelete(order.id)} disabled={busy}
-            className="u-background-surface u-color-danger u-border-1px_solid_fecaca u-padding-9px u-border-radius-8px u-cursor-pointer u-font-weight-600">
+          {canManageOrder && <Button variant="danger" onClick={() => onDelete(order.id)} disabled={busy}>
             Sifarişi sil
-          </button>}
+          </Button>}
         </div>
       </div>
     </div>
   );
 }
 
-const cell = { padding: '6px 8px', borderBottom: '1px solid #f1f5f9', textAlign: 'left' };
-const inputStyle = { width: '100%', padding: '8px 9px', border: '1px solid #cbd5e1', borderRadius: 8, background: '#fff' };
 function EditField({ label, children }) { return <label className="u-display-flex u-flex-direction-column u-gap-6px u-min-width-0"><span className="u-font-size-11px u-color-text_secondary u-font-weight-700">{label}</span>{children}</label>; }
 function Section({ title, children }) {
   return (
     <div>
       <h3 className="u-margin-0_0_8px u-font-size-12px u-text-transform-uppercase u-letter-spacing-0_5px u-color-text_secondary">{title}</h3>
-      <div className="u-background-surface_subtle u-padding-12px u-border-radius-10px u-border-1px_solid_border">{children}</div>
+      <div className="ui-detail-stack">{children}</div>
     </div>
   );
 }
@@ -218,7 +205,7 @@ function Totals({ order }) {
 }
 function Row({ label, v, bold }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontWeight: bold ? 800 : 400, fontSize: bold ? 15 : 13 }}>
+    <div className={`ui-total-row${bold ? ' ui-total-row-emphasis' : ''}`}>
       <span>{label}</span><span>{Number(v || 0).toFixed(2)} ₼</span>
     </div>
   );

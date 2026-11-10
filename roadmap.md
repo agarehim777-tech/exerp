@@ -15,4 +15,10 @@
 11. [ ] Kadr/maliyyə kolleksiyalarının xüsusi cədvəllərə təhlükəsiz keçidi — canlı sxem yoxlanıldı, dəyişdirilmədi. Maliyyə keçidinin canlı yoxlaması cashbook_ledger_summary/create_cash_expense_atomic/transfer_cash_atomic funksiyalarının bazada olmaması ilə bloklanır
 12. [ ] Qalan TypeScript keçidi, səhifələmə və son canlı yoxlamalar — tam tip keçidi və CI tip qapısı hələ əlavə edilməyib
 
+## Cari panel keçidi
+- [x] Müştəri detalları: Button/Card/Input/Select/Tabs/DataTable keçidi; mərhələ üzrə 10 test keçdi
+- [x] Müştəri siyahısı: vahid elementlər, cədvəl və formalar; mərhələ üzrə 12 test keçdi
+- [x] Sifariş paneli: vahid elementlər və cədvəl; mərhələ üzrə 13 test keçdi
+- [x] Son yoxlama: 624 test keçdi, lint xətasızdır; girişli real müştəri/sifariş panelləri masaüstü və 390px telefonda açıldı, runtime xətası və üfüqi daşma yoxdur. Bu üç faylda inline style və yerli HTML düymə/input/select/table qalmadı; maliyyə əməliyyatları dəyişdirilmədi.
+
 Yoxlama: dashboard, təhvil, kredit, mühasibat, HR ekranları girişli önizləmədə açıldı; maliyyə hesabatının beş tabı, kassa və faktura formaları masaüstü/390px telefonda yoxlanıldı. Runtime xətası yoxdur. Şirkət dəyişmə regressiyaları avtomatik testlərdə keçdi; canlı hesabda şirkət dəyişmə seçimi olmadığından canlı sınaq edilmədi. Kassa qalıqları mövcud server funksiyası çatışmazlığı səbəbindən yoxlanmış deyil.

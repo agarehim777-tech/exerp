@@ -271,6 +271,22 @@
 .ui-performance-progress::-webkit-progress-value { background: var(--action); border-radius: var(--radius-control); }
 .ui-performance-progress::-moz-progress-bar { background: var(--action); border-radius: var(--radius-control); }
 
+.ui-card-compact { padding: var(--space-3); box-shadow: none; }
+.ui-detail-stack { display: grid; gap: var(--space-3); min-width: 0; }
+.ui-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-block: var(--space-3); }
+.ui-empty-box { padding: var(--space-5); text-align: center; color: var(--text-secondary); border: 1px dashed var(--line-strong); border-radius: var(--radius-control); }
+.ui-badge-custom { color: var(--badge-accent); background: color-mix(in srgb, var(--badge-accent) 13%, var(--surface)); }
+.ui-record-action { width: 100%; justify-content: space-between; text-align: left; white-space: normal; gap: var(--space-3); padding-block: var(--space-2); }
+.ui-record-action > * { min-width: 0; overflow-wrap: anywhere; }
+.ui-icon-button { width: var(--control-height); flex: 0 0 var(--control-height); padding: 0; }
+.ui-document-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.ui-document-row > :first-child { min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
+.ui-textarea { resize: vertical; }
+.ui-note-row { display: grid; grid-template-columns: minmax(80px, 140px) minmax(0, 1fr); gap: var(--space-2); overflow-wrap: anywhere; }
+.ui-total-row { display: flex; justify-content: space-between; padding-block: var(--space-1); font-size: var(--font-size-md); }
+.ui-total-row-emphasis { font-size: var(--font-size-lg); font-weight: 800; }
+.ui-form-grid > .ui-card { min-width: 0; }
+
 @media (max-width: 640px) {
   .ui-toolbar { align-items: stretch; }
   .ui-toolbar > * { flex: 1 1 auto; }
