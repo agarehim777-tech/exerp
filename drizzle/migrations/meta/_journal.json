@@ -29,6 +29,13 @@
       "when": 1794301730004,
       "tag": "0003_reverse_vendor_invoice_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794301753603,
+      "tag": "0004_vendor_invoice_unpaid_guard_allows_reversal",
+      "breakpoints": true
     }
   ]
 }
