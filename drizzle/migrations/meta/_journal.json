@@ -15,6 +15,34 @@
       "when": 1793453939988,
       "tag": "0001_expense_status_canonical",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794301673260,
+      "tag": "0002_reverse_sales_order_reservation_status_fix",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794301730004,
+      "tag": "0003_reverse_vendor_invoice_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794301753603,
+      "tag": "0004_vendor_invoice_unpaid_guard_allows_reversal",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794301823451,
+      "tag": "0005_reverse_procurement_receipt",
+      "breakpoints": true
     }
   ]
 }

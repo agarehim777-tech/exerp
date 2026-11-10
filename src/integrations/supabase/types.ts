@@ -3189,6 +3189,8 @@ export type Database = {
           id: string
           receipt_date: string
           receipt_no: string
+          reversal_reason: string | null
+          reversed_at: string | null
           shipment_id: string
           tenant_id: string
           warehouse_id: string
@@ -3199,6 +3201,8 @@ export type Database = {
           id?: string
           receipt_date?: string
           receipt_no: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shipment_id: string
           tenant_id: string
           warehouse_id: string
@@ -3209,6 +3213,8 @@ export type Database = {
           id?: string
           receipt_date?: string
           receipt_no?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shipment_id?: string
           tenant_id?: string
           warehouse_id?: string
@@ -6002,6 +6008,10 @@ export type Database = {
         Args: { _entry: string; _reason: string }
         Returns: string
       }
+      reverse_procurement_receipt: {
+        Args: { _reason: string; _receipt: string }
+        Returns: Json
+      }
       reverse_sales_order: {
         Args: { _order_id: string; _reason: string }
         Returns: Json
@@ -6013,6 +6023,10 @@ export type Database = {
           _request_key: string
           _tenant_id: string
         }
+        Returns: Json
+      }
+      reverse_vendor_invoice_payment: {
+        Args: { _payment: string; _reason: string }
         Returns: Json
       }
       sales_dashboard: {
