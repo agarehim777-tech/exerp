@@ -34,7 +34,7 @@ export function useReportTotals(tenantId: string | null | undefined, period: str
     setTotals(null);
     if (!tenantId) return undefined;
     const { from, to } = reportPeriodRange(period, snapshotDate);
-    supabase.rpc("report_totals", { _tenant_id: tenantId, _from: from, _to: to }).then(({ data, error }) => {
+    supabase.rpc("report_totals", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined }).then(({ data, error }) => {
       if (!current) return;
       if (error || !data) { console.warn("report_totals failed", error); return; }
       const raw = data as Record<string, unknown>;
