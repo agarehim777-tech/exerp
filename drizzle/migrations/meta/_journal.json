@@ -57,6 +57,13 @@
       "when": 1794301155449,
       "tag": "0007_restore_purchase_receipt_posting",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794301205763,
+      "tag": "0008_restore_receive_stock",
+      "breakpoints": true
     }
   ]
 }

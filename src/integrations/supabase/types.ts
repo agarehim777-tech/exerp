@@ -5942,6 +5942,19 @@ export type Database = {
         Args: { _receipt_date?: string; _shipment: string; _warehouse: string }
         Returns: string
       }
+      receive_stock: {
+        Args: {
+          _note?: string
+          _product_id: string
+          _quantity: number
+          _reference_id?: string
+          _reference_type?: string
+          _tenant_id: string
+          _unit_cost: number
+          _warehouse_id: string
+        }
+        Returns: string
+      }
       refresh_credit_overdue: {
         Args: { _as_of?: string; _tenant_id: string }
         Returns: {
