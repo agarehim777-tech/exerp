@@ -286,6 +286,15 @@
 .ui-total-row { display: flex; justify-content: space-between; padding-block: var(--space-1); font-size: var(--font-size-md); }
 .ui-total-row-emphasis { font-size: var(--font-size-lg); font-weight: 800; }
 .ui-form-grid > .ui-card { min-width: 0; }
+.ui-muted, .ui-disabled { opacity: .6; }
+.ui-small-value { font-size: var(--font-size-md); }
+.ui-align-left { text-align: left; }
+.ui-surface-subtle { background: var(--surface-subtle); }
+.ui-notice-success { background: var(--success-surface); color: var(--action); }
+.ui-notice-info { background: var(--info-surface); color: var(--info); }
+.ui-unit-input { position: relative; }
+.ui-unit-label { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: var(--font-size-sm); pointer-events: none; }
+.ui-unit-field { padding-right: 44px; }
 
 @media (max-width: 640px) {
   .ui-toolbar { align-items: stretch; }
