@@ -2310,6 +2310,165 @@ export type Database = {
           },
         ]
       }
+      inventory_return_lines: {
+        Row: {
+          condition: string
+          created_at: string
+          disposition: string
+          id: string
+          note: string | null
+          product_id: string
+          quantity: number
+          repair_note: string | null
+          repair_started_at: string | null
+          repair_started_by: string | null
+          repair_status: string
+          repaired_at: string | null
+          repaired_by: string | null
+          return_id: string
+          stock_movement_id: string | null
+          tenant_id: string
+          unit_cost: number
+        }
+        Insert: {
+          condition: string
+          created_at?: string
+          disposition: string
+          id?: string
+          note?: string | null
+          product_id: string
+          quantity: number
+          repair_note?: string | null
+          repair_started_at?: string | null
+          repair_started_by?: string | null
+          repair_status?: string
+          repaired_at?: string | null
+          repaired_by?: string | null
+          return_id: string
+          stock_movement_id?: string | null
+          tenant_id: string
+          unit_cost?: number
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          disposition?: string
+          id?: string
+          note?: string | null
+          product_id?: string
+          quantity?: number
+          repair_note?: string | null
+          repair_started_at?: string | null
+          repair_started_by?: string | null
+          repair_status?: string
+          repaired_at?: string | null
+          repaired_by?: string | null
+          return_id?: string
+          stock_movement_id?: string | null
+          tenant_id?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_return_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_return_lines_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_return_lines_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_return_lines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_returns: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string | null
+          reason: string | null
+          return_no: string
+          return_type: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          reason?: string | null
+          return_no: string
+          return_type: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          reason?: string | null
+          return_no?: string
+          return_type?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_returns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_returns_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_units: {
         Row: {
           batch_no: string | null
@@ -4582,6 +4741,7 @@ export type Database = {
           id: string
           minimum_level: number
           on_hand: number
+          problem_qty: number
           product_id: string | null
           reserved: number
           sku: string | null
@@ -4594,6 +4754,7 @@ export type Database = {
           id?: string
           minimum_level?: number
           on_hand?: number
+          problem_qty?: number
           product_id?: string | null
           reserved?: number
           sku?: string | null
@@ -4606,6 +4767,7 @@ export type Database = {
           id?: string
           minimum_level?: number
           on_hand?: number
+          problem_qty?: number
           product_id?: string | null
           reserved?: number
           sku?: string | null
@@ -5696,6 +5858,10 @@ export type Database = {
       cashbook_ledger_summary: { Args: { _tenant_id: string }; Returns: Json }
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
+      complete_inventory_repair: {
+        Args: { _line: string; _note?: string }
+        Returns: string
+      }
       complete_sales_delivery: {
         Args: {
           _acceptance: Json
@@ -6086,6 +6252,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_problem_stock_action: {
+        Args: {
+          _action: string
+          _product: string
+          _quantity: number
+          _reason: string
+          _warehouse: string
+        }
+        Returns: string
+      }
       refresh_credit_overdue: {
         Args: { _as_of?: string; _tenant_id: string }
         Returns: {
@@ -6188,6 +6364,7 @@ export type Database = {
         Args: { _credit_id: string; _start_date: string; _tenant_id: string }
         Returns: string
       }
+      start_inventory_repair: { Args: { _line: string }; Returns: string }
       sync_expense_cash: {
         Args: { _expense_no: string; _status: string; _tenant_id: string }
         Returns: Json
