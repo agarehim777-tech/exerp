@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MetricCard, Panel, PanelHeader } from "../components/ui.jsx";
+import { Button } from "../shared/ui/primitives.tsx";
 import { money } from "../services/format.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCashbook } from "../shared/hooks/useCashbook.js";
@@ -118,10 +119,10 @@ export default function DashboardPage({
   return (
     <div className="stack dashboard-page density-comfortable">
       <section className="mobile-operations" aria-label="Sürətli əməliyyatlar">
-        <button type="button" onClick={() => navigate('/satis/sifarisler')}><Plus size={18} /><span>Satış</span></button>
-        <button type="button" onClick={() => navigate('/maliyye/kassa')}><BadgeDollarSign size={18} /><span>Ödəniş</span></button>
-        <button type="button" onClick={() => navigate('/anbar/qaliqlar')}><PackageSearch size={18} /><span>Stok</span></button>
-        <button type="button" onClick={() => navigate('/sistem/barisdirma')}><CircleAlert size={18} /><span>Nəzarət</span></button>
+        <Button onClick={() => navigate('/satis/sifarisler')}><Plus size={18} /><span>Satış</span></Button>
+        <Button variant="ghost" onClick={() => navigate('/maliyye/kassa')}><BadgeDollarSign size={18} /><span>Ödəniş</span></Button>
+        <Button variant="ghost" onClick={() => navigate('/anbar/qaliqlar')}><PackageSearch size={18} /><span>Stok</span></Button>
+        <Button variant="ghost" onClick={() => navigate('/sistem/barisdirma')}><CircleAlert size={18} /><span>Nəzarət</span></Button>
       </section>
       <section className="metric-grid">
         <MetricCard
@@ -157,7 +158,7 @@ export default function DashboardPage({
       </section>
 
       <section className="dashboard-grid">
-        <Panel style={{ gridColumn: "1 / -1" }}>
+        <Panel className="ui-grid-full">
           <PanelHeader
             title="Aylıq Satış Dinamikası"
             subtitle="Son 5 ay üzrə canlı dövriyyə (min ₼)"
@@ -182,13 +183,13 @@ export default function DashboardPage({
       </section>
 
       <section className="dashboard-grid">
-        <div className="dashboard-sales-performance" style={{ gridColumn: "1 / -1" }}>
+        <div className="dashboard-sales-performance ui-grid-full">
           <Panel className="performance-card">
             <PanelHeader title="Əsas satıcılar üzrə satış performansı" subtitle="Sifarişdə birinci seçilən satıcıya aid tam satış məbləği" icon={Users} />
             {sellerPerformance.length ? <div className="performance-list">{sellerPerformance.slice(0, 8).map((seller, index) => (
               <div className="performance-row" key={seller.name}>
                 <span className="seller-performance-rank">{index + 1}</span>
-                <div className="performance-name"><strong>{seller.name}</strong><small>{seller.orderCount} sifariş</small><i><b style={{ width: `${(seller.sales / maxSellerSales) * 100}%` }} /></i></div>
+                <div className="performance-name"><strong>{seller.name}</strong><small>{seller.orderCount} sifariş</small><progress className="ui-performance-progress" value={seller.sales} max={maxSellerSales} aria-label={seller.name} /></div>
                 <strong>{money(seller.sales)}</strong>
               </div>
             ))}</div> : <div className="seller-performance-empty"><Users size={22} /><strong>Satıcı satış məlumatı yoxdur</strong><span>Sifarişə satıcı təyin edildikdə burada görünəcək.</span></div>}
@@ -199,7 +200,7 @@ export default function DashboardPage({
             {productPerformance.length ? <div className="performance-list">{productPerformance.slice(0, 8).map((product, index) => (
               <div className="performance-row" key={product.name}>
                 <span className="seller-performance-rank product-rank">{index + 1}</span>
-                <div className="performance-name"><strong>{product.name}</strong><small>{product.orderCount} sifariş · {product.quantity} ədəd</small><i><b style={{ width: `${(product.quantity / maxProductQuantity) * 100}%` }} /></i></div>
+                <div className="performance-name"><strong>{product.name}</strong><small>{product.orderCount} sifariş · {product.quantity} ədəd</small><progress className="ui-performance-progress" value={product.quantity} max={maxProductQuantity} aria-label={product.name} /></div>
                 <strong>{money(product.sales)}</strong>
               </div>
             ))}</div> : <div className="seller-performance-empty"><ShoppingCart size={22} /><strong>Məhsul satış məlumatı yoxdur</strong><span>Satış sifarişi yaradıldıqda məhsullar burada sıralanacaq.</span></div>}

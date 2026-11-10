@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ChangeEventHandler, FormEventHandler, HTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, SelectHTMLAttributes } from 'react';
-export { default as DataTable } from './DataTable';
+export { default as DataTable } from './DataTable.tsx';
 
 const join = (...values: Array<string | false | undefined>) => values.filter(Boolean).join(' ');
 type ContainerProps = HTMLAttributes<HTMLElement> & { children?: ReactNode };

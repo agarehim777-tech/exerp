@@ -245,6 +245,11 @@
 .ui-section-title { margin: 0 0 var(--space-2); color: #183c31; font-size: var(--font-size-lg); }
 .ui-help-text { margin: 0; color: #647b73; font-size: var(--font-size-md); line-height: 1.55; }
 .ui-spacer-top { margin-top: var(--space-3); }
+.ui-grid-full { grid-column: 1 / -1; }
+.ui-performance-progress { display: block; appearance: none; width: 100%; height: 3px; margin-top: var(--space-1); border: 0; border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--action); }
+.ui-performance-progress::-webkit-progress-bar { background: var(--surface-subtle); border-radius: var(--radius-control); }
+.ui-performance-progress::-webkit-progress-value { background: var(--action); border-radius: var(--radius-control); }
+.ui-performance-progress::-moz-progress-bar { background: var(--action); border-radius: var(--radius-control); }
 
 @media (max-width: 640px) {
   .ui-toolbar { align-items: stretch; }
