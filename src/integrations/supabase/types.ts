@@ -5451,6 +5451,16 @@ export type Database = {
       }
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
+      complete_sales_delivery: {
+        Args: {
+          _acceptance: Json
+          _order_id: string
+          _request_key: string
+          _tenant_id: string
+          _warehouse_id: string
+        }
+        Returns: Json
+      }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
       create_credit_contract: {
         Args: {
