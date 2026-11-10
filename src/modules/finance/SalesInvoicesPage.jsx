@@ -16,12 +16,13 @@ import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 import { toLocalIsoDate } from "../../services/date.js";
 import {
-  azn, badge, card, delBtn, input, msgBox, primaryBtn, secondaryBtn,
-  statLabel, statTile, statValue, table, td, th,
+  azn,
 } from "../../shared/ui/tokens.js";
 
+import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
+
 const STATUS_TONE = {
-  draft: "gray", issued: "amber", partial: "amber", paid: "green", overdue: "red", cancelled: "gray",
+  draft: "neutral", issued: "warning", partial: "warning", paid: "success", overdue: "danger", cancelled: "neutral",
 };
 const STATUS_LABEL = {
   draft: "Qaralama", issued: "Göndərilib", partial: "Qismən ödənilib",
@@ -81,23 +82,23 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
     try { await fn(); return true; } catch (error) { setMsg(`Xəta: ${error.message}`); return false; }
   };
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <div className="ui-card">Aktiv şirkət seçilməyib.</div>;
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={statTile}><div style={statLabel}>Fakturalanmış</div><div style={statValue}>{azn(totals.billed)}</div></div>
-        <div style={statTile}><div style={statLabel}>Ödənilmiş</div><div style={statValue}>{azn(totals.paid)}</div></div>
-        <div style={statTile}><div style={statLabel}>Debitor borcu</div><div style={statValue}>{azn(totals.receivable)}</div></div>
-        <div style={statTile}><div style={statLabel}>Gecikmiş</div><div style={{ ...statValue, color: "#b23a3a" }}>{azn(totals.overdue)}</div></div>
+    <div className="ui-page-stack">
+      <div className="ui-table-actions ui-spacer-bottom">
+        <div className="ui-stat-card"><div className="ui-stat-label">Fakturalanmış</div><div className="ui-stat-value">{azn(totals.billed)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Ödənilmiş</div><div className="ui-stat-value">{azn(totals.paid)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Debitor borcu</div><div className="ui-stat-value">{azn(totals.receivable)}</div></div>
+        <div className="ui-stat-card"><div className="ui-stat-label">Gecikmiş</div><div className="ui-stat-value amount-due">{azn(totals.overdue)}</div></div>
       </div>
 
-      {msg && <div style={msgBox}>{msg}</div>}
-      {ar.error && <div role="alert" style={msgBox}>{ar.error.message}</div>}
+      {msg && <div className="ui-notice ui-notice-warning">{msg}</div>}
+      {ar.error && <div role="alert" className="ui-notice ui-notice-warning">{ar.error.message}</div>}
       {customerLookup.loading && <div role="status">Müştərilər yüklənir...</div>}
-      {customerLookup.error && <div role="alert" style={msgBox}>
+      {customerLookup.error && <div role="alert" className="ui-notice ui-notice-warning">
         {customerLookup.error.message}
-        <button type="button" style={secondaryBtn} onClick={customerLookup.refresh}>Yenidən cəhd</button>
+        <Button type="button" variant="secondary" onClick={customerLookup.refresh}>Yenidən cəhd</Button>
       </div>}
       <LoadMoreBar hasMore={customerLookup.hasMore} loading={customerLookup.loading}
         onLoadMore={customerLookup.loadMore} label="Daha çox müştəri yüklə" />
@@ -117,12 +118,12 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
 
 
 
-      <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Satış fakturaları ({filteredInvoices.length}/{ar.invoices.length})</h3>
-          <button style={primaryBtn} onClick={() => setShowForm((v) => !v)}>
+      <div className="ui-card">
+        <div className="ui-toolbar ui-spacer-bottom">
+          <h3 className="ui-section-title">Satış fakturaları ({filteredInvoices.length}/{ar.invoices.length})</h3>
+          <Button  onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Bağla" : "+ Yeni faktura"}
-          </button>
+          </Button>
         </div>
 
         {showForm && (
@@ -141,36 +142,36 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
         )}
 
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        <div className="ui-table-actions ui-spacer-bottom">
           {[["all", "Hamısı"], ...Object.entries(STATUS_LABEL)].map(([value, label]) => (
-            <button
+            <Button
               key={value}
               type="button"
               data-testid={`invoice-filter-${value}`}
-              style={statusFilter === value ? primaryBtn : secondaryBtn}
+              variant={statusFilter === value ? "primary" : "secondary"}
               onClick={() => setStatusFilter(value)}
             >
               {label} ({statusCounts[value] || 0})
-            </button>
+            </Button>
           ))}
-          <input
-            style={{ ...input, minWidth: 220, marginLeft: "auto" }}
+          <Input
+            className="ui-search-input"
             placeholder="Faktura № və ya müştəri axtar…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             data-testid="invoice-search"
           />
-          <button
+          <Button
             type="button"
-            style={secondaryBtn}
+            variant="secondary"
             data-testid="invoice-export-columns-toggle"
             onClick={() => setShowColumnPicker((v) => !v)}
           >
             Sütunlar ({exportColumns.length})
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            style={secondaryBtn}
+            variant="secondary"
             data-testid="invoice-export-csv"
             disabled={!filteredInvoices.length || !exportColumns.length}
             onClick={() => run(async () => {
@@ -179,10 +180,10 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
             })}
           >
             CSV ixrac
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            style={secondaryBtn}
+            variant="secondary"
             data-testid="invoice-export-pdf"
             disabled={!filteredInvoices.length || !exportColumns.length}
             onClick={() => run(async () => {
@@ -195,36 +196,36 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
             })}
           >
             PDF ixrac
-          </button>
+          </Button>
         </div>
 
         {showColumnPicker && (
           <div
-            style={{ ...card, padding: 12, marginBottom: 12, display: "grid", gap: 8 }}
+            className="ui-form-surface"
             data-testid="invoice-export-columns"
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <strong style={{ fontSize: 13 }}>İxrac sütunları</strong>
-              <span style={{ fontSize: 12, color: "#64748b" }}>CSV və PDF üçün seçilmiş sütunlar</span>
-              <button
+            <div className="ui-table-actions ui-spacer-bottom">
+              <strong className="ui-help-text">İxrac sütunları</strong>
+              <span className="ui-help-text">CSV və PDF üçün seçilmiş sütunlar</span>
+              <Button
                 type="button"
-                style={{ ...secondaryBtn, marginLeft: "auto" }}
+                variant="secondary"
                 onClick={() => setExportColumns(INVOICE_EXPORT_COLUMNS.map((c) => c.key))}
               >
                 Hamısı
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                style={secondaryBtn}
+                variant="secondary"
                 onClick={() => setExportColumns(DEFAULT_INVOICE_EXPORT_COLUMNS)}
               >
                 Standart
-              </button>
+              </Button>
             </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <div className="ui-table-actions ui-spacer-bottom">
               {INVOICE_EXPORT_COLUMNS.map((column) => (
-                <label key={column.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                  <input
+                <label key={column.key} className="ui-checkbox-label">
+                  <Input
                     type="checkbox"
                     checked={exportColumns.includes(column.key)}
                     data-testid={`invoice-export-col-${column.key}`}
@@ -235,18 +236,18 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
               ))}
             </div>
             {!exportColumns.length && (
-              <div style={{ fontSize: 12, color: "#b23a3a" }}>Ən azı bir sütun seçin.</div>
+              <div className="ui-validation-error">Ən azı bir sütun seçin.</div>
             )}
           </div>
         )}
 
 
-        <table style={table}>
+        <div className="ui-table-wrap"><table className="ui-table">
           <thead>
             <tr>
-              <th style={th}>№</th><th style={th}>Tarix</th><th style={th}>Müştəri</th>
-              <th style={th}>Məbləğ</th><th style={th}>Ödənilib</th><th style={th}>Status</th>
-              <th style={th}>Mühasibat</th><th style={th} />
+              <th >№</th><th >Tarix</th><th >Müştəri</th>
+              <th >Məbləğ</th><th >Ödənilib</th><th >Status</th>
+              <th >Mühasibat</th><th  />
             </tr>
           </thead>
           <tbody>
@@ -263,10 +264,10 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
               />
             ))}
             {!filteredInvoices.length && !ar.loading && (
-              <tr><td style={td} colSpan={8}>Faktura tapılmadı.</td></tr>
+              <tr><td  colSpan={8}>Faktura tapılmadı.</td></tr>
             )}
           </tbody>
-        </table>
+        </table></div>
         <LoadMoreBar hasMore={ar.hasMore} onLoadMore={ar.loadMore} loading={ar.loading} />
       </div>
     </div>
@@ -283,50 +284,50 @@ export function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company
   return (
     <>
       <tr>
-        <td style={td}><b>{invoice.invoice_no}</b></td>
-        <td style={td}>{new Date(invoice.invoice_date).toLocaleDateString("az-AZ")}</td>
-        <td style={td}>{invoice.customer?.name || "—"}</td>
-        <td style={{ ...td, fontWeight: 600 }}>{azn(invoice.total)}</td>
-        <td style={td}>{azn(invoice.paid_amount)}</td>
-        <td style={td}><span style={badge(STATUS_TONE[invoice.status])}>{STATUS_LABEL[invoice.status]}</span></td>
-        <td style={td}>
+        <td ><b>{invoice.invoice_no}</b></td>
+        <td >{new Date(invoice.invoice_date).toLocaleDateString("az-AZ")}</td>
+        <td >{invoice.customer?.name || "—"}</td>
+        <td className="ui-emphasis is-numeric">{azn(invoice.total)}</td>
+        <td >{azn(invoice.paid_amount)}</td>
+        <td ><span className={`ui-badge ui-badge-${STATUS_TONE[invoice.status]}`}>{STATUS_LABEL[invoice.status]}</span></td>
+        <td >
           {invoice.posted
-            ? <span style={badge("green")}>Yazılıb</span>
-            : invoice.status !== "cancelled" && <button style={secondaryBtn} disabled={busy} onClick={async () => {
+            ? <span className={`ui-badge ui-badge-${"success"}`}>Yazılıb</span>
+            : invoice.status !== "cancelled" && <Button variant="secondary" disabled={busy} onClick={async () => {
               setBusy(true);
               try { await onPost(); } finally { setBusy(false); }
-            }}>Jurnala yaz</button>}
+            }}>Jurnala yaz</Button>}
         </td>
-        <td style={td}>
+        <td >
           {invoice.status !== "cancelled" && outstanding > 0 && (
             invoice.order_id
-              ? <button style={secondaryBtn} disabled={!onOpenSalesOrder} onClick={() => onOpenSalesOrder?.(invoice.order_id)}>Satış ödənişi</button>
-              : <button style={primaryBtn} disabled={busy || !invoice.posted} onClick={() => {
+              ? <Button variant="secondary" disabled={!onOpenSalesOrder} onClick={() => onOpenSalesOrder?.(invoice.order_id)}>Satış ödənişi</Button>
+              : <Button  disabled={busy || !invoice.posted} onClick={() => {
                 setAmount(outstanding.toFixed(2)); setPayOpen((v) => !v);
-              }}>Ödəniş</button>
+              }}>Ödəniş</Button>
           )}
-          <button style={secondaryBtn} title="PDF / çap" onClick={() => printInvoice(invoice, { company })}>PDF</button>
-          <button style={secondaryBtn} title="E-faktura JSON" onClick={() => downloadEInvoice(invoice, company)}>E-faktura</button>
+          <Button variant="secondary" title="PDF / çap" onClick={() => printInvoice(invoice, { company })}>PDF</Button>
+          <Button variant="secondary" title="E-faktura JSON" onClick={() => downloadEInvoice(invoice, company)}>E-faktura</Button>
           {invoice.status !== "cancelled" && (
-            <button style={delBtn} disabled={busy} onClick={async () => {
+            <Button variant="danger" disabled={busy} onClick={async () => {
               if (!(await appConfirm("Faktura ləğv edilsin?", { danger: true }))) return;
               setBusy(true);
               try { await onCancel(); } finally { setBusy(false); }
-            }}>Ləğv</button>
+            }}>Ləğv</Button>
           )}
         </td>
       </tr>
       {payOpen && (
         <tr>
-          <td style={td} colSpan={8}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <input aria-label="Faktura ödəniş məbləği" disabled={busy} type="number" min="0.01" max={outstanding} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...input, width: 140 }} />
-              <select aria-label="Faktura ödəniş hesabı" disabled={busy} value={accountId} onChange={(e) => setAccountId(e.target.value)} style={input}>
+          <td  colSpan={8}>
+            <div className="ui-table-actions ui-spacer-bottom">
+              <Input aria-label="Faktura ödəniş məbləği" disabled={busy} type="number" min="0.01" max={outstanding} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}  />
+              <Select aria-label="Faktura ödəniş hesabı" disabled={busy} value={accountId} onChange={(e) => setAccountId(e.target.value)} >
                 <option value="">Hesab seç…</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              <button
-                style={primaryBtn}
+              </Select>
+              <Button
+                
                 disabled={busy || !accountId || !(Number(amount) > 0) || Number(amount) > outstanding}
                 onClick={async () => {
                   if (busy) return;
@@ -336,8 +337,8 @@ export function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company
                 }}
               >
                 Ödənişi qeyd et
-              </button>
-              <span style={{ fontSize: 12, color: "#8a7a4a" }}>Qalıq: {azn(outstanding)}</span>
+              </Button>
+              <span className="ui-help-text">Qalıq: {azn(outstanding)}</span>
             </div>
           </td>
         </tr>
@@ -368,7 +369,7 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
 
   return (
     <form
-      style={{ border: "1px solid #e6dfc9", borderRadius: 10, padding: 14, marginBottom: 16, background: "#fcfaf2" }}
+      className="ui-form-surface"
       onSubmit={async (event) => {
         event.preventDefault();
         if (busy) return;
@@ -377,28 +378,28 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
         finally { setBusy(false); }
       }}
     >
-      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 12 }}>
-        <input required placeholder="Faktura №" value={header.invoice_no} onChange={(e) => setHeader({ ...header, invoice_no: e.target.value })} style={input} />
-        <select aria-label="Faktura müştərisi" required value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })} style={input}>
+      <fieldset disabled={busy} className="ui-fieldset">
+      <div className="ui-form-grid ui-spacer-bottom">
+        <Input required placeholder="Faktura №" value={header.invoice_no} onChange={(e) => setHeader({ ...header, invoice_no: e.target.value })}  />
+        <Select aria-label="Faktura müştərisi" required value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })} >
           <option value="">Müştəri seç…</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <input type="date" value={header.invoice_date} onChange={(e) => setHeader({ ...header, invoice_date: e.target.value })} style={input} />
-        <input type="date" placeholder="Son ödəniş" value={header.due_date} onChange={(e) => setHeader({ ...header, due_date: e.target.value })} style={input} />
+        </Select>
+        <Input type="date" value={header.invoice_date} onChange={(e) => setHeader({ ...header, invoice_date: e.target.value })}  />
+        <Input type="date" placeholder="Son ödəniş" value={header.due_date} onChange={(e) => setHeader({ ...header, due_date: e.target.value })}  />
       </div>
 
-      <table style={{ ...table, marginBottom: 8 }}>
+      <div className="ui-table-wrap"><table className="ui-table">
         <thead>
           <tr>
-            <th style={th}>Məhsul / təsvir</th><th style={th}>Say</th><th style={th}>Qiymət</th>
-            <th style={th}>Endirim %</th><th style={th}>ƏDV %</th><th style={th} />
+            <th >Məhsul / təsvir</th><th >Say</th><th >Qiymət</th>
+            <th >Endirim %</th><th >ƏDV %</th><th  />
           </tr>
         </thead>
         <tbody>
           {lines.map((line, index) => (
             <tr key={index}>
-              <td style={td}>
+              <td >
                 <ProductSearchSelect
                   products={products}
                   value={line.product_id}
@@ -411,33 +412,33 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
                     });
                   }}
                 />
-                <input
+                <Input
                   placeholder="Təsvir"
                   value={line.description}
                   onChange={(e) => patchLine(index, { description: e.target.value })}
-                  style={{ ...input, width: "100%", marginTop: 4 }}
+                  className="ui-spacer-top"
                 />
               </td>
-              <td style={td}><input aria-label="Faktura sətirinin sayı" type="number" min="0.001" step="0.001" value={line.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} style={{ ...input, width: 80 }} /></td>
-              <td style={td}><input aria-label="Faktura sətirinin qiyməti" type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} style={{ ...input, width: 100 }} /></td>
-              <td style={td}><input aria-label="Faktura sətirinin endirim faizi" type="number" min="0" max="100" step="0.01" value={line.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} style={{ ...input, width: 80 }} /></td>
-              <td style={td}><input aria-label="Faktura sətirinin ƏDV faizi" type="number" min="0" max="100" step="0.01" value={line.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} style={{ ...input, width: 80 }} /></td>
-              <td style={td}>
-                <button type="button" style={delBtn} onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}>Sil</button>
+              <td ><Input aria-label="Faktura sətirinin sayı" type="number" min="0.001" step="0.001" value={line.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} className="ui-cell-input" /></td>
+              <td ><Input aria-label="Faktura sətirinin qiyməti" type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} className="ui-cell-input" /></td>
+              <td ><Input aria-label="Faktura sətirinin endirim faizi" type="number" min="0" max="100" step="0.01" value={line.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} className="ui-cell-input" /></td>
+              <td ><Input aria-label="Faktura sətirinin ƏDV faizi" type="number" min="0" max="100" step="0.01" value={line.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} className="ui-cell-input" /></td>
+              <td >
+                <Button type="button" variant="danger" onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}>Sil</Button>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <button type="button" style={secondaryBtn} onClick={() => setLines((prev) => [...prev, emptyLine()])}>+ Sətir</button>
-        <div style={{ fontSize: 13 }}>
-          Ara cəm: <b>{azn(totals.net)}</b> · ƏDV: <b>{azn(totals.vat)}</b> · Yekun: <b style={{ color: "#064e3b" }}>{azn(totals.total)}</b>
+      <div className="ui-toolbar ui-spacer-bottom">
+        <Button type="button" variant="secondary" onClick={() => setLines((prev) => [...prev, emptyLine()])}>+ Sətir</Button>
+        <div className="ui-help-text">
+          Ara cəm: <b>{azn(totals.net)}</b> · ƏDV: <b>{azn(totals.vat)}</b> · Yekun: <b className="amount-positive">{azn(totals.total)}</b>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" style={secondaryBtn} onClick={onCancel}>İmtina</button>
-          <button type="submit" disabled={busy || !lines.length} style={primaryBtn}>Yadda saxla</button>
+        <div className="ui-table-actions ui-spacer-bottom">
+          <Button type="button" variant="secondary" onClick={onCancel}>İmtina</Button>
+          <Button type="submit" disabled={busy || !lines.length} >Yadda saxla</Button>
         </div>
       </div>
       </fieldset>
@@ -497,67 +498,67 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
   const pendingProjects = src.projects.filter((p) => !p.billed);
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ margin: 0 }}>
+    <div className="ui-card">
+      <div className="ui-toolbar ui-spacer-bottom">
+        <h3 className="ui-section-title">
           Faktura kəsimi axını{" "}
-          <span style={badge("amber")}>{pendingOrders.length + pendingProjects.length} gözləyir</span>
+          <span className={`ui-badge ui-badge-${"warning"}`}>{pendingOrders.length + pendingProjects.length} gözləyir</span>
         </h3>
-        <button style={secondaryBtn} onClick={() => setOpen((v) => !v)}>{open ? "Gizlət" : "Aç"}</button>
+        <Button variant="secondary" onClick={() => setOpen((v) => !v)}>{open ? "Gizlət" : "Aç"}</Button>
       </div>
 
       {open && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button style={tab === "orders" ? primaryBtn : secondaryBtn} onClick={() => setTab("orders")}>
+        <div className="ui-spacer-top">
+          <div className="ui-table-actions ui-spacer-bottom">
+            <Button variant={tab === "orders" ? "primary" : "secondary"} onClick={() => setTab("orders")}>
               Sifarişlər ({pendingOrders.length})
-            </button>
-            <button style={tab === "projects" ? primaryBtn : secondaryBtn} onClick={() => setTab("projects")}>
+            </Button>
+            <Button variant={tab === "projects" ? "primary" : "secondary"} onClick={() => setTab("projects")}>
               Layihələr ({pendingProjects.length})
-            </button>
+            </Button>
           </div>
 
-          {src.error && <div role="alert" style={msgBox}>
+          {src.error && <div role="alert" className="ui-notice ui-notice-warning">
             Faktura mənbələri yüklənmədi: {src.error.message}
-            <button type="button" style={secondaryBtn} onClick={src.refresh}>Yenidən cəhd</button>
+            <Button type="button" variant="secondary" onClick={src.refresh}>Yenidən cəhd</Button>
           </div>}
           {tab === "orders" ? (
-            <table style={table}>
+            <div className="ui-table-wrap"><table className="ui-table">
               <thead>
                 <tr>
-                  <th style={th}>Sifariş №</th><th style={th}>Müştəri</th><th style={th}>Sətir</th>
-                  <th style={th}>Məbləğ</th><th style={th}>Status</th><th style={th} />
+                  <th >Sifariş №</th><th >Müştəri</th><th >Sətir</th>
+                  <th >Məbləğ</th><th >Status</th><th  />
                 </tr>
               </thead>
               <tbody>
                 {pendingOrders.map((order) => (
                   <tr key={order.id}>
-                    <td style={td}><b>{order.order_no}</b></td>
-                    <td style={td}>{order.customer?.name || "—"}</td>
-                    <td style={td}>{order.items?.length || 0}</td>
-                    <td style={td}>{azn(order.total)}</td>
-                    <td style={td}><span style={badge("gray")}>{order.status}</span></td>
-                    <td style={td}>
-                      <button
-                        style={primaryBtn}
+                    <td ><b>{order.order_no}</b></td>
+                    <td >{order.customer?.name || "—"}</td>
+                    <td >{order.items?.length || 0}</td>
+                    <td >{azn(order.total)}</td>
+                    <td ><span className={`ui-badge ui-badge-${"neutral"}`}>{order.status}</span></td>
+                    <td >
+                      <Button
+                        
                         disabled={!(order.items?.length)}
                         onClick={() => openOrderPreview(order)}
                       >
                         Ön baxış və kəs
-                      </button>
+                      </Button>
 
                     </td>
                   </tr>
                 ))}
-                {!pendingOrders.length && <tr><td style={td} colSpan={6}>Fakturalanmamış sifariş yoxdur.</td></tr>}
+                {!pendingOrders.length && <tr><td  colSpan={6}>Fakturalanmamış sifariş yoxdur.</td></tr>}
               </tbody>
-            </table>
+            </table></div>
           ) : (
-            <table style={table}>
+            <div className="ui-table-wrap"><table className="ui-table">
               <thead>
                 <tr>
-                  <th style={th}>Layihə</th><th style={th}>Büdcə</th><th style={th}>Müştəri</th>
-                  <th style={th}>Mərhələ %</th><th style={th} />
+                  <th >Layihə</th><th >Büdcə</th><th >Müştəri</th>
+                  <th >Mərhələ %</th><th  />
                 </tr>
               </thead>
               <tbody>
@@ -566,41 +567,41 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
                   const customerId = projectCustomer[project.id] || "";
                   return (
                     <tr key={project.id}>
-                      <td style={td}><b>{project.name}</b></td>
-                      <td style={td}>{azn(project.budget)}</td>
-                      <td style={td}>
-                        <select
+                      <td ><b>{project.name}</b></td>
+                      <td >{azn(project.budget)}</td>
+                      <td >
+                        <Select
                           value={customerId}
                           onChange={(e) => setProjectCustomer((p) => ({ ...p, [project.id]: e.target.value }))}
-                          style={input}
+                          
                         >
                           <option value="">Müştəri seç…</option>
                           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                        </Select>
                       </td>
-                      <td style={td}>
-                        <input
+                      <td >
+                        <Input
                           type="number" min="1" max="100" step="1" value={percent}
                           onChange={(e) => setProjectPercent((p) => ({ ...p, [project.id]: e.target.value }))}
-                          style={{ ...input, width: 80 }}
+                          className="ui-cell-input"
                         />
                       </td>
-                      <td style={td}>
-                        <button
-                          style={primaryBtn}
+                      <td >
+                        <Button
+                          
                           disabled={!customerId || !(Number(project.budget) > 0)}
                           onClick={() => openProjectPreview(project, customerId, percent)}
                         >
                           Ön baxış və kəs
-                        </button>
+                        </Button>
 
                       </td>
                     </tr>
                   );
                 })}
-                {!pendingProjects.length && <tr><td style={td} colSpan={5}>Fakturalanmamış layihə yoxdur.</td></tr>}
+                {!pendingProjects.length && <tr><td  colSpan={5}>Fakturalanmamış layihə yoxdur.</td></tr>}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -628,19 +629,17 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
 
   const fieldIssues = (index, field) =>
     (validation.lineIssues[index] || []).filter((i) => i.field === field);
-  const fieldStyle = (index, field, base) => {
+  const fieldClass = (index, field) => {
     const issues = fieldIssues(index, field);
-    if (!issues.length) return base;
-    const isError = issues.some((i) => i.level === "error");
-    return { ...base, borderColor: isError ? "#b23a3a" : "#c08a2e", background: isError ? "#fdf2f2" : "#fdf9ee" };
+    return issues.some(issue => issue.level === "error") ? "ui-invalid" : issues.length ? "ui-caution" : "";
   };
   const FieldError = ({ index, field }) => {
     const issues = fieldIssues(index, field);
     if (!issues.length) return null;
     return (
-      <div style={{ marginTop: 2 }}>
+      <div className="ui-spacer-top">
         {issues.map((i, k) => (
-          <div key={k} style={{ fontSize: 11, lineHeight: 1.3, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+          <div key={k} className={i.level === "error" ? "ui-validation-error" : "ui-validation-warning"}>
             {i.level === "error" ? "⛔" : "⚠"} {i.message}
           </div>
         ))}
@@ -662,39 +661,32 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
   return (
     <div
       onClick={() => { if (!busy) onClose(); }}
-      style={{
-        position: "fixed", inset: 0, background: "rgba(12,20,18,0.55)", zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-      }}
+      className="ui-modal-overlay"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#fffdf7", borderRadius: 12, border: "1px solid #e6dfc9",
-          width: "min(900px, 100%)", maxHeight: "88vh", overflow: "auto",
-          padding: 20, boxShadow: "0 24px 60px rgba(0,0,0,.28)",
-        }}
+        className="ui-modal-surface"
       >
-        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <fieldset disabled={busy} className="ui-fieldset">
+        <div className="ui-toolbar ui-spacer-bottom">
           <div>
-            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: "#8a7a4a" }}>
+            <div className="ui-help-text">
               Faktura ön baxışı — redaktə edilə bilər
             </div>
-            <h3 style={{ margin: "4px 0 0" }}>{draft.title}</h3>
+            <h3 className="ui-section-title">{draft.title}</h3>
           </div>
-          <button style={secondaryBtn} onClick={onClose}>Bağla</button>
+          <Button variant="secondary" onClick={onClose}>Bağla</Button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, margin: "14px 0" }}>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={statLabel}>Faktura №</span>
-            <input style={input} value={draft.invoice_no} placeholder="avtomatik" onChange={(e) => patch({ invoice_no: e.target.value })} />
+        <div className="ui-form-grid ui-spacer-bottom">
+          <label className="ui-field ui-spacer-top">
+            <span className="ui-stat-label">Faktura №</span>
+            <Input  value={draft.invoice_no} placeholder="avtomatik" onChange={(e) => patch({ invoice_no: e.target.value })} />
           </label>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={statLabel}>Müştəri</span>
-            <select
-              style={input}
+          <label className="ui-field ui-spacer-top">
+            <span className="ui-stat-label">Müştəri</span>
+            <Select
+              
               value={draft.customer_id || ""}
               onChange={(e) => patch({
                 customer_id: e.target.value || null,
@@ -703,35 +695,35 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             >
               <option value="">Müştəri seç…</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </Select>
           </label>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={statLabel}>Tarix</span>
-            <input type="date" style={input} value={draft.invoice_date} onChange={(e) => patch({ invoice_date: e.target.value })} />
+          <label className="ui-field ui-spacer-top">
+            <span className="ui-stat-label">Tarix</span>
+            <Input type="date"  value={draft.invoice_date} onChange={(e) => patch({ invoice_date: e.target.value })} />
           </label>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={statLabel}>Son ödəniş</span>
-            <input type="date" style={input} value={draft.due_date || ""} onChange={(e) => patch({ due_date: e.target.value })} />
+          <label className="ui-field ui-spacer-top">
+            <span className="ui-stat-label">Son ödəniş</span>
+            <Input type="date"  value={draft.due_date || ""} onChange={(e) => patch({ due_date: e.target.value })} />
           </label>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={statLabel}>Valyuta</span>
-            <input style={input} value={draft.currency} onChange={(e) => patch({ currency: e.target.value })} />
+          <label className="ui-field ui-spacer-top">
+            <span className="ui-stat-label">Valyuta</span>
+            <Input  value={draft.currency} onChange={(e) => patch({ currency: e.target.value })} />
           </label>
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-          <span style={{ fontSize: 12, color: "#8a7a4a" }}>Bütün sətirlərə ƏDV tətbiq et:</span>
+        <div className="ui-table-actions ui-spacer-bottom">
+          <span className="ui-help-text">Bütün sətirlərə ƏDV tətbiq et:</span>
           {[0, 18].map((rate) => (
-            <button key={rate} type="button" style={secondaryBtn} onClick={() => setAllVat(rate)}>{rate}%</button>
+            <Button key={rate} type="button" variant="secondary" onClick={() => setAllVat(rate)}>{rate}%</Button>
           ))}
         </div>
 
-        <table style={table}>
+        <div className="ui-table-wrap"><table className="ui-table">
           <thead>
             <tr>
-              <th style={th}>#</th><th style={th}>Təsvir</th><th style={th}>Say</th>
-              <th style={th}>Qiymət</th><th style={th}>End. %</th><th style={th}>ƏDV %</th>
-              <th style={th}>Cəm</th><th style={th} />
+              <th >#</th><th >Təsvir</th><th >Say</th>
+              <th >Qiymət</th><th >End. %</th><th >ƏDV %</th>
+              <th >Cəm</th><th  />
             </tr>
           </thead>
           <tbody>
@@ -739,9 +731,9 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
               const rowIssues = validation.lineIssues[index] || [];
               const rowHasError = rowIssues.some((i) => i.level === "error");
               return (
-              <tr key={index} style={rowHasError ? { background: "#fdf4f4" } : undefined}>
-                <td style={td}>{row.line_no}</td>
-                <td style={td}>
+              <tr key={index} className={rowHasError ? "ui-row-invalid" : undefined}>
+                <td >{row.line_no}</td>
+                <td >
                   {!!products.length && (
                     <ProductSearchSelect
                       products={products}
@@ -756,75 +748,75 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
                       }}
                     />
                   )}
-                  <input
-                    style={fieldStyle(index, "description", { ...input, width: "100%", marginTop: 4 })}
+                  <Input
+                    className={fieldClass(index, "description")}
                     value={row.description || ""}
                     placeholder="Təsvir"
                     onChange={(e) => patchLine(index, { description: e.target.value })}
                   />
                   <FieldError index={index} field="description" />
                 </td>
-                <td style={td}>
-                  <input type="number" step="0.001" style={fieldStyle(index, "qty", { ...input, width: 80 })} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} />
+                <td >
+                  <Input type="number" step="0.001" className={fieldClass(index, "qty")} value={row.qty} onChange={(e) => patchLine(index, { qty: e.target.value })} />
                   <FieldError index={index} field="qty" />
                 </td>
-                <td style={td}>
-                  <input type="number" step="0.01" style={fieldStyle(index, "unit_price", { ...input, width: 100 })} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} />
+                <td >
+                  <Input type="number" step="0.01" className={fieldClass(index, "unit_price")} value={row.unit_price} onChange={(e) => patchLine(index, { unit_price: e.target.value })} />
                   <FieldError index={index} field="unit_price" />
                 </td>
-                <td style={td}>
-                  <input type="number" step="0.01" style={fieldStyle(index, "discount_pct", { ...input, width: 80 })} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} />
+                <td >
+                  <Input type="number" step="0.01" className={fieldClass(index, "discount_pct")} value={row.discount_pct} onChange={(e) => patchLine(index, { discount_pct: e.target.value })} />
                   <FieldError index={index} field="discount_pct" />
                 </td>
-                <td style={td}>
-                  <input type="number" step="0.01" style={fieldStyle(index, "vat_rate", { ...input, width: 80 })} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} />
+                <td >
+                  <Input type="number" step="0.01" className={fieldClass(index, "vat_rate")} value={row.vat_rate} onChange={(e) => patchLine(index, { vat_rate: e.target.value })} />
                   <FieldError index={index} field="vat_rate" />
                 </td>
-                <td style={{ ...td, fontWeight: 600 }}>{azn(row.line_total)}</td>
-                <td style={td}><button type="button" style={delBtn} onClick={() => removeLine(index)}>Sil</button></td>
+                <td className="ui-emphasis is-numeric">{azn(row.line_total)}</td>
+                <td ><Button type="button" variant="danger" onClick={() => removeLine(index)}>Sil</Button></td>
               </tr>
               );
             })}
-            {!totals.rows.length && <tr><td style={td} colSpan={8}>Sətir yoxdur.</td></tr>}
+            {!totals.rows.length && <tr><td  colSpan={8}>Sətir yoxdur.</td></tr>}
 
           </tbody>
-        </table>
+        </table></div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
-          <button type="button" style={secondaryBtn} onClick={addLine}>+ Sətir</button>
-          <div style={{ fontSize: 13, textAlign: "right", lineHeight: 1.8 }}>
+        <div className="ui-toolbar ui-spacer-bottom">
+          <Button type="button" variant="secondary" onClick={addLine}>+ Sətir</Button>
+          <div className="ui-invoice-totals">
             {totals.vat_breakdown.map((g) => (
-              <div key={g.rate} style={{ color: "#6b6350" }}>
+              <div key={g.rate} className="ui-help-text">
                 ƏDV {g.rate}% — baza {azn(g.net)} · vergi <b>{azn(g.vat)}</b>
               </div>
             ))}
             <div>Ara cəm: <b>{azn(totals.subtotal)}</b></div>
             <div>ƏDV cəmi: <b>{azn(totals.vat_total)}</b></div>
-            <div style={{ color: Math.abs(validation.roundingDiff) > 0.005 ? "#b23a3a" : "#6b6350" }}>
+            <div className={Math.abs(validation.roundingDiff) > 0.005 ? "ui-validation-error" : "ui-help-text"}>
               Yuvarlaqlaşdırma fərqi: <b>{validation.roundingDiff.toFixed(2)} ₼</b>
             </div>
-            <div style={{ fontSize: 16 }}>Yekun: <b style={{ color: "#064e3b" }}>{azn(totals.total)}</b></div>
+            <div className="ui-summary-line">Yekun: <b className="amount-positive">{azn(totals.total)}</b></div>
           </div>
         </div>
 
-        <label style={{ display: "grid", gap: 4, marginTop: 12 }}>
-          <span style={statLabel}>Qeyd</span>
-          <textarea style={{ ...input, minHeight: 60 }} value={draft.notes || ""} onChange={(e) => patch({ notes: e.target.value })} />
+        <label className="ui-field ui-spacer-top">
+          <span className="ui-stat-label">Qeyd</span>
+          <textarea  value={draft.notes || ""} onChange={(e) => patch({ notes: e.target.value })} />
         </label>
 
         {(validation.docIssues.length > 0 || validation.errorCount > 0 || validation.warningCount > 0) && (
-          <div style={{ ...msgBox, marginTop: 8, display: "grid", gap: 4 }}>
-            <div style={{ fontWeight: 600, color: blocked ? "#b23a3a" : "#8a6d1f" }}>
+          <div className="ui-notice ui-notice-warning">
+            <div className={blocked ? "ui-validation-error" : "ui-validation-warning"}>
               Validasiya: {validation.errorCount} xəta · {validation.warningCount} xəbərdarlıq
             </div>
             {validation.docIssues.map((i, k) => (
-              <div key={k} style={{ fontSize: 12, color: i.level === "error" ? "#b23a3a" : "#8a6d1f" }}>
+              <div key={k} className={i.level === "error" ? "ui-validation-error" : "ui-validation-warning"}>
                 {i.level === "error" ? "⛔" : "⚠"} {i.message}
               </div>
             ))}
             {validation.lineIssues.flatMap((issues, index) =>
               issues.filter((i) => i.level === "error").map((i, k) => (
-                <div key={`${index}-${k}`} style={{ fontSize: 12, color: "#b23a3a" }}>
+                <div key={`${index}-${k}`} className="ui-validation-error">
                   ⛔ Sətir {index + 1}: {i.message}
                 </div>
               )))}
@@ -832,11 +824,11 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
         )}
 
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-          <button style={secondaryBtn} onClick={onClose}>İmtina</button>
-          <button style={primaryBtn} disabled={busy || blocked} onClick={() => onConfirm(draft)}>
+        <div className="ui-table-actions ui-spacer-bottom">
+          <Button variant="secondary" onClick={onClose}>İmtina</Button>
+          <Button  disabled={busy || blocked} onClick={() => onConfirm(draft)}>
             {busy ? "Yaradılır…" : "Təsdiqlə və faktura kəs"}
-          </button>
+          </Button>
         </div>
         </fieldset>
       </div>
