@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { readAllRows } from '../../services/readAllRows.js';
 
 export function useShipments(tenantId) {
   const [shipments, setShipments] = useState([]);
@@ -8,11 +9,13 @@ export function useShipments(tenantId) {
   const fetchAll = useCallback(async () => {
     if (!tenantId) { setShipments([]); return; }
     setLoading(true);
-    const { data } = await supabase
+    // Paged: one shipment per order, past the 1000 rows PostgREST returns per request.
+    const { data } = await readAllRows(() => supabase
       .from('sales_shipments')
       .select('*, order:orders(id,order_no,customer:customers(name))')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id'));
     setShipments(data || []);
     setLoading(false);
   }, [tenantId]);

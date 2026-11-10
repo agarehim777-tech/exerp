@@ -1,5 +1,6 @@
 import { supabase } from "../integrations/supabase/client";
 import { toLocalIsoDate } from "./date.js";
+import { readAllRows } from "./readAllRows.js";
 
 const MODULES = new Set(["procurement", "warehouse", "credits", "crm", "finance", "hr", "production", "communications", "reports", "platform"]);
 const unwrap = (result) => { if (result.error) throw result.error; return result.data; };
@@ -53,11 +54,14 @@ export async function addEntityTimelineEvent({ tenantId, entityType, entityId, e
 
 export async function listInventoryUnits({ tenantId, warehouseId, productId, status }) {
   if (!tenantId) throw new Error("Tenant seçilməyib.");
-  let query = supabase.from("inventory_units").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false });
-  if (warehouseId) query = query.eq("warehouse_id", warehouseId);
-  if (productId) query = query.eq("product_id", productId);
-  if (status) query = query.eq("status", status);
-  return unwrap(await query);
+  // Paged: serial units grow with every received item, past the 1000 rows PostgREST returns per request.
+  return unwrap(await readAllRows(() => {
+    let query = supabase.from("inventory_units").select("*").eq("tenant_id", tenantId);
+    if (warehouseId) query = query.eq("warehouse_id", warehouseId);
+    if (productId) query = query.eq("product_id", productId);
+    if (status) query = query.eq("status", status);
+    return query.order("created_at", { ascending: false }).order("id");
+  }));
 }
 
 export async function saveInventoryUnit({ tenantId, unit }) {
@@ -95,9 +99,10 @@ export async function listEmployee360({ tenantId, employeeId }) {
 
 export async function listCreditPortfolio({ tenantId }) {
   if (!tenantId) throw new Error("Tenant seçilməyib.");
-  return unwrap(await supabase.from("credit_contracts")
+  // Paged: the whole credit portfolio can exceed the 1000 rows PostgREST returns per request.
+  return unwrap(await readAllRows(() => supabase.from("credit_contracts")
     .select("*, customer:customers(id,name,fin), installments:credit_installments(id,due_date,principal_due,principal_paid,penalty_due,penalty_paid,status)")
-    .eq("tenant_id", tenantId).order("risk_score", { ascending: false }).order("created_at", { ascending: false }));
+    .eq("tenant_id", tenantId).order("risk_score", { ascending: false }).order("created_at", { ascending: false }).order("id")));
 }
 
 export async function refreshCreditOverdue({ tenantId, asOf }) {

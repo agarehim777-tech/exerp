@@ -1,6 +1,8 @@
 import { supabase } from '../../integrations/supabase/client';
+import { readAllRows } from '../../services/readAllRows.js';
 const unwrap = ({ data, error }) => { if (error) throw error; return data; };
-export const listShipments = async tenantId => unwrap(await supabase.from('procurement_shipments').select('*, lines:procurement_shipment_lines(*), costs:procurement_shipment_costs(*)').eq('tenant_id',tenantId).order('created_at',{ascending:false}));
+// Paged: shipments accumulate past the 1000 rows PostgREST returns per request.
+export const listShipments = async tenantId => unwrap(await readAllRows(() => supabase.from('procurement_shipments').select('*, lines:procurement_shipment_lines(*), costs:procurement_shipment_costs(*)').eq('tenant_id',tenantId).order('created_at',{ascending:false}).order('id')));
 export const saveShipment = async shipment => unwrap(await supabase.from('procurement_shipments').upsert(shipment).select().single());
 export const updateShipmentWarehouse = async (id, tenantId, warehouseId) => unwrap(await supabase.from('procurement_shipments').update({ warehouse_id: warehouseId || null }).eq('id',id).eq('tenant_id',tenantId).select().single());
 export const saveShipmentLine = async line => unwrap(await supabase.from('procurement_shipment_lines').upsert(line,{onConflict:'shipment_id,po_line_id'}).select().single());
