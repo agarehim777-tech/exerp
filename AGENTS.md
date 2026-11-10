@@ -9,3 +9,7 @@
 - Persist collection records through dedicated domain adapters with one writer; the retired generic collection table must never be a reload fallback.
 - Keep typecheck in the release and CI gates; migration bridges must re-export explicit TypeScript extensions to avoid self-imports.
 - Static presentation styles live as semantic classes in src/styles/static-styles.css; keep inline style only for runtime-computed values so theming stays centralized.
+- Format fixed-decimal money only through services/format.js formatAmount and compute sellable stock only through shared/lib/stockMath.js; local copies drifted and showed different numbers.
+- appDomain.jsx is a barrel over appDomain<Area>.jsx modules; add new domain logic to the area module, not the barrel, so areas stay independently editable.
+- Tenant-wide reads must page with readAllRows, never .limit(N); PostgREST silently caps at 1000 rows.
+- Report headline totals come from the report_totals database function; client row sums are only the fallback for filters the function does not support.
