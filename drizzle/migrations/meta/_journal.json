@@ -99,6 +99,13 @@
       "when": 1794304900443,
       "tag": "0013_server_receivable_kpi_settlement",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794304997511,
+      "tag": "0014_dedicated_hr_finance_records",
+      "breakpoints": true
     }
   ]
 }
