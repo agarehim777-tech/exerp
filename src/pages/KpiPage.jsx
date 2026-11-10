@@ -4,7 +4,7 @@ import { money, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildKpiEmployeeScoreRows, getKpiPeriodKey } from "../shared/lib/appDomain.jsx";
-import { input } from "../shared/ui/tokens.js";
+import { Button, Input, Select } from "../shared/ui/primitives";
 export default function KpiPage({
   employees,
   salesBonuses = [],
@@ -43,13 +43,13 @@ export default function KpiPage({
   return (
     <div className="stack">
       <div className="filter-bar">
-        <label>Period <input aria-label="KPI periodu" type="month" value={period || activePeriod.period || ''}
-          onChange={event => onSelectPeriod?.(event.target.value)} disabled={busy} style={input} /></label>
-        <label>Kassa <select aria-label="KPI ödəniş hesabı" value={accountId || ''} onChange={event => onSelectAccount?.(event.target.value)} disabled={busy} style={input}>
+        <label>Period <Input aria-label="KPI periodu" type="month" value={period || activePeriod.period || ''}
+          onChange={event => onSelectPeriod?.(event.target.value)} disabled={busy} /></label>
+        <label>Kassa <Select aria-label="KPI ödəniş hesabı" value={accountId || ''} onChange={event => onSelectAccount?.(event.target.value)} disabled={busy}>
           <option value="">Hesab seçin</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
-        </select></label>
+        </Select></label>
       </div>
-      {error && <div role="alert">{error.message}<button type="button" className="secondary-btn" onClick={onRetry}>Yenidən cəhd et</button></div>}
+      {error && <div role="alert">{error.message}<Button variant="secondary" onClick={onRetry}>Yenidən cəhd et</Button></div>}
       <section className="metric-grid four">
         <MetricCard label="Şirkət ümumi KPI" value={percent(companyKpi)} trend={`${ranking.length} əməkdaş üzrə`} icon={TrendingUp} tone="success" />
         <MetricCard label="Period score" value={percent(activePeriod.companyScore || 0)} trend={activePeriod.period || getKpiPeriodKey()} icon={CalendarClock} tone="primary" />
@@ -98,30 +98,30 @@ export default function KpiPage({
             </div>
           </div>
           <div className="kpi-period-actions">
-            <button
+            <Button
               className="secondary-btn"
               data-testid="kpi-close-period"
               disabled={!canClose}
               onClick={() => onRunPeriodAction?.("close")}
             >
               Periodu bağla
-            </button>
-            <button
+            </Button>
+            <Button
               className="secondary-btn"
               data-testid="kpi-approve-period"
               disabled={!canApprove}
               onClick={() => onRunPeriodAction?.("approve")}
             >
               Təsdiq et
-            </button>
-            <button
+            </Button>
+            <Button
               className="primary-btn"
               data-testid="kpi-payout-period"
               disabled={!canPayout}
               onClick={() => onRunPeriodAction?.("payout")}
             >
               Payout et
-            </button>
+            </Button>
           </div>
           {lastPayout && (
             <div className="kpi-last-payout">
@@ -187,13 +187,13 @@ export default function KpiPage({
         <div className="kpi-bonus-toolbar">
           <div className="tabs" aria-label="Satış bonusu filtri">
             {["Hamısı", ...bonusSellers].map((filter) => (
-              <button
+              <Button
                 key={filter}
                 className={bonusFilter === filter ? "active" : ""}
                 onClick={() => setBonusFilter(filter)}
               >
                 {filter}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="kpi-bonus-total">

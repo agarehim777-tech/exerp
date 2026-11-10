@@ -7,6 +7,7 @@ import { receivableItemView } from "../services/financialSettlement.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
+import { Button, Select } from "../shared/ui/primitives";
 export default function ReceivablesPage({ onOpenSalesOrder }) {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
@@ -72,10 +73,10 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
   return (
     <div className="stack">
       <div className="filter-bar">
-        <select aria-label="Borc valyutası" value={currency} onChange={event => setCurrency(event.target.value)}>
+        <Select aria-label="Borc valyutası" value={currency} onChange={event => setCurrency(event.target.value)}>
           {[...new Set(['AZN', ...rows.map(row => row.currency)])].map(value => <option key={value}>{value}</option>)}
-        </select>
-        <button type="button" className="icon-button" aria-label="Balansı yenilə" disabled={ledger.busy} onClick={() => ledger.refresh().catch(() => {})}><RefreshCw size={18}/></button>
+        </Select>
+        <Button type="button" className="icon-button" aria-label="Balansı yenilə" disabled={ledger.busy} onClick={() => ledger.refresh().catch(() => {})}><RefreshCw size={18}/></Button>
       </div>
       {ledger.error && <div role="alert">{ledger.error.message}</div>}
       {!ledger.ready && !ledger.error && <div role="status">Balans yüklənir...</div>}
@@ -124,31 +125,31 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
           icon={Wallet}
         />
         <div className="receivable-filter-bar">
-          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+          <Select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
             {["Hamısı", "Debitor", "Kreditor"].map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
-          <select value={sourceTypeFilter} onChange={(event) => setSourceTypeFilter(event.target.value)}>
+          </Select>
+          <Select value={sourceTypeFilter} onChange={(event) => setSourceTypeFilter(event.target.value)}>
             {sourceTypeOptions.map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
-          <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
+          </Select>
+          <Select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
             {riskOptions.map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
-          <select value={collectionFilter} onChange={(event) => setCollectionFilter(event.target.value)}>
+          </Select>
+          <Select value={collectionFilter} onChange={(event) => setCollectionFilter(event.target.value)}>
             {collectionOptions.map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
-          <select value={agingFilter} onChange={(event) => setAgingFilter(event.target.value)}>
+          </Select>
+          <Select value={agingFilter} onChange={(event) => setAgingFilter(event.target.value)}>
             {agingOptions.map((item) => (
               <option key={item}>{item}</option>
             ))}
-          </select>
+          </Select>
           <span>{visibleRows.length}/{effectiveRows.length} sətir</span>
         </div>
         <DataTable
@@ -165,9 +166,9 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
             row.nextAction,
             row.owner,
             Number(row.amount || 0) > 0 ? (
-              <button className="text-btn receivable-close-button" data-testid="receivable-close-button" disabled={!row.can_settle || ledger.busy} onClick={(event) => { event.stopPropagation(); setSettling(row); setAccountId(""); setCommandError(""); }}>
+              <Button className="text-btn receivable-close-button" data-testid="receivable-close-button" disabled={!row.can_settle || ledger.busy} onClick={(event) => { event.stopPropagation(); setSettling(row); setAccountId(""); setCommandError(""); }}>
                 Bağla
-              </button>
+              </Button>
             ) : (
               <StatusBadge status="Bağlandı" />
             ),
@@ -196,13 +197,13 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
           <h2 id="settlement-title">Borcun bağlanışı</h2>
           <p>{settling.party} · {settling.source}</p>
           <strong>{cashAmount(settling.amount, settling.currency)}</strong>
-          <label>Kassa hesabı<select aria-label="Borc bağlanışı hesabı" value={accountId} disabled={ledger.busy} onChange={event => setAccountId(event.target.value)}>
+          <label>Kassa hesabı<Select aria-label="Borc bağlanışı hesabı" value={accountId} disabled={ledger.busy} onChange={event => setAccountId(event.target.value)}>
             <option value="">Hesab seçin</option>
             {accounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
-          </select></label>
+          </Select></label>
           {commandError && <p role="alert">{commandError}</p>}
-          <footer><button type="button" className="secondary-btn" disabled={ledger.busy} onClick={() => setSettling(null)}>Geri qayıt</button>
-            <button type="button" className="primary-btn" disabled={ledger.busy || !accounts.some(account => account.id === accountId)} onClick={settle}>{ledger.busy ? 'İcra olunur...' : 'Ödənişi təsdiq et'}</button></footer>
+          <footer><Button type="button" className="secondary-btn" disabled={ledger.busy} onClick={() => setSettling(null)}>Geri qayıt</Button>
+            <Button type="button" className="primary-btn" disabled={ledger.busy || !accounts.some(account => account.id === accountId)} onClick={settle}>{ledger.busy ? 'İcra olunur...' : 'Ödənişi təsdiq et'}</Button></footer>
         </section>
       </div>}
     </div>
@@ -225,12 +226,12 @@ function DebtDetail({ row, onClose, onOpenSalesOrder }) {
     <aside onClick={event => event.stopPropagation()} className="u-width-480px u-max-width-100 u-height-100 u-overflow-y-auto u-background-surface u-padding-20px u-box-sizing-border_box u-box-shadow-10px_0_30px_rgba_15_23_42_16">
       <div className="u-display-flex u-justify-content-space_between u-align-items-flex_start u-margin-bottom-18px">
         <div><small className="u-color-text_secondary u-font-weight-700">BORC MƏLUMATI</small><h2 className="u-margin-5px_0">{row.party}</h2><StatusBadge status={row.type} /></div>
-        <button type="button" onClick={onClose} className="u-border-0 u-background-transparent u-font-size-25px u-cursor-pointer">×</button>
+        <Button type="button" onClick={onClose} className="u-border-0 u-background-transparent u-font-size-25px u-cursor-pointer">×</Button>
       </div>
       <div className="u-display-grid u-grid-template-columns-repeat_2_minmax_0_1fr u-gap-9px">
         {detailRows.map(([label, value]) => <div key={label} className="u-padding-11px u-border-1px_solid_border u-border-radius-9px u-background-surface_subtle"><small className="u-display-block u-color-text_secondary u-margin-bottom-4px">{label}</small><strong className="u-overflow-wrap-anywhere">{value || "—"}</strong></div>)}
       </div>
-      {orderId && <button type="button" onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} style={{ width: "100%", marginTop: 14, padding: 10, border: 0, borderRadius: 9, background: "#075e4b", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Əlaqəli sifarişə bax</button>}
+      {orderId && <Button onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} className="u-width-100 u-margin-top-14px">Əlaqəli sifarişə bax</Button>}
     </aside>
   </div>;
 }

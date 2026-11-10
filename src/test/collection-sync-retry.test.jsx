@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useCollectionSync } from '../shared/hooks/useCollectionSync';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), eq: vi.fn() }));
-vi.mock('../integrations/supabase/client', () => ({ supabase: { from: () => {
+vi.mock('../integrations/supabase/client', () => ({ supabase: { from: (table) => {
+  mocks.eq('table', table);
   const query = { select: () => query, eq: (...args) => { mocks.eq(...args); return query; }, in: () => query, order: () => query,
     range: mocks.load, upsert: mocks.save };
   return query;
@@ -27,8 +28,8 @@ it('reads collections separately and publishes no partial state when a later col
     return { state, sync };
   });
   await waitFor(() => expect(result.current.sync.phase).toBe('error'));
-  expect(mocks.eq).toHaveBeenCalledWith('collection', 'departments');
-  expect(mocks.eq).toHaveBeenCalledWith('collection', 'employees');
+  expect(mocks.eq).toHaveBeenCalledWith('table', 'hr_departments');
+  expect(mocks.eq).toHaveBeenCalledWith('table', 'employees');
   expect(result.current.sync.ready).toBe(false);
   expect(result.current.state).toEqual({ employees: [], departments: [] });
   expect(mocks.save).not.toHaveBeenCalled();
@@ -53,7 +54,7 @@ it('keeps collection commands blocked until initial hydration finishes and reset
 
 it('hydrates every collection record when the server caps pages below the requested size', async () => {
   const rows = Array.from({ length: 460 }, (_, index) => ({ collection: 'employees',
-    record_key: `e${index}`, position: index, data: { id: `e${index}`, name: `Employee ${index}` } }));
+    record_key: `e${index}`, sort_position: index, metadata: { id: `e${index}` }, full_name: `Employee ${index}` }));
   mocks.load.mockImplementation(async (start, end) => ({
     data: rows.slice(start, Math.min(end + 1, start + 100)), count: rows.length, error: null,
   }));
@@ -119,7 +120,7 @@ it('serializes newer edits behind an in-flight save', async () => {
   expect(mocks.save).toHaveBeenCalledTimes(1);
   await act(async () => finish({ error: null }));
   expect(mocks.save).toHaveBeenCalledTimes(2);
-  expect(mocks.save.mock.calls[1][0][0].data.name).toBe('Second');
+  expect(mocks.save.mock.calls[1][0][0].full_name).toBe('Second');
 });
 
 it('does not starve an employee write when unrelated inventory reads keep updating state', async () => {
@@ -137,7 +138,7 @@ it('does not starve an employee write when unrelated inventory reads keep updati
     act(() => result.current.setState(current => ({ ...current, warehouses: [{ id: `w${read}` }] })));
   }
   expect(mocks.save).toHaveBeenCalledTimes(1);
-  expect(mocks.save.mock.calls[0][0][0].data.name).toBe('Pending');
+  expect(mocks.save.mock.calls[0][0][0].full_name).toBe('Pending');
   expect(result.current.sync.phase).toBe('saved');
 });
 
@@ -153,7 +154,7 @@ it('preserves edits during hydration without backfilling unchanged browser recor
   act(() => result.current.setState(current => ({ employees: [{ id: 'new', name: 'Pending' }, ...current.employees] })));
   vi.useFakeTimers();
   await act(async () => finishRead({ data: [{ collection: 'employees', record_key: 'server',
-    position: 0, data: { id: 'server', name: 'Canonical' } }], count: 1, error: null }));
+    sort_position: 0, metadata: { id: 'server' }, full_name: 'Canonical' }], count: 1, error: null }));
   expect(result.current.state.employees.map(row => row.id)).toEqual(['server', 'new']);
   await act(async () => vi.advanceTimersByTimeAsync(450));
   expect(mocks.save).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import { Button, Input, Select, Table } from '../../shared/ui/primitives';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
@@ -173,7 +174,7 @@ export default function RolesPermissionsPage({
 
   if (!isAdmin) {
     return (
-      <div style={card}>
+      <div className={"ui-card"}>
         <h2 className="u-margin-0">İcazə yoxdur</h2>
         <p className="u-color-6b7a72">Bu səhifə yalnız Sahib və Admin üçündür. Cari rol: <b>{currentRole || "—"}</b></p>
       </div>
@@ -247,8 +248,8 @@ export default function RolesPermissionsPage({
 
   return (
     <div className="u-display-grid u-gap-20px">
-      <div style={card}>
-        <div style={sectionHeader}>
+      <div className={"ui-card"}>
+        <div className={"ui-toolbar"}>
           <div>
             <h2 className="u-margin-0 u-margin-bottom-4px">Yeni istifadəçi yarat</h2>
             <p className="u-margin-0 u-color-6b7a72 u-font-size-13px">
@@ -260,44 +261,44 @@ export default function RolesPermissionsPage({
               </p>
             )}
           </div>
-          <button
+          <Button
             type="button"
             disabled={!canManageUsers || !onApplyDefaultPermissions}
             onClick={async () => (await appConfirm("Bütün istifadəçilərin fərdi icazələri rol üzrə başlanğıc vəziyyətə qaytarılacaq. Davam edilsin?")) && onApplyDefaultPermissions?.()}
-            style={secondaryButton}
+            className={"ui-button ui-button-secondary"}
           >
             Başlanğıc icazələri qur
-          </button>
+          </Button>
         </div>
-        <form onSubmit={submitUser} style={userForm}>
-          <label style={fieldLabel}><span>Ad Soyad</span><input required value={userDraft.name} onChange={(e) => setUserDraft((v) => ({ ...v, name: e.target.value }))} placeholder="Ad Soyad" style={input} /></label>
-          <label style={fieldLabel}><span>E-poçt</span><input required type="email" value={userDraft.email} onChange={(e) => setUserDraft((v) => ({ ...v, email: e.target.value }))} placeholder="user@sirket.az" style={input} /></label>
-          {requiresPassword && <label style={fieldLabel}><span>İlkin parol</span><input required minLength={8} type="password" value={userDraft.password} onChange={(e) => setUserDraft((v) => ({ ...v, password: e.target.value }))} placeholder="Minimum 8 simvol" style={input} /></label>}
-          <label style={fieldLabel}><span>Rol</span><select value={userDraft.role} onChange={(e) => setUserDraft((v) => ({ ...v, role: e.target.value }))} style={input}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</select></label>
-          <button type="submit" disabled={!canManageUsers || saving || !requiresPassword} style={primaryButton}>İstifadəçi yarat</button>
+        <form onSubmit={submitUser} className={"ui-form-grid"}>
+          <label className={"ui-field"}><span>Ad Soyad</span><Input required value={userDraft.name} onChange={(e) => setUserDraft((v) => ({ ...v, name: e.target.value }))} placeholder="Ad Soyad" className={"ui-input"} /></label>
+          <label className={"ui-field"}><span>E-poçt</span><Input required type="email" value={userDraft.email} onChange={(e) => setUserDraft((v) => ({ ...v, email: e.target.value }))} placeholder="user@sirket.az" className={"ui-input"} /></label>
+          {requiresPassword && <label className={"ui-field"}><span>İlkin parol</span><Input required minLength={8} type="password" value={userDraft.password} onChange={(e) => setUserDraft((v) => ({ ...v, password: e.target.value }))} placeholder="Minimum 8 simvol" className={"ui-input"} /></label>}
+          <label className={"ui-field"}><span>Rol</span><Select value={userDraft.role} onChange={(e) => setUserDraft((v) => ({ ...v, role: e.target.value }))} className={"ui-input"}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</Select></label>
+          <Button type="submit" disabled={!canManageUsers || saving || !requiresPassword} className={"ui-button ui-button-primary"}>İstifadəçi yarat</Button>
         </form>
       </div>
 
-      <div style={overviewCard}>
-        <div style={overviewItem}>
-          <span style={overviewLabel}>İstifadəçilər</span>
-          <strong style={overviewValue}>{unifiedUsers.length}</strong>
+      <div className={"ui-stat-grid"}>
+        <div className={"ui-stat-card"}>
+          <span className={"ui-stat-label"}>İstifadəçilər</span>
+          <strong className={"ui-stat-value"}>{unifiedUsers.length}</strong>
         </div>
-        <div style={overviewItem}>
-          <span style={overviewLabel}>Rollar</span>
-          <strong style={overviewValue}>{ROLES.length}</strong>
+        <div className={"ui-stat-card"}>
+          <span className={"ui-stat-label"}>Rollar</span>
+          <strong className={"ui-stat-value"}>{ROLES.length}</strong>
         </div>
-        <div style={overviewItem}>
-          <span style={overviewLabel}>Aktiv dəvətlər</span>
-          <strong style={overviewValue}>{invites.length}</strong>
+        <div className={"ui-stat-card"}>
+          <span className={"ui-stat-label"}>Aktiv dəvətlər</span>
+          <strong className={"ui-stat-value"}>{invites.length}</strong>
         </div>
-        <div style={overviewItem}>
-          <span style={overviewLabel}>Permission qeydləri</span>
-          <strong style={overviewValue}>{rows.length}</strong>
+        <div className={"ui-stat-card"}>
+          <span className={"ui-stat-label"}>Permission qeydləri</span>
+          <strong className={"ui-stat-value"}>{rows.length}</strong>
         </div>
       </div>
 
-      <div style={card}>
+      <div className={"ui-card"}>
         <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-12px">
           <div>
             <h2 className="u-margin-0">Rollar və İcazələr</h2>
@@ -310,29 +311,29 @@ export default function RolesPermissionsPage({
         {loadError && (
           <div role="alert" className="u-background-fdecea u-color-8b1e1e u-padding-8px u-border-radius-6px u-font-size-12px u-margin-bottom-10px u-display-flex u-gap-8px u-align-items-center u-justify-content-space_between">
             <span>{loadError}</span>
-            <button type="button" onClick={() => reload()} disabled={loading} className="u-border-1px_solid_8b1e1e u-background-transparent u-color-8b1e1e u-border-radius-6px u-padding-2px_8px u-cursor-pointer">Yenidən yüklə</button>
+            <Button type="button" onClick={() => reload()} disabled={loading} className="u-border-1px_solid_8b1e1e u-background-transparent u-color-8b1e1e u-border-radius-6px u-padding-2px_8px u-cursor-pointer">Yenidən yüklə</Button>
           </div>
         )}
         {msg && <div className="u-background-fdecea u-color-8b1e1e u-padding-8px u-border-radius-6px u-font-size-12px u-margin-bottom-10px">{msg}</div>}
         {loading ? <div>Yüklənir…</div> : (
           <div className="u-overflow-x-auto">
-            <table style={table}>
+            <Table className={"ui-table"}>
               <thead>
                 <tr>
-                  <th style={th}>Modul</th>
+                  <th className={""}>Modul</th>
                   {ROLES.map((r) => (
-                    <th key={r.key} style={th} colSpan={2}>
+                    <th key={r.key} className={""} colSpan={2}>
                       {r.label}
-                      {r.locked && <span style={lockBadge}>kilidli</span>}
+                      {r.locked && <span className={"ui-badge ui-badge-success"}>kilidli</span>}
                     </th>
                   ))}
                 </tr>
                 <tr>
-                  <th style={{ ...th, background: "#f7f3e4" }}></th>
+                  <th className={["",'ui-surface-subtle'].filter(Boolean).join(' ')}></th>
                   {ROLES.map((r) => (
                     <>
-                      <th key={r.key + "v"} style={subTh}>Baxış</th>
-                      <th key={r.key + "e"} style={subTh}>Redaktə</th>
+                      <th key={r.key + "v"} className={""}>Baxış</th>
+                      <th key={r.key + "e"} className={""}>Redaktə</th>
                     </>
                   ))}
                 </tr>
@@ -340,18 +341,18 @@ export default function RolesPermissionsPage({
               <tbody>
                 {MODULES.map((mod) => (
                   <tr key={mod.id}>
-                    <td style={{ ...td, fontWeight: 600 }}>{mod.label}<div className="u-font-size-12px u-color-8a9a92">{mod.id}</div></td>
+                    <td className={["",'ui-emphasis'].filter(Boolean).join(' ')}>{mod.label}<div className="u-font-size-12px u-color-8a9a92">{mod.id}</div></td>
                     {ROLES.map((r) => {
                       const cell = matrix[r.key]?.[mod.id] || { view: r.key === "owner", edit: r.key === "owner" };
                       const locked = r.locked;
                       return (
                         <>
-                          <td key={r.key + mod.id + "v"} style={td}>
-                            <input type="checkbox" checked={!!cell.view || locked} disabled={locked || saving || !permissionsReady}
+                          <td key={r.key + mod.id + "v"} className={""}>
+                            <Input type="checkbox" checked={!!cell.view || locked} disabled={locked || saving || !permissionsReady}
                               onChange={() => toggle(r.key, mod.id, "view")} />
                           </td>
-                          <td key={r.key + mod.id + "e"} style={td}>
-                            <input type="checkbox" checked={!!cell.edit || locked} disabled={locked || saving || !permissionsReady}
+                          <td key={r.key + mod.id + "e"} className={""}>
+                            <Input type="checkbox" checked={!!cell.edit || locked} disabled={locked || saving || !permissionsReady}
                               onChange={() => toggle(r.key, mod.id, "edit")} />
                           </td>
                         </>
@@ -360,92 +361,92 @@ export default function RolesPermissionsPage({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
       </div>
 
-      <div style={card}>
+      <div className={"ui-card"}>
         <h2 className="u-margin-0 u-margin-bottom-4px">İstifadəçilər</h2>
         <p className="u-margin-0_0_12px u-color-6b7a72 u-font-size-13px">
           Cari şirkət: <b>{activeMembership?.tenants?.name || "—"}</b> · Tətbiq profilləri və Supabase üzvləri vahid siyahıda göstərilir.
         </p>
-        <table style={table}>
+        <Table className={"ui-table"}>
           <thead>
             <tr>
-              <th style={th}>İstifadəçi</th>
-              <th style={th}>E-poçt</th>
-              <th style={th}>Rol</th>
-              <th style={th}>Mənbə</th>
-              <th style={th}>Status</th>
-              <th style={th}>Əməliyyat</th>
+              <th className={""}>İstifadəçi</th>
+              <th className={""}>E-poçt</th>
+              <th className={""}>Rol</th>
+              <th className={""}>Mənbə</th>
+              <th className={""}>Status</th>
+              <th className={""}>Əməliyyat</th>
             </tr>
           </thead>
           <tbody>
             {unifiedUsers.length === 0 && (
-              <tr><td style={td} colSpan={6}><i className="u-color-8a9a92">İstifadəçi yoxdur</i></td></tr>
+              <tr><td className={""} colSpan={6}><i className="u-color-8a9a92">İstifadəçi yoxdur</i></td></tr>
             )}
             {unifiedUsers.map((user) => (
               <tr key={user.id}>
-                <td style={{ ...td, textAlign: "left", fontWeight: 600 }}>{user.name}</td>
-                <td style={{ ...td, textAlign: "left" }}>{user.email}</td>
-                <td style={td}>
+                <td className={["",'ui-align-left','ui-emphasis'].filter(Boolean).join(' ')}>{user.name}</td>
+                <td className={["",'ui-align-left'].filter(Boolean).join(' ')}>{user.email}</td>
+                <td className={""}>
                   {user.memberId ? (
-                    <select
+                    <Select
                       value={user.role}
                       disabled={saving || user.userId === activeMembership?.user_id}
                       onChange={(event) => changeRole(user.memberId, event.target.value)}
-                      style={select}
+                      className={"ui-input"}
                     >
                       {ROLES.map((role) => <option key={role.key} value={role.key}>{role.label}</option>)}
-                    </select>
+                    </Select>
                   ) : (
-                    <select
+                    <Select
                       value={user.role}
                       disabled={saving || !onChangeAppUserRole}
                       onChange={(event) => onChangeAppUserRole?.(user.userId, event.target.value)}
-                      style={select}
+                      className={"ui-input"}
                     >
                       {appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}
-                    </select>
+                    </Select>
                   )}
                 </td>
-                <td style={td}>{user.source}</td>
-                <td style={td}><span style={user.status === "Aktiv" ? activeBadge : pendingBadge}>{user.status}</span></td>
-                <td style={td}><div style={actionGroup}>
-                  <button type="button" disabled={!user.appUser || !canManageUsers} onClick={() => openUserEditor(user)} style={user.appUser ? editButton : disabledPermissionButton}>Redaktə et</button>
-                  <button
+                <td className={""}>{user.source}</td>
+                <td className={""}><span className={user.status === "Aktiv" ? "ui-badge ui-badge-success" : "ui-badge ui-badge-warning"}>{user.status}</span></td>
+                <td className={""}><div className={"ui-table-actions"}>
+                  <Button type="button" disabled={!user.appUser || !canManageUsers} onClick={() => openUserEditor(user)} className={user.appUser ? "ui-button ui-button-secondary" : "ui-button ui-button-secondary"}>Redaktə et</Button>
+                  <Button
                     type="button"
                     disabled={!user.appUser || user.appUser.role === "Super Admin"}
                     onClick={() => setSelectedUserId((current) => current === user.id ? null : user.id)}
-                    style={user.appUser ? permissionButton : disabledPermissionButton}
+                    className={user.appUser ? "ui-button ui-button-secondary" : "ui-button ui-button-secondary"}
                     title={!user.appUser ? "Bu üzv üçün tətbiq profili yaradılmalıdır" : "Modul icazələrini idarə et"}
                   >
                     {selectedUserId === user.id ? "Bağla" : "İdarə et"}
-                  </button>
+                  </Button>
                 </div></td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
 
         {selectedUser && (
-          <div style={permissionPanel}>
+          <div className={"ui-form-surface"}>
             <div className="u-display-flex u-justify-content-space_between u-gap-16px u-align-items-flex_start u-margin-bottom-12px">
               <div>
                 <strong>{selectedUser.name}</strong>
                 <div className="u-color-6b7a72 u-font-size-12px">{selectedUser.email} · {selectedAppUser?.role}</div>
               </div>
-              <span style={permissionCount}>{selectedAccess.length}/{modulePermissionCatalog.length} aktiv modul</span>
+              <span className={"ui-badge ui-badge-info"}>{selectedAccess.length}/{modulePermissionCatalog.length} aktiv modul</span>
             </div>
-            <div style={permissionGrid}>
+            <div className={"ui-form-grid"}>
               {modulePermissionCatalog.map((module) => {
                 const checked = selectedAccess.includes(module.id);
                 const roleAllows = (selectedRole?.permissions || []).includes(module.permission);
                 const editable = Boolean(onToggleAppUserModule) && (roleAllows || canOverrideUserPermissions);
                 return (
-                  <label key={module.id} style={editable ? permissionOption : disabledPermissionOption}>
-                    <input
+                  <label key={module.id} className={editable ? "ui-checkbox-label" : "ui-checkbox-label ui-disabled"}>
+                    <Input
                       type="checkbox"
                       checked={checked}
                       disabled={!editable || saving}
@@ -465,82 +466,50 @@ export default function RolesPermissionsPage({
         )}
 
         {editingUserId && (
-          <form onSubmit={saveUserEditor} style={editPanel}>
-            <div style={editHeader}><strong>İstifadəçini redaktə et</strong><button type="button" onClick={() => setEditingUserId(null)} style={closeButton}>Bağla</button></div>
-            <div style={userForm}>
-              <label style={fieldLabel}><span>Ad Soyad</span><input required value={editDraft.name} onChange={(e) => setEditDraft((v) => ({ ...v, name: e.target.value }))} style={input} /></label>
-              <label style={fieldLabel}><span>E-poçt</span><input required type="email" value={editDraft.email} onChange={(e) => setEditDraft((v) => ({ ...v, email: e.target.value }))} style={input} /></label>
-              <label style={fieldLabel}><span>Rol</span><select value={editDraft.role} onChange={(e) => setEditDraft((v) => ({ ...v, role: e.target.value }))} style={input}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</select></label>
-              <label style={fieldLabel}><span>Status</span><select value={editDraft.status} onChange={(e) => setEditDraft((v) => ({ ...v, status: e.target.value }))} style={input}><option>Aktiv</option><option>Bloklanıb</option></select></label>
-              <button type="submit" style={primaryButton}>Dəyişiklikləri saxla</button>
+          <form onSubmit={saveUserEditor} className={"ui-form-surface"}>
+            <div className={"ui-toolbar"}><strong>İstifadəçini redaktə et</strong><Button type="button" onClick={() => setEditingUserId(null)} className={"ui-button ui-button-ghost"}>Bağla</Button></div>
+            <div className={"ui-form-grid"}>
+              <label className={"ui-field"}><span>Ad Soyad</span><Input required value={editDraft.name} onChange={(e) => setEditDraft((v) => ({ ...v, name: e.target.value }))} className={"ui-input"} /></label>
+              <label className={"ui-field"}><span>E-poçt</span><Input required type="email" value={editDraft.email} onChange={(e) => setEditDraft((v) => ({ ...v, email: e.target.value }))} className={"ui-input"} /></label>
+              <label className={"ui-field"}><span>Rol</span><Select value={editDraft.role} onChange={(e) => setEditDraft((v) => ({ ...v, role: e.target.value }))} className={"ui-input"}>{appRoles.map((role) => <option key={role.name} value={role.name}>{role.name}</option>)}</Select></label>
+              <label className={"ui-field"}><span>Status</span><Select value={editDraft.status} onChange={(e) => setEditDraft((v) => ({ ...v, status: e.target.value }))} className={"ui-input"}><option>Aktiv</option><option>Bloklanıb</option></Select></label>
+              <Button type="submit" className={"ui-button ui-button-primary"}>Dəyişiklikləri saxla</Button>
             </div>
           </form>
         )}
       </div>
 
-      <div style={card}>
+      <div className={"ui-card"}>
         <h2 className="u-margin-0 u-margin-bottom-4px">Üzv dəvətləri</h2>
         <p className="u-margin-0_0_12px u-color-6b7a72 u-font-size-13px">
           E-poçt daxil edin, sistem dəvət linki yaradacaq — həmin şəxs qeydiyyatdan keçib linkə keçəndə şirkətə əlavə olunacaq
         </p>
         <form onSubmit={sendInvite} className="u-display-grid u-grid-template-columns-1fr_140px_auto u-gap-8px u-margin-bottom-12px">
-          <input type="email" required placeholder="user@example.com" value={inviteEmail}
+          <Input type="email" required placeholder="user@example.com" value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)} className="u-padding-8px_10px u-border-radius-6px u-border-1px_solid_d4c9a3" />
-          <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={select}>
+          <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className={"ui-input"}>
             {ROLES.filter((r) => !r.locked).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-          </select>
-          <button type="submit" disabled={saving} className="u-background-text_primary u-color-fbe89a u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-600">Dəvət et</button>
+          </Select>
+          <Button type="submit" disabled={saving} className="u-background-text_primary u-color-fbe89a u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-600">Dəvət et</Button>
         </form>
-        <table style={table}>
+        <Table className={"ui-table"}>
           <thead>
-            <tr><th style={th}>E-poçt</th><th style={th}>Rol</th><th style={th}>Bitir</th><th style={th}>Link</th><th style={th}></th></tr>
+            <tr><th className={""}>E-poçt</th><th className={""}>Rol</th><th className={""}>Bitir</th><th className={""}>Link</th><th className={""}></th></tr>
           </thead>
           <tbody>
-            {invites.length === 0 && <tr><td style={td} colSpan={5}><i className="u-color-8a9a92">Aktiv dəvət yoxdur</i></td></tr>}
+            {invites.length === 0 && <tr><td className={""} colSpan={5}><i className="u-color-8a9a92">Aktiv dəvət yoxdur</i></td></tr>}
             {invites.map((inv) => (
               <tr key={inv.id}>
-                <td style={{ ...td, textAlign: "left" }}>{inv.email}</td>
-                <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
-                <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
-                <td style={td}><button onClick={() => copyInviteLink(inv.id)} className="u-background-f0e6c8 u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px">Kopyala</button></td>
-                <td style={td}><button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
+                <td className={["",'ui-align-left'].filter(Boolean).join(' ')}>{inv.email}</td>
+                <td className={""}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
+                <td className={""}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
+                <td className={""}><Button onClick={() => copyInviteLink(inv.id)} className="u-background-f0e6c8 u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px">Kopyala</Button></td>
+                <td className={""}><Button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} variant="danger" size="compact">Ləğv et</Button></td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </div>
     </div>
   );
 }
-
-const card = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: 20, boxShadow: "0 4px 18px rgba(6,78,59,0.06)" };
-const table = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
-const th = { textAlign: "left", padding: "8px 10px", background: "#f0e6c8", color: "#5a4a1e", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid #e6dfc9" };
-const subTh = { textAlign: "center", padding: "4px 6px", background: "#faf5e2", color: "#8a6a1e", fontSize: 12, borderBottom: "1px solid #e6dfc9", fontWeight: 500 };
-const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb", verticalAlign: "middle", textAlign: "center" };
-const select = { padding: "4px 8px", borderRadius: 6, border: "1px solid #d4c9a3", background: "#fff", fontSize: 13 };
-const lockBadge = { fontSize: 12, background: "#064e3b", color: "#fbe89a", padding: "1px 5px", borderRadius: 4, marginLeft: 6, verticalAlign: "middle" };
-const overviewCard = { display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 1, overflow: "hidden", background: "#e6dfc9", border: "1px solid #e6dfc9", borderRadius: 8 };
-const overviewItem = { padding: "14px 16px", background: "#fff" };
-const overviewLabel = { display: "block", color: "#6b7a72", fontSize: 11, marginBottom: 5 };
-const overviewValue = { display: "block", color: "#123c31", fontSize: 22 };
-const activeBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#e7f6ef", color: "#147052", fontSize: 11, fontWeight: 700 };
-const pendingBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#fff5d8", color: "#8a6517", fontSize: 11, fontWeight: 700 };
-const permissionButton = { border: "1px solid #b8cfc5", background: "#f4faf7", color: "#075e49", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const disabledPermissionButton = { ...permissionButton, opacity: 0.45, cursor: "not-allowed" };
-const permissionPanel = { marginTop: 16, borderTop: "1px solid #e6dfc9", paddingTop: 16 };
-const permissionGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 8 };
-const permissionOption = { display: "flex", alignItems: "center", gap: 8, minHeight: 36, padding: "7px 10px", border: "1px solid #dbe8e2", borderRadius: 6, background: "#fbfdfc", color: "#28483e", fontSize: 12, cursor: "pointer" };
-const disabledPermissionOption = { ...permissionOption, opacity: 0.48, cursor: "not-allowed" };
-const permissionCount = { whiteSpace: "nowrap", padding: "5px 8px", borderRadius: 6, background: "#edf6f1", color: "#17634d", fontSize: 11, fontWeight: 700 };
-const userForm = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12, alignItems: "end" };
-const fieldLabel = { display: "grid", gap: 6, color: "#526b62", fontSize: 12, fontWeight: 600 };
-const input = { width: "100%", minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid #d4c9a3", background: "#fff", boxSizing: "border-box" };
-const primaryButton = { minHeight: 40, border: 0, borderRadius: 8, padding: "8px 16px", background: "#08785c", color: "#fff", fontWeight: 700, cursor: "pointer" };
-const actionGroup = { display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6 };
-const editButton = { ...permissionButton, background: "#fff" };
-const editPanel = { ...permissionPanel, padding: 16, border: "1px solid #dbe8e2", borderRadius: 10, background: "#f8fbf9" };
-const editHeader = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
-const closeButton = { border: 0, background: "transparent", color: "#6b7a72", cursor: "pointer" };
-const sectionHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 14, flexWrap: "wrap" };
-const secondaryButton = { minHeight: 38, border: "1px solid #08785c", borderRadius: 8, padding: "8px 14px", background: "#fff", color: "#08785c", fontWeight: 700, cursor: "pointer" };

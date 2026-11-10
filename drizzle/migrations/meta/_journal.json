@@ -85,6 +85,34 @@
       "when": 1794302558254,
       "tag": "0011_fix_reverse_cash_transaction_direction_cast",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794304837466,
+      "tag": "0012_restrict_finance_reversals_and_internal_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794304900443,
+      "tag": "0013_server_receivable_kpi_settlement",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794304997511,
+      "tag": "0014_dedicated_hr_finance_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794305094568,
+      "tag": "0015_dedicated_kpi_employee_scope_and_reversal_auth",
+      "breakpoints": true
     }
   ]
 }

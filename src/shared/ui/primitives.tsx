@@ -55,3 +55,6 @@ export function Badge({ children, tone = 'neutral', className, accentColor, ...r
   return <span className={join('ui-badge', `ui-badge-${tone}`, accentColor && 'ui-badge-custom', className)} style={style} {...rest}>{children}</span>;
 }
 export function TableActions({ children }: { children?: ReactNode }) { return <div className="ui-table-actions">{children}</div>; }
+export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
+  return <div className="ui-table-wrap"><table className={join('ui-table', className)} {...props} /></div>;
+}

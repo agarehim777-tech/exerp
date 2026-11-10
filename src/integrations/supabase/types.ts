@@ -288,6 +288,53 @@ export type Database = {
         }
         Relationships: []
       }
+      business_contracts: {
+        Row: {
+          amount: number | null
+          customer: string | null
+          fin: string | null
+          metadata: Json
+          order_id: string | null
+          product: string | null
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount?: number | null
+          customer?: string | null
+          fin?: string | null
+          metadata?: Json
+          order_id?: string | null
+          product?: string | null
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number | null
+          customer?: string | null
+          fin?: string | null
+          metadata?: Json
+          order_id?: string | null
+          product?: string | null
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_accounts: {
         Row: {
           account_no: string | null
@@ -1601,9 +1648,12 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          metadata: Json | null
           phone: string | null
           position: string | null
+          record_key: string | null
           salary: number | null
+          sort_position: number | null
           status: string
           tenant_id: string
           updated_at: string
@@ -1615,9 +1665,12 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          metadata?: Json | null
           phone?: string | null
           position?: string | null
+          record_key?: string | null
           salary?: number | null
+          sort_position?: number | null
           status?: string
           tenant_id: string
           updated_at?: string
@@ -1629,9 +1682,12 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          metadata?: Json | null
           phone?: string | null
           position?: string | null
+          record_key?: string | null
           salary?: number | null
+          sort_position?: number | null
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -1920,6 +1976,53 @@ export type Database = {
           },
         ]
       }
+      finance_account_records: {
+        Row: {
+          code: string | null
+          currency: string | null
+          metadata: Json
+          name: string | null
+          opening_balance: number | null
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+          type: string | null
+        }
+        Insert: {
+          code?: string | null
+          currency?: string | null
+          metadata?: Json
+          name?: string | null
+          opening_balance?: number | null
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+          type?: string | null
+        }
+        Update: {
+          code?: string | null
+          currency?: string | null
+          metadata?: Json
+          name?: string | null
+          opening_balance?: number | null
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_account_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_budgets: {
         Row: {
           actual_amount: number
@@ -2027,6 +2130,112 @@ export type Database = {
           },
           {
             foreignKeyName: "finance_cost_centers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_credit_records: {
+        Row: {
+          balance: number | null
+          contract_id: string | null
+          customer: string | null
+          initial_payment: number | null
+          metadata: Json
+          months: number | null
+          order_id: string | null
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+          total: number | null
+        }
+        Insert: {
+          balance?: number | null
+          contract_id?: string | null
+          customer?: string | null
+          initial_payment?: number | null
+          metadata?: Json
+          months?: number | null
+          order_id?: string | null
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+          total?: number | null
+        }
+        Update: {
+          balance?: number | null
+          contract_id?: string | null
+          customer?: string | null
+          initial_payment?: number | null
+          metadata?: Json
+          months?: number | null
+          order_id?: string | null
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_credit_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_entries: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          category: string | null
+          currency: string | null
+          date: string | null
+          description: string | null
+          direction: string | null
+          metadata: Json
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          category?: string | null
+          currency?: string | null
+          date?: string | null
+          description?: string | null
+          direction?: string | null
+          metadata?: Json
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          category?: string | null
+          currency?: string | null
+          date?: string | null
+          description?: string | null
+          direction?: string | null
+          metadata?: Json
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2206,6 +2415,153 @@ export type Database = {
           },
           {
             foreignKeyName: "goods_receipts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_departments: {
+        Row: {
+          description: string | null
+          metadata: Json
+          name: string | null
+          parent_department: string | null
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          description?: string | null
+          metadata?: Json
+          name?: string | null
+          parent_department?: string | null
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          description?: string | null
+          metadata?: Json
+          name?: string | null
+          parent_department?: string | null
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_departments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_leave_requests: {
+        Row: {
+          approver: string | null
+          days: number | null
+          department: string | null
+          employee_id: string | null
+          employee_name: string | null
+          from_date: string | null
+          metadata: Json
+          record_key: string
+          sort_position: number
+          status: string | null
+          tenant_id: string
+          to_date: string | null
+          type: string | null
+        }
+        Insert: {
+          approver?: string | null
+          days?: number | null
+          department?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          from_date?: string | null
+          metadata?: Json
+          record_key: string
+          sort_position?: number
+          status?: string | null
+          tenant_id: string
+          to_date?: string | null
+          type?: string | null
+        }
+        Update: {
+          approver?: string | null
+          days?: number | null
+          department?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          from_date?: string | null
+          metadata?: Json
+          record_key?: string
+          sort_position?: number
+          status?: string | null
+          tenant_id?: string
+          to_date?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_leave_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_vacancies: {
+        Row: {
+          candidates: number | null
+          department: string | null
+          metadata: Json
+          owner: string | null
+          record_key: string
+          role: string | null
+          sort_position: number
+          stage: string | null
+          status: string | null
+          target_date: string | null
+          tenant_id: string
+        }
+        Insert: {
+          candidates?: number | null
+          department?: string | null
+          metadata?: Json
+          owner?: string | null
+          record_key: string
+          role?: string | null
+          sort_position?: number
+          stage?: string | null
+          status?: string | null
+          target_date?: string | null
+          tenant_id: string
+        }
+        Update: {
+          candidates?: number | null
+          department?: string | null
+          metadata?: Json
+          owner?: string | null
+          record_key?: string
+          role?: string | null
+          sort_position?: number
+          stage?: string | null
+          status?: string | null
+          target_date?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_vacancies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2751,6 +3107,76 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_periods: {
+        Row: {
+          account_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          closed_at: string
+          closed_by: string
+          expense_id: string | null
+          id: string
+          paid_at: string | null
+          payout_amount: number
+          period: string
+          snapshot: Json
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string
+          closed_by: string
+          expense_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount: number
+          period: string
+          snapshot: Json
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string
+          closed_by?: string
+          expense_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount?: number
+          period?: string
+          snapshot?: Json
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_periods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_periods_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: true
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_periods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -4354,6 +4780,93 @@ export type Database = {
           },
           {
             foreignKeyName: "quotes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receivable_settlements: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          created_by: string
+          credit_id: string | null
+          currency: string
+          id: string
+          invoice_id: string | null
+          order_id: string | null
+          receipt_id: string
+          result: Json
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          created_by: string
+          credit_id?: string | null
+          currency: string
+          id?: string
+          invoice_id?: string | null
+          order_id?: string | null
+          receipt_id: string
+          result: Json
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string
+          credit_id?: string | null
+          currency?: string
+          id?: string
+          invoice_id?: string | null
+          order_id?: string | null
+          receipt_id?: string
+          result?: Json
+          source_id?: string
+          source_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receivable_settlements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credit_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivable_settlements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6409,6 +6922,10 @@ export type Database = {
         Args: { _approve?: boolean; _shipment: string }
         Returns: number
       }
+      receivable_ledger_snapshot: {
+        Args: { _tenant_id: string }
+        Returns: Json
+      }
       receive_landed_cost_shipment: {
         Args: { _receipt_date?: string; _shipment: string; _warehouse: string }
         Returns: string
@@ -6522,6 +7039,10 @@ export type Database = {
         Args: { _payment: string; _reason: string }
         Returns: Json
       }
+      run_kpi_period_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: Json
@@ -6537,6 +7058,10 @@ export type Database = {
           _reason?: string
         }
         Returns: undefined
+      }
+      settle_receivable_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       start_credit_contract: {
         Args: { _credit_id: string; _start_date: string; _tenant_id: string }
