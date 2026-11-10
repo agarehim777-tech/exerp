@@ -64,6 +64,13 @@
       "when": 1794301205763,
       "tag": "0008_restore_receive_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794301230781,
+      "tag": "0009_stock_balances_tenant_unique",
+      "breakpoints": true
     }
   ]
 }
