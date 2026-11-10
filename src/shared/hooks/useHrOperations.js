@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTenantRequestScope } from "./useTenantRequestScope";
 import { supabase } from "../../integrations/supabase/client";
 
-export function useHrOperations(tenantId, seedEmployees = []) {
+export function useHrOperations(tenantId) {
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [employees, setEmployees] = useState([]);
   const [events, setEvents] = useState([]);
@@ -38,7 +38,7 @@ export function useHrOperations(tenantId, seedEmployees = []) {
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [begin, seedEmployees, tenantId]);
+  }, [begin, tenantId]);
 
   useEffect(() => { setEmployees([]); setEvents([]); setError(null); refresh(); }, [scope, refresh]);
 
