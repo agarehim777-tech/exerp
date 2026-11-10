@@ -6,6 +6,7 @@ import CustomerDrawer from './CustomerDrawer.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
+import { Badge, Button, Card, DataTable, Input, Select, StatCard, StatGrid, Toolbar } from '../../shared/ui/primitives.tsx';
 
 function timeAgo(iso) {
   if (!iso) return '—';
@@ -18,10 +19,10 @@ function timeAgo(iso) {
 }
 
 const segmentBadge = {
-  individual: { label: 'Fiziki', bg: '#f1f5f9', color: '#475569' },
-  business:   { label: 'Hüquqi', bg: '#dbeafe', color: '#1e40af' },
+  individual: { label: 'Fiziki', tone: 'neutral' },
+  business:   { label: 'Hüquqi', tone: 'info' },
 };
-const levelMeta = { standard: { label: 'Adi', color: '#64748b' }, silver: { label: 'Gümüş', color: '#64748b' }, gold: { label: 'Qızıl', color: '#b7791f' }, platinum: { label: 'Platin', color: '#6d28d9' } };
+const levelMeta = { standard: { label: 'Adi', tone: 'neutral' }, silver: { label: 'Gümüş', tone: 'neutral' }, gold: { label: 'Qızıl', tone: 'warning' }, platinum: { label: 'Platin', tone: 'info' } };
 
 function getNextBirthday(value) {
   if (!value) return null;
@@ -80,107 +81,74 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
           <p className="u-margin-4px_0_0 u-color-var_muted_fg_text_secondary">360° görünüş, sövdələşmə tarixi və aktivlik</p>
         </div>
         <div className="u-display-flex u-gap-8px">
-        <button onClick={() => setShowLevels(true)} className="u-background-surface u-color-08745a u-border-1px_solid_08745a u-padding-10px_14px u-border-radius-10px u-font-weight-700 u-cursor-pointer">Müştəri səviyyələri</button>
-        <button onClick={() => setShowNew(true)} className="btn-primary u-background-linear_gradient_135deg_action_action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-font-weight-700 u-cursor-pointer u-box-shadow-0_4px_14px_rgba_16_185_129_0_35"
+        <Button variant="secondary" onClick={() => setShowLevels(true)} className="u-background-surface u-color-08745a u-border-1px_solid_08745a u-padding-10px_14px u-border-radius-10px u-font-weight-700 u-cursor-pointer">Müştəri səviyyələri</Button>
+        <Button onClick={() => setShowNew(true)} className="btn-primary u-background-linear_gradient_135deg_action_action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-font-weight-700 u-cursor-pointer u-box-shadow-0_4px_14px_rgba_16_185_129_0_35"
           >
           + Yeni müştəri
-        </button>
+        </Button>
         </div>
       </header>
 
-      <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_180px_1fr u-gap-12px">
+      <StatGrid>
         {[
-          { label: 'Ümumi', value: stats.total, color: '#10b981' },
-          { label: 'Yeni bu ay', value: stats.newMonth, color: '#38bdf8' },
-          { label: 'Aktiv (30g)', value: stats.active, color: '#a78bfa' },
-          { label: 'Platin', value: stats.platinum, color: '#7c3aed' },
-          { label: 'Dublikat riski', value: duplicateGroups.length, color: duplicateGroups.length ? '#dc2626' : '#10b981' },
-        ].map(s => (
-          <div key={s.label} className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-padding-16px u-display-flex u-flex-direction-column u-gap-6px">
-            <span className="u-font-size-12px u-color-text_secondary u-font-weight-600 u-text-transform-uppercase u-letter-spacing-0_5px">{s.label}</span>
-            <span style={{ fontSize: 21, lineHeight: 1.2, fontWeight: 750, color: s.color }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
+          { label: 'Ümumi', value: stats.total },
+          { label: 'Yeni bu ay', value: stats.newMonth },
+          { label: 'Aktiv (30g)', value: stats.active },
+          { label: 'Platin', value: stats.platinum },
+          { label: 'Dublikat riski', value: duplicateGroups.length, tone: duplicateGroups.length ? 'danger' : 'default' },
+        ].map(stat => <StatCard key={stat.label} {...stat} />)}
+      </StatGrid>
 
-      {duplicateGroups.length > 0 && <section className="u-background-fff7ed u-border-1px_solid_fdba74 u-border-radius-10px u-padding-14px"><b className="u-color-9a3412">Dublikat ola bilən müştərilər</b><div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-top-8px">{duplicateGroups.map(([left, right]) => <button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} style={{ border: '1px solid #fdba74', borderRadius: 7, background: '#fff', padding: '7px 10px', cursor: 'pointer' }}>{left.name} ↔ {right.name}</button>)}</div></section>}
+      {duplicateGroups.length > 0 && <section className="u-background-fff7ed u-border-1px_solid_fdba74 u-border-radius-10px u-padding-14px"><b className="u-color-9a3412">Dublikat ola bilən müştərilər</b><div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-top-8px">{duplicateGroups.map(([left, right]) => <Button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} variant="secondary" size="compact">{left.name} ↔ {right.name}</Button>)}</div></section>}
 
-      <div className="u-display-flex u-gap-10px u-flex-wrap-wrap">
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar: ad, telefon, FİN, VÖEN, vəsiqə..."
-          className="u-flex-1 u-min-width-220px u-padding-10px_14px u-border-1px_solid_border u-border-radius-10px u-font-size-14px" />
-        <select value={seg} onChange={e => setSeg(e.target.value)}
-          className="u-padding-10px_14px u-border-1px_solid_border u-border-radius-10px u-font-size-14px u-background-surface">
+      <Toolbar>
+        <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar: ad, telefon, FİN, VÖEN, vəsiqə..."
+          className="ui-search-input" aria-label="Müştəri axtar" />
+        <Select value={seg} onChange={e => setSeg(e.target.value)}
+          aria-label="Müştəri tipi">
           <option value="all">Bütün müştəri tipləri</option>
           <option value="individual">Fiziki</option>
           <option value="business">Hüquqi</option>
-        </select>
-      </div>
+        </Select>
+      </Toolbar>
 
-      <section className="u-background-surface u-border-1px_solid_e2d8bc u-border-radius-14px u-padding-16px">
+      <section className="ui-detail-stack">
         <div className="u-display-flex u-justify-content-space_between u-gap-12px u-align-items-center u-margin-bottom-12px">
           <div><h3 className="u-margin-0 u-font-size-17px">Ad günləri</h3><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Bu gün və qarşıdakı 30 gün</p></div>
           <span className="u-background-fef3c7 u-color-92400e u-padding-5px_10px u-border-radius-999px u-font-size-12px u-font-weight-700">{birthdays.length} müştəri</span>
         </div>
         {!birthdays.length ? <div className="u-color-text_secondary u-font-size-13px">Yaxınlaşan ad günü yoxdur.</div> : <div className="u-display-grid u-gap-8px">
-          {birthdaysToday.map(({ customer }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_86efac u-background-f0fdf4 u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></button>)}
-          {birthdaysUpcoming.map(({ customer, next }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_border u-background-surface u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></button>)}
+          {birthdaysToday.map(({ customer }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_86efac u-background-f0fdf4 u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></Button>)}
+          {birthdaysUpcoming.map(({ customer, next }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_border u-background-surface u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></Button>)}
         </div>}
       </section>
 
       {filtered.length === 0 ? (
-        <div className="u-padding-60px u-text-align-center u-background-surface u-border-radius-14px u-border-1px_dashed_line_strong">
+        <Card className="ui-empty-box">
           <div className="u-font-size-48px">👥</div>
           <h3 className="u-margin-12px_0_4px">Hələ müştəri yoxdur</h3>
           <p className="u-color-text_secondary u-margin-0">İlk müştərinizi əlavə edərək başlayın.</p>
-        </div>
+        </Card>
       ) : (
-        <div className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-overflow-hidden">
-          <table className="u-width-100 u-border-collapse-collapse u-font-size-14px">
-            <thead className="u-background-surface_subtle u-text-align-left u-font-size-12px u-text-transform-uppercase u-color-text_secondary u-letter-spacing-0_5px">
-              <tr>
-                <th className="u-padding-12px_16px">Müştəri</th>
-                <th className="u-padding-12px_16px">Əlaqə</th>
-                <th className="u-padding-12px_16px">FİN / VÖEN</th>
-                <th className="u-padding-12px_16px">Son aktivlik</th>
-                <th className="u-padding-12px_16px u-text-align-right">Əməliyyat</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(c => {
-                const seg = segmentBadge[c.segment] || segmentBadge.individual;
-                return (
-                  <tr key={c.id} onClick={() => setOpenId(c.id)}
-                    className="u-border-top-1px_solid_surface_subtle u-cursor-pointer u-transition-background_0_15s"
-                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td className="u-padding-12px_16px">
-                      <div className="u-display-flex u-align-items-center u-gap-12px">
-                        <Avatar name={c.name} />
-                        <div>
-                          <div className="u-font-weight-600">{c.name}</div>
-                          <span style={{ background: seg.bg, color: seg.color, padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{seg.label}</span>
-                          <span style={{ marginLeft: 5, color: levelMeta[c.customer_level]?.color, fontSize: 11, fontWeight: 700 }}>{levelMeta[c.customer_level]?.label || 'Adi'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="u-padding-12px_16px u-color-text_secondary">
-                      <div>{c.phone || '—'}</div>
-                      <div className="u-font-size-12px u-color-text_secondary">{c.email || ''}</div>
-                    </td>
-                    <td className="u-padding-12px_16px u-color-text_secondary">
-                      <div>{c.segment === 'business' ? (c.tax_id || '—') : (c.fin_code || c.tax_id || '—')}</div>
-                      {c.segment !== 'business' && c.identity_card_no && <div className="u-font-size-11px u-color-text_secondary u-margin-top-2px">{c.identity_card_no}</div>}
-                    </td>
-                    <td className="u-padding-12px_16px u-color-text_secondary">{timeAgo(c.last_activity_at)}</td>
-                    <td className="u-padding-12px_16px u-text-align-right" onClick={e => e.stopPropagation()}>
-                      <button onClick={async () => { if (await appConfirm(`"${c.name}" silinsin?`, { danger: true })) remove(c.id); }}
-                        style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Sil</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="ui-detail-stack">
+          <DataTable label="Müştəri siyahısı" rows={filtered} onRowClick={customer => setOpenId(customer.id)}
+            columns={[
+              { key: 'customer', label: 'Müştəri' }, { key: 'contact', label: 'Əlaqə' },
+              { key: 'identity', label: 'FİN / VÖEN' }, { key: 'activity', label: 'Son aktivlik' },
+              { key: 'actions', label: 'Əməliyyat', align: 'right' },
+            ]}
+            renderCell={(customer, column) => {
+              const segment = segmentBadge[customer.segment] || segmentBadge.individual;
+              const level = levelMeta[customer.customer_level] || levelMeta.standard;
+              switch (column.key) {
+                case 'customer': return <div className="u-display-flex u-align-items-center u-gap-12px"><Avatar name={customer.name} /><div><strong>{customer.name}</strong><div className="u-display-flex u-flex-wrap-wrap u-gap-4px"><Badge tone={segment.tone}>{segment.label}</Badge><Badge tone={level.tone}>{level.label}</Badge></div></div></div>;
+                case 'contact': return <div><div>{customer.phone || '—'}</div><small>{customer.email || ''}</small></div>;
+                case 'identity': return <div>{customer.segment === 'business' ? (customer.tax_id || '—') : (customer.fin_code || customer.tax_id || '—')}{customer.segment !== 'business' && customer.identity_card_no && <small className="u-display-block">{customer.identity_card_no}</small>}</div>;
+                case 'activity': return timeAgo(customer.last_activity_at);
+                case 'actions': return <Button variant="danger" size="compact" onClick={async () => { if (await appConfirm(`"${customer.name}" silinsin?`, { danger: true })) remove(customer.id); }}>Sil</Button>;
+                default: return null;
+              }
+            }} />
           <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={customersLoading} />
         </div>
       )}
@@ -218,41 +186,40 @@ function NewCustomerModal({ onClose, onCreate }) {
         className="u-background-surface u-border-radius-16px u-width-500px u-max-width-100 u-max-height-calc_100vh_40px u-overflow-y-auto u-display-flex u-flex-direction-column u-box-shadow-0_20px_55px_rgba_15_23_42_22">
         <div className="u-position-sticky u-top-0 u-z-index-2 u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-padding-18px_20px u-border-bottom-1px_solid_border u-background-surface">
           <div><h2 className="u-margin-0 u-font-size-20px">Yeni müştəri</h2><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Müştərinin əsas məlumatlarını daxil edin</p></div>
-          <button type="button" onClick={onClose} aria-label="Pəncərəni bağla" className="u-width-34px u-height-34px u-border-1px_solid_border u-border-radius-9px u-background-surface u-cursor-pointer u-font-size-20px u-line-height-1">×</button>
+          <Button type="button" onClick={onClose} aria-label="Pəncərəni bağla">×</Button>
         </div>
         <div className="u-display-flex u-flex-direction-column u-gap-12px u-padding-18px_20px_8px">
         {err && <div className="u-background-fef2f2 u-color-danger u-padding-8px u-border-radius-8px u-font-size-13px">{err}</div>}
-        <label style={modalLabel}>Ad və soyad / şirkət adı *<input autoFocus value={form.name} onChange={e => set('name', e.target.value)} placeholder={form.segment === 'business' ? 'Şirkətin hüquqi adı' : 'Ad və soyad'} style={inp} /></label>
-        <label>Telefon<input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+994..." style={inp} /></label>
-        <label>E-poçt <span className="u-color-text_secondary u-font-size-12px">(məcburi deyil)</span><input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inp} /></label>
+        <label className="ui-field">Ad və soyad / şirkət adı *<Input autoFocus value={form.name} onChange={e => set('name', e.target.value)} placeholder={form.segment === 'business' ? 'Şirkətin hüquqi adı' : 'Ad və soyad'} className="u-margin-top-4px" /></label>
+        <label>Telefon<Input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+994..." className="u-margin-top-4px" /></label>
+        <label>E-poçt <span className="u-color-text_secondary u-font-size-12px">(məcburi deyil)</span><Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="u-margin-top-4px" /></label>
         <label>Müştəri tipi
-          <select value={form.segment} onChange={e => set('segment', e.target.value)} style={inp}>
+          <Select value={form.segment} onChange={e => set('segment', e.target.value)} className="u-margin-top-4px">
             <option value="individual">Fiziki şəxs</option>
             <option value="business">Hüquqi şəxs</option>
-          </select>
+          </Select>
         </label>
         {form.segment === 'individual' ? <>
-          <label>FİN kod<input value={form.fin_code} onChange={e => set('fin_code', e.target.value.toUpperCase())} placeholder="7 simvol" maxLength={7} style={inp} /></label>
-          <label>Şəxsiyyət vəsiqəsinin seriya və nömrəsi<input value={form.identity_card_no} onChange={e => set('identity_card_no', e.target.value.toUpperCase())} placeholder="Məsələn: AA1234567" style={inp} /></label>
+          <label>FİN kod<Input value={form.fin_code} onChange={e => set('fin_code', e.target.value.toUpperCase())} placeholder="7 simvol" maxLength={7} className="u-margin-top-4px" /></label>
+          <label>Şəxsiyyət vəsiqəsinin seriya və nömrəsi<Input value={form.identity_card_no} onChange={e => set('identity_card_no', e.target.value.toUpperCase())} placeholder="Məsələn: AA1234567" className="u-margin-top-4px" /></label>
           <label>Doğum tarixi <span className="u-color-text_secondary u-font-size-12px">(məcburi deyil)</span><BirthDateInput value={form.birth_date} onChange={value => set('birth_date', value)} /></label>
-        </> : <label>VÖEN<input value={form.tax_id} onChange={e => set('tax_id', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10 rəqəm" inputMode="numeric" style={inp} /></label>}
+        </> : <label>VÖEN<Input value={form.tax_id} onChange={e => set('tax_id', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10 rəqəm" inputMode="numeric" className="u-margin-top-4px" /></label>}
         <label>Səviyyə
-          <select value={form.customer_level_override || ''} onChange={e => set('customer_level_override', e.target.value || null)} style={inp}>
+          <Select value={form.customer_level_override || ''} onChange={e => set('customer_level_override', e.target.value || null)} className="u-margin-top-4px">
             <option value="">Avtomatik hesablansın</option><option value="standard">Adi</option><option value="silver">Gümüş</option><option value="gold">Qızıl</option><option value="platinum">Platin</option>
-          </select>
+          </Select>
         </label>
-        <label>Ünvan<input value={form.address} onChange={e => set('address', e.target.value)} style={inp} /></label>
+        <label>Ünvan<Input value={form.address} onChange={e => set('address', e.target.value)} className="u-margin-top-4px" /></label>
         </div>
         <div className="u-position-sticky u-bottom-0 u-z-index-2 u-display-flex u-justify-content-flex_end u-gap-8px u-margin-top-8px u-padding-14px_20px u-border-top-1px_solid_border u-background-surface">
-          <button type="button" onClick={onClose} style={btnGhost}>Ləğv et</button>
-          <button type="submit" disabled={busy} style={btnPrimary}>{busy ? '...' : 'Yarat'}</button>
+          <Button type="button" onClick={onClose} variant="secondary">Ləğv et</Button>
+          <Button type="submit" disabled={busy} >{busy ? '...' : 'Yarat'}</Button>
         </div>
       </form>
     </div>
   );
 }
 
-const modalLabel = { display: 'flex', flexDirection: 'column', gap: 5, color: '#334155', fontSize: 13, fontWeight: 600 };
 
 function LevelSettingsModal({ levels, onClose, onSave }) {
   const [form, setForm] = useState(levels);
@@ -260,11 +227,8 @@ function LevelSettingsModal({ levels, onClose, onSave }) {
   const submit = async (e) => { e.preventDefault(); if (!(Number(form.silver) <= Number(form.gold) && Number(form.gold) <= Number(form.platinum))) return; setBusy(true); try { await onSave(form); } finally { setBusy(false); } };
   return <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_5 u-display-grid u-place-items-center u-z-index-110"><form onClick={e => e.stopPropagation()} onSubmit={submit} className="u-background-surface u-border-radius-16px u-padding-24px u-width-430px u-max-width-92vw u-display-grid u-gap-12px">
     <h2 className="u-margin-0">Müştəri səviyyələri</h2><p className="u-margin-0 u-color-text_secondary u-font-size-13px">Kassaya daxil olmuş ümumi satış ödənişinə əsasən avtomatik hesablanır.</p>
-    {[['silver','Gümüş'],['gold','Qızıl'],['platinum','Platin']].map(([key,label]) => <label key={key}>{label} üçün minimum məbləğ<input type="number" min="0" value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={inp} /></label>)}
-    <div className="u-display-flex u-justify-content-flex_end u-gap-8px"><button type="button" onClick={onClose} style={btnGhost}>Ləğv et</button><button disabled={busy} style={btnPrimary}>Yadda saxla</button></div>
+    {[['silver','Gümüş'],['gold','Qızıl'],['platinum','Platin']].map(([key,label]) => <label key={key}>{label} üçün minimum məbləğ<Input type="number" min="0" value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="u-margin-top-4px" /></label>)}
+    <div className="u-display-flex u-justify-content-flex_end u-gap-8px"><Button type="button" onClick={onClose} variant="secondary">Ləğv et</Button><Button disabled={busy} >Yadda saxla</Button></div>
   </form></div>;
 }
 
-const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 };
-const btnGhost = { background: 'transparent', border: '1px solid #e2e8f0', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 };
-const btnPrimary = { background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 0, padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 };
