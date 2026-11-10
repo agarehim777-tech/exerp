@@ -5108,6 +5108,80 @@ export type Database = {
           },
         ]
       }
+      vendor_invoice_tax_postings: {
+        Row: {
+          created_by: string
+          currency: string
+          gross_amount: number
+          id: string
+          invoice_id: string
+          journal_entry_id: string
+          net_amount: number
+          posted_at: string
+          tax_account_id: string
+          tax_amount: number
+          tax_treatment: string
+          tenant_id: string
+        }
+        Insert: {
+          created_by: string
+          currency: string
+          gross_amount: number
+          id?: string
+          invoice_id: string
+          journal_entry_id: string
+          net_amount: number
+          posted_at?: string
+          tax_account_id: string
+          tax_amount: number
+          tax_treatment: string
+          tenant_id: string
+        }
+        Update: {
+          created_by?: string
+          currency?: string
+          gross_amount?: number
+          id?: string
+          invoice_id?: string
+          journal_entry_id?: string
+          net_amount?: number
+          posted_at?: string
+          tax_account_id?: string
+          tax_amount?: number
+          tax_treatment?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_tax_account_id_fkey"
+            columns: ["tax_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_invoices: {
         Row: {
           created_at: string
@@ -5716,6 +5790,10 @@ export type Database = {
         Returns: undefined
       }
       pay_vendor_invoice_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
+      pay_vendor_invoice_with_tax_atomic: {
         Args: { _payload: Json; _request_key: string; _tenant_id: string }
         Returns: Json
       }
