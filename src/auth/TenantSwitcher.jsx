@@ -46,11 +46,11 @@ export default function TenantSwitcher() {
           {memberships.map((m) => {
             const isActive = m.tenant_id === activeTenantId;
             return (
-              <div key={m.id} style={{ ...row, background: isActive ? "#e6f4ef" : "transparent" }}>
+              <div key={m.id} className={`tenant-switcher-row ${isActive ? "sx-623d0b0" : "sx-1eb2246"}`}>
                 <button
                   onClick={() => !isActive && switchTo(m.tenant_id)}
                   disabled={isActive || busy === m.tenant_id}
-                  style={{ ...rowBtn, fontWeight: isActive ? 700 : 500, color: isActive ? "#064e3b" : "#0f2a20" }}
+                  className={`tenant-switcher-row-btn ${isActive ? "sx-83e4487" : "sx-1e29eef"} ${isActive ? "sx-7c2de19" : "sx-4c30a91"}`}
  >
                   {isActive ? "✓ " : ""}{m.tenants?.name}
                   <span className="u-color-8a9a92 u-font-size-11px u-margin-left-6px">/{m.tenants?.slug}</span>
@@ -70,8 +70,6 @@ export default function TenantSwitcher() {
   );
 }
 
-const row = { display: "flex", alignItems: "center", padding: "0 4px" };
-const rowBtn = { flex: 1, background: "none", border: 0, textAlign: "left", padding: "8px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6 };
 
 function roleLabel(role) {
   const map = { owner: "Sahib", admin: "Admin", member: "Üzv", viewer: "Baxış" };

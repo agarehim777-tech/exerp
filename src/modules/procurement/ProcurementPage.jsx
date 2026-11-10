@@ -116,7 +116,7 @@ function groupBy(rows, key) {
 function StatusPill({ status, type = "po" }) {
   const meta = type === "invoice" ? INVOICE_STATUS[status] : PO_STATUS[status];
   const label = meta?.label || status || "Naməlum";
-  return <span style={{ ...styles.badge, ...styles[`badge_${meta?.tone || "neutral"}`] }}>{label}</span>;
+  return <span className={`procurement-page-styles-badge procurement-page-styles-badge-${meta?.tone || "neutral"}`}>{label}</span>;
 }
 
 function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = false, submit = false }) {
@@ -125,7 +125,7 @@ function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = fal
       type={submit ? "submit" : "button"}
       onClick={onClick}
       disabled={disabled}
-      style={{ ...styles.iconButton, ...styles[`button_${tone}`], opacity: disabled ? 0.5 : 1 }}
+      className={`procurement-page-styles-icon-button procurement-page-styles-button-${tone}`}
  >
       <Icon size={15} />
       <span>{label}</span>
@@ -1239,7 +1239,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       </section>
 
       {(notice || error) && (
-        <div style={{ ...styles.message, ...(error ? styles.messageError : styles.messageOk) }}>
+        <div className={`procurement-page-styles-message ${error ? "procurement-page-styles-message-error" : "procurement-page-styles-message-ok"}`}>
           {error || notice}
           <button type="button" onClick={() => { setError(""); setNotice(""); }} className="procurement-page-styles-message-close">
             <X size={14} />
@@ -1248,7 +1248,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       )}
 
       {!poPaymentsAvailable && !loading && (
-        <div role="status" style={{ ...styles.message, ...styles.messageError }}>
+        <div role="status" className="procurement-page-styles-message procurement-page-styles-message-error">
           Birbaşa PO ödənişi bağlıdır. Ödəniş üçün uyğun vendor fakturası tələb olunur.
         </div>
       )}
@@ -1262,7 +1262,7 @@ function ProcurementWorkspace({ tenantId, user }) {
           ["landed", Ship, "Göndəriş və maya"],
           ["invoices", Receipt, "Fakturalar"],
         ].map(([id, Icon, label]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} style={{ ...styles.tabButton, ...(tab === id ? styles.tabActive : {}) }}>
+          <button key={id} type="button" onClick={() => setTab(id)} className={`procurement-page-styles-tab-button ${tab === id ? "procurement-page-styles-tab-active" : ""}`}>
             <Icon size={16} />
             {label}
           </button>
@@ -1454,7 +1454,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
   return (
     <div className="procurement-page-styles-split-grid">
       <Panel title="Yeni təklif sorğusu" icon={ClipboardCheck}>
-        <form style={{ ...styles.form, gridTemplateColumns: "1fr" }} onSubmit={onSubmit}>
+        <form className="procurement-page-styles-form sx-d7614df" onSubmit={onSubmit}>
           <Field label="Sorğunun adı" value={form.title} onChange={(value) => setForm({ ...form, title: value })} required wide />
           <Field label="Məhsul / xidmət" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required wide />
           <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
@@ -1487,7 +1487,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
               <TwoLine title={line?.description || "—"} subtitle={`${qty(line?.quantity)} vahid`} />,
               <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
               rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "—",
-              <span style={{ ...styles.badge, ...(rfq.status === "approved" ? styles.badge_success : rfq.status === "rejected" ? styles.badge_danger : styles.badge_info) }}>{rfq.status}</span>,
+              <span className={`procurement-page-styles-badge procurement-page-styles-badge-${rfq.status === "approved" ? "success" : rfq.status === "rejected" ? "danger" : "info"}`}>{rfq.status}</span>,
               <div className="procurement-page-styles-row-actions">
                 {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="Təsdiq" tone="success" onClick={() => onApprove(rfq)} />}
                 {rfq.status === "sent" && <IconButton icon={XCircle} label="Rədd" tone="danger" onClick={() => onReject(rfq)} />}
@@ -1504,7 +1504,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
 function Metric({ icon: Icon, label, value, hint, tone }) {
   return (
     <article className="procurement-page-styles-metric-card">
-      <div style={{ ...styles.metricIcon, ...styles[`metric_${tone}`] }}>
+      <div className={`procurement-page-styles-metric-icon procurement-page-styles-metric-${tone}`}>
         <Icon size={20} />
       </div>
       <div>
@@ -1602,7 +1602,7 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
               <TwoLine key="vendor" title={vendor.name} subtitle={vendor.tax_id || vendor.address || "VÖEN/ünvan qeyd edilməyib"} />,
               <TwoLine key="contact" title={vendor.phone || "Telefon yoxdur"} subtitle={vendor.email || "Email yoxdur"} />,
               vendorPo.length,
-              <span key="status" style={{ ...styles.badge, ...(vendor.is_active ? styles.badge_success : styles.badge_neutral) }}>
+              <span key="status" className={`procurement-page-styles-badge ${vendor.is_active ? "procurement-page-styles-badge-success" : "procurement-page-styles-badge-neutral"}`}>
                 {vendor.is_active ? "Aktiv" : "Passiv"}
               </span>,
               <div key="actions" className="procurement-page-styles-row-actions">
@@ -1819,7 +1819,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
       </div>
 
       {payments.length > 0 ? (
-        <table style={{ ...styles.table, background: "#fff", borderRadius: "8px", overflow: "hidden" }}>
+        <table className="procurement-page-styles-table sx-0695ff9 sx-a50337b sx-3e3b3e7">
           <thead>
             <tr className="u-background-surface_subtle u-text-align-left">
               <th className="u-padding-8px_10px">Tarix</th>
@@ -1853,7 +1853,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
       )}
 
       {isOpen && (
-        <form onSubmit={onPaymentSubmit} style={{ ...styles.form, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "12px", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+        <form onSubmit={onPaymentSubmit} className="procurement-page-styles-form sx-0d541a3 sx-176884a sx-0695ff9 sx-a50337b sx-4fd67c1">
           <Field label="Məbləğ" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })} required />
           <Field label="Tarix" type="date" value={paymentForm.payment_date} onChange={(value) => setPaymentForm({ ...paymentForm, payment_date: value })} required />
           <label className="procurement-page-styles-field">
@@ -2150,7 +2150,7 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
             qty(row.qty_accepted),
             qty(row.qty_invoiced),
             row.price_ok ? "Uyğun" : "Fərq var",
-            <span key="match" style={{ ...styles.badge, ...(row.status === "matched" ? styles.badge_success : styles.badge_warning) }}>
+            <span key="match" className={`procurement-page-styles-badge ${row.status === "matched" ? "procurement-page-styles-badge-success" : "procurement-page-styles-badge-warning"}`}>
               {row.status === "matched" ? "Uyğundur" : row.status}
             </span>,
           ])}
@@ -2177,7 +2177,7 @@ function Panel({ title, icon: Icon, action, children }) {
 
 function Field({ label, value, onChange, type = "text", required = false, wide = false }) {
   return (
-    <label style={{ ...styles.field, ...(wide ? styles.fieldWide : {}) }}>
+    <label className={`procurement-page-styles-field ${wide ? "procurement-page-styles-field-wide" : ""}`}>
       <span>{label}</span>
       <input className="procurement-page-styles-input" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </label>
@@ -2197,7 +2197,7 @@ function Progress({ value, label }) {
   return (
     <div className="procurement-page-styles-progress-wrap">
       <div className="procurement-page-styles-progress-track">
-        <span style={{ ...styles.progressFill, width: `${Math.max(0, Math.min(100, value))}%` }} />
+        <span className="procurement-page-styles-progress-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
       <small>{label}</small>
     </div>
@@ -2250,170 +2250,3 @@ function DataTable({ columns, rows, empty, detail, sourceRows }) {
   );
 }
 
-const styles = {
-  page: {
-    width: "100%",
-    boxSizing: "border-box",
-    background: "transparent",
-    color: "#0f172a",
-    padding: "0",
-    fontFamily: "inherit",
-  },
-  header: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "18px",
-    width: "100%",
-    margin: "0 0 14px",
-  },
-  headerActions: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" },
-  backLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    color: "#2563eb",
-    textDecoration: "none",
-    fontSize: "13px",
-    fontWeight: 700,
-    marginBottom: "8px",
-  },
-  title: { margin: 0, fontSize: "22px", lineHeight: 1.25, color: "#15372d" },
-  subtitle: { margin: "4px 0 0", color: "#71867f", fontSize: "12px" },
-  metricGrid: {
-    width: "100%",
-    margin: "0 0 12px",
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "10px",
-  },
-  metricCard: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    background: "#fff",
-    border: "1px solid #ded8c4",
-    borderRadius: "12px",
-    padding: "13px",
-    boxShadow: "none",
-  },
-  metricIcon: { width: "44px", height: "44px", borderRadius: "10px", display: "grid", placeItems: "center" },
-  metric_blue: { background: "#dff3e9", color: "#08745a" },
-  metric_amber: { background: "#fef3c7", color: "#b45309" },
-  metric_green: { background: "#dcfce7", color: "#15803d" },
-  metric_rose: { background: "#ffe4e6", color: "#be123c" },
-  metricLabel: { display: "block", color: "#64748b", fontSize: "12px", fontWeight: 700 },
-  metricValue: { display: "block", fontSize: "22px", marginTop: "2px" },
-  metricHint: { display: "block", color: "#94a3b8", marginTop: "2px" },
-  toolbar: { width: "100%", margin: "0 0 10px", display: "flex", gap: "8px", alignItems: "center" },
-  searchBox: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "#fff",
-    border: "1px solid #d8d3c2",
-    borderRadius: "10px",
-    padding: "0 12px",
-    minHeight: "38px",
-    color: "#64748b",
-  },
-  searchInput: { flex: 1, border: 0, outline: 0, minHeight: "38px", font: "inherit", background: "transparent" },
-  select: { height: "42px", border: "1px solid #e5e7eb", borderRadius: "10px", background: "#fff", padding: "0 12px", fontWeight: 700 },
-  tabs: { width: "100%", margin: "0 0 12px", display: "flex", gap: "6px", flexWrap: "wrap" },
-  tabButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    minHeight: "36px",
-    padding: "0 12px",
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    background: "#fff",
-    color: "#475569",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  tabActive: { border: "1px solid #08745a", color: "#075e4b", background: "#e8f5ef" },
-  panel: { background: "#fff", border: "1px solid #ded8c4", borderRadius: "12px", padding: "15px", boxShadow: "none", minWidth: 0 },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "14px" },
-  panelTools: { display: "flex", alignItems: "center", gap: "8px", color: "#64748b" },
-  dashboardGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) repeat(2, minmax(250px, 1fr))", gap: "10px" },
-  splitGrid: { width: "100%", display: "grid", gridTemplateColumns: "minmax(300px, 380px) minmax(0, 1fr)", gap: "10px" },
-  stack: { width: "100%", display: "grid", gap: "10px" },
-  sectionActions: { display: "flex", justifyContent: "flex-end", alignItems: "center", minHeight: "34px" },
-  stackSmall: { display: "grid", gap: "10px" },
-  form: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px" },
-  field: { display: "grid", gap: "6px", color: "#475569", fontSize: "12px", fontWeight: 800 },
-  fieldWide: { gridColumn: "span 2" },
-  input: {
-    width: "100%",
-    height: "38px",
-    boxSizing: "border-box",
-    border: "1px solid #dbe3ef",
-    borderRadius: "8px",
-    padding: "0 10px",
-    font: "inherit",
-    color: "#0f172a",
-    background: "#fff",
-  },
-  linesBlock: { gridColumn: "1 / -1", border: "1px solid #edf2f7", background: "#f8fafc", borderRadius: "10px", padding: "12px", display: "grid", gap: "8px" },
-  linesHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", color: "#334155" },
-  lineGrid: { display: "grid", gridTemplateColumns: "1.1fr 1.4fr 0.7fr 0.8fr 0.65fr auto", gap: "8px", alignItems: "center" },
-  receiptLineGrid: { display: "grid", gridTemplateColumns: "1.5fr 0.55fr 0.65fr 0.55fr", gap: "8px", alignItems: "center" },
-  invoiceLineGrid: { display: "grid", gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.45fr", gap: "8px", alignItems: "center" },
-  formActions: { gridColumn: "1 / -1", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
-  checkLine: { gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontWeight: 700 },
-  helperText: { gridColumn: "1 / -1", margin: 0, color: "#b45309", fontSize: "13px", fontWeight: 700 },
-  iconButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    minHeight: "34px",
-    padding: "0 10px",
-    borderRadius: "8px",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "#dbe3ef",
-    background: "#fff",
-    color: "#334155",
-    fontWeight: 800,
-    fontSize: "12px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  button_primary: { background: "#08745a", color: "#fff", borderColor: "#08745a" },
-  button_success: { background: "#16a34a", color: "#fff", borderColor: "#16a34a" },
-  button_danger: { background: "#fff1f2", color: "#be123c", borderColor: "#fecdd3" },
-  button_ghost: {},
-  rowActions: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" },
-  tableWrap: { overflowX: "auto" },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
-  th: { textAlign: "left", padding: "10px", background: "#f8fafc", color: "#64748b", borderBottom: "1px solid #e5e7eb", fontWeight: 900 },
-  td: { padding: "10px", borderBottom: "1px solid #eef2f7", verticalAlign: "middle" },
-  detailCell: { padding: "12px", background: "#f8fafc", borderBottom: "1px solid #e5e7eb" },
-  linkCell: { border: 0, padding: 0, background: "transparent", textAlign: "left", color: "#0f172a", cursor: "pointer", font: "inherit" },
-  twoLine: { display: "grid", gap: "2px" },
-  badge: { display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "24px", padding: "0 9px", borderRadius: "999px", fontSize: "12px", fontWeight: 900 },
-  badge_success: { background: "#dcfce7", color: "#166534" },
-  badge_warning: { background: "#fef3c7", color: "#92400e" },
-  badge_danger: { background: "#ffe4e6", color: "#be123c" },
-  badge_info: { background: "#dbeafe", color: "#1d4ed8" },
-  badge_dark: { background: "#e2e8f0", color: "#334155" },
-  badge_neutral: { background: "#f1f5f9", color: "#475569" },
-  progressWrap: { display: "grid", gap: "5px", minWidth: "150px" },
-  progressTrack: { height: "7px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" },
-  progressFill: { display: "block", height: "100%", background: "#2563eb", borderRadius: "999px" },
-  emptyInline: { minHeight: "120px", display: "grid", placeItems: "center", gap: "8px", color: "#64748b", textAlign: "center" },
-  flowRow: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" },
-  flowItem: { border: "1px solid #e5e7eb", borderRadius: "9px", padding: "11px", background: "#f8fafc", display: "grid", gap: "4px", minWidth: 0 },
-  compactRow: { display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #eef2f7" },
-  warningRow: { display: "flex", gap: "8px", alignItems: "center", padding: "10px", border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: "10px", marginBottom: "8px" },
-  message: { maxWidth: "1440px", margin: "0 auto 12px", borderRadius: "10px", padding: "10px 42px 10px 12px", position: "relative", fontWeight: 800, fontSize: "13px" },
-  messageOk: { background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" },
-  messageError: { background: "#ffe4e6", color: "#be123c", border: "1px solid #fecdd3" },
-  messageClose: { position: "absolute", right: "10px", top: "8px", border: 0, background: "transparent", cursor: "pointer", color: "inherit" },
-  emptyPanel: { maxWidth: "560px", margin: "90px auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "30px", textAlign: "center", display: "grid", gap: "10px", justifyItems: "center" },
-  linkButton: { display: "inline-flex", alignItems: "center", gap: "8px", background: "#2563eb", color: "#fff", borderRadius: "9px", padding: "10px 14px", textDecoration: "none", fontWeight: 800 },
-};

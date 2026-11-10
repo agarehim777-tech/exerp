@@ -52,7 +52,7 @@ export default function CrmDealsPage() {
           <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
         </div>
         <button onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
-          style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 0, padding: '10px 18px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>+ Sövdələşmə</button>
+          className="sx-ef4ac23 sx-4eb23a8 sx-012333e sx-618e663 sx-3c85720 sx-83e4487 sx-b202c6d">+ Sövdələşmə</button>
       </header>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
@@ -86,14 +86,10 @@ export default function CrmDealsPage() {
 function StageColumn({ stage, count, sum, onAdd, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   return (
-    <div ref={setNodeRef} style={{
-      minWidth: 280, background: isOver ? '#ecfdf5' : '#f8fafc', borderRadius: 14,
-      display: 'flex', flexDirection: 'column', border: `2px solid ${isOver ? stage.color : 'transparent'}`,
-      transition: 'all 0.2s',
-    }}>
+    <div ref={setNodeRef} className={`sx-0ee1255 ${isOver ? "sx-e016922" : "sx-b55f8cb"} sx-2f18f99 sx-f7dbba7 sx-678b59d sx-b1185e5`} style={{ border: `2px solid ${isOver ? stage.color : 'transparent'}` }}>
       <div className="u-padding-12px u-border-bottom-1px_solid_border">
         <div className="u-display-flex u-align-items-center u-gap-8px">
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color }} />
+          <span className="sx-90bc849 sx-c984939 sx-8f633ef" style={{ background: stage.color }} />
           <b className="u-flex-1">{stage.name}</b>
           <span className="u-background-surface u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{count}</span>
         </div>
@@ -143,33 +139,32 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
     } finally { setBusy(false); }
   };
 
-  const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 };
   return (
     <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_0_5 u-display-flex u-align-items-center u-justify-content-center u-z-index-100">
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
  className="u-background-surface u-border-radius-16px u-padding-24px u-width-480px u-max-width-92vw u-display-flex u-flex-direction-column u-gap-12px">
         <h2 className="u-margin-0">Yeni sövdələşmə</h2>
-        <label>Başlıq *<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={inp} required /></label>
+        <label>Başlıq *<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="crm-deals-page-inp" required /></label>
         <label>Müştəri
-          <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} style={inp}>
+          <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} className="crm-deals-page-inp">
             <option value="">—</option>
             {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
         <div className="u-display-grid u-grid-template-columns-2fr_1fr u-gap-8px">
-          <label>Məbləğ<input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} style={inp} /></label>
+          <label>Məbləğ<input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="crm-deals-page-inp" /></label>
           <label>Valyuta
-            <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} style={inp}>
+            <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} className="crm-deals-page-inp">
               <option>AZN</option><option>USD</option><option>EUR</option>
             </select>
           </label>
         </div>
         <label>Mərhələ
-          <select value={form.stage_id} onChange={e => setForm({ ...form, stage_id: e.target.value })} style={inp}>
+          <select value={form.stage_id} onChange={e => setForm({ ...form, stage_id: e.target.value })} className="crm-deals-page-inp">
             {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
-        <label>Gözlənilən bağlanma<input type="date" value={form.expected_close} onChange={e => setForm({ ...form, expected_close: e.target.value })} style={inp} /></label>
+        <label>Gözlənilən bağlanma<input type="date" value={form.expected_close} onChange={e => setForm({ ...form, expected_close: e.target.value })} className="crm-deals-page-inp" /></label>
         <div className="u-display-flex u-justify-content-flex_end u-gap-8px">
           <button type="button" onClick={onClose} className="u-padding-8px_16px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</button>
           <button type="submit" disabled={busy} className="u-background-action u-color-surface u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-700">{busy ? '...' : 'Yarat'}</button>

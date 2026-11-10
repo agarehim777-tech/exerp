@@ -64,7 +64,7 @@ export default function TenantBootstrap() {
           <p className="u-color-5f7a70 u-margin-top-8px u-font-size-14px u-line-height-1_55">
             Sistemə daxil ola bilmək üçün zəhmət olmasa <strong>ExERP platform administratoru</strong> ilə əlaqə saxlayın — o, sizin şirkətinizi yaradıb hesabınızı əlaqələndirəcək.
           </p>
-          <button onClick={signOut} style={{ ...btn, marginTop: 18 }}>Çıxış</button>
+          <button onClick={signOut} className="tenant-bootstrap-btn sx-4a909ea">Çıxış</button>
         </div>
       </main>
     );
@@ -108,4 +108,3 @@ export default function TenantBootstrap() {
 }
 
 
-const btn = { padding: "12px 14px", borderRadius: 12, background: "linear-gradient(135deg,#0d7a5f,#064e3b)", color: "#f5f0e0", border: 0, cursor: "pointer", fontWeight: 700, fontFamily: "Sora, sans-serif" };

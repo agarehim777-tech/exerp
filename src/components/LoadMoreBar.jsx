@@ -11,16 +11,7 @@ export default function LoadMoreBar({ hasMore, onLoadMore, loading, label = "Dah
         type="button"
         onClick={onLoadMore}
         disabled={loading}
-        style={{
-          background: "transparent",
-          border: "1px solid #d7e0dc",
-          color: "#0d7a5f",
-          padding: "8px 18px",
-          borderRadius: 999,
-          cursor: loading ? "progress" : "pointer",
-          fontWeight: 700,
-          fontSize: 13,
-        }}
+        className={`sx-1eb2246 sx-63585d6 sx-3153e0f sx-df3930f sx-1eb7905 ${loading ? "sx-50b0de5" : "sx-b202c6d"} sx-83e4487 sx-3044b60`}
  >
         {loading ? "Yüklənir…" : label}
       </button>

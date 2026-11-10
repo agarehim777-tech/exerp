@@ -118,3 +118,12 @@ export function badge(tone = "gray") {
 export function azn(value) {
   return cashAmount(Number(value) || 0);
 }
+
+// Class-based equivalents of badge()/tabBtn() that reuse the shared Badge and tab styles.
+const BADGE_TONE_CLASS = { green: "success", red: "danger", amber: "warning", yellow: "warning", gray: "neutral" };
+export function badgeClass(tone = "gray") {
+  return `ui-badge ui-badge-${BADGE_TONE_CLASS[tone] || "neutral"}`;
+}
+export function tabClass(active) {
+  return active ? "ui-tok-tab ui-tok-tab-active" : "ui-tok-tab";
+}

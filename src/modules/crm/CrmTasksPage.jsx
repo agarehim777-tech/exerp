@@ -74,7 +74,7 @@ function Bucket({ title, color, tasks, onToggle, onRemove }) {
   return (
     <div className="u-background-surface u-border-1px_solid_border u-border-radius-12px u-padding-12px">
       <div className="u-display-flex u-align-items-center u-gap-8px u-margin-bottom-10px">
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+        <span className="sx-90bc849 sx-c984939 sx-8f633ef" style={{ background: color }} />
         <b>{title}</b>
         <span className="u-margin-left-auto u-background-surface_subtle u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{tasks.length}</span>
       </div>
@@ -90,8 +90,8 @@ function TaskRow({ t, onToggle, onRemove }) {
   return (
     <div className="u-display-flex u-align-items-center u-gap-8px u-padding-8px u-background-surface_subtle u-border-radius-8px">
       <input type="checkbox" checked={t.done} onChange={e => onToggle(t.id, e.target.checked)} />
-      <span style={{ width: 4, height: 24, borderRadius: 2, background: priColor[t.priority] }} />
-      <div style={{ flex: 1, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#94a3b8' : '#0f172a', fontSize: 13 }}>
+      <span className="sx-dd518b1 sx-eeb774e sx-0384986" style={{ background: priColor[t.priority] }} />
+      <div className={`sx-da5cd67 ${t.done ? "sx-c9b77c9" : "sx-116e33d"} ${t.done ? "sx-8cd4ae7" : "sx-5cfb91b"} sx-3044b60`}>
         <div>{t.title}</div>
         {t.due_at && <div className="u-font-size-11px u-color-text_secondary">{new Date(t.due_at).toLocaleString('az-AZ')}</div>}
       </div>

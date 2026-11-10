@@ -89,8 +89,8 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
 
       <div className="customer-messenger-panel--s-row">
         <div className="customer-messenger-panel--s-tabs">
-          <button onClick={() => setChannel("whatsapp")} style={{ ...S.tab, ...(channel === "whatsapp" ? S.tabOn : {}) }}>WhatsApp</button>
-          <button onClick={() => setChannel("telegram")} style={{ ...S.tab, ...(channel === "telegram" ? S.tabOn : {}) }}>Telegram</button>
+          <button onClick={() => setChannel("whatsapp")} className={`customer-messenger-panel--s-tab ${channel === "whatsapp" ? "customer-messenger-panel--s-tab-on" : ""}`}>WhatsApp</button>
+          <button onClick={() => setChannel("telegram")} className={`customer-messenger-panel--s-tab ${channel === "telegram" ? "customer-messenger-panel--s-tab-on" : ""}`}>Telegram</button>
         </div>
         <select value={customerId} onChange={(event) => { setCustomerId(event.target.value); setOrderId(""); }} className="customer-messenger-panel--s-input">
           <option value="">Müştəri seçin</option>
@@ -108,7 +108,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
       <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} className="customer-messenger-panel--s-textarea" placeholder="Mesaj mətni" />
 
       <div className="customer-messenger-panel--s-actions">
-        <span style={{ fontSize: 12, color: recipient ? "#475569" : "#b91c1c" }}>
+        <span className={`sx-6b9c179 ${recipient ? "sx-53deb6e" : "sx-53875d1"}`}>
           {recipient
             ? `Alıcı: ${recipient}`
             : channel === "telegram"
@@ -123,7 +123,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
         </button>
       </div>
 
-      {message && <div style={message.tone === "ok" ? S.ok : S.err}>{message.text}</div>}
+      {message && <div className={`${message.tone === "ok" ? "customer-messenger-panel--s-ok" : "customer-messenger-panel--s-err"}`}>{message.text}</div>}
 
       {deliveries.length > 0 && (
         <div>
@@ -133,7 +133,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
               <div key={row.id} className="customer-messenger-panel--s-log-row">
                 <span className="u-font-weight-600 u-text-transform-capitalize">{row.channel}</span>
                 <span className="u-color-text_secondary">{row.recipient}</span>
-                <span style={{ color: row.status === "sent" ? "#15803d" : row.status === "failed" ? "#b91c1c" : "#b45309" }}>{row.status}</span>
+                <span className={`messenger-status messenger-status-${row.status === "sent" ? "sent" : row.status === "failed" ? "failed" : "pending"}`}>{row.status}</span>
                 <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleString("az-AZ")}</span>
               </div>
             ))}

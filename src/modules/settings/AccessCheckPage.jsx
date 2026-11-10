@@ -6,7 +6,7 @@ function Pill({ ok, label }) {
   const bg = ok === null ? "#e5e7eb" : ok ? "#dcfce7" : "#fee2e2";
   const fg = ok === null ? "#374151" : ok ? "#166534" : "#991b1b";
   return (
-    <span style={{ background: bg, color: fg, padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+    <span className="sx-f456d36 sx-1eb7905 sx-6b9c179 sx-e634e6d" style={{ background: bg, color: fg }}>
       {ok === null ? "—" : ok ? "✓" : "✗"} {label}
     </span>
   );
@@ -158,7 +158,7 @@ export default function AccessCheckPage() {
                 <button
                   key={p.id}
                   onClick={() => { setProjectId(p.id); runProjectCheck(p.id); }}
-                  style={{ padding: "4px 10px", fontSize: 12, borderRadius: 999, border: "1px solid #d1d5db", background: p.user_id === user?.id ? "#ecfdf5" : "#f9fafb", cursor: "pointer" }}
+                  className={`sx-cd22087 sx-6b9c179 sx-1eb7905 sx-006d15c ${p.user_id === user?.id ? "sx-e016922" : "sx-98f358a"} sx-b202c6d`}
                   title={p.user_id === user?.id ? "Sizin layihəniz" : "Başqasının layihəsi"}
  >
                   {p.name || p.id.slice(0, 8)}

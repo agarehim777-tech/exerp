@@ -16,16 +16,15 @@ export default function BirthDateInput({ value, onChange }) {
     if (part === 'year') setYear(next);
     onChange(parts.day && parts.month && parts.year ? `${parts.year}-${parts.month}-${parts.day}` : '');
   };
-  const selectStyle = { minWidth: 0, width: '100%', height: 38, border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '0 8px', fontSize: 14 };
   const currentYear = new Date().getFullYear();
   return <div className="u-display-grid u-grid-template-columns-0_8fr_1_2fr_1fr u-gap-8px u-margin-top-4px">
-    <select aria-label="Gün" value={day} onChange={e => setPart('day', e.target.value)} style={selectStyle}>
+    <select aria-label="Gün" value={day} onChange={e => setPart('day', e.target.value)} className="birth-date-input-select-style">
       <option value="">Gün</option>{Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(v => <option key={v} value={v}>{Number(v)}</option>)}
     </select>
-    <select aria-label="Ay" value={month} onChange={e => setPart('month', e.target.value)} style={selectStyle}>
+    <select aria-label="Ay" value={month} onChange={e => setPart('month', e.target.value)} className="birth-date-input-select-style">
       <option value="">Ay</option>{['Yanvar','Fevral','Mart','Aprel','May','İyun','İyul','Avqust','Sentyabr','Oktyabr','Noyabr','Dekabr'].map((name, i) => <option key={name} value={String(i + 1).padStart(2, '0')}>{name}</option>)}
     </select>
-    <select aria-label="İl" value={year} onChange={e => setPart('year', e.target.value)} style={selectStyle}>
+    <select aria-label="İl" value={year} onChange={e => setPart('year', e.target.value)} className="birth-date-input-select-style">
       <option value="">İl</option>{Array.from({ length: 110 }, (_, i) => String(currentYear - i)).map(v => <option key={v} value={v}>{v}</option>)}
     </select>
   </div>;
