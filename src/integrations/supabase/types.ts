@@ -5033,6 +5033,81 @@ export type Database = {
           },
         ]
       }
+      vendor_invoice_payments: {
+        Row: {
+          account_id: string
+          amount: number
+          cash_transaction_id: string
+          created_by: string
+          currency: string
+          id: string
+          invoice_id: string
+          journal_entry_id: string
+          paid_at: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          cash_transaction_id: string
+          created_by: string
+          currency: string
+          id?: string
+          invoice_id: string
+          journal_entry_id: string
+          paid_at?: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          cash_transaction_id?: string
+          created_by?: string
+          currency?: string
+          id?: string
+          invoice_id?: string
+          journal_entry_id?: string
+          paid_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoice_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: true
+            referencedRelation: "cash_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_invoices: {
         Row: {
           created_at: string
@@ -5639,6 +5714,10 @@ export type Database = {
       mark_sales_order_delivered: {
         Args: { _order_id: string }
         Returns: undefined
+      }
+      pay_vendor_invoice_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       platform_bootstrap_admin: { Args: never; Returns: boolean }
       platform_create_tenant: {
