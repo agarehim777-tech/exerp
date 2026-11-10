@@ -81,8 +81,8 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
           <p className="u-margin-4px_0_0 u-color-var_muted_fg_text_secondary">360° görünüş, sövdələşmə tarixi və aktivlik</p>
         </div>
         <div className="u-display-flex u-gap-8px">
-        <Button variant="secondary" onClick={() => setShowLevels(true)} className="u-background-surface u-color-08745a u-border-1px_solid_08745a u-padding-10px_14px u-border-radius-10px u-font-weight-700 u-cursor-pointer">Müştəri səviyyələri</Button>
-        <Button onClick={() => setShowNew(true)} className="btn-primary u-background-linear_gradient_135deg_action_action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-font-weight-700 u-cursor-pointer u-box-shadow-0_4px_14px_rgba_16_185_129_0_35"
+        <Button variant="secondary" onClick={() => setShowLevels(true)}>Müştəri səviyyələri</Button>
+        <Button onClick={() => setShowNew(true)}
           >
           + Yeni müştəri
         </Button>
@@ -118,8 +118,8 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
           <span className="u-background-fef3c7 u-color-92400e u-padding-5px_10px u-border-radius-999px u-font-size-12px u-font-weight-700">{birthdays.length} müştəri</span>
         </div>
         {!birthdays.length ? <div className="u-color-text_secondary u-font-size-13px">Yaxınlaşan ad günü yoxdur.</div> : <div className="u-display-grid u-gap-8px">
-          {birthdaysToday.map(({ customer }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_86efac u-background-f0fdf4 u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></Button>)}
-          {birthdaysUpcoming.map(({ customer, next }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_border u-background-surface u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></Button>)}
+          {birthdaysToday.map(({ customer }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)}><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></Button>)}
+          {birthdaysUpcoming.map(({ customer, next }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)}><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></Button>)}
         </div>}
       </section>
 

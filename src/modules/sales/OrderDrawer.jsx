@@ -127,7 +127,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                   <EditField label="Miqdar"><Input type="number" min="0.01" step="0.01" value={it.qty} readOnly={priceEditOnly} onChange={e => changeItem(index, 'qty', e.target.value)}  /></EditField>
                   <EditField label="Qiymət"><Input type="number" min="0" step="0.01" value={it.unit_price} onChange={e => changeItem(index, 'unit_price', e.target.value)}  /></EditField>
                   <EditField label="ƏDV"><Select value={Number(it.vat_rate || 0)} onChange={e => changeItem(index, 'vat_rate', Number(e.target.value))} ><option value="0">ƏDV yoxdur</option><option value="18">18% ƏDV</option></Select></EditField>
-                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <Button variant="danger" onClick={() => removeItem(index)} className="u-border-1px_solid_fecaca u-border-radius-7px u-padding-7px_10px u-background-surface u-color-danger u-cursor-pointer">Sil</Button>}</div>
+                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <Button variant="danger" onClick={() => removeItem(index)}>Sil</Button>}</div>
                 </Card>;
               })}
               {!priceEditOnly && <Button variant="secondary" type="button" onClick={addItem}>+ Məhsul əlavə et</Button>}
@@ -148,8 +148,8 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                 <StatusBadge status={salesStatus.label} size="md" />
               </div>
               <div className="u-display-flex u-gap-8px u-flex-wrap-wrap">
-                {salesStatus.next && <Button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy} className="u-padding-9px_14px u-border-radius-8px u-border-0 u-background-0b7a5c u-color-surface u-cursor-pointer u-font-weight-700">{busy ? 'Yenilənir…' : salesStatus.nextLabel}</Button>}
-                {!['delivered', 'cancelled'].includes(order.status) && <Button variant="danger" type="button" onClick={() => onDelete(order.id)} disabled={busy} className="u-padding-9px_14px u-border-radius-8px u-border-1px_solid_fecaca u-background-surface u-color-danger u-cursor-pointer u-font-weight-700">Ləğv et</Button>}
+                {salesStatus.next && <Button type="button" onClick={() => changeStatus(salesStatus.next)} disabled={busy}>{busy ? 'Yenilənir…' : salesStatus.nextLabel}</Button>}
+                {!['delivered', 'cancelled'].includes(order.status) && <Button variant="danger" type="button" onClick={() => onDelete(order.id)} disabled={busy}>Ləğv et</Button>}
                 {!salesStatus.next && <span className="u-color-text_secondary u-font-size-12px">{order.status === 'delivered' ? 'Sifariş müştəriyə təhvil verilib.' : order.status === 'cancelled' ? 'Satış ləğv edilib.' : 'Sifariş təsdiqlənib və anbar təhvili gözləyir.'}</span>}
               </div>
             </div>
@@ -175,8 +175,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
             {!cashAccounts.length && <div className="u-margin-top-8px u-color-text_secondary u-font-size-12px">Hesab seçilməyibsə ödəniş zamanı “Əsas kassa” avtomatik yaradılacaq.</div>}
           </Section>}
 
-          {canManageOrder && <Button variant="danger" onClick={() => onDelete(order.id)} disabled={busy}
-            className="u-background-surface u-color-danger u-border-1px_solid_fecaca u-padding-9px u-border-radius-8px u-cursor-pointer u-font-weight-600">
+          {canManageOrder && <Button variant="danger" onClick={() => onDelete(order.id)} disabled={busy}>
             Sifarişi sil
           </Button>}
         </div>

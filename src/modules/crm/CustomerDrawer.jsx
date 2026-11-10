@@ -75,9 +75,8 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               {tab === 'documents' && <DocumentsTab documents={data.documents || []} onUpload={uploadDocument} onDownload={downloadDocument} onRemove={removeDocument} />}
               {tab === 'activity' && (
                 <div>
-                  <div className="u-display-flex u-gap-8px u-margin-bottom-12px">
-                    <Select value={activityType} onChange={e => setActivityType(e.target.value)}
-                      className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px u-font-size-13px">
+                  <div className="ui-form-grid ui-spacer-bottom">
+                    <Select value={activityType} onChange={e => setActivityType(e.target.value)}>
                       <option value="note">📝 Qeyd</option>
                       <option value="call">📞 Zəng</option>
                       <option value="meeting">🤝 Görüş</option>
@@ -86,8 +85,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
                     </Select>
                     <Input value={activityText} onChange={e => setActivityText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && addActivity()}
-                      placeholder="Nə baş verdi?"
-                      className="u-flex-1 u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-13px" />
+                      placeholder="Nə baş verdi?" className="u-flex-1" />
                     <Button onClick={addActivity} aria-label="Əlaqə əlavə et" title="Əlaqə əlavə et" className="ui-icon-button"><Plus size={18} /></Button>
                   </div>
                   <Timeline items={data.activities || []} />
@@ -173,7 +171,7 @@ const orderStatusLabels = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiql
 function OrdersTab({ orders, count, total, onOpen }) {
   return <div className="u-display-grid u-gap-10px">
     <div className="u-display-flex u-justify-content-space_between u-gap-12px u-color-text_secondary u-font-size-12px"><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
-    {orders.length === 0 ? <div className="u-padding-28px u-text-align-center u-color-text_secondary u-border-1px_dashed_line_strong u-border-radius-10px">Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <Button variant="secondary" className="ui-record-action" key={order.id} type="button" onClick={() => onOpen?.(order.id)} className="u-width-100 u-display-grid u-grid-template-columns-minmax_0_1fr_auto u-gap-10px u-padding-12px u-text-align-left u-border-1px_solid_border u-border-radius-10px u-background-surface u-cursor-pointer">
+    {orders.length === 0 ? <div className="u-padding-28px u-text-align-center u-color-text_secondary u-border-1px_dashed_line_strong u-border-radius-10px">Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <Button variant="secondary" className="ui-record-action" key={order.id} type="button" onClick={() => onOpen?.(order.id)}>
       <span className="u-min-width-0"><strong className="u-display-block u-color-text_primary">{order.order_no || order.id}</strong><small className="u-color-text_secondary">{order.order_date ? new Date(order.order_date).toLocaleDateString('az-AZ') : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
       <span className="u-text-align-right"><strong className="u-display-block u-color-0b7a5c">{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small className="u-color-info">Sifarişə bax →</small></span>
     </Button>)}
@@ -214,7 +212,7 @@ function OverviewTab({ c, tags, onUpdate }) {
           ))}
         </div>
       </div>
-      <Button variant="secondary" onClick={() => setEdit(true)} className="u-margin-top-8px u-background-surface_subtle u-border-1px_solid_border u-padding-8px_14px u-border-radius-8px u-cursor-pointer u-font-weight-600">Düzəliş et</Button>
+      <Button variant="secondary" onClick={() => setEdit(true)} className="u-margin-top-8px">Düzəliş et</Button>
     </div>
   );
 
@@ -240,7 +238,7 @@ function OverviewTab({ c, tags, onUpdate }) {
         </Select>
       </label>
       <div className="u-display-flex u-gap-8px u-justify-content-flex_end">
-        <Button variant="secondary" onClick={() => setEdit(false)} className="u-padding-8px_14px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</Button>
+        <Button variant="secondary" onClick={() => setEdit(false)}>Ləğv</Button>
         <Button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.segment === 'business' ? form.tax_id : (form.fin_code || ''), fin_code: form.segment === 'individual' ? form.fin_code : '', identity_card_no: form.segment === 'individual' ? form.identity_card_no : '', address: form.address, birth_date: form.segment === 'individual' ? (form.birth_date || null) : null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
           >Yadda saxla</Button>
       </div>
@@ -275,7 +273,7 @@ function TasksTab({ tasks }) {
     <div className="u-display-flex u-flex-direction-column u-gap-8px">
       {tasks.map(t => (
         <div key={t.id} className="u-padding-10px u-border-1px_solid_border u-border-radius-10px u-display-flex u-gap-8px u-align-items-center">
-          <Input type="checkbox" checked={t.done} readOnly />
+          <Input type="checkbox" className="ui-checkbox" checked={t.done} readOnly />
           <span className="u-flex-1">{t.title}</span>
           {t.due_at && <span className="u-font-size-11px u-color-text_secondary">{new Date(t.due_at).toLocaleDateString()}</span>}
         </div>
