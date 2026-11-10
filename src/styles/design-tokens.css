@@ -52,5 +52,7 @@
   --panel-shadow: 0 2px 7px rgba(25, 65, 53, .045);
   --tab-shadow: 0 1px 4px rgba(24, 60, 49, .13);
   --focus-shadow: 0 0 0 2px rgba(8, 118, 93, .16);
+  --overlay: rgba(12, 20, 18, .55);
+  --modal-shadow: 0 24px 60px rgba(0, 0, 0, .28);
 }
 
