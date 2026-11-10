@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
-import { azn, badge, card, input, statLabel, statTile, statValue, table, td, th } from "../../shared/ui/tokens.js";
+import { azn, badge, input, statValue, td } from "../../shared/ui/tokens.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.

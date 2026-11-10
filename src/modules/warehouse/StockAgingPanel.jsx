@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { readAllRows } from "../../services/readAllRows.js";
-import { azn, badge, card, input, table, td, th } from "../../shared/ui/tokens.js";
+import { azn, badge, input } from "../../shared/ui/tokens.js";
 import { buildAgingRows, isMissingAgingView } from "./stockAging.js";
 
 export default function StockAgingPanel({ tenantId }) {

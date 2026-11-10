@@ -2,13 +2,11 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useProducts } from "../../shared/hooks/useProducts.js";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
-import { card, input, primaryBtn, secondaryBtn, delBtn, table, th, td, msgBox, badge, azn } from "../../shared/ui/tokens.js";
+import { card, input, td, badge, azn } from "../../shared/ui/tokens.js";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 
 const emptyProduct = { id: "", sku: "", name: "", description: "", unit: "ədəd", price: "", currency: "AZN", vat_rate: 18, is_active: true };
-const summaryCard = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: "15px 18px", display: "grid", gap: 5 };
-const summaryLabel = { fontSize: 12, color: "#718079", fontWeight: 650 };
 const summaryValue = { fontSize: 22, lineHeight: 1.2, color: "#173f32" };
 
 export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }) {

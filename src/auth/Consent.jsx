@@ -101,7 +101,3 @@ export default function OAuthConsent() {
   );
 }
 
-const wrap = { maxWidth: 480, margin: "5rem auto", padding: "0 1rem", fontFamily: "system-ui" };
-const h1 = { fontSize: "1.3rem", marginBottom: 12 };
-const primaryBtn = { padding: "10px 16px", borderRadius: 8, background: "#2563eb", color: "#fff", border: 0, cursor: "pointer", fontWeight: 600 };
-const secondaryBtn = { padding: "10px 16px", borderRadius: 8, background: "#f3f4f6", color: "#111", border: "1px solid #e5e7eb", cursor: "pointer" };

@@ -6,18 +6,12 @@ import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import {
-  azn, badge, card as baseCard, delBtn, input, msgBox, primaryBtn,
-  statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
-} from "../../shared/ui/tokens.js";
+import { azn, badge, card as baseCard, input, msgBox, primaryBtn, statValue, tabBtn, td } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
 const card = { ...baseCard, minWidth: 0 };
-const sectionTitle = { margin: 0, fontSize: 19, lineHeight: 1.3, color: "#12372c" };
-const sectionSubtitle = { margin: "5px 0 18px", fontSize: 13, lineHeight: 1.5, color: "#66756f" };
 const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#334b43" };
-const formGrid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(220px, 1fr))", gap: 14 };
 const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 function useTablePage(rows) {

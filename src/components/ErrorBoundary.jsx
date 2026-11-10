@@ -63,7 +63,4 @@ export default class ErrorBoundary extends React.Component {
   }
 }
 
-const wrap = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f0e0", fontFamily: "Manrope, system-ui" };
-const card = { background: "#fff", padding: 28, borderRadius: 22, boxShadow: "0 18px 44px rgba(6,78,59,0.14)", width: "min(560px, 92vw)", border: "1px solid #e6dfc9" };
-const pre = { marginTop: 14, background: "#faf6ea", padding: 12, borderRadius: 12, fontSize: 12, color: "#0f2a20", maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" };
 const btn = { padding: "10px 14px", borderRadius: 12, background: "linear-gradient(135deg,#0d7a5f,#064e3b)", color: "#f5f0e0", border: 0, cursor: "pointer", fontWeight: 700, fontFamily: "Sora, sans-serif" };

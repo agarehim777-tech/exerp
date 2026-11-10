@@ -26,14 +26,7 @@ const ResetPassword = lazy(() => import("./auth/ResetPassword.jsx"));
 const TenantBootstrap = lazy(() => import("./auth/TenantBootstrap.jsx"));
 const AcceptInvite = lazy(() => import("./auth/AcceptInvite.jsx"));
 
-const fullPage = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "100vh",
-  fontFamily: "Manrope, system-ui, sans-serif",
-  color: "#0f2a20",
-};
+
 
 function Loading({ label = "Yüklənir…" }) {
   return <div className="main-full-page">{label}</div>;

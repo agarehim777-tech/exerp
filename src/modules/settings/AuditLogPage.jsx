@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAuditLogs } from "../../shared/hooks/useAuditLogs.js";
-import {
-  badge, card, input, msgBox, secondaryBtn, statLabel, statTile, statValue, table, td, th,
-} from "../../shared/ui/tokens.js";
+import { badge, input, td } from "../../shared/ui/tokens.js";
 
 const TABLE_LABEL = {
   journal_entries: "Jurnal yazılışları",
@@ -133,15 +131,3 @@ function AuditRow({ log }) {
   );
 }
 
-const preStyle = {
-  flex: 1,
-  minWidth: 260,
-  maxHeight: 240,
-  overflow: "auto",
-  background: "#faf8f0",
-  border: "1px solid #ece5d0",
-  borderRadius: 8,
-  padding: 10,
-  fontSize: 11,
-  margin: 0,
-};
