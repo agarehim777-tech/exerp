@@ -1382,6 +1382,7 @@ export type Database = {
           acceptance_signature: string | null
           accepted_at: string | null
           created_at: string
+          created_by: string | null
           delivered_at: string | null
           delivered_by: string | null
           delivery_no: string | null
@@ -1402,6 +1403,7 @@ export type Database = {
           acceptance_signature?: string | null
           accepted_at?: string | null
           created_at?: string
+          created_by?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
           delivery_no?: string | null
@@ -1422,6 +1424,7 @@ export type Database = {
           acceptance_signature?: string | null
           accepted_at?: string | null
           created_at?: string
+          created_by?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
           delivery_no?: string | null
@@ -5033,6 +5036,155 @@ export type Database = {
           },
         ]
       }
+      vendor_invoice_payments: {
+        Row: {
+          account_id: string
+          amount: number
+          cash_transaction_id: string
+          created_by: string
+          currency: string
+          id: string
+          invoice_id: string
+          journal_entry_id: string
+          paid_at: string
+          tenant_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          cash_transaction_id: string
+          created_by: string
+          currency: string
+          id?: string
+          invoice_id: string
+          journal_entry_id: string
+          paid_at?: string
+          tenant_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          cash_transaction_id?: string
+          created_by?: string
+          currency?: string
+          id?: string
+          invoice_id?: string
+          journal_entry_id?: string
+          paid_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoice_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: true
+            referencedRelation: "cash_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_invoice_tax_postings: {
+        Row: {
+          created_by: string
+          currency: string
+          gross_amount: number
+          id: string
+          invoice_id: string
+          journal_entry_id: string
+          net_amount: number
+          posted_at: string
+          tax_account_id: string
+          tax_amount: number
+          tax_treatment: string
+          tenant_id: string
+        }
+        Insert: {
+          created_by: string
+          currency: string
+          gross_amount: number
+          id?: string
+          invoice_id: string
+          journal_entry_id: string
+          net_amount: number
+          posted_at?: string
+          tax_account_id: string
+          tax_amount: number
+          tax_treatment: string
+          tenant_id: string
+        }
+        Update: {
+          created_by?: string
+          currency?: string
+          gross_amount?: number
+          id?: string
+          invoice_id?: string
+          journal_entry_id?: string
+          net_amount?: number
+          posted_at?: string
+          tax_account_id?: string
+          tax_amount?: number
+          tax_treatment?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_tax_account_id_fkey"
+            columns: ["tax_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_invoice_tax_postings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_invoices: {
         Row: {
           created_at: string
@@ -5449,8 +5601,19 @@ export type Database = {
         Args: { _invoice_id: string }
         Returns: undefined
       }
+      cashbook_ledger_summary: { Args: { _tenant_id: string }; Returns: Json }
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
+      complete_sales_delivery: {
+        Args: {
+          _acceptance: Json
+          _order_id: string
+          _request_key: string
+          _tenant_id: string
+          _warehouse_id: string
+        }
+        Returns: Json
+      }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
       create_credit_contract: {
         Args: {
@@ -5630,6 +5793,14 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      pay_vendor_invoice_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
+      pay_vendor_invoice_with_tax_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       platform_bootstrap_admin: { Args: never; Returns: boolean }
       platform_create_tenant: {
         Args: {
@@ -5769,6 +5940,19 @@ export type Database = {
       }
       receive_landed_cost_shipment: {
         Args: { _receipt_date?: string; _shipment: string; _warehouse: string }
+        Returns: string
+      }
+      receive_stock: {
+        Args: {
+          _note?: string
+          _product_id: string
+          _quantity: number
+          _reference_id?: string
+          _reference_type?: string
+          _tenant_id: string
+          _unit_cost: number
+          _warehouse_id: string
+        }
         Returns: string
       }
       refresh_credit_overdue: {
