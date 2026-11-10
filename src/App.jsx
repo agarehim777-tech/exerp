@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { moduleFromPath, pathForModule, pathForRecord, canonicalPath } from "./config/routes.js";
+import { pathForModule, pathForRecord } from "./config/routes.js";
+import { useModuleNavigation } from "./shared/hooks/useModuleNavigation";
+import { useToasts } from "./shared/hooks/useToasts";
 import { useAuth } from "./auth/AuthProvider.jsx";
 import { ProductionLedgerPage } from './config/lazyPages.js';
 import { supabase } from "./integrations/supabase/client";
@@ -252,25 +253,7 @@ function App() {
     ordersLoaded: dbOrdersLoaded, inventory: dbInventory, setState,
   });
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [active, setActiveState] = useState(() => moduleFromPath(location.pathname));
-  const setActive = useCallback((id) => {
-    setActiveState(id);
-    const target = pathForModule(id);
-    if (location.search || (location.pathname !== target && !location.pathname.startsWith(target + "/"))) {
-      navigate(target);
-    }
-  }, [navigate, location.pathname, location.search]);
-  useEffect(() => {
-    const fromUrl = moduleFromPath(location.pathname);
-    setActiveState((prev) => (prev === fromUrl ? prev : fromUrl));
-    // Köhnə/alias URL-lərini kanonik yeni ünvana yönləndir.
-    const target = canonicalPath(location.pathname);
-    if (target && target !== "/") {
-      navigate(target + location.search + location.hash, { replace: true });
-    }
-  }, [location.pathname, location.search, location.hash, navigate]);
+  const { active, setActive, location, navigate } = useModuleNavigation();
 
 
   const [query, setQuery] = useState("");
@@ -283,7 +266,7 @@ function App() {
       refreshDbInventory();
     }
   }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, refreshDbInventory]);
-  const [toasts, setToasts] = useState([]);
+  const { toasts, setToasts, notify } = useToasts();
   const [selectedKpiPeriod, setSelectedKpiPeriod] = useState(getKpiPeriodKey);
   const [kpiAccountId, setKpiAccountId] = useState("");
   const kpiLedger = useKpiLedger(active === "kpi" ? activeTenantId : null);
@@ -540,14 +523,6 @@ function App() {
       messageConversations,
     ],
   );
-
-  const notify = useCallback((message, variant = "success") => {
-    const id = Date.now() + Math.random();
-    setToasts((items) => [...items, { id, message, variant }]);
-    window.setTimeout(() => {
-      setToasts((items) => items.filter((item) => item.id !== id));
-    }, 3200);
-  }, []);
 
   const handleGitHubPush = useCallback(
     (commit) => {
