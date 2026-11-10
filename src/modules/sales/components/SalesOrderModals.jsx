@@ -781,7 +781,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <div className="section-title-row">
               <div>
                 <span className="order-label">DAXİLİ QEYDLƏR</span>
-                <small style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>Qeydin kim üçün olduğunu seçin. Bu məlumat sifariş kartında saxlanacaq.</small>
+                <small className="u-display-block u-margin-top-4px u-color-muted">Qeydin kim üçün olduğunu seçin. Bu məlumat sifariş kartında saxlanacaq.</small>
               </div>
               <button type="button" className="secondary-btn" onClick={() => setInternalNotes((rows) => [...rows, { id: createClientId(), recipient: "Maliyyə", text: "" }])}>
                 <Plus size={16} /> Qeyd əlavə et

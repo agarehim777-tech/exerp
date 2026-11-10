@@ -127,14 +127,14 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
 
       {deliveries.length > 0 && (
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Son göndərişlər</div>
-          <div style={{ display: "grid", gap: 4 }}>
+          <div className="u-font-size-13px u-font-weight-700 u-margin-bottom-6px">Son göndərişlər</div>
+          <div className="u-display-grid u-gap-4px">
             {deliveries.map((row) => (
               <div key={row.id} style={S.logRow}>
-                <span style={{ fontWeight: 600, textTransform: "capitalize" }}>{row.channel}</span>
-                <span style={{ color: "#475569" }}>{row.recipient}</span>
+                <span className="u-font-weight-600 u-text-transform-capitalize">{row.channel}</span>
+                <span className="u-color-text_secondary">{row.recipient}</span>
                 <span style={{ color: row.status === "sent" ? "#15803d" : row.status === "failed" ? "#b91c1c" : "#b45309" }}>{row.status}</span>
-                <span style={{ color: "#94a3b8", fontSize: 12 }}>{new Date(row.created_at).toLocaleString("az-AZ")}</span>
+                <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleString("az-AZ")}</span>
               </div>
             ))}
           </div>

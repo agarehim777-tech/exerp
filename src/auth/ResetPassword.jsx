@@ -36,19 +36,19 @@ export default function ResetPassword() {
   return (
     <main style={wrap}>
       <div style={card}>
-        <h1 style={{ fontFamily: "Sora, sans-serif", margin: 0, fontSize: 22, color: "#064e3b" }}>
+        <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
           Şifrəni yenilə
         </h1>
         {!ready ? (
-          <p style={{ marginTop: 12, fontSize: 14, color: "#5f7a70" }}>
+          <p className="u-margin-top-12px u-font-size-14px u-color-5f7a70">
             Emailinizə göndərilən linkə klikləyin. Bu səhifə həmin linkdən açılmalıdır.
           </p>
         ) : ok ? (
-          <p style={{ marginTop: 12, fontSize: 14, color: "#0d7a5f" }}>
+          <p className="u-margin-top-12px u-font-size-14px u-color-0d7a5f">
             Şifrə yeniləndi. Girişə yönləndirilirsiniz…
           </p>
         ) : (
-          <form onSubmit={submit} style={{ display: "grid", gap: 10, marginTop: 16 }}>
+          <form onSubmit={submit} className="u-display-grid u-gap-10px u-margin-top-16px">
             <input
               required
               type="password"
@@ -63,7 +63,7 @@ export default function ResetPassword() {
             </button>
           </form>
         )}
-        {error && <p style={{ color: "#b23a3a", marginTop: 12, fontSize: 13 }}>{error}</p>}
+        {error && <p className="u-color-b23a3a u-margin-top-12px u-font-size-13px">{error}</p>}
       </div>
     </main>
   );

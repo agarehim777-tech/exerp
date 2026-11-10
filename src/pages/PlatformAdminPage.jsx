@@ -171,20 +171,20 @@ export default function PlatformAdminPage() {
     return (
       <Panel>
         <PanelHeader title="Platform Super Admin" subtitle="Bu bölmə yalnız platform administratorları üçündür." />
-        <p className="muted" style={{ marginBottom: 12 }}>
+        <p className="muted u-margin-bottom-12px" >
           Hələ heç bir platform admin təyin edilməyib. İlk admin kimi özünüzü təyin edin.
         </p>
         <button type="button" className="primary-btn" onClick={bootstrap} disabled={busy}>
           {busy ? "Təyin olunur…" : "Məni platform admin təyin et"}
         </button>
-        {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
+        {error && <div className="form-error u-margin-top-10px" >{error}</div>}
       </Panel>
     );
   }
 
   return (
     <div className="page-grid">
-      <section className="metric-grid four" style={{ gridColumn: "1 / -1" }}>
+      <section className="metric-grid four u-grid-column-1_1" >
         <MetricCard label="Aktiv şirkət" value={activeTenantCount} trend={`${tenants.length} tenant`} icon={Building2} tone="success" />
         <MetricCard label="Platform istifadəçisi" value={totalPlatformUsers} trend="Bütün tenant-lər" icon={Users} tone="primary" />
         <MetricCard label="Dondurulmuş" value={frozenTenantCount} trend="Giriş məhdudiyyəti" icon={ShieldCheck} tone={frozenTenantCount ? "warning" : "success"} />
@@ -196,8 +196,8 @@ export default function PlatformAdminPage() {
           subtitle={editing ? "Dəyişiklikləri yadda saxlayın." : "Yeni tenant və (istəyə bağlı) admin — müvəqqəti parol yaradılır."}
           action={editing ? <button type="button" className="secondary-btn" onClick={cancelEdit}>Ləğv et</button> : null}
         />
-        <form className="form-grid" onSubmit={submit} style={{ gap: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <form className="form-grid u-gap-12px" onSubmit={submit} >
+          <div className="u-display-grid u-grid-template-columns-1fr_1fr u-gap-12px">
             <label className="field">
               <span>Şirkət adı *</span>
               <input required value={form.name}
@@ -209,7 +209,7 @@ export default function PlatformAdminPage() {
                 onChange={(e) => setForm({ ...form, slug: slugifyPlatform(e.target.value) })} placeholder="avto" />
             </label>
             {!editing && (
-              <label className="field" style={{ gridColumn: "1 / -1" }}>
+              <label className="field u-grid-column-1_1" >
                 <span>Admin e-poçtu (müvəqqəti parol yaradılacaq)</span>
                 <input type="email" value={form.admin_email}
                   onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
@@ -238,16 +238,16 @@ export default function PlatformAdminPage() {
             </label>
           </div>
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>İcazə verilən modullar ({form.modules.length}/{PLATFORM_MODULE_CHOICES.length})</span>
-              <div style={{ display: "flex", gap: 8 }}>
+            <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-6px">
+              <span className="u-font-weight-600 u-font-size-13px">İcazə verilən modullar ({form.modules.length}/{PLATFORM_MODULE_CHOICES.length})</span>
+              <div className="u-display-flex u-gap-8px">
                 <button type="button" className="link-btn" onClick={() => setForm({ ...form, modules: PLATFORM_MODULE_CHOICES.map((m) => m.id) })}>Hamısı</button>
                 <button type="button" className="link-btn" onClick={() => setForm({ ...form, modules: [] })}>Heç biri</button>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 6, padding: 10, border: "1px solid #e6dfc9", borderRadius: 10, maxHeight: 220, overflowY: "auto", background: "#fafaf5" }}>
+            <div className="u-display-grid u-grid-template-columns-repeat_auto_fill_minmax_160px_1fr u-gap-6px u-padding-10px u-border-1px_solid_e6dfc9 u-border-radius-10px u-max-height-220px u-overflow-y-auto u-background-fafaf5">
               {PLATFORM_MODULE_CHOICES.map((m) => (
-                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <label key={m.id} className="u-display-flex u-align-items-center u-gap-6px u-font-size-13px u-cursor-pointer">
                   <input type="checkbox" checked={form.modules.includes(m.id)} onChange={() => toggleModule(m.id)} />
                   {m.label}
                 </label>
@@ -260,16 +260,16 @@ export default function PlatformAdminPage() {
             </button>
           </div>
         </form>
-        {error && <div className="form-error" style={{ marginTop: 10 }}>{error}</div>}
+        {error && <div className="form-error u-margin-top-10px" >{error}</div>}
         {credential && (
-          <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: "#e6f4ef", border: "1px solid #0d7a5f" }}>
-            <div style={{ fontWeight: 700, color: "#064e3b", marginBottom: 6 }}>Admin girişi yaradıldı</div>
-            <div style={{ fontSize: 13, color: "#0f2a20" }}>Bu məlumatı admin ilə paylaşın — bu pəncərəni bağladıqdan sonra parolu yenidən görə bilməyəcəksiniz.</div>
-            <div style={{ marginTop: 8, display: "grid", gap: 4, fontFamily: "monospace", fontSize: 14 }}>
+          <div className="u-margin-top-12px u-padding-14px u-border-radius-12px u-background-e6f4ef u-border-1px_solid_0d7a5f">
+            <div className="u-font-weight-700 u-color-text_primary u-margin-bottom-6px">Admin girişi yaradıldı</div>
+            <div className="u-font-size-13px u-color-0f2a20">Bu məlumatı admin ilə paylaşın — bu pəncərəni bağladıqdan sonra parolu yenidən görə bilməyəcəksiniz.</div>
+            <div className="u-margin-top-8px u-display-grid u-gap-4px u-font-family-monospace u-font-size-14px">
               <div><strong>E-poçt:</strong> {credential.email}</div>
               <div><strong>Müvəqqəti parol:</strong> {credential.password}</div>
             </div>
-            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <div className="u-margin-top-10px u-display-flex u-gap-8px">
               <button type="button" className="secondary-btn"
                 onClick={() => navigator.clipboard?.writeText(`${credential.email} / ${credential.password}`)}>
                 Kopyala
@@ -296,7 +296,7 @@ export default function PlatformAdminPage() {
               `${t.member_count}/${t.max_users}`,
               t.expires_at || "—",
               `${normalizePlatformModules(t.modules || []).length}/${PLATFORM_MODULE_CHOICES.length}`,
-              <div className="table-actions" style={{ display: "flex", gap: 4 }}>
+              <div className="table-actions u-display-flex u-gap-4px" >
                 <button type="button" className="icon-btn" title="Redaktə" onClick={() => startEdit(t)}><Pencil size={14} /></button>
                 {t.status === "active" ? (
                   <button type="button" className="icon-btn" title="Dondur" onClick={() => setStatus(t, "frozen")}>❄</button>

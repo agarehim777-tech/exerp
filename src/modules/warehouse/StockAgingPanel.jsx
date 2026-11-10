@@ -81,24 +81,24 @@ export default function StockAgingPanel({ tenantId }) {
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="u-display-flex u-justify-content-space_between u-gap-12px u-align-items-center u-flex-wrap-wrap">
         <div>
-          <h3 style={{ margin: 0 }}>Stok yaşlandırması</h3>
-          <p style={{ margin: "4px 0 0", color: "#64748b" }}>FIFO maya layları üzrə yavaş hərəkət edən mallar</p>
+          <h3 className="u-margin-0">Stok yaşlandırması</h3>
+          <p className="u-margin-4px_0_0 u-color-text_secondary">FIFO maya layları üzrə yavaş hərəkət edən mallar</p>
         </div>
         <select value={bucket} onChange={(event) => setBucket(event.target.value)} style={{ ...input, width: 180 }}>
           {["Hamısı", "0-30", "31-90", "91-180", "180+"].map((item) => <option key={item}>{item}</option>)}
         </select>
       </div>
 
-      <div style={{ display: "flex", gap: 10, margin: "14px 0", flexWrap: "wrap" }}>
+      <div className="u-display-flex u-gap-10px u-margin-14px_0 u-flex-wrap-wrap">
         <span style={badge(slow.length ? "red" : "green")}>{slow.length} yavaş məhsul</span>
         <b>{azn(slowValue)} riskli stok dəyəri</b>
       </div>
 
-      {error && <div style={{ color: "#b91c1c", marginBottom: 12 }}>Stok yaşlandırması yüklənmədi: {error}</div>}
+      {error && <div className="u-color-danger u-margin-bottom-12px">Stok yaşlandırması yüklənmədi: {error}</div>}
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="u-overflow-x-auto">
         <table style={table}>
           <thead>
             <tr>

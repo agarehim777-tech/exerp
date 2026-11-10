@@ -138,7 +138,7 @@ function MessageBubble({ m }) {
       <div style={{ ...styles.bubble, ...(isUser ? styles.bubbleUser : styles.bubbleBot) }}>
         {parts.map((p, i) => {
           if (p.type === "text") {
-            return <div key={i} style={{ whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{p.text}</div>;
+            return <div key={i} className="u-white-space-pre_wrap u-line-height-1_55">{p.text}</div>;
           }
           if (p.type?.startsWith("tool-")) {
             const name = p.type.replace(/^tool-/, "");
@@ -146,7 +146,7 @@ function MessageBubble({ m }) {
             return (
               <details key={i} style={styles.tool}>
                 <summary style={styles.toolSummary}>
-                  <Wrench size={12} /> {name} · <span style={{ color: "#64748b" }}>{state}</span>
+                  <Wrench size={12} /> {name} · <span className="u-color-text_secondary">{state}</span>
                 </summary>
                 {p.input && <pre style={styles.pre}>Input: {JSON.stringify(p.input, null, 2)}</pre>}
                 {p.output && <pre style={styles.pre}>{JSON.stringify(p.output, null, 2).slice(0, 2000)}</pre>}

@@ -74,11 +74,11 @@ function SidebarNav({ items, active, onSelect }) {
               aria-expanded={isOpen}
             >
               <GroupIcon size={17} />
-              <span style={{ flex: 1, textAlign: "left" }}>{GROUP_LABELS[entry.id] || entry.id}</span>
+              <span className="u-flex-1 u-text-align-left">{GROUP_LABELS[entry.id] || entry.id}</span>
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
             {isOpen && (
-              <div className="nav-group-children" style={{ display: "flex", flexDirection: "column", gap: 2, paddingLeft: 18, marginTop: 2 }}>
+              <div className="nav-group-children u-display-flex u-flex-direction-column u-gap-2px u-padding-left-18px u-margin-top-2px" >
                 {entry.children.map((child) => {
                   const Icon = navIcons[child.id];
                   return (

@@ -6,7 +6,7 @@
 export default function LoadMoreBar({ hasMore, onLoadMore, loading, label = "Daha çox yüklə" }) {
   if (!hasMore) return null;
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+    <div className="u-display-flex u-justify-content-center u-padding-12px_0">
       <button
         type="button"
         onClick={onLoadMore}

@@ -195,7 +195,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 days,
                 <StatusChip key="s" status={row.status} />,
                 row.status === "draft" ? (
-                  <div key="a" style={{ display: "flex", gap: 6 }}>
+                  <div key="a" className="u-display-flex u-gap-6px">
                     <button style={S.mini} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "approved"))}>Təsdiq</button>
                     <button style={{ ...S.mini, color: "#b91c1c" }} disabled={busy} onClick={() => guard(() => ops.updateEventStatus(row.id, "rejected"))}>İmtina</button>
                   </div>
@@ -227,7 +227,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
               money(row.medicalEmployee),
               <strong key="n">{money(row.net)}</strong>,
               row.posted
-                ? <span key="p" style={{ color: "#15803d", display: "inline-flex", gap: 4, alignItems: "center" }}><CheckCircle2 size={14} /> Bağlanıb</span>
+                ? <span key="p" className="u-color-15803d u-display-inline_flex u-gap-4px u-align-items-center"><CheckCircle2 size={14} /> Bağlanıb</span>
                 : <button
                     key="b"
                     style={S.mini}
@@ -262,7 +262,7 @@ function StatusChip({ status }) {
 function Total({ label, value, tone }) {
   return (
     <div style={S.total}>
-      <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+      <span className="u-font-size-12px u-color-text_secondary">{label}</span>
       <strong style={{ fontSize: 16, color: tone || "#0f172a" }}>{value}</strong>
     </div>
   );
@@ -279,7 +279,7 @@ function SectionTitle({ title, subtitle }) {
 function Table({ columns, rows }) {
   if (!rows.length) return <div style={S.empty}>Qeyd yoxdur</div>;
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div className="u-overflow-x-auto">
       <table style={S.table}>
         <thead>
           <tr>{columns.map((column) => <th key={column} style={S.th}>{column}</th>)}</tr>

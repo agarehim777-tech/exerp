@@ -104,10 +104,10 @@ export default function InsightsPage() {
   const signals = data?.signals;
 
   return (
-    <div className="stack" style={{ padding: 24, maxWidth: 1100, margin: "0 auto", width: "100%" }}>
+    <div className="stack u-padding-24px u-max-width-1100px u-margin-0_auto u-width-100" >
       <div style={S.header}>
         <div style={S.headerIcon}><Brain size={20} /></div>
-        <div style={{ flex: 1 }}>
+        <div className="u-flex-1">
           <div style={S.title}>AI Agent v2 — Ağıllı tövsiyələr</div>
           <div style={S.sub}>Satış, satınalma, anbar qalıqları və vaxtı keçmiş borclar üzrə avtomatik təhlil. Rəyləriniz növbəti təhlildə nəzərə alınır.</div>
         </div>
@@ -131,8 +131,8 @@ export default function InsightsPage() {
       {!data && !loading && (
         <div style={S.empty}>
           <Zap size={28} color="#94a3b8" />
-          <div style={{ fontWeight: 700, color: "#334155", marginTop: 8 }}>Hələ təhlil aparılmayıb</div>
-          <div style={{ fontSize: 13, color: "#64748b" }}>“Təhlil et” düyməsi ilə şirkət datası üzrə tövsiyələr yaradın.</div>
+          <div className="u-font-weight-700 u-color-text_primary u-margin-top-8px">Hələ təhlil aparılmayıb</div>
+          <div className="u-font-size-13px u-color-text_secondary">“Təhlil et” düyməsi ilə şirkət datası üzrə tövsiyələr yaradın.</div>
         </div>
       )}
 
@@ -159,7 +159,7 @@ export default function InsightsPage() {
               <button onClick={() => react(insight, "dismissed")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "dismissed" ? S.smallBtnOff : {}) }}>
                 <ThumbsDown size={14} /> Uyğun deyil
               </button>
-              {state && <span style={{ fontSize: 12, color: "#64748b" }}>Rəy yadda saxlanıldı — növbəti təhlildə nəzərə alınacaq.</span>}
+              {state && <span className="u-font-size-12px u-color-text_secondary">Rəy yadda saxlanıldı — növbəti təhlildə nəzərə alınacaq.</span>}
             </div>
           </div>
         );
@@ -172,14 +172,14 @@ export default function InsightsPage() {
       {history.length > 0 && (
         <div style={S.card}>
           <div style={S.cardTitle}>Öyrənmə tarixçəsi</div>
-          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+          <div className="u-display-grid u-gap-6px u-margin-top-8px">
             {history.map((row, index) => (
               <div key={index} style={S.historyRow}>
-                <span style={{ fontWeight: 600 }}>{row.title || row.insight_key}</span>
+                <span className="u-font-weight-600">{row.title || row.insight_key}</span>
                 <span style={{ color: row.action === "dismissed" ? "#b91c1c" : "#15803d" }}>
                   {row.action === "dismissed" ? "rədd edildi" : row.action === "done" ? "icra olundu" : "qəbul edildi"}
                 </span>
-                <span style={{ color: "#94a3b8", fontSize: 12 }}>{new Date(row.created_at).toLocaleDateString("az-AZ")}</span>
+                <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleDateString("az-AZ")}</span>
               </div>
             ))}
           </div>
@@ -193,7 +193,7 @@ export default function InsightsPage() {
 function Signal({ label, value, tone }) {
   return (
     <div style={S.signal}>
-      <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+      <span className="u-font-size-12px u-color-text_secondary">{label}</span>
       <strong style={{ fontSize: 18, color: tone }}>{value}</strong>
     </div>
   );

@@ -27,11 +27,11 @@ export default function AcceptInvite() {
   }, [user, loading, token, nav]);
 
   return (
-    <div style={{ maxWidth: 480, margin: "80px auto", padding: 24, background: "#fff", borderRadius: 12, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
+    <div className="u-max-width-480px u-margin-80px_auto u-padding-24px u-background-surface u-border-radius-12px u-text-align-center u-box-shadow-0_8px_32px_rgba_0_0_0_0_08">
       <h2>Şirkət dəvəti</h2>
       {status === "checking" && <p>Yoxlanılır…</p>}
-      {status === "ok" && <p style={{ color: "#064e3b" }}>✓ Dəvət qəbul edildi. Yönləndirilirsiniz…</p>}
-      {status === "error" && <p style={{ color: "#b23a3a" }}>✗ {msg}</p>}
+      {status === "ok" && <p className="u-color-text_primary">✓ Dəvət qəbul edildi. Yönləndirilirsiniz…</p>}
+      {status === "error" && <p className="u-color-b23a3a">✗ {msg}</p>}
     </div>
   );
 }

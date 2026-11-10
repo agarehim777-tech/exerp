@@ -14,9 +14,9 @@ function Pill({ ok, label }) {
 
 function Row({ label, value }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed #e5e7eb", fontSize: 13 }}>
-      <span style={{ color: "#6b7280" }}>{label}</span>
-      <span style={{ fontFamily: "ui-monospace, monospace", color: "#111827" }}>{String(value ?? "—")}</span>
+    <div className="u-display-flex u-justify-content-space_between u-padding-6px_0 u-border-bottom-1px_dashed_e5e7eb u-font-size-13px">
+      <span className="u-color-6b7280">{label}</span>
+      <span className="u-font-family-ui_monospace_monospace u-color-111827">{String(value ?? "—")}</span>
     </div>
   );
 }
@@ -67,32 +67,32 @@ export default function AccessCheckPage() {
   }, []);
 
   return (
-    <div style={{ padding: 24, maxWidth: 960, margin: "0 auto" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>İcazə diaqnostikası</h1>
-        <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>
+    <div className="u-padding-24px u-max-width-960px u-margin-0_auto">
+      <div className="u-margin-bottom-20px">
+        <h1 className="u-font-size-22px u-font-weight-700 u-margin-0">İcazə diaqnostikası</h1>
+        <p className="u-color-6b7280 u-font-size-14px u-margin-top-4px">
           Cari istifadəçinin tenant admin və layihə sahibi icazələrini real-time yoxlayın.
         </p>
       </div>
 
       {/* ---------- My access ---------- */}
-      <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 20, marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Mənim icazələrim</h2>
+      <section className="u-background-surface u-border-1px_solid_e5e7eb u-border-radius-12px u-padding-20px u-margin-bottom-20px">
+        <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-12px">
+          <h2 className="u-font-size-16px u-font-weight-600 u-margin-0">Mənim icazələrim</h2>
           <button
             onClick={load}
             disabled={loading}
-            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d1d5db", background: "#f9fafb", fontSize: 13, cursor: "pointer" }}
+            className="u-padding-6px_12px u-border-radius-8px u-border-1px_solid_d1d5db u-background-f9fafb u-font-size-13px u-cursor-pointer"
           >
             {loading ? "Yoxlanılır…" : "Yenilə"}
           </button>
         </div>
 
-        {error && <div style={{ color: "#991b1b", fontSize: 13, marginBottom: 10 }}>Xəta: {error}</div>}
+        {error && <div className="u-color-991b1b u-font-size-13px u-margin-bottom-10px">Xəta: {error}</div>}
 
         {access && (
           <>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            <div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-bottom-14px">
               <Pill ok={!!access.authenticated} label="Autentifikasiya" />
               <Pill ok={!!access.is_tenant_member} label="Tenant üzvü" />
               <Pill ok={!!access.is_tenant_admin} label="Tenant admin" />
@@ -104,22 +104,22 @@ export default function AccessCheckPage() {
             <Row label="Aktiv modullar" value={(access.enabled_modules || []).join(", ") || "(hamısı)"} />
 
             {Array.isArray(access.role_permissions) && access.role_permissions.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Rol icazə matrisi</div>
-                <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+              <div className="u-margin-top-16px">
+                <div className="u-font-size-13px u-font-weight-600 u-margin-bottom-6px">Rol icazə matrisi</div>
+                <table className="u-width-100 u-font-size-12px u-border-collapse-collapse">
                   <thead>
-                    <tr style={{ background: "#f9fafb", textAlign: "left" }}>
-                      <th style={{ padding: "6px 8px" }}>Modul</th>
-                      <th style={{ padding: "6px 8px" }}>Baxış</th>
-                      <th style={{ padding: "6px 8px" }}>Redaktə</th>
+                    <tr className="u-background-f9fafb u-text-align-left">
+                      <th className="u-padding-6px_8px">Modul</th>
+                      <th className="u-padding-6px_8px">Baxış</th>
+                      <th className="u-padding-6px_8px">Redaktə</th>
                     </tr>
                   </thead>
                   <tbody>
                     {access.role_permissions.map((p) => (
-                      <tr key={p.module} style={{ borderTop: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "6px 8px", fontFamily: "ui-monospace, monospace" }}>{p.module}</td>
-                        <td style={{ padding: "6px 8px" }}><Pill ok={!!p.can_view} label={p.can_view ? "bəli" : "xeyr"} /></td>
-                        <td style={{ padding: "6px 8px" }}><Pill ok={!!p.can_edit} label={p.can_edit ? "bəli" : "xeyr"} /></td>
+                      <tr key={p.module} className="u-border-top-1px_solid_f3f4f6">
+                        <td className="u-padding-6px_8px u-font-family-ui_monospace_monospace">{p.module}</td>
+                        <td className="u-padding-6px_8px"><Pill ok={!!p.can_view} label={p.can_view ? "bəli" : "xeyr"} /></td>
+                        <td className="u-padding-6px_8px"><Pill ok={!!p.can_edit} label={p.can_edit ? "bəli" : "xeyr"} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -131,29 +131,29 @@ export default function AccessCheckPage() {
       </section>
 
       {/* ---------- Project access ---------- */}
-      <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 20 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, marginBottom: 12 }}>Layihə sahibi yoxlaması</h2>
+      <section className="u-background-surface u-border-1px_solid_e5e7eb u-border-radius-12px u-padding-20px">
+        <h2 className="u-font-size-16px u-font-weight-600 u-margin-0 u-margin-bottom-12px">Layihə sahibi yoxlaması</h2>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div className="u-display-flex u-gap-8px u-margin-bottom-12px">
           <input
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
             placeholder="Layihə UUID"
-            style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontFamily: "ui-monospace, monospace" }}
+            className="u-flex-1 u-padding-8px_10px u-border-1px_solid_d1d5db u-border-radius-8px u-font-size-13px u-font-family-ui_monospace_monospace"
           />
           <button
             onClick={() => runProjectCheck(projectId)}
             disabled={!projectId || projectLoading}
-            style={{ padding: "8px 14px", borderRadius: 8, border: 0, background: "#111827", color: "#fff", fontSize: 13, cursor: "pointer" }}
+            className="u-padding-8px_14px u-border-radius-8px u-border-0 u-background-111827 u-color-surface u-font-size-13px u-cursor-pointer"
           >
             {projectLoading ? "…" : "Yoxla"}
           </button>
         </div>
 
         {myProjects.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Sürətli seçim (son layihələr):</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div className="u-margin-bottom-12px">
+            <div className="u-font-size-12px u-color-6b7280 u-margin-bottom-6px">Sürətli seçim (son layihələr):</div>
+            <div className="u-display-flex u-gap-6px u-flex-wrap-wrap">
               {myProjects.map((p) => (
                 <button
                   key={p.id}
@@ -168,15 +168,15 @@ export default function AccessCheckPage() {
           </div>
         )}
 
-        {projectError && <div style={{ color: "#991b1b", fontSize: 13 }}>Xəta: {projectError}</div>}
+        {projectError && <div className="u-color-991b1b u-font-size-13px">Xəta: {projectError}</div>}
 
         {projectCheck && projectCheck.found === false && (
-          <div style={{ color: "#991b1b", fontSize: 13 }}>Layihə tapılmadı və ya sizin görmə icazəniz yoxdur.</div>
+          <div className="u-color-991b1b u-font-size-13px">Layihə tapılmadı və ya sizin görmə icazəniz yoxdur.</div>
         )}
 
         {projectCheck && projectCheck.found && (
           <>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-bottom-12px">
               <Pill ok={!!projectCheck.is_owner} label="Sahib" />
               <Pill ok={!!projectCheck.is_tenant_member} label="Tenant üzvü" />
               <Pill ok={!!projectCheck.is_tenant_admin} label="Tenant admin" />

@@ -103,7 +103,7 @@ export default function FloatingAssistant() {
             ))}
 
             {status === "submitted" && (
-              <div className="floating-assistant-row" style={{ justifyContent: "flex-start" }}>
+              <div className="floating-assistant-row u-justify-content-flex_start" >
                 <Avatar role="assistant" />
                 <div className="floating-assistant-thinking">
                   <Loader2 size={12} className="spin" /> Düşünürəm…
@@ -418,7 +418,7 @@ function MessageBubble({ m }) {
       <div className={`floating-assistant-bubble ${isUser ? "floating-assistant-bubble-user" : "floating-assistant-bubble-bot"}`}>
         {parts.map((p, i) => {
           if (p.type === "text") {
-            return <div key={i} style={{ whiteSpace: "pre-wrap" }}>{p.text}</div>;
+            return <div key={i} className="u-white-space-pre_wrap">{p.text}</div>;
           }
           if (p.type?.startsWith("tool-")) {
             const name = p.type.replace(/^tool-/, "");
@@ -426,7 +426,7 @@ function MessageBubble({ m }) {
             return (
               <details key={i} className="floating-assistant-tool">
                 <summary>
-                  <Wrench size={10} /> {name} · <span style={{ color: "#64748b" }}>{state}</span>
+                  <Wrench size={10} /> {name} · <span className="u-color-text_secondary">{state}</span>
                 </summary>
                 {p.input && <pre className="floating-assistant-pre">Input: {JSON.stringify(p.input, null, 2)}</pre>}
                 {p.output && <pre className="floating-assistant-pre">{JSON.stringify(p.output, null, 2).slice(0, 1200)}</pre>}

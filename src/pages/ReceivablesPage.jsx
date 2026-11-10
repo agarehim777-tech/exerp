@@ -221,14 +221,14 @@ function DebtDetail({ row, onClose, onOpenSalesOrder }) {
     ["Risk", row.riskCategory], ["Kolleksiya", row.collectionStatus],
     ["Məsul", row.owner], ["Növbəti addım", row.nextAction], ["Ətraflı", row.detail],
   ];
-  return <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(15,23,42,.45)", display: "flex", justifyContent: "flex-end" }}>
-    <aside onClick={event => event.stopPropagation()} style={{ width: 480, maxWidth: "100%", height: "100%", overflowY: "auto", background: "#fff", padding: 20, boxSizing: "border-box", boxShadow: "-10px 0 30px rgba(15,23,42,.16)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-        <div><small style={{ color: "#64748b", fontWeight: 700 }}>BORC MƏLUMATI</small><h2 style={{ margin: "5px 0" }}>{row.party}</h2><StatusBadge status={row.type} /></div>
-        <button type="button" onClick={onClose} style={{ border: 0, background: "transparent", fontSize: 25, cursor: "pointer" }}>×</button>
+  return <div onClick={onClose} className="u-position-fixed u-inset-0 u-z-index-120 u-background-rgba_15_23_42_45 u-display-flex u-justify-content-flex_end">
+    <aside onClick={event => event.stopPropagation()} className="u-width-480px u-max-width-100 u-height-100 u-overflow-y-auto u-background-surface u-padding-20px u-box-sizing-border_box u-box-shadow-10px_0_30px_rgba_15_23_42_16">
+      <div className="u-display-flex u-justify-content-space_between u-align-items-flex_start u-margin-bottom-18px">
+        <div><small className="u-color-text_secondary u-font-weight-700">BORC MƏLUMATI</small><h2 className="u-margin-5px_0">{row.party}</h2><StatusBadge status={row.type} /></div>
+        <button type="button" onClick={onClose} className="u-border-0 u-background-transparent u-font-size-25px u-cursor-pointer">×</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 9 }}>
-        {detailRows.map(([label, value]) => <div key={label} style={{ padding: 11, border: "1px solid #e2e8f0", borderRadius: 9, background: "#f8fafc" }}><small style={{ display: "block", color: "#64748b", marginBottom: 4 }}>{label}</small><strong style={{ overflowWrap: "anywhere" }}>{value || "—"}</strong></div>)}
+      <div className="u-display-grid u-grid-template-columns-repeat_2_minmax_0_1fr u-gap-9px">
+        {detailRows.map(([label, value]) => <div key={label} className="u-padding-11px u-border-1px_solid_border u-border-radius-9px u-background-surface_subtle"><small className="u-display-block u-color-text_secondary u-margin-bottom-4px">{label}</small><strong className="u-overflow-wrap-anywhere">{value || "—"}</strong></div>)}
       </div>
       {orderId && <button type="button" onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} style={{ width: "100%", marginTop: 14, padding: 10, border: 0, borderRadius: 9, background: "#075e4b", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Əlaqəli sifarişə bax</button>}
     </aside>

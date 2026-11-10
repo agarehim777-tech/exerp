@@ -52,8 +52,8 @@ export default function AuditLogPage() {
   if (!isAdmin) return <div style={card}>Audit izinə yalnız şirkət adminləri baxa bilər.</div>;
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+    <div className="u-display-grid u-gap-16px">
+      <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
         <div style={statTile}><div style={statLabel}>Qeyd</div><div style={statValue}>{stats.total}</div></div>
         <div style={statTile}><div style={statLabel}>Yaradılıb</div><div style={statValue}>{stats.inserts}</div></div>
         <div style={statTile}><div style={statLabel}>Dəyişib</div><div style={statValue}>{stats.updates}</div></div>
@@ -63,7 +63,7 @@ export default function AuditLogPage() {
       {error && <div style={msgBox}>Xəta: {error.message}</div>}
 
       <div style={card}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        <div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-align-items-center u-margin-bottom-12px">
           <select style={input} value={tableFilter} onChange={(e) => setTableFilter(e.target.value)}>
             <option value="">Bütün cədvəllər</option>
             {Object.entries(TABLE_LABEL).map(([key, label]) => (
@@ -112,7 +112,7 @@ function AuditRow({ log }) {
 
   return (
     <>
-      <tr style={{ cursor: "pointer" }} onClick={() => setOpen((v) => !v)}>
+      <tr className="u-cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <td style={td}>{new Date(log.created_at).toLocaleString("az-AZ")}</td>
         <td style={td}>{TABLE_LABEL[log.table_name] || log.table_name}</td>
         <td style={td}><span style={badge(ACTION_TONE[log.action])}>{ACTION_LABEL[log.action] || log.action}</span></td>
@@ -122,7 +122,7 @@ function AuditRow({ log }) {
       {open && (
         <tr>
           <td style={td} colSpan={5}>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div className="u-display-flex u-gap-16px u-flex-wrap-wrap">
               <pre style={preStyle}>{JSON.stringify(log.old_data, null, 2) || "—"}</pre>
               <pre style={preStyle}>{JSON.stringify(log.new_data, null, 2) || "—"}</pre>
             </div>

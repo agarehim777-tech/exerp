@@ -58,7 +58,7 @@ export default function OAuthConsent() {
     return (
       <main style={wrap}>
         <h1 style={h1}>Bağlantı yaradıla bilmədi</h1>
-        <p style={{ color: "#b91c1c" }}>{error}</p>
+        <p className="u-color-danger">{error}</p>
       </main>
     );
   if (!details)
@@ -74,26 +74,26 @@ export default function OAuthConsent() {
   return (
     <main style={wrap}>
       <h1 style={h1}>{clientName} hesabınıza qoşulsun?</h1>
-      <p style={{ color: "#374151" }}>
+      <p className="u-color-374151">
         Bu, <strong>{clientName}</strong>-ə ERPAZ-ı sizin kimi istifadə etməyə imkan verəcək.
       </p>
       {details.client?.redirect_uri && (
-        <p style={{ fontSize: 13, color: "#6b7280" }}>Redirect URI: {details.client.redirect_uri}</p>
+        <p className="u-font-size-13px u-color-6b7280">Redirect URI: {details.client.redirect_uri}</p>
       )}
       {scopes.length > 0 && (
-        <div style={{ margin: "12px 0", fontSize: 13 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Tələb olunan icazələr:</div>
-          <ul style={{ margin: 0, paddingLeft: 18, color: "#374151" }}>
+        <div className="u-margin-12px_0 u-font-size-13px">
+          <div className="u-font-weight-600 u-margin-bottom-4px">Tələb olunan icazələr:</div>
+          <ul className="u-margin-0 u-padding-left-18px u-color-374151">
             {scopes.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
         </div>
       )}
-      <p style={{ fontSize: 12, color: "#6b7280" }}>
+      <p className="u-font-size-12px u-color-6b7280">
         Bu icazə tətbiqin öz permissions və backend qaydalarını dəyişmir.
       </p>
-      <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+      <div className="u-display-flex u-gap-10px u-margin-top-18px">
         <button disabled={busy} onClick={() => decide(true)} style={primaryBtn}>Təsdiqlə</button>
         <button disabled={busy} onClick={() => decide(false)} style={secondaryBtn}>Ləğv et</button>
       </div>

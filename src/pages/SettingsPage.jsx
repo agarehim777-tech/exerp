@@ -189,7 +189,7 @@ function SettingsPage({
         </div>
       </Panel>
 
-      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
+      <Panel className="settings-security-panel u-display-none"  aria-hidden="true">
         <PanelHeader
           title="İstifadəçilər, Rollar və İcazələr"
           subtitle="İstifadəçi, rol, fərdi permission və dəvətləri vahid mərkəzdən idarə edin"
@@ -201,7 +201,7 @@ function SettingsPage({
         </button>
       </Panel>
 
-      <Panel className="settings-security-panel" id="user-management" style={{ display: "none" }} aria-hidden="true">
+      <Panel className="settings-security-panel u-display-none" id="user-management"  aria-hidden="true">
         <PanelHeader
           title="Yeni istifadəçi yarat"
           subtitle="Anbardar, satıcı, satınalma və maliyyə əməkdaşlarını yaradın, rol və modul icazələrini təyin edin"
@@ -337,7 +337,7 @@ function SettingsPage({
         />
       </Panel>
 
-      <Panel className="settings-security-panel" style={{ display: "none" }} aria-hidden="true">
+      <Panel className="settings-security-panel u-display-none"  aria-hidden="true">
         <PanelHeader title="Rollar & İcazələr" subtitle="Modul səviyyəli girişlər" />
         <label className="role-selector">
           <span>Aktiv rol</span>

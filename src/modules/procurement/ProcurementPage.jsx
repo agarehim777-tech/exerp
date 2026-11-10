@@ -1462,7 +1462,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
           <div style={styles.linesBlock}>
             <strong>Vendorlar</strong>
             {vendors.map((vendor) => (
-              <label key={vendor.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+              <label key={vendor.id} className="u-display-flex u-align-items-center u-gap-8px u-font-size-13px">
                 <input type="checkbox" checked={form.vendor_ids.includes(vendor.id)} onChange={() => toggleVendor(vendor.id)} />
                 {vendor.name}
               </label>
@@ -1771,7 +1771,7 @@ function PurchaseOrdersTab({
           })}
           detail={(po) =>
             expandedPo === po.id && (
-              <div style={{ display: "grid", gap: "16px" }}>
+              <div className="u-display-grid u-gap-16px">
                 <LineDetailTable lines={linesByPo.get(po.id) || []} acceptedByLine={acceptedByLine} invoicedByLine={invoicedByLine} currency={po.currency} />
                 {poPaymentsAvailable && <PoPaymentPanel
                   po={po}
@@ -1806,12 +1806,12 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
   const isOpen = paymentPoId === po.id;
 
   return (
-    <div style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", background: "#f8fafc", display: "grid", gap: "12px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between", flexWrap: "wrap" }}>
-        <strong style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <div className="u-border-1px_solid_border u-border-radius-10px u-padding-14px u-background-surface_subtle u-display-grid u-gap-12px">
+      <div className="u-display-flex u-align-items-center u-gap-8px u-justify-content-space_between u-flex-wrap-wrap">
+        <strong className="u-display-flex u-align-items-center u-gap-8px">
           <CreditCard size={18} /> PO ödənişləri
         </strong>
-        <div style={{ display: "flex", gap: "10px", fontSize: "13px" }}>
+        <div className="u-display-flex u-gap-10px u-font-size-13px">
           <span>PO dəyəri: <strong>{money(poValue, po.currency)}</strong></span>
           <span>Ödənilib: <strong>{money(paid, po.currency)}</strong></span>
           <span>Qalıq ödəniş: <strong>{money(due, po.currency)}</strong></span>
@@ -1821,24 +1821,24 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
       {payments.length > 0 ? (
         <table style={{ ...styles.table, background: "#fff", borderRadius: "8px", overflow: "hidden" }}>
           <thead>
-            <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-              <th style={{ padding: "8px 10px" }}>Tarix</th>
-              <th style={{ padding: "8px 10px" }}>Məbləğ</th>
-              <th style={{ padding: "8px 10px" }}>Üsul</th>
-              <th style={{ padding: "8px 10px" }}>Referans</th>
-              <th style={{ padding: "8px 10px" }}>Qeyd</th>
-              <th style={{ padding: "8px 10px", textAlign: "right" }}>Əməl</th>
+            <tr className="u-background-surface_subtle u-text-align-left">
+              <th className="u-padding-8px_10px">Tarix</th>
+              <th className="u-padding-8px_10px">Məbləğ</th>
+              <th className="u-padding-8px_10px">Üsul</th>
+              <th className="u-padding-8px_10px">Referans</th>
+              <th className="u-padding-8px_10px">Qeyd</th>
+              <th className="u-padding-8px_10px u-text-align-right">Əməl</th>
             </tr>
           </thead>
           <tbody>
             {payments.map((payment) => (
-              <tr key={payment.id} style={{ borderTop: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "8px 10px" }}>{payment.payment_date}</td>
-                <td style={{ padding: "8px 10px", fontWeight: 700 }}>{money(payment.amount, po.currency)}</td>
-                <td style={{ padding: "8px 10px" }}>{payment.payment_method || "bank"}</td>
-                <td style={{ padding: "8px 10px" }}>{payment.reference_no || "—"}</td>
-                <td style={{ padding: "8px 10px" }}>{payment.notes || "—"}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>
+              <tr key={payment.id} className="u-border-top-1px_solid_border">
+                <td className="u-padding-8px_10px">{payment.payment_date}</td>
+                <td className="u-padding-8px_10px u-font-weight-700">{money(payment.amount, po.currency)}</td>
+                <td className="u-padding-8px_10px">{payment.payment_method || "bank"}</td>
+                <td className="u-padding-8px_10px">{payment.reference_no || "—"}</td>
+                <td className="u-padding-8px_10px">{payment.notes || "—"}</td>
+                <td className="u-padding-8px_10px u-text-align-right">
                   <div style={styles.rowActions}>
                     <IconButton icon={Pencil} label="Edit" onClick={() => onPaymentEdit(payment)} />
                     <IconButton icon={Trash2} label="Sil" onClick={() => onPaymentDelete(payment)} tone="danger" />

@@ -55,13 +55,13 @@ export default function TenantBootstrap() {
     return (
       <main style={wrap}>
         <div style={card}>
-          <h1 style={{ fontFamily: "Sora, sans-serif", margin: 0, fontSize: 22, color: "#064e3b" }}>
+          <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
             Şirkət təyinatı gözlənilir
           </h1>
-          <p style={{ color: "#5f7a70", marginTop: 10, fontSize: 14, lineHeight: 1.55 }}>
+          <p className="u-color-5f7a70 u-margin-top-10px u-font-size-14px u-line-height-1_55">
             Salam, <strong>{user?.email}</strong>. Sizin hesabınız hələ heç bir şirkətə təyin edilməyib.
           </p>
-          <p style={{ color: "#5f7a70", marginTop: 8, fontSize: 14, lineHeight: 1.55 }}>
+          <p className="u-color-5f7a70 u-margin-top-8px u-font-size-14px u-line-height-1_55">
             Sistemə daxil ola bilmək üçün zəhmət olmasa <strong>ExERP platform administratoru</strong> ilə əlaqə saxlayın — o, sizin şirkətinizi yaradıb hesabınızı əlaqələndirəcək.
           </p>
           <button onClick={signOut} style={{ ...btn, marginTop: 18 }}>Çıxış</button>
@@ -73,13 +73,13 @@ export default function TenantBootstrap() {
   return (
     <main style={wrap}>
       <div style={card}>
-        <h1 style={{ fontFamily: "Sora, sans-serif", margin: 0, fontSize: 22, color: "#064e3b" }}>
+        <h1 className="u-font-family-Sora_sans_serif u-margin-0 u-font-size-22px u-color-text_primary">
           İlk şirkətinizi yaradın
         </h1>
-        <p style={{ color: "#5f7a70", marginTop: 6, fontSize: 14 }}>
+        <p className="u-color-5f7a70 u-margin-top-6px u-font-size-14px">
           Salam, {user?.email}. Platform administratoru kimi ilk şirkətinizi yaradın — sonra əlavə şirkətləri "Şirkətlər" bölməsindən idarə edə bilərsiniz.
         </p>
-        <form onSubmit={submit} style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        <form onSubmit={submit} className="u-display-grid u-gap-10px u-margin-top-16px">
           <input
             required
             placeholder="Şirkət adı"
@@ -100,7 +100,7 @@ export default function TenantBootstrap() {
             {busy ? "Yaradılır…" : "Yarat və davam et"}
           </button>
         </form>
-        {error && <p style={{ color: "#b23a3a", marginTop: 12, fontSize: 13 }}>{error}</p>}
+        {error && <p className="u-color-b23a3a u-margin-top-12px u-font-size-13px">{error}</p>}
         <button onClick={signOut} style={link}>Çıxış</button>
       </div>
     </main>

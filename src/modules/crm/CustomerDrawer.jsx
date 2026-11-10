@@ -25,35 +25,31 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)' }} />
-      <aside role="dialog" aria-modal="true" aria-label="Müştəri kartı" style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: 520, maxWidth: '95vw',
-        background: '#fff', boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
-        display: 'flex', flexDirection: 'column', animation: 'slideIn 0.25s ease-out',
-      }}>
+    <div className="u-position-fixed u-inset-0 u-z-index-90">
+      <div onClick={onClose} className="u-position-absolute u-inset-0 u-background-rgba_15_23_42_0_45" />
+      <aside role="dialog" aria-modal="true" aria-label="Müştəri kartı" className="u-position-absolute u-top-0 u-right-0 u-bottom-0 u-width-520px u-max-width-95vw u-background-surface u-box-shadow-8px_0_32px_rgba_0_0_0_0_15 u-display-flex u-flex-direction-column u-animation-slideIn_0_25s_ease_out">
         <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center' }}>Yüklənir...</div>
+          <div className="u-padding-40px u-text-align-center">Yüklənir...</div>
         ) : error || !c ? (
-          <div style={{ padding: 40, textAlign: 'center' }}>
-            <div style={{ color: '#dc2626', fontWeight: 700, marginBottom: 8 }}>Müştəri məlumatları yüklənmədi</div>
-            <div style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{error?.message || 'Müştəri tapılmadı.'}</div>
-            <button onClick={refresh} style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yenidən yoxla</button>
+          <div className="u-padding-40px u-text-align-center">
+            <div className="u-color-danger u-font-weight-700 u-margin-bottom-8px">Müştəri məlumatları yüklənmədi</div>
+            <div className="u-color-text_secondary u-font-size-13px u-margin-bottom-16px">{error?.message || 'Müştəri tapılmadı.'}</div>
+            <button onClick={refresh} className="u-background-action u-color-surface u-border-0 u-padding-8px_14px u-border-radius-8px u-cursor-pointer u-font-weight-700">Yenidən yoxla</button>
           </div>
         ) : (
           <>
-            <header style={{ padding: 20, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <header className="u-padding-20px u-border-bottom-1px_solid_border u-display-flex u-align-items-center u-gap-14px">
               <Avatar name={c.name} size={56} />
-              <div style={{ flex: 1 }}>
-                <h2 style={{ margin: 0, fontSize: 20 }}>{c.name}</h2>
-                <div style={{ fontSize: 13, color: '#64748b' }}>{c.email || c.phone || '—'}</div>
+              <div className="u-flex-1">
+                <h2 className="u-margin-0 u-font-size-20px">{c.name}</h2>
+                <div className="u-font-size-13px u-color-text_secondary">{c.email || c.phone || '—'}</div>
               </div>
-              <button onClick={onClose} aria-label="Müştəri kartını bağla" style={{ background: 'none', border: 0, fontSize: 24, cursor: 'pointer', color: '#94a3b8' }}>×</button>
+              <button onClick={onClose} aria-label="Müştəri kartını bağla" className="u-background-none u-border-0 u-font-size-24px u-cursor-pointer u-color-text_secondary">×</button>
             </header>
 
-            <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <div className="u-padding-12px_20px u-display-grid u-grid-template-columns-repeat_3_1fr u-gap-8px u-background-surface_subtle u-border-bottom-1px_solid_border">
               <Stat label="LTV (Sifariş)" value={`${Number(data.orders_total || 0).toFixed(0)} ₼`} />
               <Stat label="Ödənilib" value={`${Number(data.orders_paid || 0).toFixed(0)} ₼`} />
               <Stat label="Qalıq borc" value={`${Number(data.orders_outstanding || 0).toFixed(0)} ₼`} />
@@ -63,7 +59,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               <Stat label="Risk" value={data.analytics?.riskLabel || '—'} />
             </div>
 
-            <nav style={{ display: 'flex', overflowX: 'auto', flexShrink: 0, borderBottom: '1px solid #e2e8f0', padding: '0 20px' }}>
+            <nav className="u-display-flex u-overflow-x-auto u-flex-shrink-0 u-border-bottom-1px_solid_border u-padding-0_20px">
               {[
                 ['overview', 'Ümumi'], ['deals', 'Sövdələşmələr'],
                 ['timeline', 'Timeline'], ['credits', 'Kreditlər'], ['devices', 'Cihazlar'],
@@ -78,7 +74,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               ))}
             </nav>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+            <div className="u-flex-1 u-overflow-y-auto u-padding-20px">
               {tab === 'overview' && <OverviewTab c={c} tags={data.tags} onUpdate={onUpdate} />}
               {tab === 'deals' && <DealsTab deals={data.open_deals || []} />}
               {tab === 'timeline' && <CustomerTimeline items={data.timeline || []} />}
@@ -87,9 +83,9 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               {tab === 'documents' && <DocumentsTab documents={data.documents || []} onUpload={uploadDocument} onDownload={downloadDocument} onRemove={removeDocument} />}
               {tab === 'activity' && (
                 <div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <div className="u-display-flex u-gap-8px u-margin-bottom-12px">
                     <select value={activityType} onChange={e => setActivityType(e.target.value)}
-                      style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13 }}>
+                      className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px u-font-size-13px">
                       <option value="note">📝 Qeyd</option>
                       <option value="call">📞 Zəng</option>
                       <option value="meeting">🤝 Görüş</option>
@@ -99,8 +95,8 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
                     <input value={activityText} onChange={e => setActivityText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && addActivity()}
                       placeholder="Nə baş verdi?"
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13 }} />
-                    <button onClick={addActivity} style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>+</button>
+                      className="u-flex-1 u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-13px" />
+                    <button onClick={addActivity} className="u-background-action u-color-surface u-border-0 u-padding-8px_14px u-border-radius-8px u-cursor-pointer u-font-weight-700">+</button>
                   </div>
                   <Timeline items={data.activities || []} />
                 </div>
@@ -119,36 +115,36 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
 
 function CustomerTimeline({ items }) {
   if (!items.length) return <div style={emptyBox}>Timeline məlumatı yoxdur.</div>;
-  return <div style={{ display: 'grid', gap: 0 }}>{items.map(item => <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '86px 12px minmax(0,1fr)', gap: 10, minHeight: 66 }}>
-    <small style={{ color: '#64748b', paddingTop: 2 }}>{item.at ? new Date(item.at).toLocaleDateString('az-AZ') : '—'}</small>
-    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#0b7a5c', marginTop: 3, boxShadow: '0 0 0 4px #dcfce7' }} />
-    <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 12 }}><b style={{ display: 'block' }}>{item.type} · {item.title}</b><span style={{ color: '#64748b', fontSize: 13 }}>{item.detail || '—'}</span></div>
+  return <div className="u-display-grid u-gap-0">{items.map(item => <div key={item.id} className="u-display-grid u-grid-template-columns-86px_12px_minmax_0_1fr u-gap-10px u-min-height-66px">
+    <small className="u-color-text_secondary u-padding-top-2px">{item.at ? new Date(item.at).toLocaleDateString('az-AZ') : '—'}</small>
+    <span className="u-width-10px u-height-10px u-border-radius-50 u-background-0b7a5c u-margin-top-3px u-box-shadow-0_0_0_4px_dcfce7" />
+    <div className="u-border-bottom-1px_solid_border u-padding-bottom-12px"><b className="u-display-block">{item.type} · {item.title}</b><span className="u-color-text_secondary u-font-size-13px">{item.detail || '—'}</span></div>
   </div>)}</div>;
 }
 
 export function CreditsTab({ credits, onOpenSalesOrder, onOpenCredit }) {
   if (!credits.length) return <div style={emptyBox}>Kredit müqaviləsi yoxdur.</div>;
-  return <div style={{ display: 'grid', gap: 10 }}>{credits.map(credit => {
+  return <div className="u-display-grid u-gap-10px">{credits.map(credit => {
     const paid = (credit.payments || []).filter(row => !row.reversed_at).reduce((sum, row) => sum + Number(row.principal_amount || 0), 0) + Number(credit.initial_payment || 0);
     const balance = Math.max(0, Number(credit.principal || 0) - paid);
     const overdue = (credit.installments || []).filter(row => row.status === 'overdue').length;
     return <article key={credit.id} aria-label={credit.contract_no} style={detailCard}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><b>{credit.contract_no}</b><span style={{ color: overdue ? '#b91c1c' : '#0b7a5c', fontWeight: 700 }}>{overdue ? `${overdue} gecikmə` : credit.status}</span></div>
+      <div className="u-display-flex u-justify-content-space_between u-gap-12px"><b>{credit.contract_no}</b><span style={{ color: overdue ? '#b91c1c' : '#0b7a5c', fontWeight: 700 }}>{overdue ? `${overdue} gecikmə` : credit.status}</span></div>
       <div style={miniGrid}><Stat label="Məbləğ" value={`${Number(credit.principal || 0).toFixed(2)} ₼`} /><Stat label="Ödənilib" value={`${paid.toFixed(2)} ₼`} /><Stat label="Qalıq" value={`${balance.toFixed(2)} ₼`} /></div>
-      <small style={{ color: '#64748b' }}>Risk {credit.risk_score || 0}/100 · Kolleksiya: {credit.collection_stage || 'current'} · {credit.term_months} ay</small>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+      <small className="u-color-text_secondary">Risk {credit.risk_score || 0}/100 · Kolleksiya: {credit.collection_stage || 'current'} · {credit.term_months} ay</small>
+      <div className="u-display-flex u-flex-wrap-wrap u-gap-8px u-margin-top-10px">
         {onOpenCredit && <button type="button" onClick={() => onOpenCredit(credit.id)} style={smallButton}><ArrowUpRight size={14} aria-hidden="true" /> Kreditə bax</button>}
         {credit.order_id && onOpenSalesOrder && <button type="button" onClick={() => onOpenSalesOrder(credit.order_id)} style={smallButton}><ArrowUpRight size={14} aria-hidden="true" /> Sifarişə bax</button>}
       </div>
-      <details style={{ marginTop: 12 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Ödəniş cədvəli</summary>
-        {credit.installments?.length ? <table style={{ width: '100%', fontSize: 12, marginTop: 8, borderCollapse: 'collapse' }}>
-          <thead><tr><th scope="col" style={{ textAlign: 'left' }}>Tarix</th><th scope="col" style={{ textAlign: 'right' }}>Plan</th><th scope="col" style={{ textAlign: 'right' }}>Qalıq</th></tr></thead>
+      <details className="u-margin-top-12px">
+        <summary className="u-cursor-pointer u-font-weight-600">Ödəniş cədvəli</summary>
+        {credit.installments?.length ? <table className="u-width-100 u-font-size-12px u-margin-top-8px u-border-collapse-collapse">
+          <thead><tr><th scope="col" className="u-text-align-left">Tarix</th><th scope="col" className="u-text-align-right">Plan</th><th scope="col" className="u-text-align-right">Qalıq</th></tr></thead>
           <tbody>{[...credit.installments].sort((a, b) => a.installment_no - b.installment_no).map(row => <tr key={row.id ?? row.installment_no}>
-            <td style={{ padding: '6px 0' }}>{row.due_date}</td><td style={{ textAlign: 'right' }}>{Number(row.principal_due || 0).toFixed(2)} ₼</td>
-            <td style={{ textAlign: 'right' }}>{Math.max(0, Number(row.principal_due || 0) - Number(row.principal_paid || 0)).toFixed(2)} ₼</td>
+            <td className="u-padding-6px_0">{row.due_date}</td><td className="u-text-align-right">{Number(row.principal_due || 0).toFixed(2)} ₼</td>
+            <td className="u-text-align-right">{Math.max(0, Number(row.principal_due || 0) - Number(row.principal_paid || 0)).toFixed(2)} ₼</td>
           </tr>)}</tbody>
-        </table> : <p style={{ color: '#64748b', fontSize: 12 }}>Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.</p>}
+        </table> : <p className="u-color-text_secondary u-font-size-12px">Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.</p>}
       </details>
     </article>;
   })}</div>;
@@ -157,9 +153,9 @@ export function CreditsTab({ credits, onOpenSalesOrder, onOpenCredit }) {
 function DevicesTab({ orders, serviceCases }) {
   const devices = orders.flatMap(order => (order.items || []).map(item => ({ ...item, order })));
   if (!devices.length) return <div style={emptyBox}>Alınmış cihaz və məhsul yoxdur.</div>;
-  return <div style={{ display: 'grid', gap: 10 }}>{devices.map(item => {
+  return <div className="u-display-grid u-gap-10px">{devices.map(item => {
     const cases = serviceCases.filter(row => row.product_id && row.product_id === item.product_id);
-    return <article key={item.id} style={detailCard}><b>{item.product?.name || item.description || 'Məhsul'}</b><small style={{ display: 'block', color: '#64748b', marginTop: 4 }}>{item.product?.sku || 'SKU yoxdur'} · {item.qty} ədəd · {item.order.order_no}</small><div style={{ marginTop: 8, fontSize: 13, color: cases.length ? '#b45309' : '#0b7a5c' }}>{cases.length ? `${cases.length} servis müraciəti` : 'Servis müraciəti yoxdur'}</div>{cases.map(row => <div key={row.id} style={{ marginTop: 6, padding: 8, background: '#fff7ed', borderRadius: 6, fontSize: 12 }}>{row.case_no} · {row.subject} · {row.status}</div>)}</article>;
+    return <article key={item.id} style={detailCard}><b>{item.product?.name || item.description || 'Məhsul'}</b><small className="u-display-block u-color-text_secondary u-margin-top-4px">{item.product?.sku || 'SKU yoxdur'} · {item.qty} ədəd · {item.order.order_no}</small><div style={{ marginTop: 8, fontSize: 13, color: cases.length ? '#b45309' : '#0b7a5c' }}>{cases.length ? `${cases.length} servis müraciəti` : 'Servis müraciəti yoxdur'}</div>{cases.map(row => <div key={row.id} className="u-margin-top-6px u-padding-8px u-background-fff7ed u-border-radius-6px u-font-size-12px">{row.case_no} · {row.subject} · {row.status}</div>)}</article>;
   })}</div>;
 }
 
@@ -169,12 +165,12 @@ function DocumentsTab({ documents, onUpload, onDownload, onRemove }) {
   const [type, setType] = useState('Şəxsiyyət sənədi');
   const [message, setMessage] = useState('');
   const submit = async event => { event.preventDefault(); setMessage(''); try { await onUpload({ file, title, documentType: type }); setFile(null); setTitle(''); setMessage('Sənəd saxlanıldı.'); event.currentTarget.reset(); } catch (nextError) { setMessage(nextError.message); } };
-  return <div style={{ display: 'grid', gap: 12 }}><form onSubmit={submit} style={{ ...detailCard, display: 'grid', gap: 8 }}>
+  return <div className="u-display-grid u-gap-12px"><form onSubmit={submit} style={{ ...detailCard, display: 'grid', gap: 8 }}>
     <b>Yeni sənəd</b><input required value={title} onChange={event => setTitle(event.target.value)} placeholder="Sənədin adı" style={drawerInput} />
     <select value={type} onChange={event => setType(event.target.value)} style={drawerInput}><option>Şəxsiyyət sənədi</option><option>Müqavilə</option><option>Ödəniş sənədi</option><option>Servis sənədi</option><option>Digər</option></select>
     <input required type="file" onChange={event => setFile(event.target.files?.[0] || null)} style={drawerInput} />
     <button type="submit" style={actionButton}>Sənədi yüklə</button>{message && <small>{message}</small>}
-  </form>{documents.map(document => <div key={document.id} style={{ ...detailCard, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}><div><b>{document.title}</b><small style={{ display: 'block', color: '#64748b' }}>{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div style={{ display: 'flex', gap: 6 }}><button type="button" onClick={() => onDownload(document)} style={smallButton}>Aç</button><button type="button" onClick={async () => (await appConfirm('Sənəd silinsin?', { danger: true })) && onRemove(document)} style={{ ...smallButton, color: '#b91c1c' }}>Sil</button></div></div>)}{!documents.length && <div style={emptyBox}>Sənəd əlavə edilməyib.</div>}</div>;
+  </form>{documents.map(document => <div key={document.id} style={{ ...detailCard, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}><div><b>{document.title}</b><small className="u-display-block u-color-text_secondary">{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div className="u-display-flex u-gap-6px"><button type="button" onClick={() => onDownload(document)} style={smallButton}>Aç</button><button type="button" onClick={async () => (await appConfirm('Sənəd silinsin?', { danger: true })) && onRemove(document)} style={{ ...smallButton, color: '#b91c1c' }}>Sil</button></div></div>)}{!documents.length && <div style={emptyBox}>Sənəd əlavə edilməyib.</div>}</div>;
 }
 
 const emptyBox = { padding: 28, textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', borderRadius: 8 };
@@ -185,19 +181,19 @@ const actionButton = { background: '#0b7a5c', color: '#fff', border: 0, borderRa
 const smallButton = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 32, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, padding: '6px 9px', cursor: 'pointer' };
 
 const Stat = ({ label, value }) => (
-  <div style={{ textAlign: 'center' }}>
-    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
-    <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{value}</div>
+  <div className="u-text-align-center">
+    <div className="u-font-size-11px u-color-text_secondary u-font-weight-600 u-text-transform-uppercase">{label}</div>
+    <div className="u-font-size-16px u-font-weight-700 u-color-text_primary u-margin-top-2px">{value}</div>
   </div>
 );
 
 const orderStatusLabels = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
 function OrdersTab({ orders, count, total, onOpen }) {
-  return <div style={{ display: 'grid', gap: 10 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#64748b', fontSize: 12 }}><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
-    {orders.length === 0 ? <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', borderRadius: 10 }}>Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <button key={order.id} type="button" onClick={() => onOpen?.(order.id)} style={{ width: '100%', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10, padding: 12, textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff', cursor: 'pointer' }}>
-      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', color: '#0f172a' }}>{order.order_no || order.id}</strong><small style={{ color: '#64748b' }}>{order.order_date ? new Date(order.order_date).toLocaleDateString('az-AZ') : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
-      <span style={{ textAlign: 'right' }}><strong style={{ display: 'block', color: '#0b7a5c' }}>{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small style={{ color: '#2563eb' }}>Sifarişə bax →</small></span>
+  return <div className="u-display-grid u-gap-10px">
+    <div className="u-display-flex u-justify-content-space_between u-gap-12px u-color-text_secondary u-font-size-12px"><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
+    {orders.length === 0 ? <div className="u-padding-28px u-text-align-center u-color-text_secondary u-border-1px_dashed_line_strong u-border-radius-10px">Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <button key={order.id} type="button" onClick={() => onOpen?.(order.id)} className="u-width-100 u-display-grid u-grid-template-columns-minmax_0_1fr_auto u-gap-10px u-padding-12px u-text-align-left u-border-1px_solid_border u-border-radius-10px u-background-surface u-cursor-pointer">
+      <span className="u-min-width-0"><strong className="u-display-block u-color-text_primary">{order.order_no || order.id}</strong><small className="u-color-text_secondary">{order.order_date ? new Date(order.order_date).toLocaleDateString('az-AZ') : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
+      <span className="u-text-align-right"><strong className="u-display-block u-color-0b7a5c">{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small className="u-color-info">Sifarişə bax →</small></span>
     </button>)}
   </div>;
 }
@@ -217,7 +213,7 @@ function OverviewTab({ c, tags, onUpdate }) {
   React.useEffect(() => setForm(c), [c]);
 
   if (!edit) return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="u-display-flex u-flex-direction-column u-gap-10px">
       <Row label="Telefon" value={c.phone} />
       <Row label="E-poçt" value={c.email} />
       {c.segment === 'business' ? <Row label="VÖEN" value={c.tax_id} /> : <>
@@ -229,19 +225,19 @@ function OverviewTab({ c, tags, onUpdate }) {
       <Row label="Müştəri tipi" value={c.segment === 'business' ? 'Hüquqi şəxs' : 'Fiziki şəxs'} />
       <Row label="Müştəri səviyyəsi" value={c.customer_level_override ? `${c.customer_level_override} (manual)` : (c.customer_level || 'standard')} />
       <div>
-        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Teqlər</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {(tags || []).length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : tags.map(t => (
+        <div className="u-font-size-11px u-color-text_secondary u-font-weight-600 u-text-transform-uppercase u-margin-bottom-4px">Teqlər</div>
+        <div className="u-display-flex u-flex-wrap-wrap u-gap-4px">
+          {(tags || []).length === 0 ? <span className="u-color-text_secondary">—</span> : tags.map(t => (
             <span key={t.id} style={{ background: `${t.color}22`, color: t.color, padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{t.name}</span>
           ))}
         </div>
       </div>
-      <button onClick={() => setEdit(true)} style={{ marginTop: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Düzəliş et</button>
+      <button onClick={() => setEdit(true)} className="u-margin-top-8px u-background-surface_subtle u-border-1px_solid_border u-padding-8px_14px u-border-radius-8px u-cursor-pointer u-font-weight-600">Düzəliş et</button>
     </div>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="u-display-flex u-flex-direction-column u-gap-10px">
       {['name', 'phone', 'email', 'address'].map(k => (
         <label key={k}>{fieldLabels[k]}<input value={form[k] || ''} onChange={e => setForm({ ...form, [k]: e.target.value })}
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, marginTop: 4 }} /></label>
@@ -266,8 +262,8 @@ function OverviewTab({ c, tags, onUpdate }) {
           <option value="">Avtomatik hesablansın</option><option value="standard">Adi</option><option value="silver">Gümüş</option><option value="gold">Qızıl</option><option value="platinum">Platin</option>
         </select>
       </label>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={() => setEdit(false)} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', background: '#fff' }}>Ləğv</button>
+      <div className="u-display-flex u-gap-8px u-justify-content-flex_end">
+        <button onClick={() => setEdit(false)} className="u-padding-8px_14px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</button>
         <button onClick={async () => { await onUpdate({ name: form.name, phone: form.phone, email: form.email, tax_id: form.segment === 'business' ? form.tax_id : (form.fin_code || ''), fin_code: form.segment === 'individual' ? form.fin_code : '', identity_card_no: form.segment === 'individual' ? form.identity_card_no : '', address: form.address, birth_date: form.segment === 'individual' ? (form.birth_date || null) : null, segment: form.segment, customer_level_override: form.customer_level_override || null }); setEdit(false); }}
           style={{ background: '#10b981', color: '#fff', border: 0, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yadda saxla</button>
       </div>
@@ -277,19 +273,19 @@ function OverviewTab({ c, tags, onUpdate }) {
 
 const Row = ({ label, value }) => (
   <div>
-    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
-    <div style={{ fontSize: 14, color: '#0f172a' }}>{value || '—'}</div>
+    <div className="u-font-size-11px u-color-text_secondary u-font-weight-600 u-text-transform-uppercase">{label}</div>
+    <div className="u-font-size-14px u-color-text_primary">{value || '—'}</div>
   </div>
 );
 
 function DealsTab({ deals }) {
-  if (deals.length === 0) return <div style={{ color: '#94a3b8', textAlign: 'center', padding: 30 }}>Açıq sövdələşmə yoxdur</div>;
+  if (deals.length === 0) return <div className="u-color-text_secondary u-text-align-center u-padding-30px">Açıq sövdələşmə yoxdur</div>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="u-display-flex u-flex-direction-column u-gap-8px">
       {deals.map(d => (
-        <div key={d.id} style={{ padding: 12, border: '1px solid #e2e8f0', borderRadius: 10 }}>
-          <div style={{ fontWeight: 600 }}>{d.title}</div>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{Number(d.amount).toFixed(2)} {d.currency}</div>
+        <div key={d.id} className="u-padding-12px u-border-1px_solid_border u-border-radius-10px">
+          <div className="u-font-weight-600">{d.title}</div>
+          <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{Number(d.amount).toFixed(2)} {d.currency}</div>
         </div>
       ))}
     </div>
@@ -297,14 +293,14 @@ function DealsTab({ deals }) {
 }
 
 function TasksTab({ tasks }) {
-  if (tasks.length === 0) return <div style={{ color: '#94a3b8', textAlign: 'center', padding: 30 }}>Açıq tapşırıq yoxdur</div>;
+  if (tasks.length === 0) return <div className="u-color-text_secondary u-text-align-center u-padding-30px">Açıq tapşırıq yoxdur</div>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="u-display-flex u-flex-direction-column u-gap-8px">
       {tasks.map(t => (
-        <div key={t.id} style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div key={t.id} className="u-padding-10px u-border-1px_solid_border u-border-radius-10px u-display-flex u-gap-8px u-align-items-center">
           <input type="checkbox" checked={t.done} readOnly />
-          <span style={{ flex: 1 }}>{t.title}</span>
-          {t.due_at && <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(t.due_at).toLocaleDateString()}</span>}
+          <span className="u-flex-1">{t.title}</span>
+          {t.due_at && <span className="u-font-size-11px u-color-text_secondary">{new Date(t.due_at).toLocaleDateString()}</span>}
         </div>
       ))}
     </div>
@@ -313,16 +309,16 @@ function TasksTab({ tasks }) {
 
 const activityIcon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms: '💬' };
 function Timeline({ items }) {
-  if (items.length === 0) return <div style={{ color: '#94a3b8', textAlign: 'center', padding: 20 }}>Hələ aktivlik yoxdur</div>;
+  if (items.length === 0) return <div className="u-color-text_secondary u-text-align-center u-padding-20px">Hələ aktivlik yoxdur</div>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="u-display-flex u-flex-direction-column u-gap-10px">
       {items.map(a => (
-        <div key={a.id} style={{ display: 'flex', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 10 }}>
-          <span style={{ fontSize: 18 }}>{activityIcon[a.type] || '•'}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>{a.subject}</div>
-            {a.body && <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{a.body}</div>}
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{new Date(a.occurred_at).toLocaleString('az-AZ')}</div>
+        <div key={a.id} className="u-display-flex u-gap-10px u-padding-10px u-background-surface_subtle u-border-radius-10px">
+          <span className="u-font-size-18px">{activityIcon[a.type] || '•'}</span>
+          <div className="u-flex-1">
+            <div className="u-font-weight-600 u-font-size-13px">{a.subject}</div>
+            {a.body && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{a.body}</div>}
+            <div className="u-font-size-11px u-color-text_secondary u-margin-top-4px">{new Date(a.occurred_at).toLocaleString('az-AZ')}</div>
           </div>
         </div>
       ))}

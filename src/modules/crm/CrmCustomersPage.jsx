@@ -73,22 +73,22 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
   }), [customers]);
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+    <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-20px">
+      <header className="u-display-flex u-justify-content-space_between u-align-items-flex_end u-gap-16px u-flex-wrap-wrap">
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>Müştərilər</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--muted-fg, #64748b)' }}>360° görünüş, sövdələşmə tarixi və aktivlik</p>
+          <h1 className="u-margin-0 u-font-size-28px u-font-weight-800">Müştərilər</h1>
+          <p className="u-margin-4px_0_0 u-color-var_muted_fg_text_secondary">360° görünüş, sövdələşmə tarixi və aktivlik</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => setShowLevels(true)} style={{ background: '#fff', color: '#08745a', border: '1px solid #08745a', padding: '10px 14px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>Müştəri səviyyələri</button>
-        <button onClick={() => setShowNew(true)} className="btn-primary"
-          style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 0, padding: '10px 18px', borderRadius: 10, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}>
+        <div className="u-display-flex u-gap-8px">
+        <button onClick={() => setShowLevels(true)} className="u-background-surface u-color-08745a u-border-1px_solid_08745a u-padding-10px_14px u-border-radius-10px u-font-weight-700 u-cursor-pointer">Müştəri səviyyələri</button>
+        <button onClick={() => setShowNew(true)} className="btn-primary u-background-linear_gradient_135deg_action_action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-font-weight-700 u-cursor-pointer u-box-shadow-0_4px_14px_rgba_16_185_129_0_35"
+          >
           + Yeni müştəri
         </button>
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12 }}>
+      <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_180px_1fr u-gap-12px">
         {[
           { label: 'Ümumi', value: stats.total, color: '#10b981' },
           { label: 'Yeni bu ay', value: stats.newMonth, color: '#38bdf8' },
@@ -96,53 +96,53 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
           { label: 'Platin', value: stats.platinum, color: '#7c3aed' },
           { label: 'Dublikat riski', value: duplicateGroups.length, color: duplicateGroups.length ? '#dc2626' : '#10b981' },
         ].map(s => (
-          <div key={s.label} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</span>
+          <div key={s.label} className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-padding-16px u-display-flex u-flex-direction-column u-gap-6px">
+            <span className="u-font-size-12px u-color-text_secondary u-font-weight-600 u-text-transform-uppercase u-letter-spacing-0_5px">{s.label}</span>
             <span style={{ fontSize: 21, lineHeight: 1.2, fontWeight: 750, color: s.color }}>{s.value}</span>
           </div>
         ))}
       </div>
 
-      {duplicateGroups.length > 0 && <section style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 10, padding: 14 }}><b style={{ color: '#9a3412' }}>Dublikat ola bilən müştərilər</b><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>{duplicateGroups.map(([left, right]) => <button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} style={{ border: '1px solid #fdba74', borderRadius: 7, background: '#fff', padding: '7px 10px', cursor: 'pointer' }}>{left.name} ↔ {right.name}</button>)}</div></section>}
+      {duplicateGroups.length > 0 && <section className="u-background-fff7ed u-border-1px_solid_fdba74 u-border-radius-10px u-padding-14px"><b className="u-color-9a3412">Dublikat ola bilən müştərilər</b><div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-top-8px">{duplicateGroups.map(([left, right]) => <button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} style={{ border: '1px solid #fdba74', borderRadius: 7, background: '#fff', padding: '7px 10px', cursor: 'pointer' }}>{left.name} ↔ {right.name}</button>)}</div></section>}
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="u-display-flex u-gap-10px u-flex-wrap-wrap">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar: ad, telefon, FİN, VÖEN, vəsiqə..."
-          style={{ flex: 1, minWidth: 220, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14 }} />
+          className="u-flex-1 u-min-width-220px u-padding-10px_14px u-border-1px_solid_border u-border-radius-10px u-font-size-14px" />
         <select value={seg} onChange={e => setSeg(e.target.value)}
-          style={{ padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14, background: '#fff' }}>
+          className="u-padding-10px_14px u-border-1px_solid_border u-border-radius-10px u-font-size-14px u-background-surface">
           <option value="all">Bütün müştəri tipləri</option>
           <option value="individual">Fiziki</option>
           <option value="business">Hüquqi</option>
         </select>
       </div>
 
-      <section style={{ background: '#fff', border: '1px solid #e2d8bc', borderRadius: 14, padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-          <div><h3 style={{ margin: 0, fontSize: 17 }}>Ad günləri</h3><p style={{ margin: '3px 0 0', color: '#64748b', fontSize: 12 }}>Bu gün və qarşıdakı 30 gün</p></div>
-          <span style={{ background: '#fef3c7', color: '#92400e', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{birthdays.length} müştəri</span>
+      <section className="u-background-surface u-border-1px_solid_e2d8bc u-border-radius-14px u-padding-16px">
+        <div className="u-display-flex u-justify-content-space_between u-gap-12px u-align-items-center u-margin-bottom-12px">
+          <div><h3 className="u-margin-0 u-font-size-17px">Ad günləri</h3><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Bu gün və qarşıdakı 30 gün</p></div>
+          <span className="u-background-fef3c7 u-color-92400e u-padding-5px_10px u-border-radius-999px u-font-size-12px u-font-weight-700">{birthdays.length} müştəri</span>
         </div>
-        {!birthdays.length ? <div style={{ color: '#94a3b8', fontSize: 13 }}>Yaxınlaşan ad günü yoxdur.</div> : <div style={{ display: 'grid', gap: 8 }}>
-          {birthdaysToday.map(({ customer }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 10, padding: 10, display: 'flex', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}><span><strong>{customer.name}</strong><small style={{ display: 'block', color: '#64748b' }}>{customer.phone || 'Telefon yoxdur'}</small></span><strong style={{ color: '#15803d' }}>Bu gün 🎉</strong></button>)}
-          {birthdaysUpcoming.map(({ customer, next }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: 10, padding: 10, display: 'flex', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}><span><strong>{customer.name}</strong><small style={{ display: 'block', color: '#64748b' }}>{customer.phone || 'Telefon yoxdur'}</small></span><span style={{ textAlign: 'right' }}><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small style={{ display: 'block', color: '#64748b' }}>{next.days} gün qalıb</small></span></button>)}
+        {!birthdays.length ? <div className="u-color-text_secondary u-font-size-13px">Yaxınlaşan ad günü yoxdur.</div> : <div className="u-display-grid u-gap-8px">
+          {birthdaysToday.map(({ customer }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_86efac u-background-f0fdf4 u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></button>)}
+          {birthdaysUpcoming.map(({ customer, next }) => <button key={customer.id} type="button" onClick={() => setOpenId(customer.id)} className="u-border-1px_solid_border u-background-surface u-border-radius-10px u-padding-10px u-display-flex u-justify-content-space_between u-cursor-pointer u-text-align-left"><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></button>)}
         </div>}
       </section>
 
       {filtered.length === 0 ? (
-        <div style={{ padding: 60, textAlign: 'center', background: '#fff', borderRadius: 14, border: '1px dashed #cbd5e1' }}>
-          <div style={{ fontSize: 48 }}>👥</div>
-          <h3 style={{ margin: '12px 0 4px' }}>Hələ müştəri yoxdur</h3>
-          <p style={{ color: '#64748b', margin: 0 }}>İlk müştərinizi əlavə edərək başlayın.</p>
+        <div className="u-padding-60px u-text-align-center u-background-surface u-border-radius-14px u-border-1px_dashed_line_strong">
+          <div className="u-font-size-48px">👥</div>
+          <h3 className="u-margin-12px_0_4px">Hələ müştəri yoxdur</h3>
+          <p className="u-color-text_secondary u-margin-0">İlk müştərinizi əlavə edərək başlayın.</p>
         </div>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead style={{ background: '#f8fafc', textAlign: 'left', fontSize: 12, textTransform: 'uppercase', color: '#64748b', letterSpacing: 0.5 }}>
+        <div className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-overflow-hidden">
+          <table className="u-width-100 u-border-collapse-collapse u-font-size-14px">
+            <thead className="u-background-surface_subtle u-text-align-left u-font-size-12px u-text-transform-uppercase u-color-text_secondary u-letter-spacing-0_5px">
               <tr>
-                <th style={{ padding: '12px 16px' }}>Müştəri</th>
-                <th style={{ padding: '12px 16px' }}>Əlaqə</th>
-                <th style={{ padding: '12px 16px' }}>FİN / VÖEN</th>
-                <th style={{ padding: '12px 16px' }}>Son aktivlik</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Əməliyyat</th>
+                <th className="u-padding-12px_16px">Müştəri</th>
+                <th className="u-padding-12px_16px">Əlaqə</th>
+                <th className="u-padding-12px_16px">FİN / VÖEN</th>
+                <th className="u-padding-12px_16px">Son aktivlik</th>
+                <th className="u-padding-12px_16px u-text-align-right">Əməliyyat</th>
               </tr>
             </thead>
             <tbody>
@@ -150,29 +150,29 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
                 const seg = segmentBadge[c.segment] || segmentBadge.individual;
                 return (
                   <tr key={c.id} onClick={() => setOpenId(c.id)}
-                    style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
+                    className="u-border-top-1px_solid_surface_subtle u-cursor-pointer u-transition-background_0_15s"
                     onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <td className="u-padding-12px_16px">
+                      <div className="u-display-flex u-align-items-center u-gap-12px">
                         <Avatar name={c.name} />
                         <div>
-                          <div style={{ fontWeight: 600 }}>{c.name}</div>
+                          <div className="u-font-weight-600">{c.name}</div>
                           <span style={{ background: seg.bg, color: seg.color, padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{seg.label}</span>
                           <span style={{ marginLeft: 5, color: levelMeta[c.customer_level]?.color, fontSize: 11, fontWeight: 700 }}>{levelMeta[c.customer_level]?.label || 'Adi'}</span>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                    <td className="u-padding-12px_16px u-color-text_secondary">
                       <div>{c.phone || '—'}</div>
-                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{c.email || ''}</div>
+                      <div className="u-font-size-12px u-color-text_secondary">{c.email || ''}</div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                    <td className="u-padding-12px_16px u-color-text_secondary">
                       <div>{c.segment === 'business' ? (c.tax_id || '—') : (c.fin_code || c.tax_id || '—')}</div>
-                      {c.segment !== 'business' && c.identity_card_no && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{c.identity_card_no}</div>}
+                      {c.segment !== 'business' && c.identity_card_no && <div className="u-font-size-11px u-color-text_secondary u-margin-top-2px">{c.identity_card_no}</div>}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b' }}>{timeAgo(c.last_activity_at)}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                    <td className="u-padding-12px_16px u-color-text_secondary">{timeAgo(c.last_activity_at)}</td>
+                    <td className="u-padding-12px_16px u-text-align-right" onClick={e => e.stopPropagation()}>
                       <button onClick={async () => { if (await appConfirm(`"${c.name}" silinsin?`, { danger: true })) remove(c.id); }}
                         style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Sil</button>
                     </td>
@@ -213,18 +213,18 @@ function NewCustomerModal({ onClose, onCreate }) {
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Yeni müştəri" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 100, padding: '20px 12px', overflowY: 'auto' }}>
+    <div role="dialog" aria-modal="true" aria-label="Yeni müştəri" onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_0_5 u-display-flex u-align-items-flex_start u-justify-content-center u-z-index-100 u-padding-20px_12px u-overflow-y-auto">
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
-        style={{ background: '#fff', borderRadius: 16, width: 500, maxWidth: '100%', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 55px rgba(15,23,42,.22)' }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
-          <div><h2 style={{ margin: 0, fontSize: 20 }}>Yeni müştəri</h2><p style={{ margin: '3px 0 0', color: '#64748b', fontSize: 12 }}>Müştərinin əsas məlumatlarını daxil edin</p></div>
-          <button type="button" onClick={onClose} aria-label="Pəncərəni bağla" style={{ width: 34, height: 34, border: '1px solid #e2e8f0', borderRadius: 9, background: '#fff', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+        className="u-background-surface u-border-radius-16px u-width-500px u-max-width-100 u-max-height-calc_100vh_40px u-overflow-y-auto u-display-flex u-flex-direction-column u-box-shadow-0_20px_55px_rgba_15_23_42_22">
+        <div className="u-position-sticky u-top-0 u-z-index-2 u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-padding-18px_20px u-border-bottom-1px_solid_border u-background-surface">
+          <div><h2 className="u-margin-0 u-font-size-20px">Yeni müştəri</h2><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Müştərinin əsas məlumatlarını daxil edin</p></div>
+          <button type="button" onClick={onClose} aria-label="Pəncərəni bağla" className="u-width-34px u-height-34px u-border-1px_solid_border u-border-radius-9px u-background-surface u-cursor-pointer u-font-size-20px u-line-height-1">×</button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '18px 20px 8px' }}>
-        {err && <div style={{ background: '#fef2f2', color: '#dc2626', padding: 8, borderRadius: 8, fontSize: 13 }}>{err}</div>}
+        <div className="u-display-flex u-flex-direction-column u-gap-12px u-padding-18px_20px_8px">
+        {err && <div className="u-background-fef2f2 u-color-danger u-padding-8px u-border-radius-8px u-font-size-13px">{err}</div>}
         <label style={modalLabel}>Ad və soyad / şirkət adı *<input autoFocus value={form.name} onChange={e => set('name', e.target.value)} placeholder={form.segment === 'business' ? 'Şirkətin hüquqi adı' : 'Ad və soyad'} style={inp} /></label>
         <label>Telefon<input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+994..." style={inp} /></label>
-        <label>E-poçt <span style={{ color: '#94a3b8', fontSize: 12 }}>(məcburi deyil)</span><input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inp} /></label>
+        <label>E-poçt <span className="u-color-text_secondary u-font-size-12px">(məcburi deyil)</span><input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inp} /></label>
         <label>Müştəri tipi
           <select value={form.segment} onChange={e => set('segment', e.target.value)} style={inp}>
             <option value="individual">Fiziki şəxs</option>
@@ -234,7 +234,7 @@ function NewCustomerModal({ onClose, onCreate }) {
         {form.segment === 'individual' ? <>
           <label>FİN kod<input value={form.fin_code} onChange={e => set('fin_code', e.target.value.toUpperCase())} placeholder="7 simvol" maxLength={7} style={inp} /></label>
           <label>Şəxsiyyət vəsiqəsinin seriya və nömrəsi<input value={form.identity_card_no} onChange={e => set('identity_card_no', e.target.value.toUpperCase())} placeholder="Məsələn: AA1234567" style={inp} /></label>
-          <label>Doğum tarixi <span style={{ color: '#94a3b8', fontSize: 12 }}>(məcburi deyil)</span><BirthDateInput value={form.birth_date} onChange={value => set('birth_date', value)} /></label>
+          <label>Doğum tarixi <span className="u-color-text_secondary u-font-size-12px">(məcburi deyil)</span><BirthDateInput value={form.birth_date} onChange={value => set('birth_date', value)} /></label>
         </> : <label>VÖEN<input value={form.tax_id} onChange={e => set('tax_id', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10 rəqəm" inputMode="numeric" style={inp} /></label>}
         <label>Səviyyə
           <select value={form.customer_level_override || ''} onChange={e => set('customer_level_override', e.target.value || null)} style={inp}>
@@ -243,7 +243,7 @@ function NewCustomerModal({ onClose, onCreate }) {
         </label>
         <label>Ünvan<input value={form.address} onChange={e => set('address', e.target.value)} style={inp} /></label>
         </div>
-        <div style={{ position: 'sticky', bottom: 0, zIndex: 2, display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8, padding: '14px 20px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
+        <div className="u-position-sticky u-bottom-0 u-z-index-2 u-display-flex u-justify-content-flex_end u-gap-8px u-margin-top-8px u-padding-14px_20px u-border-top-1px_solid_border u-background-surface">
           <button type="button" onClick={onClose} style={btnGhost}>Ləğv et</button>
           <button type="submit" disabled={busy} style={btnPrimary}>{busy ? '...' : 'Yarat'}</button>
         </div>
@@ -258,10 +258,10 @@ function LevelSettingsModal({ levels, onClose, onSave }) {
   const [form, setForm] = useState(levels);
   const [busy, setBusy] = useState(false);
   const submit = async (e) => { e.preventDefault(); if (!(Number(form.silver) <= Number(form.gold) && Number(form.gold) <= Number(form.platinum))) return; setBusy(true); try { await onSave(form); } finally { setBusy(false); } };
-  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', display: 'grid', placeItems: 'center', zIndex: 110 }}><form onClick={e => e.stopPropagation()} onSubmit={submit} style={{ background: '#fff', borderRadius: 16, padding: 24, width: 430, maxWidth: '92vw', display: 'grid', gap: 12 }}>
-    <h2 style={{ margin: 0 }}>Müştəri səviyyələri</h2><p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>Kassaya daxil olmuş ümumi satış ödənişinə əsasən avtomatik hesablanır.</p>
+  return <div onClick={onClose} className="u-position-fixed u-inset-0 u-background-rgba_15_23_42_5 u-display-grid u-place-items-center u-z-index-110"><form onClick={e => e.stopPropagation()} onSubmit={submit} className="u-background-surface u-border-radius-16px u-padding-24px u-width-430px u-max-width-92vw u-display-grid u-gap-12px">
+    <h2 className="u-margin-0">Müştəri səviyyələri</h2><p className="u-margin-0 u-color-text_secondary u-font-size-13px">Kassaya daxil olmuş ümumi satış ödənişinə əsasən avtomatik hesablanır.</p>
     {[['silver','Gümüş'],['gold','Qızıl'],['platinum','Platin']].map(([key,label]) => <label key={key}>{label} üçün minimum məbləğ<input type="number" min="0" value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} style={inp} /></label>)}
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}><button type="button" onClick={onClose} style={btnGhost}>Ləğv et</button><button disabled={busy} style={btnPrimary}>Yadda saxla</button></div>
+    <div className="u-display-flex u-justify-content-flex_end u-gap-8px"><button type="button" onClick={onClose} style={btnGhost}>Ləğv et</button><button disabled={busy} style={btnPrimary}>Yadda saxla</button></div>
   </form></div>;
 }
 

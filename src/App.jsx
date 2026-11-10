@@ -2563,7 +2563,7 @@ function App() {
             disabledReason={actionDeniedReason}
           />
 
-          <Suspense fallback={<div className="page-suspense-loader" style={{ padding: 32, opacity: 0.6 }}>Yüklənir…</div>}>
+          <Suspense fallback={<div className="page-suspense-loader u-padding-32px u-opacity-0_6" >Yüklənir…</div>}>
           {active === "platform" && <PlatformAdminPage />}
           {active === "assistant" && <AssistantPage />}
           {active === "insights" && <InsightsPage />}
@@ -2847,7 +2847,7 @@ function App() {
             />
           )}
           {active === "notifications" && (
-            <div className="stack" style={{ marginBottom: 16 }}><CustomerMessengerPanel /></div>
+            <div className="stack u-margin-bottom-16px" ><CustomerMessengerPanel /></div>
           )}
           {active === "notifications" && (
             <NotificationsPage

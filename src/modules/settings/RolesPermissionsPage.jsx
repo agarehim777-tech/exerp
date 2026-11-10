@@ -174,8 +174,8 @@ export default function RolesPermissionsPage({
   if (!isAdmin) {
     return (
       <div style={card}>
-        <h2 style={{ margin: 0 }}>İcazə yoxdur</h2>
-        <p style={{ color: "#6b7a72" }}>Bu səhifə yalnız Sahib və Admin üçündür. Cari rol: <b>{currentRole || "—"}</b></p>
+        <h2 className="u-margin-0">İcazə yoxdur</h2>
+        <p className="u-color-6b7a72">Bu səhifə yalnız Sahib və Admin üçündür. Cari rol: <b>{currentRole || "—"}</b></p>
       </div>
     );
   }
@@ -246,16 +246,16 @@ export default function RolesPermissionsPage({
 
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
+    <div className="u-display-grid u-gap-20px">
       <div style={card}>
         <div style={sectionHeader}>
           <div>
-            <h2 style={{ margin: 0, marginBottom: 4 }}>Yeni istifadəçi yarat</h2>
-            <p style={{ margin: 0, color: "#6b7a72", fontSize: 13 }}>
+            <h2 className="u-margin-0 u-margin-bottom-4px">Yeni istifadəçi yarat</h2>
+            <p className="u-margin-0 u-color-6b7a72 u-font-size-13px">
               Anbardar, satıcı, satınalma və maliyyə əməkdaşını yaradıb uyğun sistem rolunu seçin.
             </p>
             {!requiresPassword && (
-              <p role="note" style={{ margin: "6px 0 0", color: "#8a6a1e", fontSize: 13 }}>
+              <p role="note" className="u-margin-6px_0_0 u-color-8a6a1e u-font-size-13px">
                 Bu versiyada hesab yalnız dəvətlə yaradılır: aşağıdakı "Dəvət et" bölməsindən e-poçta dəvət göndərin.
               </p>
             )}
@@ -298,24 +298,24 @@ export default function RolesPermissionsPage({
       </div>
 
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-12px">
           <div>
-            <h2 style={{ margin: 0 }}>Rollar və İcazələr</h2>
-            <p style={{ margin: "4px 0 0", color: "#6b7a72", fontSize: 13 }}>
+            <h2 className="u-margin-0">Rollar və İcazələr</h2>
+            <p className="u-margin-4px_0_0 u-color-6b7a72 u-font-size-13px">
               Hər rol üçün modul səviyyəsində Baxış / Redaktə icazələrini idarə et
             </p>
           </div>
-          {saving && <span style={{ fontSize: 12, color: "#8a6a1e" }}>Saxlanılır…</span>}
+          {saving && <span className="u-font-size-12px u-color-8a6a1e">Saxlanılır…</span>}
         </div>
         {loadError && (
-          <div role="alert" style={{ background: "#fdecea", color: "#8b1e1e", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 10, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+          <div role="alert" className="u-background-fdecea u-color-8b1e1e u-padding-8px u-border-radius-6px u-font-size-12px u-margin-bottom-10px u-display-flex u-gap-8px u-align-items-center u-justify-content-space_between">
             <span>{loadError}</span>
-            <button type="button" onClick={() => reload()} disabled={loading} style={{ border: "1px solid #8b1e1e", background: "transparent", color: "#8b1e1e", borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Yenidən yüklə</button>
+            <button type="button" onClick={() => reload()} disabled={loading} className="u-border-1px_solid_8b1e1e u-background-transparent u-color-8b1e1e u-border-radius-6px u-padding-2px_8px u-cursor-pointer">Yenidən yüklə</button>
           </div>
         )}
-        {msg && <div style={{ background: "#fdecea", color: "#8b1e1e", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 10 }}>{msg}</div>}
+        {msg && <div className="u-background-fdecea u-color-8b1e1e u-padding-8px u-border-radius-6px u-font-size-12px u-margin-bottom-10px">{msg}</div>}
         {loading ? <div>Yüklənir…</div> : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="u-overflow-x-auto">
             <table style={table}>
               <thead>
                 <tr>
@@ -340,7 +340,7 @@ export default function RolesPermissionsPage({
               <tbody>
                 {MODULES.map((mod) => (
                   <tr key={mod.id}>
-                    <td style={{ ...td, fontWeight: 600 }}>{mod.label}<div style={{ fontSize: 12, color: "#8a9a92" }}>{mod.id}</div></td>
+                    <td style={{ ...td, fontWeight: 600 }}>{mod.label}<div className="u-font-size-12px u-color-8a9a92">{mod.id}</div></td>
                     {ROLES.map((r) => {
                       const cell = matrix[r.key]?.[mod.id] || { view: r.key === "owner", edit: r.key === "owner" };
                       const locked = r.locked;
@@ -366,8 +366,8 @@ export default function RolesPermissionsPage({
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: 0, marginBottom: 4 }}>İstifadəçilər</h2>
-        <p style={{ margin: "0 0 12px", color: "#6b7a72", fontSize: 13 }}>
+        <h2 className="u-margin-0 u-margin-bottom-4px">İstifadəçilər</h2>
+        <p className="u-margin-0_0_12px u-color-6b7a72 u-font-size-13px">
           Cari şirkət: <b>{activeMembership?.tenants?.name || "—"}</b> · Tətbiq profilləri və Supabase üzvləri vahid siyahıda göstərilir.
         </p>
         <table style={table}>
@@ -383,7 +383,7 @@ export default function RolesPermissionsPage({
           </thead>
           <tbody>
             {unifiedUsers.length === 0 && (
-              <tr><td style={td} colSpan={6}><i style={{ color: "#8a9a92" }}>İstifadəçi yoxdur</i></td></tr>
+              <tr><td style={td} colSpan={6}><i className="u-color-8a9a92">İstifadəçi yoxdur</i></td></tr>
             )}
             {unifiedUsers.map((user) => (
               <tr key={user.id}>
@@ -431,10 +431,10 @@ export default function RolesPermissionsPage({
 
         {selectedUser && (
           <div style={permissionPanel}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 12 }}>
+            <div className="u-display-flex u-justify-content-space_between u-gap-16px u-align-items-flex_start u-margin-bottom-12px">
               <div>
                 <strong>{selectedUser.name}</strong>
-                <div style={{ color: "#6b7a72", fontSize: 12 }}>{selectedUser.email} · {selectedAppUser?.role}</div>
+                <div className="u-color-6b7a72 u-font-size-12px">{selectedUser.email} · {selectedAppUser?.role}</div>
               </div>
               <span style={permissionCount}>{selectedAccess.length}/{modulePermissionCatalog.length} aktiv modul</span>
             </div>
@@ -457,7 +457,7 @@ export default function RolesPermissionsPage({
               })}
             </div>
             {canOverrideUserPermissions && (
-              <p style={{ margin: "12px 0 0", color: "#6b7a72", fontSize: 11 }}>
+              <p className="u-margin-12px_0_0 u-color-6b7a72 u-font-size-11px">
                 Super Admin rol limitindən kənar fərdi icazəni də aktiv və ya deaktiv edə bilər.
               </p>
             )}
@@ -479,30 +479,30 @@ export default function RolesPermissionsPage({
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: 0, marginBottom: 4 }}>Üzv dəvətləri</h2>
-        <p style={{ margin: "0 0 12px", color: "#6b7a72", fontSize: 13 }}>
+        <h2 className="u-margin-0 u-margin-bottom-4px">Üzv dəvətləri</h2>
+        <p className="u-margin-0_0_12px u-color-6b7a72 u-font-size-13px">
           E-poçt daxil edin, sistem dəvət linki yaradacaq — həmin şəxs qeydiyyatdan keçib linkə keçəndə şirkətə əlavə olunacaq
         </p>
-        <form onSubmit={sendInvite} style={{ display: "grid", gridTemplateColumns: "1fr 140px auto", gap: 8, marginBottom: 12 }}>
+        <form onSubmit={sendInvite} className="u-display-grid u-grid-template-columns-1fr_140px_auto u-gap-8px u-margin-bottom-12px">
           <input type="email" required placeholder="user@example.com" value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)} style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #d4c9a3" }} />
+            onChange={(e) => setInviteEmail(e.target.value)} className="u-padding-8px_10px u-border-radius-6px u-border-1px_solid_d4c9a3" />
           <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={select}>
             {ROLES.filter((r) => !r.locked).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
           </select>
-          <button type="submit" disabled={saving} style={{ background: "#064e3b", color: "#fbe89a", border: 0, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Dəvət et</button>
+          <button type="submit" disabled={saving} className="u-background-text_primary u-color-fbe89a u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-600">Dəvət et</button>
         </form>
         <table style={table}>
           <thead>
             <tr><th style={th}>E-poçt</th><th style={th}>Rol</th><th style={th}>Bitir</th><th style={th}>Link</th><th style={th}></th></tr>
           </thead>
           <tbody>
-            {invites.length === 0 && <tr><td style={td} colSpan={5}><i style={{ color: "#8a9a92" }}>Aktiv dəvət yoxdur</i></td></tr>}
+            {invites.length === 0 && <tr><td style={td} colSpan={5}><i className="u-color-8a9a92">Aktiv dəvət yoxdur</i></td></tr>}
             {invites.map((inv) => (
               <tr key={inv.id}>
                 <td style={{ ...td, textAlign: "left" }}>{inv.email}</td>
                 <td style={td}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
                 <td style={td}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
-                <td style={td}><button onClick={() => copyInviteLink(inv.id)} style={{ background: "#f0e6c8", border: 0, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Kopyala</button></td>
+                <td style={td}><button onClick={() => copyInviteLink(inv.id)} className="u-background-f0e6c8 u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px">Kopyala</button></td>
                 <td style={td}><button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</button></td>
               </tr>
             ))}

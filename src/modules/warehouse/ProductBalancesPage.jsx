@@ -94,12 +94,12 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
               {product.imageUrl || product.image_url ? <img src={product.imageUrl || product.image_url} alt={`${product.name} şəkli`} /> : <Package size={25} />}
             </div>
             <div>
-              <span style={{ color: "#0b7a5c", fontWeight: 700, fontSize: 13 }}>MƏHSUL 360</span>
-              <h2 id="product-360-title" style={{ margin: "4px 0" }}>{product.name}</h2>
-              <p style={{ margin: 0 }}>{product.sku || "SKU yoxdur"} · {product.category || "Kateqoriyasız"}</p>
+              <span className="u-color-0b7a5c u-font-weight-700 u-font-size-13px">MƏHSUL 360</span>
+              <h2 id="product-360-title" className="u-margin-4px_0">{product.name}</h2>
+              <p className="u-margin-0">{product.sku || "SKU yoxdur"} · {product.category || "Kateqoriyasız"}</p>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="u-display-flex u-gap-8px">
             <button type="button" className="secondary-btn" onClick={() => onEdit(product.id)}>Redaktə et</button>
             <button type="button" className="secondary-btn" onClick={onClose} aria-label="Bağla"><X size={18} /></button>
           </div>
@@ -122,7 +122,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
             <div><span>Daxilolma</span><strong>{number(receivedQty)} · {incoming.length} əməliyyat</strong></div>
           </div>
 
-          <div className="warehouse-balance-tabs" role="tablist" style={{ marginBottom: 16 }}>
+          <div className="warehouse-balance-tabs u-margin-bottom-16px" role="tablist" >
             {[["stock", `Qalıq (${balances.length})`, Package], ["cost", `Maya tarixçəsi (${costHistory.length})`, CircleDollarSign], ["returns", "Problemli stok", RotateCcw], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Stok 360 (${productMovements.length})`, History]].map(([key, label, Icon]) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>
             ))}
@@ -143,7 +143,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
 
 function HistoryTable({ title, headers, rows, empty, loading }) {
   return <section>
-    <h3 style={{ margin: "0 0 12px", color: "#173a30", fontSize: 17 }}>{title}</h3>
+    <h3 className="u-margin-0_0_12px u-color-173a30 u-font-size-17px">{title}</h3>
     <div className="warehouse-balance-table-wrap">
       <table className="warehouse-balance-table"><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
         <tbody>{loading ? <tr><td colSpan={headers.length}>Tarixçə yüklənir…</td></tr> : rows.length ? rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>) : <tr><td colSpan={headers.length} className="warehouse-balance-empty">{empty}</td></tr>}</tbody>

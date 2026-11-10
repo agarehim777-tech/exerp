@@ -32,15 +32,15 @@ export default function TenantSwitcher() {
   if (!memberships.length) return null;
 
   return (
-    <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 40, fontFamily: "Manrope, system-ui" }}>
+    <div className="u-position-fixed u-bottom-16px u-right-16px u-z-index-40 u-font-family-Manrope_system_ui">
       <button onClick={() => setOpen(!open)} style={btn}>
         🏢 {active?.tenants?.name || "Şirkət"}
         {active?.role && <span style={roleBadge}>{roleLabel(active.role)}</span>}
-        <span style={{ marginLeft: 4 }}>▾</span>
+        <span className="u-margin-left-4px">▾</span>
       </button>
       {open && (
         <div style={panel}>
-          <div style={{ fontSize: 11, color: "#5f7a70", padding: "6px 10px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <div className="u-font-size-11px u-color-5f7a70 u-padding-6px_10px u-text-transform-uppercase u-letter-spacing-0_5px">
             Şirkətləriniz ({memberships.length})
           </div>
           {memberships.map((m) => {
@@ -53,7 +53,7 @@ export default function TenantSwitcher() {
                   style={{ ...rowBtn, fontWeight: isActive ? 700 : 500, color: isActive ? "#064e3b" : "#0f2a20" }}
                 >
                   {isActive ? "✓ " : ""}{m.tenants?.name}
-                  <span style={{ color: "#8a9a92", fontSize: 11, marginLeft: 6 }}>/{m.tenants?.slug}</span>
+                  <span className="u-color-8a9a92 u-font-size-11px u-margin-left-6px">/{m.tenants?.slug}</span>
                   <span style={inlineRoleBadge}>{roleLabel(m.role)}</span>
                 </button>
                 {m.role === "owner" && !isActive && (
