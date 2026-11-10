@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ChangeEventHandler, FormEventHandler, HTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, SelectHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, ChangeEventHandler, CSSProperties, FormEventHandler, HTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, SelectHTMLAttributes } from 'react';
 export { default as DataTable } from './DataTable.tsx';
 
 const join = (...values: Array<string | false | undefined>) => values.filter(Boolean).join(' ');
@@ -50,5 +50,8 @@ export function Tabs({ items, value, onChange, className }: { items: Array<[stri
   return <div className={join('ui-tabs', className)} role="tablist">{items.map(([key, label], index) => <Button key={key} variant="tab" className={value === key ? 'active' : ''} role="tab" aria-selected={value === key} tabIndex={value === key ? 0 : -1} onKeyDown={event => move(event, index)} onClick={() => onChange(key)}>{label}</Button>)}</div>;
 }
 export function Notice({ children, tone = 'info', className }: ContainerProps & { tone?: string }) { return <div className={join('ui-notice', `ui-notice-${tone}`, className)} role={tone === 'danger' ? 'alert' : undefined}>{children}</div>; }
-export function Badge({ children, tone = 'neutral', className }: ContainerProps & { tone?: string }) { return <span className={join('ui-badge', `ui-badge-${tone}`, className)}>{children}</span>; }
+export function Badge({ children, tone = 'neutral', className, accentColor, ...rest }: ContainerProps & { tone?: string; accentColor?: string }) {
+  const style = accentColor ? { '--badge-accent': accentColor } as CSSProperties : undefined;
+  return <span className={join('ui-badge', `ui-badge-${tone}`, accentColor && 'ui-badge-custom', className)} style={style} {...rest}>{children}</span>;
+}
 export function TableActions({ children }: { children?: ReactNode }) { return <div className="ui-table-actions">{children}</div>; }
