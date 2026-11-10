@@ -1319,3 +1319,211 @@
 .sx-6179637.sx-6179637 { margin-bottom: 14px; }
 
 .sx-4ddbe90.sx-4ddbe90 { white-space: nowrap; }
+
+.sx-f7dbba7.sx-f7dbba7 { display: flex; }
+
+.sx-daae847.sx-daae847 { justify-content: space-between; }
+
+.sx-2dab903.sx-2dab903 { padding: 3px 0; }
+
+.sx-f2ee35f.sx-f2ee35f { font-weight: 800; }
+
+.sx-f1bde2c.sx-f1bde2c { font-weight: 400; }
+
+.sx-3dd9b4c.sx-3dd9b4c { font-size: 15px; }
+
+.sx-3044b60.sx-3044b60 { font-size: 13px; }
+
+.sx-5cfb91b.sx-5cfb91b { color: #0f172a; }
+
+.sx-53deb6e.sx-53deb6e { color: #475569; }
+
+.procurement-page-styles-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.procurement-page-styles-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #dbe3ef;
+  background: #fff;
+  color: #334155;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.procurement-page-styles-message {
+  max-width: 1440px;
+  margin: 0 auto 12px;
+  border-radius: 10px;
+  padding: 10px 42px 10px 12px;
+  position: relative;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.procurement-page-styles-message-error {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.procurement-page-styles-message-ok {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.procurement-page-styles-tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.procurement-page-styles-tab-active {
+  border: 1px solid #08745a;
+  color: #075e4b;
+  background: #e8f5ef;
+}
+
+.sx-d7614df.sx-d7614df { grid-template-columns: 1fr; }
+
+.procurement-page-styles-badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.procurement-page-styles-metric-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.procurement-page-styles-badge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sx-0695ff9.sx-0695ff9 { background: #fff; }
+
+.sx-a50337b.sx-a50337b { border-radius: 8px; }
+
+.sx-3e3b3e7.sx-3e3b3e7 { overflow: hidden; }
+
+.sx-0d541a3.sx-0d541a3 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.sx-176884a.sx-176884a { padding: 12px; }
+
+.sx-4fd67c1.sx-4fd67c1 { border: 1px solid #e2e8f0; }
+
+.procurement-page-styles-badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.procurement-page-styles-field-wide {
+  grid-column: span 2;
+}
+
+.procurement-page-styles-progress-fill {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.sx-ef4ac23.sx-ef4ac23 { background: linear-gradient(135deg,#10b981,#059669); }
+
+.sx-4eb23a8.sx-4eb23a8 { color: #fff; }
+
+.sx-012333e.sx-012333e { border: 0; }
+
+.sx-618e663.sx-618e663 { padding: 10px 18px; }
+
+.sx-3c85720.sx-3c85720 { border-radius: 10px; }
+
+.sx-83e4487.sx-83e4487 { font-weight: 700; }
+
+.sx-b202c6d.sx-b202c6d { cursor: pointer; }
+
+.sx-0ee1255.sx-0ee1255 { min-width: 280px; }
+
+.sx-e016922.sx-e016922 { background: #ecfdf5; }
+
+.sx-b55f8cb.sx-b55f8cb { background: #f8fafc; }
+
+.sx-2f18f99.sx-2f18f99 { border-radius: 14px; }
+
+.sx-678b59d.sx-678b59d { flex-direction: column; }
+
+.sx-b1185e5.sx-b1185e5 { transition: all 0.2s; }
+
+.sx-90bc849.sx-90bc849 { width: 8px; }
+
+.sx-c984939.sx-c984939 { height: 8px; }
+
+.sx-8f633ef.sx-8f633ef { border-radius: 50%; }
+
+.insights-page--s-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+
+.insights-page--s-small-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.insights-page--s-small-btn-on {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.insights-page--s-small-btn-off {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sx-53875d1.sx-53875d1 { color: #b91c1c; }
+
+.sx-db8bce3.sx-db8bce3 { color: #15803d; }
+
+.sx-bf83cf1.sx-bf83cf1 { font-size: 18px; }

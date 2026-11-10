@@ -1239,7 +1239,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       </section>
 
       {(notice || error) && (
-        <div style={{ ...styles.message, ...(error ? styles.messageError : styles.messageOk) }}>
+        <div className={`procurement-page-styles-message ${error ? "procurement-page-styles-message-error" : "procurement-page-styles-message-ok"}`}>
           {error || notice}
           <button type="button" onClick={() => { setError(""); setNotice(""); }} className="procurement-page-styles-message-close">
             <X size={14} />
@@ -1248,7 +1248,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       )}
 
       {!poPaymentsAvailable && !loading && (
-        <div role="status" style={{ ...styles.message, ...styles.messageError }}>
+        <div role="status" className="procurement-page-styles-message procurement-page-styles-message-error">
           Birbaşa PO ödənişi bağlıdır. Ödəniş üçün uyğun vendor fakturası tələb olunur.
         </div>
       )}
@@ -1262,7 +1262,7 @@ function ProcurementWorkspace({ tenantId, user }) {
           ["landed", Ship, "Göndəriş və maya"],
           ["invoices", Receipt, "Fakturalar"],
         ].map(([id, Icon, label]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} style={{ ...styles.tabButton, ...(tab === id ? styles.tabActive : {}) }}>
+          <button key={id} type="button" onClick={() => setTab(id)} className={`procurement-page-styles-tab-button ${tab === id ? "procurement-page-styles-tab-active" : ""}`}>
             <Icon size={16} />
             {label}
           </button>
@@ -1454,7 +1454,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
   return (
     <div className="procurement-page-styles-split-grid">
       <Panel title="Yeni təklif sorğusu" icon={ClipboardCheck}>
-        <form style={{ ...styles.form, gridTemplateColumns: "1fr" }} onSubmit={onSubmit}>
+        <form className="procurement-page-styles-form sx-d7614df" onSubmit={onSubmit}>
           <Field label="Sorğunun adı" value={form.title} onChange={(value) => setForm({ ...form, title: value })} required wide />
           <Field label="Məhsul / xidmət" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required wide />
           <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
@@ -1602,7 +1602,7 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
               <TwoLine key="vendor" title={vendor.name} subtitle={vendor.tax_id || vendor.address || "VÖEN/ünvan qeyd edilməyib"} />,
               <TwoLine key="contact" title={vendor.phone || "Telefon yoxdur"} subtitle={vendor.email || "Email yoxdur"} />,
               vendorPo.length,
-              <span key="status" style={{ ...styles.badge, ...(vendor.is_active ? styles.badge_success : styles.badge_neutral) }}>
+              <span key="status" className={`procurement-page-styles-badge ${vendor.is_active ? "procurement-page-styles-badge-success" : "procurement-page-styles-badge-neutral"}`}>
                 {vendor.is_active ? "Aktiv" : "Passiv"}
               </span>,
               <div key="actions" className="procurement-page-styles-row-actions">
@@ -1819,7 +1819,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
       </div>
 
       {payments.length > 0 ? (
-        <table style={{ ...styles.table, background: "#fff", borderRadius: "8px", overflow: "hidden" }}>
+        <table className="procurement-page-styles-table sx-0695ff9 sx-a50337b sx-3e3b3e7">
           <thead>
             <tr className="u-background-surface_subtle u-text-align-left">
               <th className="u-padding-8px_10px">Tarix</th>
@@ -1853,7 +1853,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
       )}
 
       {isOpen && (
-        <form onSubmit={onPaymentSubmit} style={{ ...styles.form, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "12px", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+        <form onSubmit={onPaymentSubmit} className="procurement-page-styles-form sx-0d541a3 sx-176884a sx-0695ff9 sx-a50337b sx-4fd67c1">
           <Field label="Məbləğ" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })} required />
           <Field label="Tarix" type="date" value={paymentForm.payment_date} onChange={(value) => setPaymentForm({ ...paymentForm, payment_date: value })} required />
           <label className="procurement-page-styles-field">
@@ -2150,7 +2150,7 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
             qty(row.qty_accepted),
             qty(row.qty_invoiced),
             row.price_ok ? "Uyğun" : "Fərq var",
-            <span key="match" style={{ ...styles.badge, ...(row.status === "matched" ? styles.badge_success : styles.badge_warning) }}>
+            <span key="match" className={`procurement-page-styles-badge ${row.status === "matched" ? "procurement-page-styles-badge-success" : "procurement-page-styles-badge-warning"}`}>
               {row.status === "matched" ? "Uyğundur" : row.status}
             </span>,
           ])}
@@ -2177,7 +2177,7 @@ function Panel({ title, icon: Icon, action, children }) {
 
 function Field({ label, value, onChange, type = "text", required = false, wide = false }) {
   return (
-    <label style={{ ...styles.field, ...(wide ? styles.fieldWide : {}) }}>
+    <label className={`procurement-page-styles-field ${wide ? "procurement-page-styles-field-wide" : ""}`}>
       <span>{label}</span>
       <input className="procurement-page-styles-input" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </label>
@@ -2197,7 +2197,7 @@ function Progress({ value, label }) {
   return (
     <div className="procurement-page-styles-progress-wrap">
       <div className="procurement-page-styles-progress-track">
-        <span style={{ ...styles.progressFill, width: `${Math.max(0, Math.min(100, value))}%` }} />
+        <span className="procurement-page-styles-progress-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
       <small>{label}</small>
     </div>

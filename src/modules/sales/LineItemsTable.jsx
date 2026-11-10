@@ -89,7 +89,7 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
 
 function Row({ label, value, bold }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontWeight: bold ? 800 : 400, fontSize: bold ? 15 : 13, color: bold ? '#0f172a' : '#475569' }}>
+    <div className={`sx-f7dbba7 sx-daae847 sx-2dab903 ${bold ? "sx-f2ee35f" : "sx-f1bde2c"} ${bold ? "sx-3dd9b4c" : "sx-3044b60"} ${bold ? "sx-5cfb91b" : "sx-53deb6e"}`}>
       <span>{label}</span><span>{value.toFixed(2)} ₼</span>
     </div>
   );

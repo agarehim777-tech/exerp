@@ -140,9 +140,9 @@ export default function InsightsPage() {
         const tone = PRIORITY_TONE[insight.priority] || PRIORITY_TONE.medium;
         const state = feedback[insight.key];
         return (
-          <div key={insight.key || index} style={{ ...S.card, borderColor: tone.border }}>
+          <div key={insight.key || index} className="insights-page--s-card" style={{ borderColor: tone.border }}>
             <div className="insights-page--s-card-head">
-              <span style={{ ...S.badge, background: tone.bg, color: tone.color, borderColor: tone.border }}>{tone.label}</span>
+              <span className="insights-page--s-badge" style={{ background: tone.bg, color: tone.color, borderColor: tone.border }}>{tone.label}</span>
               <span className="insights-page--s-category">{CATEGORY_LABELS[insight.category] || insight.category || "Ümumi"}</span>
               {insight.impact && <span className="insights-page--s-impact">{insight.impact}</span>}
             </div>
@@ -150,13 +150,13 @@ export default function InsightsPage() {
             <div className="insights-page--s-card-detail">{insight.detail}</div>
             {insight.action && <div className="insights-page--s-action"><strong>Addım:</strong> {insight.action}</div>}
             <div className="insights-page--s-card-actions">
-              <button onClick={() => react(insight, "accepted")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "accepted" ? S.smallBtnOn : {}) }}>
+              <button onClick={() => react(insight, "accepted")} disabled={!!state || !!pendingFeedback[insight.key]} className={`insights-page--s-small-btn ${state === "accepted" ? "insights-page--s-small-btn-on" : ""}`}>
                 <Check size={14} /> Qəbul et
               </button>
-              <button onClick={() => react(insight, "done")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "done" ? S.smallBtnOn : {}) }}>
+              <button onClick={() => react(insight, "done")} disabled={!!state || !!pendingFeedback[insight.key]} className={`insights-page--s-small-btn ${state === "done" ? "insights-page--s-small-btn-on" : ""}`}>
                 <Zap size={14} /> İcra olundu
               </button>
-              <button onClick={() => react(insight, "dismissed")} disabled={!!state || !!pendingFeedback[insight.key]} style={{ ...S.smallBtn, ...(state === "dismissed" ? S.smallBtnOff : {}) }}>
+              <button onClick={() => react(insight, "dismissed")} disabled={!!state || !!pendingFeedback[insight.key]} className={`insights-page--s-small-btn ${state === "dismissed" ? "insights-page--s-small-btn-off" : ""}`}>
                 <ThumbsDown size={14} /> Uyğun deyil
               </button>
               {state && <span className="u-font-size-12px u-color-text_secondary">Rəy yadda saxlanıldı — növbəti təhlildə nəzərə alınacaq.</span>}
@@ -176,7 +176,7 @@ export default function InsightsPage() {
             {history.map((row, index) => (
               <div key={index} className="insights-page--s-history-row">
                 <span className="u-font-weight-600">{row.title || row.insight_key}</span>
-                <span style={{ color: row.action === "dismissed" ? "#b91c1c" : "#15803d" }}>
+                <span className={`${row.action === "dismissed" ? "sx-53875d1" : "sx-db8bce3"}`}>
                   {row.action === "dismissed" ? "rədd edildi" : row.action === "done" ? "icra olundu" : "qəbul edildi"}
                 </span>
                 <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleDateString("az-AZ")}</span>
@@ -194,7 +194,7 @@ function Signal({ label, value, tone }) {
   return (
     <div className="insights-page--s-signal">
       <span className="u-font-size-12px u-color-text_secondary">{label}</span>
-      <strong style={{ fontSize: 18, color: tone }}>{value}</strong>
+      <strong className="sx-bf83cf1" style={{ color: tone }}>{value}</strong>
     </div>
   );
 }

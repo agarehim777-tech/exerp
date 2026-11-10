@@ -6,11 +6,10 @@ import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { azn, primaryBtn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
+import { azn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
-const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 function useTablePage(rows) {
   const [page, setPage] = useState(0);
@@ -434,7 +433,7 @@ function WarehousesPanel({ stock, isAdmin }) {
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h2 className="stock-page-section-title">Anbarlar ({stock.warehouses.length})</h2>
         {isAdmin && (
-          <button type="button" style={isFormOpen ? secondaryActionBtn : primaryBtn} onClick={toggleForm}>
+          <button type="button" className={`${isFormOpen ? "stock-page-secondary-action-btn" : "ui-tok-primary-btn"}`} onClick={toggleForm}>
             {isFormOpen ? "Formanı bağla ↑" : "+ Yeni anbar"}
           </button>
         )}

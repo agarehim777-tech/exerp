@@ -52,7 +52,7 @@ export default function CrmDealsPage() {
           <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
         </div>
         <button onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
-          style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 0, padding: '10px 18px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>+ Sövdələşmə</button>
+          className="sx-ef4ac23 sx-4eb23a8 sx-012333e sx-618e663 sx-3c85720 sx-83e4487 sx-b202c6d">+ Sövdələşmə</button>
       </header>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
@@ -86,14 +86,10 @@ export default function CrmDealsPage() {
 function StageColumn({ stage, count, sum, onAdd, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   return (
-    <div ref={setNodeRef} style={{
-      minWidth: 280, background: isOver ? '#ecfdf5' : '#f8fafc', borderRadius: 14,
-      display: 'flex', flexDirection: 'column', border: `2px solid ${isOver ? stage.color : 'transparent'}`,
-      transition: 'all 0.2s',
-    }}>
+    <div ref={setNodeRef} className={`sx-0ee1255 ${isOver ? "sx-e016922" : "sx-b55f8cb"} sx-2f18f99 sx-f7dbba7 sx-678b59d sx-b1185e5`} style={{ border: `2px solid ${isOver ? stage.color : 'transparent'}` }}>
       <div className="u-padding-12px u-border-bottom-1px_solid_border">
         <div className="u-display-flex u-align-items-center u-gap-8px">
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color }} />
+          <span className="sx-90bc849 sx-c984939 sx-8f633ef" style={{ background: stage.color }} />
           <b className="u-flex-1">{stage.name}</b>
           <span className="u-background-surface u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{count}</span>
         </div>
