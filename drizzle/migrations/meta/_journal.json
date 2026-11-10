@@ -113,6 +113,13 @@
       "when": 1794305094568,
       "tag": "0015_dedicated_kpi_employee_scope_and_reversal_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794307791998,
+      "tag": "0016_migration",
+      "breakpoints": true
     }
   ]
 }
