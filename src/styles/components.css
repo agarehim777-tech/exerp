@@ -252,6 +252,8 @@
 .ui-stat-value.amount-due { color: var(--danger); }
 .ui-stat-value.amount-positive { color: var(--action); }
 .ui-grid-full { grid-column: 1 / -1; }
+.ui-spacer-bottom { margin-bottom: var(--space-3); }
+.ui-category-item { display: flex; align-items: center; gap: var(--space-1); padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
 .ui-performance-progress { display: block; appearance: none; width: 100%; height: 3px; margin-top: var(--space-1); border: 0; border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--action); }
 .ui-performance-progress::-webkit-progress-bar { background: var(--surface-subtle); border-radius: var(--radius-control); }
 .ui-performance-progress::-webkit-progress-value { background: var(--action); border-radius: var(--radius-control); }
