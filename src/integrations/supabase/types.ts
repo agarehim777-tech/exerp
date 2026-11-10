@@ -6989,6 +6989,10 @@ export type Database = {
         }
         Returns: Json
       }
+      report_totals: {
+        Args: { _from?: string; _tenant_id: string; _to?: string }
+        Returns: Json
+      }
       reserve_stock: {
         Args: {
           _order_id: string
