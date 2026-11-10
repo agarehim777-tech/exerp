@@ -316,7 +316,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     const source = balances.find(
       (row) => row.warehouse_id === fromWarehouseId && row.product_id === productId,
     );
-    const available = Number(source?.on_hand ?? source?.qty ?? 0) - Number(source?.reserved ?? 0);
+    const available = Number(source?.on_hand ?? source?.qty ?? 0) - Number(source?.reserved ?? 0) - Number(source?.problem_qty ?? 0);
     if (!source || available < amount) {
       throw new Error(`Mənbə anbarda yalnız ${available.toLocaleString('az-AZ')} ədəd mövcuddur.`);
     }

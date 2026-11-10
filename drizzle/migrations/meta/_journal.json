@@ -120,6 +120,13 @@
       "when": 1794307791998,
       "tag": "0016_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794311988955,
+      "tag": "0017_problem_stock_excluded_from_reservation_delivery",
+      "breakpoints": true
     }
   ]
 }
