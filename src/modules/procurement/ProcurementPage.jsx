@@ -126,7 +126,7 @@ function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = fal
       onClick={onClick}
       disabled={disabled}
       style={{ ...styles.iconButton, ...styles[`button_${tone}`], opacity: disabled ? 0.5 : 1 }}
-    >
+ >
       <Icon size={15} />
       <span>{label}</span>
     </button>
@@ -179,7 +179,7 @@ function ProductAutocomplete({ products, value, onSelect }) {
           if (event.key === "Enter" && open && matches[activeIndex]) { event.preventDefault(); choose(matches[activeIndex]); }
           if (event.key === "Escape") setOpen(false);
         }}
-      />
+ />
       {open && (
         <div className="product-autocomplete__menu">
           {matches.length ? matches.map((product, index) => (
@@ -1190,12 +1190,12 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   if (!tenantId) {
     return (
-      <main style={styles.page} className="procurement-page">
-        <section style={styles.emptyPanel}>
+      <main className="procurement-page procurement-page-styles-page">
+        <section className="procurement-page-styles-empty-panel">
           <AlertTriangle size={28} />
           <h1>Aktiv şirkət seçilməyib</h1>
           <p>Satınalma modulundan istifadə etmək üçün əvvəl tenant/şirkət seçin.</p>
-          <Link to="/" style={styles.linkButton}>
+          <Link to="/" className="procurement-page-styles-link-button">
             <ArrowLeft size={16} />
             Panelə qayıt
           </Link>
@@ -1205,31 +1205,31 @@ function ProcurementWorkspace({ tenantId, user }) {
   }
 
   return (
-    <main style={styles.page} className="procurement-page" aria-busy={loading || saving}>
-      <header style={styles.header}>
+    <main className="procurement-page procurement-page-styles-page" aria-busy={loading || saving}>
+      <header className="procurement-page-styles-header">
         <div>
-          <h1 style={styles.title}>Satınalma</h1>
-          <p style={styles.subtitle}>Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.</p>
+          <h1 className="procurement-page-styles-title">Satınalma</h1>
+          <p className="procurement-page-styles-subtitle">Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.</p>
         </div>
-        <div style={styles.headerActions}>
+        <div className="procurement-page-styles-header-actions">
           <IconButton icon={RefreshCw} label={loading ? "Yüklənir" : "Yenilə"} onClick={load} disabled={loading || saving} />
         </div>
       </header>
 
-      <section style={styles.metricGrid} className="procurement-metrics">
+      <section className="procurement-metrics procurement-page-styles-metric-grid">
         <Metric icon={Building2} label="Aktiv vendor" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} vendor`} tone="blue" />
         <Metric icon={ShoppingCart} label="Açıq PO" value={stats.openPo.length} hint={`${purchaseOrders.length} ümumi PO`} tone="amber" />
         <Metric icon={Truck} label="Mədaxil gözləyir" value={stats.waitingReceipt.length} hint="Təsdiqli və qismən PO" tone="green" />
         <Metric icon={WalletCards} label="PO dəyəri" value={money(stats.approvedSpend)} hint={`${purchaseOrders.length} ümumi PO`} tone="rose" />
       </section>
 
-      <section style={styles.toolbar}>
-        <div style={styles.searchBox}>
+      <section className="procurement-page-styles-toolbar">
+        <div className="procurement-page-styles-search-box">
           <Search size={17} />
-          <input style={styles.searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, GRN və ya SKU axtar..." />
+          <input className="procurement-page-styles-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, GRN və ya SKU axtar..." />
         </div>
         {tab === "po" && (
-          <select value={poStatus} onChange={(event) => setPoStatusFilter(event.target.value)} style={styles.select}>
+          <select value={poStatus} onChange={(event) => setPoStatusFilter(event.target.value)} className="procurement-page-styles-select">
             <option value="all">Bütün PO statusları</option>
             {Object.entries(PO_STATUS).map(([key, meta]) => (
               <option key={key} value={key}>{meta.label}</option>
@@ -1241,7 +1241,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       {(notice || error) && (
         <div style={{ ...styles.message, ...(error ? styles.messageError : styles.messageOk) }}>
           {error || notice}
-          <button type="button" onClick={() => { setError(""); setNotice(""); }} style={styles.messageClose}>
+          <button type="button" onClick={() => { setError(""); setNotice(""); }} className="procurement-page-styles-message-close">
             <X size={14} />
           </button>
         </div>
@@ -1253,7 +1253,7 @@ function ProcurementWorkspace({ tenantId, user }) {
         </div>
       )}
 
-      <nav style={styles.tabs}>
+      <nav className="procurement-page-styles-tabs">
         {[
           ["dashboard", BarChart3, "İcmal"],
           ["vendors", Building2, "Vendorlar"],
@@ -1270,7 +1270,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       </nav>
 
       {loading && !registryLoaded ? (
-        <section style={styles.emptyPanel}>
+        <section className="procurement-page-styles-empty-panel">
           <RefreshCw size={26} />
           <h2>Məlumatlar yüklənir</h2>
           <p>Satınalma reyestri serverdən oxunur.</p>
@@ -1283,7 +1283,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               poMetrics={poMetrics}
               onCreatePo={() => { resetPoForm(); setTab("po"); }}
               onReceive={choosePoForReceipt}
-            />
+ />
           )}
           {tab === "landed" && <LandedCostPanel tenantId={tenantId} />}
           {tab === "rfq" && (
@@ -1297,7 +1297,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               onReject={(rfq) => updateRfq(rfq, { status: "rejected" })}
               onConvert={convertRfqToPo}
               saving={saving}
-            />
+ />
           )}
           {tab === "vendors" && (
             <VendorsTab
@@ -1312,7 +1312,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               onDelete={deleteVendor}
               purchaseOrders={purchaseOrders}
               saving={saving}
-            />
+ />
           )}
           {tab === "po" && (
             <PurchaseOrdersTab
@@ -1353,7 +1353,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               onReceive={choosePoForReceipt}
               onInvoice={choosePoForInvoice}
               saving={saving}
-            />
+ />
           )}
           {tab === "grn" && (
             <ReceiptsTab
@@ -1376,7 +1376,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               onEdit={editReceipt}
               onDelete={deleteReceipt}
               saving={saving}
-            />
+ />
           )}
           {tab === "invoices" && (
             <InvoicesTab
@@ -1405,7 +1405,7 @@ function ProcurementWorkspace({ tenantId, user }) {
               onPaid={openInvoicePayment}
               onCancelInvoice={(invoice) => updateInvoiceStatus(invoice.id, "cancelled")}
               saving={saving}
-            />
+ />
           )}
         </>
       )}
@@ -1452,14 +1452,14 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
   });
 
   return (
-    <div style={styles.splitGrid}>
+    <div className="procurement-page-styles-split-grid">
       <Panel title="Yeni təklif sorğusu" icon={ClipboardCheck}>
         <form style={{ ...styles.form, gridTemplateColumns: "1fr" }} onSubmit={onSubmit}>
           <Field label="Sorğunun adı" value={form.title} onChange={(value) => setForm({ ...form, title: value })} required wide />
           <Field label="Məhsul / xidmət" value={form.description} onChange={(value) => setForm({ ...form, description: value })} required wide />
           <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
           <Field label="Təklif üçün son tarix" type="date" value={form.due_at} onChange={(value) => setForm({ ...form, due_at: value })} />
-          <div style={styles.linesBlock}>
+          <div className="procurement-page-styles-lines-block">
             <strong>Vendorlar</strong>
             {vendors.map((vendor) => (
               <label key={vendor.id} className="u-display-flex u-align-items-center u-gap-8px u-font-size-13px">
@@ -1469,7 +1469,7 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
             ))}
             {!vendors.length && <small>Əvvəl aktiv vendor yaradın.</small>}
           </div>
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label="RFQ yarat" tone="primary" submit disabled={saving || !vendors.length} />
           </div>
         </form>
@@ -1488,14 +1488,14 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
               <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
               rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "—",
               <span style={{ ...styles.badge, ...(rfq.status === "approved" ? styles.badge_success : rfq.status === "rejected" ? styles.badge_danger : styles.badge_info) }}>{rfq.status}</span>,
-              <div style={styles.rowActions}>
+              <div className="procurement-page-styles-row-actions">
                 {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="Təsdiq" tone="success" onClick={() => onApprove(rfq)} />}
                 {rfq.status === "sent" && <IconButton icon={XCircle} label="Rədd" tone="danger" onClick={() => onReject(rfq)} />}
                 {rfq.status === "approved" && <IconButton icon={ShoppingCart} label="PO yarat" tone="primary" onClick={() => onConvert(rfq)} />}
               </div>,
             ];
           })}
-        />
+ />
       </Panel>
     </div>
   );
@@ -1503,14 +1503,14 @@ function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, o
 
 function Metric({ icon: Icon, label, value, hint, tone }) {
   return (
-    <article style={styles.metricCard}>
+    <article className="procurement-page-styles-metric-card">
       <div style={{ ...styles.metricIcon, ...styles[`metric_${tone}`] }}>
         <Icon size={20} />
       </div>
       <div>
-        <span style={styles.metricLabel}>{label}</span>
-        <strong style={styles.metricValue}>{value}</strong>
-        <small style={styles.metricHint}>{hint}</small>
+        <span className="procurement-page-styles-metric-label">{label}</span>
+        <strong className="procurement-page-styles-metric-value">{value}</strong>
+        <small className="procurement-page-styles-metric-hint">{hint}</small>
       </div>
     </article>
   );
@@ -1521,18 +1521,18 @@ function DashboardTab({ purchaseOrders, poMetrics, onCreatePo, onReceive }) {
   const actionPo = purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status)).slice(0, 6);
 
   return (
-    <section style={styles.dashboardGrid} className="procurement-dashboard-grid">
+    <section className="procurement-dashboard-grid procurement-page-styles-dashboard-grid">
       <Panel title="Təhvil/mədaxil gözləyən PO-lar" icon={Truck}>
         {actionPo.length === 0 ? (
           <Empty title="Mədaxil gözləyən PO yoxdur." />
         ) : (
           actionPo.map((po) => (
-            <div key={po.id} style={styles.compactRow}>
+            <div key={po.id} className="procurement-page-styles-compact-row">
               <div>
                 <strong>{po.po_number}</strong>
                 <small>{po.vendors?.name || "Vendor yoxdur"} · {money(poMetrics.get(po.id)?.total || 0, po.currency)}</small>
               </div>
-              <div style={styles.rowActions}>
+              <div className="procurement-page-styles-row-actions">
                 <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} />
               </div>
             </div>
@@ -1546,7 +1546,7 @@ function DashboardTab({ purchaseOrders, poMetrics, onCreatePo, onReceive }) {
         ) : (
           <>
             {latePo.map((po) => (
-              <div key={po.id} style={styles.warningRow}>
+              <div key={po.id} className="procurement-page-styles-warning-row">
                 <AlertTriangle size={16} />
                 <div>
                   <strong>{po.po_number}</strong>
@@ -1565,8 +1565,8 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
   const [showForm, setShowForm] = useState(false);
   useEffect(() => { if (editingId) setShowForm(true); }, [editingId]);
   return (
-    <section style={styles.stack}>
-      <div style={styles.sectionActions}>
+    <section className="procurement-page-styles-stack">
+      <div className="procurement-page-styles-section-actions">
         <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni vendor"} tone={showForm ? "ghost" : "primary"} onClick={() => {
           if (showForm && editingId) onCancel();
           setShowForm((value) => !value);
@@ -1574,17 +1574,17 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
       </div>
       {showForm && (
       <Panel title={editingId ? "Vendoru redaktə et" : "Yeni vendor"} icon={Building2}>
-        <form onSubmit={onSubmit} style={styles.form}>
+        <form onSubmit={onSubmit} className="procurement-page-styles-form">
           <Field label="Ad" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
           <Field label="VÖEN" value={form.tax_id} onChange={(value) => setForm({ ...form, tax_id: value })} />
           <Field label="Email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
           <Field label="Telefon" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
           <Field label="Ünvan" value={form.address} onChange={(value) => setForm({ ...form, address: value })} wide />
-          <label style={styles.checkLine}>
+          <label className="procurement-page-styles-check-line">
             <input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} />
             Aktiv vendor kimi saxla
           </label>
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingId ? "Yadda saxla" : "Əlavə et"} tone="primary" disabled={saving} submit />
             {editingId && <IconButton icon={X} label="Ləğv et" onClick={onCancel} />}
           </div>
@@ -1605,14 +1605,14 @@ function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCancel, onE
               <span key="status" style={{ ...styles.badge, ...(vendor.is_active ? styles.badge_success : styles.badge_neutral) }}>
                 {vendor.is_active ? "Aktiv" : "Passiv"}
               </span>,
-              <div key="actions" style={styles.rowActions}>
+              <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Pencil} label="Edit" onClick={() => { setShowForm(true); onEdit(vendor); }} />
                 <IconButton icon={vendor.is_active ? XCircle : CheckCircle2} label={vendor.is_active ? "Passiv" : "Aktiv"} onClick={() => onToggle(vendor)} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(vendor)} tone="danger" />
               </div>,
             ];
           })}
-        />
+ />
       </Panel>
     </section>
   );
@@ -1661,8 +1661,8 @@ function PurchaseOrdersTab({
   const [showForm, setShowForm] = useState(false);
   useEffect(() => { if (editingPoId) setShowForm(true); }, [editingPoId]);
   return (
-    <section style={styles.stack}>
-      <div style={styles.sectionActions}>
+    <section className="procurement-page-styles-stack">
+      <div className="procurement-page-styles-section-actions">
         <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni PO yarat"} tone={showForm ? "ghost" : "primary"} onClick={() => {
           if (showForm && editingPoId) onCancel();
           setShowForm((value) => !value);
@@ -1670,8 +1670,8 @@ function PurchaseOrdersTab({
       </div>
       {showForm && (
       <Panel title={editingPoId ? "PO redaktəsi" : "Yeni satınalma sifarişi"} icon={ShoppingCart}>
-        <form onSubmit={onSubmit} style={styles.form}>
-          <label style={styles.field}>
+        <form onSubmit={onSubmit} className="procurement-page-styles-form">
+          <label className="procurement-page-styles-field">
             <span>Vendor</span>
             <select value={form.vendor_id} onChange={(event) => setForm({ ...form, vendor_id: event.target.value })} required>
               <option value="">Vendor seçin</option>
@@ -1684,7 +1684,7 @@ function PurchaseOrdersTab({
           <Field label="PO nömrəsi" value={form.po_number} onChange={(value) => setForm({ ...form, po_number: value })} required />
           <Field label="Sifariş tarixi" type="date" value={form.order_date} onChange={(value) => setForm({ ...form, order_date: value })} />
           <Field label="Gözlənilən tarix" type="date" value={form.expected_date} onChange={(value) => setForm({ ...form, expected_date: value })} />
-          <label style={styles.field}>
+          <label className="procurement-page-styles-field">
             <span>Valyuta</span>
             <select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })}>
               <option value="AZN">AZN</option>
@@ -1696,8 +1696,8 @@ function PurchaseOrdersTab({
           <Field label="Ödəniş şərti" value={form.payment_terms} onChange={(value) => setForm({ ...form, payment_terms: value })} />
           <Field label="Qeyd" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} wide />
 
-          <div style={styles.linesBlock}>
-            <div style={styles.linesHeader}>
+          <div className="procurement-page-styles-lines-block">
+            <div className="procurement-page-styles-lines-header">
               <strong>Məhsul sətirləri</strong>
               <IconButton icon={Plus} label="Sətir" onClick={() => setDraftLines([...draftLines, { ...emptyPoLine }])} />
             </div>
@@ -1726,11 +1726,11 @@ function PurchaseOrdersTab({
             ))}
           </div>
 
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingPoId ? "PO yenilə" : "PO yarat"} tone="primary" disabled={saving || activeVendors.length === 0} submit />
             {editingPoId && <IconButton icon={X} label="Ləğv et" onClick={onCancel} />}
           </div>
-          {activeVendors.length === 0 && <p style={styles.helperText}>PO yaratmaq üçün əvvəl aktiv vendor yaradın.</p>}
+          {activeVendors.length === 0 && <p className="procurement-page-styles-helper-text">PO yaratmaq üçün əvvəl aktiv vendor yaradın.</p>}
         </form>
       </Panel>
       )}
@@ -1747,7 +1747,7 @@ function PurchaseOrdersTab({
             const due = Math.max(0, total - paid);
             const isExpanded = expandedPo === po.id;
             return [
-              <button key="po" type="button" style={styles.linkCell} onClick={() => setExpandedPo(isExpanded ? null : po.id)}>
+              <button key="po" type="button" className="procurement-page-styles-link-cell" onClick={() => setExpandedPo(isExpanded ? null : po.id)}>
                 <TwoLine title={po.po_number} subtitle={`${po.order_date || "tarixsiz"} → ${po.expected_date || "plan yoxdur"}`} />
               </button>,
               po.vendors?.name || "Vendor yoxdur",
@@ -1757,7 +1757,7 @@ function PurchaseOrdersTab({
               <StatusPill key="status" status={po.status} />,
 
               <Progress key="progress" value={metrics.progress || 0} label={`${qty(metrics.received)} / ${qty(metrics.ordered)} ədəd`} />,
-              <div key="actions" style={styles.rowActions}>
+              <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Pencil} label="Redaktə et" onClick={() => { setShowForm(true); onEdit(po); }} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(po)} tone="danger" />
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedPo(isExpanded ? null : po.id)} />
@@ -1786,12 +1786,12 @@ function PurchaseOrdersTab({
                   saving={saving}
                   paymentByPo={paymentByPo}
                   poMetrics={poMetrics}
-                />}
+ />}
               </div>
             )
           }
           sourceRows={purchaseOrders}
-        />
+ />
       </Panel>
     </section>
   );
@@ -1839,7 +1839,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
                 <td className="u-padding-8px_10px">{payment.reference_no || "—"}</td>
                 <td className="u-padding-8px_10px">{payment.notes || "—"}</td>
                 <td className="u-padding-8px_10px u-text-align-right">
-                  <div style={styles.rowActions}>
+                  <div className="procurement-page-styles-row-actions">
                     <IconButton icon={Pencil} label="Edit" onClick={() => onPaymentEdit(payment)} />
                     <IconButton icon={Trash2} label="Sil" onClick={() => onPaymentDelete(payment)} tone="danger" />
                   </div>
@@ -1849,14 +1849,14 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
           </tbody>
         </table>
       ) : (
-        <p style={styles.helperText}>Bu PO üzrə hələ ödəniş qeyd edilməyib.</p>
+        <p className="procurement-page-styles-helper-text">Bu PO üzrə hələ ödəniş qeyd edilməyib.</p>
       )}
 
       {isOpen && (
         <form onSubmit={onPaymentSubmit} style={{ ...styles.form, gridTemplateColumns: "repeat(4, minmax(0, 1fr))", padding: "12px", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
           <Field label="Məbləğ" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm({ ...paymentForm, amount: value })} required />
           <Field label="Tarix" type="date" value={paymentForm.payment_date} onChange={(value) => setPaymentForm({ ...paymentForm, payment_date: value })} required />
-          <label style={styles.field}>
+          <label className="procurement-page-styles-field">
             <span>Üsul</span>
             <select value={paymentForm.payment_method} onChange={(event) => setPaymentForm({ ...paymentForm, payment_method: event.target.value })}>
               <option value="bank">Bank köçürməsi</option>
@@ -1867,7 +1867,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
           </label>
           <Field label="Referans №" value={paymentForm.reference_no} onChange={(value) => setPaymentForm({ ...paymentForm, reference_no: value })} />
           <Field label="Qeyd" value={paymentForm.notes} onChange={(value) => setPaymentForm({ ...paymentForm, notes: value })} wide />
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingPaymentId ? "Yenilə" : "Ödəniş qeyd et"} tone="primary" disabled={saving} submit />
             {editingPaymentId && (
               <IconButton icon={X} label="Ləğv et" onClick={() => {
@@ -1901,12 +1901,12 @@ function ReceiptsTab({
   saving,
 }) {
   return (
-    <section style={styles.stack}>
+    <section className="procurement-page-styles-stack">
       <Panel title={editingId ? "Mədaxili redaktə et" : "Yeni mədaxil (GRN)"} icon={PackageCheck}>
-        <form onSubmit={onSubmit} style={styles.form}>
-          <label style={styles.field}>
+        <form onSubmit={onSubmit} className="procurement-page-styles-form">
+          <label className="procurement-page-styles-field">
             <span>PO</span>
-            <select aria-label="PO" style={styles.input} value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
+            <select aria-label="PO" className="procurement-page-styles-input" value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
                 <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>
@@ -1917,13 +1917,13 @@ function ReceiptsTab({
           <Field label="Mədaxil tarixi" type="date" value={form.receipt_date} onChange={(value) => setForm({ ...form, receipt_date: value })} />
           <Field label="Qeyd" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} wide />
 
-          <div style={styles.linesBlock}>
-            <div style={styles.linesHeader}>
+          <div className="procurement-page-styles-lines-block">
+            <div className="procurement-page-styles-lines-header">
               <strong>Qəbul sətirləri</strong>
               <small>{draftLines.length ? "Qəbul/rədd miqdarlarını təsdiqləyin." : "PO seçdikdə sətirlər açılacaq."}</small>
             </div>
             {draftLines.map((line, index) => (
-              <div key={line.po_line_id} style={styles.receiptLineGrid}>
+              <div key={line.po_line_id} className="procurement-page-styles-receipt-line-grid">
                 <TwoLine title={line.label} subtitle={`Sifariş: ${qty(line.ordered)} · Qalıq: ${qty(line.outstanding)}`} />
                 <input type="number" min="0" max={line.outstanding} step="0.001" placeholder="Qəbul edildi" value={line.qty_received} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => {
                   if (itemIndex !== index) return item;
@@ -1931,19 +1931,19 @@ function ReceiptsTab({
                   if (raw === "") return { ...item, qty_received: "" };
                   const received = Math.min(Math.max(0, toNumber(raw)), toNumber(item.outstanding));
                   return { ...item, qty_received: String(received), qty_rejected: String(Math.min(toNumber(item.qty_rejected), received)) };
-                }))} style={styles.input} />
-                <input type="number" min="0.000001" step="0.000001" placeholder="Vahid həcm, m³" value={line.unit_volume_m3} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => itemIndex === index ? { ...item, unit_volume_m3: event.target.value } : item))} style={styles.input} />
+                }))} className="procurement-page-styles-input" />
+                <input type="number" min="0.000001" step="0.000001" placeholder="Vahid həcm, m³" value={line.unit_volume_m3} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => itemIndex === index ? { ...item, unit_volume_m3: event.target.value } : item))} className="procurement-page-styles-input" />
                 <input type="number" min="0" max={line.qty_received || 0} step="0.001" placeholder="Rədd edildi" value={line.qty_rejected} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => {
                   if (itemIndex !== index) return item;
                   const raw = event.target.value;
                   if (raw === "") return { ...item, qty_rejected: "" };
                   return { ...item, qty_rejected: String(Math.min(Math.max(0, toNumber(raw)), toNumber(item.qty_received))) };
-                }))} style={styles.input} />
+                }))} className="procurement-page-styles-input" />
               </div>
             ))}
           </div>
 
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingId ? "GRN yenilə" : "Mədaxil et"} tone="primary" disabled={saving || !draftLines.length} submit />
             {editingId && <IconButton icon={X} label="Ləğv et" onClick={onCancel} />}
           </div>
@@ -1958,13 +1958,13 @@ function ReceiptsTab({
             const lines = receiptLinesByReceipt.get(receipt.id) || [];
             const isExpanded = expandedReceipt === receipt.id;
             return [
-              <button key="grn" type="button" style={styles.linkCell} onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)}>
+              <button key="grn" type="button" className="procurement-page-styles-link-cell" onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)}>
                 <TwoLine title={receipt.grn_number} subtitle={receipt.notes || "Qeyd yoxdur"} />
               </button>,
               receipt.purchase_orders?.po_number || "PO yoxdur",
               receipt.receipt_date,
               lines.length,
-              <div key="actions" style={styles.rowActions}>
+              <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)} />
                 <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(receipt)} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(receipt)} tone="danger" />
@@ -1973,7 +1973,7 @@ function ReceiptsTab({
           })}
           sourceRows={goodsReceipts}
           detail={(receipt) => expandedReceipt === receipt.id && <ReceiptLineTable lines={receiptLinesByReceipt.get(receipt.id) || []} poLines={poLines} />}
-        />
+ />
       </Panel>
     </section>
   );
@@ -2004,12 +2004,12 @@ function InvoicesTab({
   saving,
 }) {
   return (
-    <section style={styles.stack}>
+    <section className="procurement-page-styles-stack">
       <Panel title={editingId ? "Fakturanı redaktə et" : "Yeni vendor fakturası"} icon={Receipt}>
-        <form onSubmit={onSubmit} style={styles.form}>
-          <label style={styles.field}>
+        <form onSubmit={onSubmit} className="procurement-page-styles-form">
+          <label className="procurement-page-styles-field">
             <span>PO</span>
-            <select aria-label="PO" style={styles.input} value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
+            <select aria-label="PO" className="procurement-page-styles-input" value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
                 <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>
@@ -2019,7 +2019,7 @@ function InvoicesTab({
           <Field label="Faktura nömrəsi" value={form.invoice_number} onChange={(value) => setForm({ ...form, invoice_number: value })} required />
           <Field label="Faktura tarixi" type="date" value={form.invoice_date} onChange={(value) => setForm({ ...form, invoice_date: value })} />
           <Field label="Ödəniş tarixi" type="date" value={form.due_date} onChange={(value) => setForm({ ...form, due_date: value })} />
-          <label style={styles.field}>
+          <label className="procurement-page-styles-field">
             <span>Valyuta</span>
             <select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })}>
               <option value="AZN">AZN</option>
@@ -2029,22 +2029,22 @@ function InvoicesTab({
           </label>
           <Field label="Match qeydi" value={form.match_notes} onChange={(value) => setForm({ ...form, match_notes: value })} wide />
 
-          <div style={styles.linesBlock}>
-            <div style={styles.linesHeader}>
+          <div className="procurement-page-styles-lines-block">
+            <div className="procurement-page-styles-lines-header">
               <strong>Faktura sətirləri</strong>
               <small>{draftLines.length ? "Qəbul və PO qiyməti ilə müqayisə olunacaq." : "PO seçdikdə sətirlər açılacaq."}</small>
             </div>
             {draftLines.map((line, index) => (
-              <div key={line.po_line_id} style={styles.invoiceLineGrid}>
+              <div key={line.po_line_id} className="procurement-page-styles-invoice-line-grid">
                 <TwoLine title={line.label} subtitle={`Sifariş: ${qty(line.ordered)} · Qəbul: ${qty(line.accepted)}`} />
-                <input type="number" min="0" step="0.001" placeholder="Faktura miqdarı" value={line.qty_invoiced} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_invoiced: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.0001" placeholder="Faktura qiyməti" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} style={styles.input} />
-                <input type="number" min="0" step="0.01" placeholder="ƏDV %" value={line.tax_rate} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, tax_rate: event.target.value } : item)))} style={styles.input} />
+                <input type="number" min="0" step="0.001" placeholder="Faktura miqdarı" value={line.qty_invoiced} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_invoiced: event.target.value } : item)))} className="procurement-page-styles-input" />
+                <input type="number" min="0" step="0.0001" placeholder="Faktura qiyməti" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} className="procurement-page-styles-input" />
+                <input type="number" min="0" step="0.01" placeholder="ƏDV %" value={line.tax_rate} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, tax_rate: event.target.value } : item)))} className="procurement-page-styles-input" />
               </div>
             ))}
           </div>
 
-          <div style={styles.formActions}>
+          <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingId ? "Faktura yenilə" : "Faktura yarat"} tone="primary" disabled={saving || !draftLines.length} submit />
             {editingId && <IconButton icon={X} label="Ləğv et" onClick={onCancel} />}
           </div>
@@ -2058,13 +2058,13 @@ function InvoicesTab({
           rows={invoices.map((invoice) => {
             const isExpanded = expandedInvoice === invoice.id;
             return [
-              <button key="invoice" type="button" style={styles.linkCell} onClick={() => setExpandedInvoice(isExpanded ? null : invoice.id)}>
+              <button key="invoice" type="button" className="procurement-page-styles-link-cell" onClick={() => setExpandedInvoice(isExpanded ? null : invoice.id)}>
                 <TwoLine title={invoice.invoice_number} subtitle={`${invoice.invoice_date || "tarixsiz"} · son ödəniş ${invoice.due_date || "qeyd yoxdur"}`} />
               </button>,
               <TwoLine key="vendor" title={invoice.vendors?.name || "Vendor yoxdur"} subtitle={`PO ${invoice.purchase_orders?.po_number || "yoxdur"}`} />,
               money(invoiceTotals.get(invoice.id) || 0, invoice.currency),
               <StatusPill key="status" status={invoice.status} type="invoice" />,
-              <div key="actions" style={styles.rowActions}>
+              <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedInvoice(isExpanded ? null : invoice.id)} />
                 <IconButton icon={RefreshCw} label="Match" onClick={() => onMatch(invoice)} />
                 <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(invoice)} disabled={invoice.status === "paid"} />
@@ -2081,7 +2081,7 @@ function InvoicesTab({
               <InvoiceDetailTable lines={invoiceLinesByInvoice.get(invoice.id) || []} poLines={poLines} matchRows={matchRows[invoice.id]} currency={invoice.currency} />
             )
           }
-        />
+ />
       </Panel>
     </section>
   );
@@ -2101,7 +2101,7 @@ function LineDetailTable({ lines, acceptedByLine, invoicedByLine, currency }) {
         money(line.unit_price, currency),
         money(lineAmount(line), currency),
       ])}
-    />
+ />
   );
 }
 
@@ -2119,13 +2119,13 @@ function ReceiptLineTable({ lines, poLines }) {
           qty(Math.max(0, toNumber(line.qty_received) - toNumber(line.qty_rejected))),
         ];
       })}
-    />
+ />
   );
 }
 
 function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
   return (
-    <div style={styles.stackSmall}>
+    <div className="procurement-page-styles-stack-small">
       <DataTable
         columns={["SKU", "Faktura miqdarı", "Faktura qiyməti", "ƏDV %", "ƏDV daxil cəm"]}
         empty="Faktura sətri yoxdur."
@@ -2139,7 +2139,7 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
             money(vendorInvoiceLineGross(line), currency),
           ];
         })}
-      />
+ />
       {matchRows && (
         <DataTable
           columns={["SKU", "PO", "Mədaxil", "Faktura", "Qiymət", "Nəticə"]}
@@ -2154,7 +2154,7 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
               {row.status === "matched" ? "Uyğundur" : row.status}
             </span>,
           ])}
-        />
+ />
       )}
     </div>
   );
@@ -2162,10 +2162,10 @@ function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
 
 function Panel({ title, icon: Icon, action, children }) {
   return (
-    <section style={styles.panel}>
-      <div style={styles.panelHeader}>
+    <section className="procurement-page-styles-panel">
+      <div className="procurement-page-styles-panel-header">
         <h2>{title}</h2>
-        <div style={styles.panelTools}>
+        <div className="procurement-page-styles-panel-tools">
           {Icon && <Icon size={18} />}
           {action}
         </div>
@@ -2179,14 +2179,14 @@ function Field({ label, value, onChange, type = "text", required = false, wide =
   return (
     <label style={{ ...styles.field, ...(wide ? styles.fieldWide : {}) }}>
       <span>{label}</span>
-      <input style={styles.input} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
+      <input className="procurement-page-styles-input" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </label>
   );
 }
 
 function TwoLine({ title, subtitle }) {
   return (
-    <div style={styles.twoLine}>
+    <div className="procurement-page-styles-two-line">
       <strong>{title}</strong>
       {subtitle && <span>{subtitle}</span>}
     </div>
@@ -2195,8 +2195,8 @@ function TwoLine({ title, subtitle }) {
 
 function Progress({ value, label }) {
   return (
-    <div style={styles.progressWrap}>
-      <div style={styles.progressTrack}>
+    <div className="procurement-page-styles-progress-wrap">
+      <div className="procurement-page-styles-progress-track">
         <span style={{ ...styles.progressFill, width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
       <small>{label}</small>
@@ -2206,7 +2206,7 @@ function Progress({ value, label }) {
 
 function Empty({ title }) {
   return (
-    <div style={styles.emptyInline}>
+    <div className="procurement-page-styles-empty-inline">
       <PackagePlus size={20} />
       <span>{title}</span>
     </div>
@@ -2217,12 +2217,12 @@ function DataTable({ columns, rows, empty, detail, sourceRows }) {
   const detailSource = sourceRows || rows;
   if (!rows.length) return <Empty title={empty} />;
   return (
-    <div style={styles.tableWrap}>
-      <table style={styles.table}>
+    <div className="procurement-page-styles-table-wrap">
+      <table className="procurement-page-styles-table">
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column} style={styles.th}>{column}</th>
+              <th key={column} className="procurement-page-styles-th">{column}</th>
             ))}
           </tr>
         </thead>
@@ -2233,12 +2233,12 @@ function DataTable({ columns, rows, empty, detail, sourceRows }) {
               <Fragment key={detailSource[rowIndex]?.id || `row-${rowIndex}`}>
                 <tr>
                   {row.map((cell, cellIndex) => (
-                    <td key={`${rowIndex}-${cellIndex}`} style={styles.td}>{cell}</td>
+                    <td key={`${rowIndex}-${cellIndex}`} className="procurement-page-styles-td">{cell}</td>
                   ))}
                 </tr>
                 {detailContent && (
                   <tr>
-                    <td colSpan={columns.length} style={styles.detailCell}>{detailContent}</td>
+                    <td colSpan={columns.length} className="procurement-page-styles-detail-cell">{detailContent}</td>
                   </tr>
                 )}
               </Fragment>
