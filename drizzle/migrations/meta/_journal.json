@@ -78,6 +78,13 @@
       "when": 1794302493948,
       "tag": "0010_atomic_sales_invoice_commands",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794302558254,
+      "tag": "0011_fix_reverse_cash_transaction_direction_cast",
+      "breakpoints": true
     }
   ]
 }
