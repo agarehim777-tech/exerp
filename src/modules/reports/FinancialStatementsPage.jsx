@@ -4,9 +4,10 @@ import { useFinancialStatements } from "../../shared/hooks/useFinancialStatement
 import { AGING_BUCKETS, AGING_LABELS } from "../../shared/lib/financialReports.js";
 import { toLocalIsoDate } from "../../services/date.js";
 import {
-  azn, badge, card, input, msgBox, primaryBtn,
-  statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
+  azn,
 } from "../../shared/ui/tokens.js";
+
+import { Button, Card, Input, Notice, PageStack, StatGrid, Tabs, Toolbar } from "../../shared/ui/primitives.tsx";
 
 const TABS = [
   ["pl", "Mənfəət-Zərər"],
@@ -22,85 +23,79 @@ export default function FinancialStatementsPage() {
   const fs = useFinancialStatements(tenantId);
   const [tab, setTab] = useState("pl");
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <Notice>Aktiv şirkət seçilməyib.</Notice>;
 
   const { profitAndLoss: pl, balanceSheet: bs, cashFlow: cf, aging } = fs;
   const applyPeriod = mode => { const now=new Date(); let from; if(mode==='month') from=new Date(now.getFullYear(),now.getMonth(),1); else if(mode==='quarter') from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1); else from=new Date(now.getFullYear(),0,1); fs.setRange({from:toLocalIsoDate(from),to:toLocalIsoDate(now)}); };
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={card}>
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+    <PageStack>
+      <Card>
+        <Toolbar>
+          <label className="ui-field">
             Başlanğıc
-            <input
+            <Input
               type="date"
               value={fs.range.from}
               onChange={(e) => fs.setRange((r) => ({ ...r, from: e.target.value }))}
-              style={{ ...input, width: 170 }}
             />
           </label>
-          <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+          <label className="ui-field">
             Son
-            <input
+            <Input
               type="date"
               value={fs.range.to}
               onChange={(e) => fs.setRange((r) => ({ ...r, to: e.target.value }))}
-              style={{ ...input, width: 170 }}
             />
           </label>
-          <button type="button" style={primaryBtn} onClick={fs.reload} disabled={fs.loading}>
+          <Button onClick={fs.reload} disabled={fs.loading}>
             {fs.loading ? "Hesablanır…" : "Yenilə"}
-          </button>
-          <div style={{display:"flex",gap:6}}><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('month')}>Bu ay</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('quarter')}>Bu rüb</button><button type="button" style={tabBtn(false)} onClick={()=>applyPeriod('year')}>Bu il</button></div>
-        </div>
-        <div style={{ marginTop: 10, fontSize: 12, color: "#64748b" }}>
+          </Button>
+          <div className="ui-table-actions"><Button variant="secondary" onClick={()=>applyPeriod('month')}>Bu ay</Button><Button variant="secondary" onClick={()=>applyPeriod('quarter')}>Bu rüb</Button><Button variant="secondary" onClick={()=>applyPeriod('year')}>Bu il</Button></div>
+        </Toolbar>
+        <div className="ui-help-text ui-spacer-top">
           Mənbə: Mühasibat jurnalı və satış anındakı tarixi maya dəyəri
           {fs.degraded ? " · Real-time bağlantı bərpa olunur" : " · Canlı yenilənir"}
         </div>
-      </div>
+      </Card>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={statTile}>
-          <div style={statLabel}>Gəlir</div>
-          <div style={statValue}>{azn(pl.totalRevenue)}</div>
-        </div>
-        <div style={statTile}>
-          <div style={statLabel}>Xərc</div>
-          <div style={statValue}>{azn(pl.totalExpense)}</div>
-        </div>
-        <div style={statTile}>
-          <div style={statLabel}>Xalis mənfəət</div>
-          <div style={{ ...statValue, color: pl.netProfit < 0 ? "#b23a3a" : "#064e3b" }}>{azn(pl.netProfit)}</div>
-        </div>
-        <div style={statTile}>
-          <div style={statLabel}>Vaxtı keçmiş debitor</div>
-          <div style={{ ...statValue, color: aging.overdue ? "#b23a3a" : "#064e3b" }}>{azn(aging.overdue)}</div>
-        </div>
-      </div>
+      <StatGrid>
+        <article className="ui-stat-card">
+          <div className="ui-stat-label">Gəlir</div>
+          <div className="ui-stat-value">{azn(pl.totalRevenue)}</div>
+        </article>
+        <article className="ui-stat-card">
+          <div className="ui-stat-label">Xərc</div>
+          <div className="ui-stat-value">{azn(pl.totalExpense)}</div>
+        </article>
+        <article className="ui-stat-card">
+          <div className="ui-stat-label">Xalis mənfəət</div>
+          <div className={`ui-stat-value ${pl.netProfit < 0 ? "amount-due" : "amount-positive"}`}>{azn(pl.netProfit)}</div>
+        </article>
+        <article className="ui-stat-card">
+          <div className="ui-stat-label">Vaxtı keçmiş debitor</div>
+          <div className={`ui-stat-value ${aging.overdue ? "amount-due" : "amount-positive"}`}>{azn(aging.overdue)}</div>
+        </article>
+      </StatGrid>
 
-      <div style={tabBar}>
-        {TABS.map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setTab(key)} style={tabBtn(tab === key)}>{label}</button>
-        ))}
-      </div>
+      <Tabs items={TABS} value={tab} onChange={setTab} />
 
-      {fs.error && <div style={msgBox}>Xəta: {fs.error.message}</div>}
+      {fs.error && <Notice tone="danger">Xəta: {fs.error.message}</Notice>}
 
       {tab === "pl" && (
-        <div style={card}>
-          <h3 style={{ marginTop: 0 }}>Mənfəət və zərər ({fs.range.from} — {fs.range.to})</h3>
+        <Card>
+          <h3 className="ui-section-title">Mənfəət və zərər ({fs.range.from} — {fs.range.to})</h3>
           <SectionTable title="Gəlirlər" rows={pl.revenue} total={pl.totalRevenue} />
           <SectionTable title="Xərclər" rows={pl.expenses} total={pl.totalExpense} />
-          <div style={{ marginTop: 12, fontWeight: 700 }}>
+          <div className="ui-summary-line">
             Xalis nəticə: {azn(pl.netProfit)} · Marja: {pl.margin}%
           </div>
-        </div>
+        </Card>
       )}
 
       {tab === "bs" && (
-        <div style={card}>
-          <h3 style={{ marginTop: 0 }}>Balans hesabatı</h3>
+        <Card>
+          <h3 className="ui-section-title">Balans hesabatı</h3>
           <SectionTable title="Aktivlər" rows={bs.assets} total={bs.totalAssets} />
           <SectionTable title="Öhdəliklər" rows={bs.liabilities} total={bs.totalLiabilities} />
           <SectionTable
@@ -108,112 +103,112 @@ export default function FinancialStatementsPage() {
             rows={[...bs.equity, { code: "—", name: "Dövrün mənfəəti", amount: bs.netProfit }]}
             total={bs.totalEquity}
           />
-          <div style={{ marginTop: 12 }}>
-            <span style={badge(bs.balanced ? "green" : "red")}>
+          <div className="ui-spacer-top">
+            <span className={`ui-badge ${bs.balanced ? "ui-badge-success" : "ui-badge-danger"}`}>
               {bs.balanced ? "Balans bərabərdir" : `Fərq: ${azn(bs.difference)}`}
             </span>
           </div>
-        </div>
+        </Card>
       )}
 
       {tab === "cf" && (
-        <div style={card}>
-          <h3 style={{ marginTop: 0 }}>Pul axını (kassa/bank)</h3>
-          <table style={table}>
+        <Card>
+          <h3 className="ui-section-title">Pul axını (kassa/bank)</h3>
+          <div className="ui-table-wrap"><table className="ui-table">
             <thead>
               <tr>
-                <th style={th}>Ay</th><th style={th}>Mədaxil</th><th style={th}>Məxaric</th>
-                <th style={th}>Xalis</th><th style={th}>Kumulyativ</th>
+                <th >Ay</th><th >Mədaxil</th><th >Məxaric</th>
+                <th >Xalis</th><th >Kumulyativ</th>
               </tr>
             </thead>
             <tbody>
               {cf.rows.map((row) => (
                 <tr key={row.month}>
-                  <td style={td}>{row.month}</td>
-                  <td style={td}>{azn(row.inflow)}</td>
-                  <td style={td}>{azn(row.outflow)}</td>
-                  <td style={{ ...td, color: row.net < 0 ? "#b23a3a" : undefined }}>{azn(row.net)}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{azn(row.cumulative)}</td>
+                  <td >{row.month}</td>
+                  <td >{azn(row.inflow)}</td>
+                  <td >{azn(row.outflow)}</td>
+                  <td className={row.net < 0 ? "amount-due is-numeric" : "is-numeric"}>{azn(row.net)}</td>
+                  <td className="ui-emphasis is-numeric">{azn(row.cumulative)}</td>
                 </tr>
               ))}
-              {!cf.rows.length && <tr><td style={td} colSpan={5}>Seçilmiş dövrdə kassa əməliyyatı yoxdur.</td></tr>}
+              {!cf.rows.length && <tr><td  colSpan={5}>Seçilmiş dövrdə kassa əməliyyatı yoxdur.</td></tr>}
             </tbody>
-          </table>
-          <div style={{ marginTop: 10, fontWeight: 600 }}>
+          </table></div>
+          <div className="ui-summary-line">
             Ümumi: mədaxil {azn(cf.inflow)} · məxaric {azn(cf.outflow)} · xalis {azn(cf.net)}
           </div>
-        </div>
+        </Card>
       )}
 
       {tab === "ar" && (
-        <div style={card}>
-          <h3 style={{ marginTop: 0 }}>Debitor borclarının yaşlanması ({aging.asOf})</h3>
-          <table style={table}>
+        <Card>
+          <h3 className="ui-section-title">Debitor borclarının yaşlanması ({aging.asOf})</h3>
+          <div className="ui-table-wrap"><table className="ui-table">
             <thead>
               <tr>
-                <th style={th}>Müştəri</th>
-                {AGING_BUCKETS.map((key) => <th key={key} style={th}>{AGING_LABELS[key]}</th>)}
-                <th style={th}>Cəmi</th>
+                <th >Müştəri</th>
+                {AGING_BUCKETS.map((key) => <th key={key} >{AGING_LABELS[key]}</th>)}
+                <th >Cəmi</th>
               </tr>
             </thead>
             <tbody>
               {aging.rows.map((row) => (
                 <tr key={row.customerId}>
-                  <td style={td}>{row.customerName}</td>
+                  <td >{row.customerName}</td>
                   {AGING_BUCKETS.map((key) => (
-                    <td key={key} style={{ ...td, color: key === "d90_plus" && row[key] ? "#b23a3a" : undefined }}>
+                    <td key={key} className={key === "d90_plus" && row[key] ? "amount-due is-numeric" : "is-numeric"}>
                       {row[key] ? azn(row[key]) : "—"}
                     </td>
                   ))}
-                  <td style={{ ...td, fontWeight: 600 }}>{azn(row.total)}</td>
+                  <td className="ui-emphasis is-numeric">{azn(row.total)}</td>
                 </tr>
               ))}
               {!aging.rows.length && (
-                <tr><td style={td} colSpan={AGING_BUCKETS.length + 2}>Açıq debitor borcu yoxdur.</td></tr>
+                <tr><td  colSpan={AGING_BUCKETS.length + 2}>Açıq debitor borcu yoxdur.</td></tr>
               )}
             </tbody>
             <tfoot>
               <tr>
-                <td style={{ ...td, fontWeight: 700 }}>Cəmi</td>
+                <td className="ui-emphasis is-numeric">Cəmi</td>
                 {AGING_BUCKETS.map((key) => (
-                  <td key={key} style={{ ...td, fontWeight: 700 }}>{azn(aging.totals[key])}</td>
+                  <td key={key} className="ui-emphasis is-numeric">{azn(aging.totals[key])}</td>
                 ))}
-                <td style={{ ...td, fontWeight: 700 }}>{azn(aging.grandTotal)}</td>
+                <td className="ui-emphasis is-numeric">{azn(aging.grandTotal)}</td>
               </tr>
             </tfoot>
-          </table>
-        </div>
+          </table></div>
+        </Card>
       )}
-      {tab === "forecast" && <div style={card}><h3 style={{marginTop:0}}>Növbəti 3 ay üzrə cash-flow proqnozu</h3><p style={{color:'#64748b'}}>Mədaxil açıq fakturaların son tarixindən, məxaric isə seçilmiş dövrün aylıq ortalamasından hesablanır.</p><table style={table}><thead><tr><th style={th}>Ay</th><th style={th}>Gözlənilən mədaxil</th><th style={th}>Proqnoz məxaric</th><th style={th}>Xalis dəyişmə</th><th style={th}>Proqnoz qalıq</th></tr></thead><tbody>{fs.cashFlowForecast.rows.map(row=><tr key={row.month}><td style={td}>{row.month}</td><td style={td}>{azn(row.expectedInflow)}</td><td style={td}>{azn(row.expectedOutflow)}</td><td style={{...td,color:row.net<0?'#b23a3a':'#064e3b'}}>{azn(row.net)}</td><td style={{...td,fontWeight:700,color:row.cumulative<0?'#b23a3a':undefined}}>{azn(row.cumulative)}</td></tr>)}</tbody></table></div>}
-    </div>
+      {tab === "forecast" && <Card><h3 className="ui-section-title">Növbəti 3 ay üzrə cash-flow proqnozu</h3><p className="ui-help-text">Mədaxil açıq fakturaların son tarixindən, məxaric isə seçilmiş dövrün aylıq ortalamasından hesablanır.</p><div className="ui-table-wrap"><table className="ui-table"><thead><tr><th >Ay</th><th >Gözlənilən mədaxil</th><th >Proqnoz məxaric</th><th >Xalis dəyişmə</th><th >Proqnoz qalıq</th></tr></thead><tbody>{fs.cashFlowForecast.rows.map(row=><tr key={row.month}><td >{row.month}</td><td >{azn(row.expectedInflow)}</td><td >{azn(row.expectedOutflow)}</td><td className={row.net < 0 ? "amount-due is-numeric" : "amount-positive is-numeric"}>{azn(row.net)}</td><td className={`ui-emphasis is-numeric ${row.cumulative < 0 ? "amount-due" : ""}`}>{azn(row.cumulative)}</td></tr>)}</tbody></table></div></Card>}
+    </PageStack>
   );
 }
 
 function SectionTable({ title, rows, total }) {
   return (
-    <div style={{ marginTop: 14 }}>
-      <h4 style={{ margin: "0 0 6px" }}>{title}</h4>
-      <table style={table}>
+    <div className="ui-spacer-top">
+      <h4 className="ui-section-title">{title}</h4>
+      <div className="ui-table-wrap"><table className="ui-table">
         <thead>
-          <tr><th style={th}>Kod</th><th style={th}>Hesab</th><th style={th}>Məbləğ</th></tr>
+          <tr><th >Kod</th><th >Hesab</th><th >Məbləğ</th></tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
             <tr key={`${row.code}-${index}`}>
-              <td style={td}>{row.code}</td>
-              <td style={td}>{row.name}</td>
-              <td style={td}>{azn(row.amount)}</td>
+              <td >{row.code}</td>
+              <td >{row.name}</td>
+              <td >{azn(row.amount)}</td>
             </tr>
           ))}
-          {!rows.length && <tr><td style={td} colSpan={3}>Qeyd yoxdur.</td></tr>}
+          {!rows.length && <tr><td  colSpan={3}>Qeyd yoxdur.</td></tr>}
         </tbody>
         <tfoot>
           <tr>
-            <td style={{ ...td, fontWeight: 700 }} colSpan={2}>Cəmi</td>
-            <td style={{ ...td, fontWeight: 700 }}>{azn(total)}</td>
+            <td className="ui-emphasis is-numeric" colSpan={2}>Cəmi</td>
+            <td className="ui-emphasis is-numeric">{azn(total)}</td>
           </tr>
         </tfoot>
-      </table>
+      </table></div>
     </div>
   );
 }

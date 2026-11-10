@@ -1,7 +1,6 @@
 import { CalendarClock, CircleAlert, RefreshCw, Search, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { DataTable, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money } from "../services/format.js";
-import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { Customer360Modal, CustomerCreditHistory, buildCrmPipelineRows, buildCustomer360, matchesCrmCustomerSearch, matchesCrmCustomerSegment, matchesCrmPipelineFilter } from "../shared/lib/appDomain.jsx";
 export default function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit, onDeleteCustomer }) {

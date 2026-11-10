@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createIdempotencyKey } from "../services/coreOperations.js";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
@@ -8,7 +8,6 @@ import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
 import ModuleLink from '../shared/ui/ModuleLink.jsx';
 import { pathForRecord } from '../config/routes.js';
 import { formatPaymentDate, parsePaymentDate, toLocalIsoDate } from "../services/date.js";
-import { total } from "../shared/utils/aggregate.js";
 import {
   baseCreditDate,
   currentBusinessYear,
@@ -59,7 +58,7 @@ function CreditsPage({
   const setYearFilter = year => setPageQuery({ year }, { replace: true });
   const setSearchTerm = q => setPageQuery({ q }, { replace: true });
   const setPageSize = size => setPageQuery({ size: String(size) }, { replace: true });
-  const setDetailCreditId = credit => setPageQuery({ credit });
+  const setDetailCreditId = useCallback(credit => setPageQuery({ credit }), [setPageQuery]);
   const [quickCreditId, setQuickCreditId] = useState("");
   const [startCreditId, setStartCreditId] = useState("");
 
@@ -184,7 +183,7 @@ function CreditsPage({
     if (credits.some((credit) => credit.id === selectedCreditId)) {
       setDetailCreditId(selectedCreditId);
     }
-  }, [credits, selectedCreditId]);
+  }, [credits, selectedCreditId, detailCreditId, setDetailCreditId]);
 
   const closeDetail = () => {
     setDetailCreditId("");

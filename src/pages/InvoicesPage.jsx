@@ -1,7 +1,6 @@
 import { BarChart3, CalendarClock, CircleAlert, Download, FileText, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, percent } from "../services/format.js";
-import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { InvoicePrintModal, buildInvoiceAgingRows, buildInvoiceControlSummary } from "../shared/lib/appDomain.jsx";
 import { toLocalIsoDate } from "../services/date.js";

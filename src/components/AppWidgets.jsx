@@ -7,7 +7,6 @@ import { initialState, stages } from "../data.js";
 import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, StatusBadge, TwoLine } from "./ui.jsx";
 import { money, normalize } from "../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
-import { total } from "../shared/utils/aggregate.js";
 import {
   currentBusinessDate, getEmployeeKey, hrLevelOptions, isPurchaseOrderOpen, getVendorKey,
 } from "../shared/lib/appDomain.jsx";

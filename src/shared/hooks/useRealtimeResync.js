@@ -21,7 +21,8 @@ export function useRealtimeResync(tenantId, tables, refetch, options = {}) {
   const tableKey = tables.join(',');
 
   useEffect(() => {
-    if (!tenantId || !tables.length) return undefined;
+    const subscribedTables = tableKey ? tableKey.split(',') : [];
+    if (!tenantId || !subscribedTables.length) return undefined;
     let disposed = false;
     let timer = null;
 
@@ -44,7 +45,7 @@ export function useRealtimeResync(tenantId, tables, refetch, options = {}) {
     const filter = `tenant_id=eq.${tenantId}`;
     const suffix = Math.random().toString(36).slice(2, 10);
     let channel = supabase.channel(`${channelPrefix}:${tenantId}:${suffix}`);
-    tables.forEach((tableName) => {
+    subscribedTables.forEach((tableName) => {
       channel = channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: tableName, filter },

@@ -3,7 +3,7 @@ import { buildGoLiveReadiness, buildHelpArticles, buildHelpModuleGuides, buildMo
 
 // Integrity, go-live, hardening and module-readiness reports, plus onboarding and help content built on them.
 export function useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced = false }) {
-  const onboardingRows = useMemo(() => buildOnboardingRows(state.onboarding, state), [state.onboarding, state]);
+  const onboardingRows = useMemo(() => buildOnboardingRows(state.onboarding, state), [state]);
   const integrityReport = useMemo(
     () => buildStateIntegrityReport(state, creditRecords),
     [state, creditRecords],

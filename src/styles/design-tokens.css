@@ -38,5 +38,21 @@
   --action: #08765d;
   --action-hover: #075f4c;
   --focus-ring: #3478bd;
+  --danger: #ad3434;
+  --danger-border: #e3bcbc;
+  --danger-surface: #fff5f5;
+  --warning: #a8620b;
+  --warning-border: #ead6ae;
+  --warning-surface: #fff9eb;
+  --success-surface: #e6f5ee;
+  --info: #2869a7;
+  --info-surface: #e8f1fa;
+  --row-even: #fafcfb;
+  --row-hover: #eff8f4;
+  --panel-shadow: 0 2px 7px rgba(25, 65, 53, .045);
+  --tab-shadow: 0 1px 4px rgba(24, 60, 49, .13);
+  --focus-shadow: 0 0 0 2px rgba(8, 118, 93, .16);
+  --overlay: rgba(12, 20, 18, .55);
+  --modal-shadow: 0 24px 60px rgba(0, 0, 0, .28);
 }
 

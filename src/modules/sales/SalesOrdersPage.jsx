@@ -37,6 +37,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
   const setPage = value => setPageQuery({ page: String(value + 1) });
   const [detailLoading, setDetailLoading] = useState(false);
   const requestedId = pageQuery.order || selectedOrderId;
+  const getOrderById = repository.getById;
   const openOrder = order => { setActionError(''); setSelected(order); setPageQuery({ order: order.id }); };
   const closeOrder = () => { setSelected(null); setPageQuery({ order: '' }); };
 
@@ -67,9 +68,9 @@ export default function SalesOrdersPage({ repository, customers = [], products =
     if (target) {
       setSelected(target);
       if (selectedOrderId) onSelectedOrderHandled?.();
-    } else if (!ordersLoading && repository.getById) {
+    } else if (!ordersLoading && getOrderById) {
       setDetailLoading(true);
-      repository.getById(requestedId).then(order => {
+      getOrderById(requestedId).then(order => {
         if (!current) return;
         setSelected(order);
         setActionError(order ? '' : 'Bağlı sifariş tapılmadı və ya bu şirkətdə əlçatan deyil.');
@@ -77,7 +78,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
         .finally(() => { if (current) setDetailLoading(false); });
     }
     return () => { current = false; };
-  }, [requestedId, orders, ordersLoading, repository.getById, activeTenantId]);
+  }, [requestedId, orders, ordersLoading, getOrderById, activeTenantId, selectedOrderId, onSelectedOrderHandled]);
 
   return (
     <div className="ui-page-stack sales-registry">
