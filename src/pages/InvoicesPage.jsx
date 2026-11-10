@@ -5,6 +5,7 @@ import { money, percent } from "../services/format.js";
 import { useMemo, useState } from "react";
 import { InvoicePrintModal, buildInvoiceAgingRows, buildInvoiceControlSummary } from "../shared/lib/appDomain.jsx";
 import { toLocalIsoDate } from "../services/date.js";
+import { Button } from "../shared/ui/primitives.tsx";
 export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, onExport, onOpenSalesOrder }) {
   const [invoiceFilter, setInvoiceFilter] = useState("Hamısı");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -154,10 +155,10 @@ export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, 
               </button>
             ))}
           </div>
-          <button className="secondary-btn" onClick={exportInvoices}>
+          <Button variant="secondary"  onClick={exportInvoices}>
             <Download size={16} />
             PDF/Excel
-          </button>
+          </Button>
         </div>
         <DataTable
           columns={["Faktura", "Sifariş", "Müştəri", "Məhsul", "Net", "ƏDV", "Cəmi", "Qalıq", "E-qaimə", "Əməliyyat"]}
@@ -181,9 +182,9 @@ export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, 
             <strong>{money(invoice.totalAmount)}</strong>,
             invoice.balance > 0 ? money(invoice.balance) : "Yoxdur",
             <StatusBadge status={invoice.eTaxStatus} />,
-            <button className="text-btn" onClick={() => setSelectedInvoice(invoice)}>
+            <Button variant="ghost" className="text-btn" onClick={() => setSelectedInvoice(invoice)}>
               Çap/PDF
-            </button>,
+            </Button>,
           ])}
         />
       </Panel>

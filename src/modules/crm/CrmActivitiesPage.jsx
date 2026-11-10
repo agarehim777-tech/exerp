@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useActivities } from '../../shared/hooks/useActivities.js';
+import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 
 const icon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms: '💬' };
 
@@ -24,14 +25,14 @@ export default function CrmActivitiesPage() {
       <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">Aktivliklər</h1>
 
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border">
-        <select value={type} onChange={e => setType(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
+        <Select value={type} onChange={e => setType(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
           <option value="note">📝 Qeyd</option><option value="call">📞 Zəng</option><option value="meeting">🤝 Görüş</option>
           <option value="email">✉️ E-poçt</option><option value="sms">💬 SMS</option>
-        </select>
-        <input value={subject} onChange={e => setSubject(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
+        </Select>
+        <Input value={subject} onChange={e => setSubject(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Sürətli aktivlik əlavə et..."
  className="u-flex-1 u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-14px" />
-        <button onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">Əlavə et</button>
+        <Button variant="ghost" onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">Əlavə et</Button>
       </div>
 
       <div className="u-display-flex u-gap-6px u-flex-wrap-wrap">

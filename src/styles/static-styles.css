@@ -1909,3 +1909,6 @@
 .sx-c9b77c9.sx-c9b77c9 { text-decoration: line-through; }
 
 .sx-116e33d.sx-116e33d { text-decoration: none; }
+
+/* Inline controls inside toolbars size to content; flex utilities decide growth. */
+.ui-toolbar > .ui-input { width: auto; }

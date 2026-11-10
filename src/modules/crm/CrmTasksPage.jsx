@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useTasks } from '../../shared/hooks/useTasks.js';
+import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 
 const priColor = { high: '#ef4444', medium: '#f59e0b', low: '#94a3b8' };
 
@@ -40,15 +41,15 @@ export default function CrmTasksPage() {
       <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">Tapşırıqlar</h1>
 
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border u-flex-wrap-wrap">
-        <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
+        <Input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Nə etmək lazımdır?"
  className="u-flex-1 u-min-width-200px u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px u-font-size-14px" />
-        <input type="datetime-local" value={due} onChange={e => setDue(e.target.value)}
+        <Input type="datetime-local" value={due} onChange={e => setDue(e.target.value)}
  className="u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px" />
-        <select value={pri} onChange={e => setPri(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
+        <Select value={pri} onChange={e => setPri(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
           <option value="low">Aşağı</option><option value="medium">Orta</option><option value="high">Yüksək</option>
-        </select>
-        <button onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">+ Əlavə et</button>
+        </Select>
+        <Button variant="ghost" onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">+ Əlavə et</Button>
       </div>
 
       <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_250px_1fr u-gap-12px">
@@ -95,7 +96,7 @@ function TaskRow({ t, onToggle, onRemove }) {
         <div>{t.title}</div>
         {t.due_at && <div className="u-font-size-11px u-color-text_secondary">{new Date(t.due_at).toLocaleString('az-AZ')}</div>}
       </div>
-      <button onClick={() => onRemove(t.id)} className="u-background-none u-border-0 u-cursor-pointer u-color-text_secondary u-font-size-16px">×</button>
+      <Button variant="ghost" onClick={() => onRemove(t.id)} className="u-background-none u-border-0 u-cursor-pointer u-color-text_secondary u-font-size-16px">×</Button>
     </div>
   );
 }

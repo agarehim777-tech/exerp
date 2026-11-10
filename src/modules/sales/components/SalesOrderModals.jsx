@@ -13,6 +13,7 @@ import {
 } from "../../../shared/lib/appDomain.jsx";
 import { createClientId } from "../../../shared/utils/id.js";
 import { calculateOrderFinancials, calculateOrderLineTotal } from "../services/orderCalculations.js";
+import { Button, Input, Select } from "../../../shared/ui/primitives.tsx";
 
 const MAX_TOTAL_BONUS_RATE = 3;
 
@@ -63,7 +64,7 @@ function SearchableOrderSelect({ value, options, onChange, placeholder, ariaLabe
   return (
     <div className={`order-search-select ${disabled ? "disabled" : ""}`}>
       <Search size={16} aria-hidden="true" />
-      <input
+      <Input
         role="combobox"
         aria-label={ariaLabel}
         aria-expanded={open}
@@ -331,61 +332,61 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
             <h2>Satış əməliyyatını redaktə et</h2>
             <p>{order.id} üzrə müştəri, ödəniş, bonus və rezerv məlumatlarını yeniləyin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
+          <Button variant="ghost" className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
             <X size={18} />
-          </button>
+          </Button>
         </div>
         <form onSubmit={submit} className="order-modal-form">
           <section className="order-section">
             <label className="order-label">MÜŞTƏRİ VƏ ÖDƏNİŞ</label>
             <div className="order-two-col">
               <SearchableOrderSelect value={customerFin} options={customerSearchOptions(customers)} onChange={changeCustomer} placeholder="Müştəri axtarın..." ariaLabel="Müştəri axtar və seç" />
-              <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
+              <Select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
                 <option>Nağd</option>
                 <option>Kart</option>
                 <option>Köçürmə</option>
                 <option>Kredit</option>
-              </select>
+              </Select>
             </div>
             <div className="order-two-col">
               <label className="order-sub-field">
                 <span>Müştəri adı</span>
-                <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+                <Input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
               </label>
               <label className="order-sub-field">
                 <span>Tarix</span>
-                <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+                <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
               </label>
             </div>
             <label className="order-sub-field">
               <span>ANBAR</span>
-              <select value={warehouseId} onChange={(event) => changeWarehouse(event.target.value)} disabled={delivered}>
+              <Select value={warehouseId} onChange={(event) => changeWarehouse(event.target.value)} disabled={delivered}>
                 {warehouses.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
                     {warehouse.name} — {warehouse.city}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </section>
 
           <section className="order-section">
             <div className="section-title-row">
               <span className="order-label">MƏHSULLAR</span>
-              <button type="button" className="secondary-btn" onClick={addProductRow} disabled={delivered}>
+              <Button variant="secondary" type="button"  onClick={addProductRow} disabled={delivered}>
                 <Plus size={16} />
                 Sətr əlavə et
-              </button>
+              </Button>
             </div>
             <div className="order-lines">
               {productRows.map((row) => (
                 <div className="order-line-grid" key={row.id}>
                   <SearchableOrderSelect value={row.product} options={productSearchOptions(availableStock)} onChange={(value) => changeProduct(row.id, "product", value)} placeholder="Məhsul və ya SKU axtarın..." ariaLabel="Məhsul axtar və seç" disabled={delivered} />
-                  <input type="number" min="1" value={row.qty} onChange={(event) => changeProduct(row.id, "qty", event.target.value)} disabled={delivered} />
-                  <input type="number" min="0" value={row.price} onChange={(event) => changeProduct(row.id, "price", event.target.value)} disabled={delivered} />
-                  <button type="button" className="line-delete" onClick={() => removeProductRow(row.id)} disabled={delivered} aria-label="Məhsul sətrini sil">
+                  <Input type="number" min="1" value={row.qty} onChange={(event) => changeProduct(row.id, "qty", event.target.value)} disabled={delivered} />
+                  <Input type="number" min="0" value={row.price} onChange={(event) => changeProduct(row.id, "price", event.target.value)} disabled={delivered} />
+                  <Button variant="ghost" type="button" className="line-delete" onClick={() => removeProductRow(row.id)} disabled={delivered} aria-label="Məhsul sətrini sil">
                     <Trash2 size={17} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -393,7 +394,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
               <span>Sətir cəmi: {money(lineTotal)}</span>
               <label>
                 <span>Yekun məbləğ</span>
-                <input type="number" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} />
+                <Input type="number" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} />
               </label>
             </div>
           </section>
@@ -407,15 +408,15 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
               <div className="credit-order-grid">
                 <label className="order-sub-field">
                   <span>Müddət</span>
-                  <select value={creditMonths} onChange={(event) => setCreditMonths(Number(event.target.value))}>
+                  <Select value={creditMonths} onChange={(event) => setCreditMonths(Number(event.target.value))}>
                     {creditTermOptions.map((month) => (
                       <option key={month} value={month}>{month} ay</option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <label className="order-sub-field">
                   <span>İlkin ödəniş</span>
-                  <input type="number" min="0" max={amount} value={initialPayment} onChange={(event) => setInitialPayment(event.target.value)} />
+                  <Input type="number" min="0" max={amount} value={initialPayment} onChange={(event) => setInitialPayment(event.target.value)} />
                 </label>
               </div>
             </section>
@@ -423,7 +424,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
             <section className="order-section">
               <label className="order-sub-field">
                 <span>Daxil olan</span>
-                <input type="number" min="0" max={amount} value={paid} onChange={(event) => setPaid(event.target.value)} />
+                <Input type="number" min="0" max={amount} value={paid} onChange={(event) => setPaid(event.target.value)} />
               </label>
             </section>
           )}
@@ -434,22 +435,22 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
                 <Users size={16} />
                 SATICI BONUSLARI
               </span>
-              <button type="button" className="secondary-btn" disabled={sellerRows.length >= 3} onClick={addSellerRow}>
+              <Button variant="secondary" type="button"  disabled={sellerRows.length >= 3} onClick={addSellerRow}>
                 <Plus size={16} />
                 Satıcı əlavə et
-              </button>
+              </Button>
             </div>
             <div className="order-lines">
               {sellerRows.map((row) => (
                 <div className="seller-line-grid" key={row.id}>
                   <SearchableOrderSelect value={row.seller} options={sellerSearchOptions(sellers, row.seller)} onChange={(value) => changeSeller(row.id, "seller", value)} placeholder="Satıcı adı ilə axtarın..." ariaLabel="Satıcı axtar və seç" />
                   <label className="bonus-input">
-                    <input type="number" min="0" max={maxBonusForRow(sellerRows, row.id)} step="0.01" value={row.bonus} onChange={(event) => changeSeller(row.id, "bonus", event.target.value)} />
+                    <Input type="number" min="0" max={maxBonusForRow(sellerRows, row.id)} step="0.01" value={row.bonus} onChange={(event) => changeSeller(row.id, "bonus", event.target.value)} />
                     <span>% bonus</span>
                   </label>
-                  <button type="button" className="line-delete" onClick={() => removeSellerRow(row.id)} aria-label="Satıcı sətrini sil">
+                  <Button variant="ghost" type="button" className="line-delete" onClick={() => removeSellerRow(row.id)} aria-label="Satıcı sətrini sil">
                     <Trash2 size={17} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -462,17 +463,17 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
             <div className="order-two-col">
               <label className="order-sub-field">
                 <span>Status</span>
-                <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                <Select value={status} onChange={(event) => setStatus(event.target.value)}>
                   {stages
                     .filter((stage) => delivered || stage !== "Təhvil verilib")
                     .map((stage) => (
                       <option key={stage}>{stage}</option>
                     ))}
-                </select>
+                </Select>
               </label>
               <label className="order-sub-field">
                 <span>Ünvan</span>
-                <input value={address} onChange={(event) => setAddress(event.target.value)} />
+                <Input value={address} onChange={(event) => setAddress(event.target.value)} />
               </label>
             </div>
             <label className="order-sub-field">
@@ -482,8 +483,8 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
           </section>
 
           <div className="modal-actions order-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={!canSubmit}>Yadda saxla</button>
+            <Button variant="secondary" type="button"  onClick={onClose}>Ləğv et</Button>
+            <Button variant="primary" type="submit"  disabled={!canSubmit}>Yadda saxla</Button>
           </div>
         </form>
       </div>
@@ -740,9 +741,9 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             <h2>Yeni Satış Sifarişi</h2>
             <p>Müştəri, məhsul və satıcı bonus faizlərini daxil edin.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} disabled={submitting} aria-label="Pəncərəni bağla">
+          <Button variant="ghost" className="icon-btn" onClick={onClose} disabled={submitting} aria-label="Pəncərəni bağla">
             <X size={18} />
-          </button>
+          </Button>
         </div>
         <form onSubmit={submit} className="order-modal-form" aria-busy={submitting}>
           {submitError && <p role="alert">{submitError}</p>}
@@ -752,18 +753,18 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
             </label>
             <div className="order-two-col">
               <SearchableOrderSelect value={customerFin} options={customerSearchOptions(customers)} onChange={setCustomerFin} placeholder="Ad, telefon, FİN və ya VÖEN ilə axtarın..." ariaLabel="Müştəri axtar və seç" />
-              <select
+              <Select
                 aria-label="Ödəniş tipi"
                 value={paymentMethod}
                 onChange={(event) => setPaymentMethod(event.target.value)}
               >
                 <option>Nağd</option>
                 <option>Kredit</option>
-              </select>
+              </Select>
             </div>
             <label className="order-sub-field">
               <span>ANBAR</span>
-              <select
+              <Select
                 aria-label="Rezerv anbarı"
                 value={warehouseId}
                 onChange={(event) => changeWarehouse(event.target.value)}
@@ -773,7 +774,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     {warehouse.name} — {warehouse.city}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </section>
 
@@ -783,23 +784,23 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                 <span className="order-label">DAXİLİ QEYDLƏR</span>
                 <small className="u-display-block u-margin-top-4px u-color-muted">Qeydin kim üçün olduğunu seçin. Bu məlumat sifariş kartında saxlanacaq.</small>
               </div>
-              <button type="button" className="secondary-btn" onClick={() => setInternalNotes((rows) => [...rows, { id: createClientId(), recipient: "Maliyyə", text: "" }])}>
+              <Button variant="secondary" type="button"  onClick={() => setInternalNotes((rows) => [...rows, { id: createClientId(), recipient: "Maliyyə", text: "" }])}>
                 <Plus size={16} /> Qeyd əlavə et
-              </button>
+              </Button>
             </div>
             <div className="order-lines">
               {internalNotes.map((item) => (
                 <div className="order-internal-note-line" key={item.id}>
-                  <select value={item.recipient} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, recipient: event.target.value } : row))}>
+                  <Select value={item.recipient} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, recipient: event.target.value } : row))}>
                     <option>Maliyyə</option>
                     <option>Təhvil əməkdaşı</option>
                     <option>Anbar</option>
                     <option>Satış</option>
                     <option>Rəhbərlik</option>
                     <option>Ümumi</option>
-                  </select>
-                  <input value={item.text} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, text: event.target.value } : row))} placeholder={`${item.recipient} üçün qeyd yazın…`} />
-                  <button type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={17} /></button>
+                  </Select>
+                  <Input value={item.text} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, text: event.target.value } : row))} placeholder={`${item.recipient} üçün qeyd yazın…`} />
+                  <Button variant="ghost" type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={17} /></Button>
                 </div>
               ))}
             </div>
@@ -808,51 +809,51 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
           <section className="order-section">
             <div className="section-title-row">
               <span className="order-label">MƏHSULLAR</span>
-              <button type="button" className="secondary-btn" onClick={addProductRow}>
+              <Button variant="secondary" type="button"  onClick={addProductRow}>
                 <Plus size={16} />
                 Sətr əlavə et
-              </button>
+              </Button>
             </div>
             <div className="order-lines">
               {productRows.map((row) => (
                 <div className="order-line-grid" key={row.id}>
                   <SearchableOrderSelect value={row.product} options={productSearchOptions(availableStock)} onChange={(value) => changeProduct(row.id, "product", value)} placeholder="Məhsul adı və ya SKU..." ariaLabel="Məhsul axtar və seç" />
-                  <input
+                  <Input
                     aria-label="Miqdar"
                     type="number"
                     min="1"
                     value={row.qty}
                     onChange={(event) => changeProduct(row.id, "qty", event.target.value)}
                   />
-                  <input
+                  <Input
                     aria-label="Qiymət"
                     type="number"
                     min="0"
                     value={row.price}
                     onChange={(event) => changeProduct(row.id, "price", event.target.value)}
                   />
-                  <select
+                  <Select
                     aria-label="ƏDV seçimi"
                     value={row.vatRate || 0}
                     onChange={(event) => changeProduct(row.id, "vatRate", Number(event.target.value))}
                   >
                     <option value="0">ƏDV yoxdur</option>
                     <option value="18">ƏDV 18%</option>
-                  </select>
-                  <button
+                  </Select>
+                  <Button variant="ghost"
                     type="button"
                     className="line-delete"
                     onClick={() => removeProductRow(row.id)}
                     aria-label="Məhsul sətrini sil"
                   >
                     <Trash2 size={17} />
-                  </button>
+                  </Button>
                   {getRowSerialOptions(row).length > 0 && (
                     <div className="serial-pick-list">
                       {Array.from({ length: Math.max(1, Number(row.qty || 1)) }).map((_, index) => (
                         <label key={`${row.id}-serial-${index}`}>
                           <span>IMEI #{index + 1}</span>
-                          <select
+                          <Select
                             value={row.serials?.[index] || ""}
                             onChange={(event) => changeRowSerial(row.id, index, event.target.value)}
                           >
@@ -862,7 +863,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                                 {serial}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </label>
                       ))}
                     </div>
@@ -927,7 +928,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               <div className="credit-order-grid">
                 <label className="order-sub-field">
                   <span>MÜDDƏT</span>
-                  <select
+                  <Select
                     aria-label="Kredit müddəti"
                     value={creditMonths}
                     onChange={(event) => setCreditMonths(Number(event.target.value))}
@@ -937,11 +938,11 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                         {month} ay
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <label className="order-sub-field">
                   <span>İLKİN ÖDƏNİŞ (HƏDƏF)</span>
-                  <input
+                  <Input
                     aria-label="İlkin ödəniş hədəfi"
                     type="number"
                     min="0"
@@ -952,7 +953,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                 </label>
                 <label className="order-sub-field">
                   <span>BEH (İNDİ ÖDƏNİLƏN)</span>
-                  <input
+                  <Input
                     aria-label="Beh məbləği"
                     type="number"
                     min="0"
@@ -1006,22 +1007,22 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                 <Users size={16} />
                 SATICILAR (MAX. 3 NƏFƏR) — TOPLAM BONUS MAX. 3%
               </span>
-              <button
+              <Button variant="secondary"
                 type="button"
-                className="secondary-btn"
+                
                 disabled={sellerRows.length >= 3}
                 onClick={addSellerRow}
               >
                 <Plus size={16} />
                 Satıcı əlavə et
-              </button>
+              </Button>
             </div>
             <div className="order-lines">
               {sellerRows.map((row) => (
                 <div className="seller-line-grid" key={row.id}>
                   <SearchableOrderSelect value={row.seller} options={sellerSearchOptions(sellers)} onChange={(value) => changeSeller(row.id, "seller", value)} placeholder="Satıcı adı ilə axtarın..." ariaLabel="Satıcı axtar və seç" />
                   <label className="bonus-input">
-                    <input
+                    <Input
                       aria-label="Bonus faizi"
                       type="number"
                       min="0"
@@ -1032,14 +1033,14 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     />
                     <span>% bonus</span>
                   </label>
-                  <button
+                  <Button variant="ghost"
                     type="button"
                     className="line-delete"
                     onClick={() => removeSellerRow(row.id)}
                     aria-label="Satıcı sətrini sil"
                   >
                     <Trash2 size={17} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -1063,12 +1064,12 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
           </section>
 
           <div className="modal-actions order-actions">
-            <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
+            <Button variant="secondary" type="button"  onClick={onClose} disabled={submitting}>
               Ləğv et
-            </button>
-            <button type="submit" className="primary-btn" disabled={!canCreateOrder || submitting}>
+            </Button>
+            <Button variant="primary" type="submit"  disabled={!canCreateOrder || submitting}>
               Sifarişi yarat
-            </button>
+            </Button>
           </div>
         </form>
       </div>

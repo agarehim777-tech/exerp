@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Input } from "../../shared/ui/primitives.tsx";
 
 export default function ProductPicker({ products = [], value, onPick }) {
   const [q, setQ] = useState('');
@@ -13,7 +14,7 @@ export default function ProductPicker({ products = [], value, onPick }) {
 
   return (
     <div className="u-position-relative">
-      <input
+      <Input
         value={open ? q : (selected?.name || '')}
         onFocus={() => { setOpen(true); setQ(''); }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}

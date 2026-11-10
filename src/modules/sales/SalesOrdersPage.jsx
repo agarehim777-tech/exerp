@@ -6,7 +6,7 @@ import { useCashbook } from '../../shared/hooks/useCashbook.js';
 import StatusBadge from './StatusBadge.jsx';
 import OrderDrawer from './OrderDrawer.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
-import { DataTable, Tabs } from '../../shared/ui/primitives.jsx';
+import { Button, DataTable, Input, Tabs } from '../../shared/ui/primitives.jsx';
 import ModuleLink from '../../shared/ui/ModuleLink.jsx';
 import { pathForRecord } from '../../config/routes.js';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
@@ -86,11 +86,11 @@ export default function SalesOrdersPage({ repository, customers = [], products =
       {ordersError && <div role="alert" className="form-error">{ordersError.message || 'Satış məlumatları oxunmadı.'}</div>}
       {actionError && <div role="alert" className="u-padding-10px_14px u-border-1px_solid_fecaca u-border-radius-10px u-background-fff1f2 u-color-danger u-font-size-13px">{actionError}</div>}
       <div className="ui-toolbar sales-registry-toolbar">
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
+        <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar..."
           className="u-flex-1 u-min-width-200px u-padding-8px_12px u-border-1px_solid_border u-border-radius-8px" />
-        <input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
-        <input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
-        <button type="button" onClick={exportRegistry} disabled={!filtered.length || ordersLoading} className="secondary-btn" title="Görünən satışları CSV formatında ixrac et"><Download size={16} /> CSV ixrac</button>
+        <Input aria-label="Başlanğıc tarixi" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
+        <Input aria-label="Son tarix" type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} className="u-height-38px u-border-1px_solid_border u-border-radius-8px u-padding-0_8px" />
+        <Button variant="secondary" type="button" onClick={exportRegistry} disabled={!filtered.length || ordersLoading}  title="Görünən satışları CSV formatında ixrac et"><Download size={16} /> CSV ixrac</Button>
         <Tabs items={[["table", "Cədvəl"], ["kanban", "Kanban"]]} value={view} onChange={value => setPageQuery({ view: value })} />
       </div>
 
@@ -157,8 +157,8 @@ export default function SalesOrdersPage({ repository, customers = [], products =
       <nav aria-label="Satış reyestri səhifələri" className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <span>{filtered.length} sifariş · {currentPage + 1} / {pageCount}</span>
         <div className="u-display-flex u-gap-8px">
-          <button type="button" className="icon-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18} /></button>
-          <button type="button" className="icon-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18} /></button>
+          <Button variant="ghost" type="button" className="icon-btn" title="Əvvəlki səhifə" aria-label="Əvvəlki səhifə" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18} /></Button>
+          <Button variant="ghost" type="button" className="icon-btn" title="Növbəti səhifə" aria-label="Növbəti səhifə" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18} /></Button>
         </div>
       </nav>
 
@@ -224,7 +224,7 @@ function ReversalPreview({ state, reason, setReason, deleting, onClose, onConfir
         </div>
         {p.warning && <div className="reversal-note">{p.warning}</div>}
         <label className="reversal-reason"><span>Ləğv səbəbi</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} /></label>
-        <footer><button type="button" className="secondary-btn" onClick={onClose}>İmtina</button><button type="button" className="danger-btn" onClick={onConfirm} disabled={deleting}>{deleting ? 'Ləğv edilir…' : 'Satışı ləğv et'}</button></footer>
+        <footer><Button variant="secondary" type="button"  onClick={onClose}>İmtina</Button><Button variant="danger" type="button"  onClick={onConfirm} disabled={deleting}>{deleting ? 'Ləğv edilir…' : 'Satışı ləğv et'}</Button></footer>
       </>}
     </section>
   </div>;

@@ -5,6 +5,7 @@ import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../compo
 import { listReconciliations, saveReconciliation } from "../../services/enterpriseWorkflows.js";
 import { money } from "../../services/format.js";
 import { toLocalIsoDate } from "../../services/date.js";
+import { Button, Input } from "../../shared/ui/primitives.tsx";
 
 const today = () => toLocalIsoDate();
 export function ReconciliationPanel() {
@@ -27,11 +28,11 @@ export function ReconciliationPanel() {
     <PanelHeader title="Kassa və bank uzlaşdırması" subtitle="Statement qalığı ilə ERP ledger qalığını müqayisə edin" icon={RefreshCw} />
     {error && <div className="inline-alert danger">{error}</div>}
     <form className="production-form-grid" onSubmit={submit}>
-      <label><span>Başlanğıc</span><input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
-      <label><span>Son tarix</span><input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></label>
-      <label><span>Bank/kassa çıxarışı</span><input type="number" step="0.01" value={form.statement_balance} onChange={(e) => setForm({ ...form, statement_balance: e.target.value })} /></label>
-      <label><span>ERP ledger</span><input type="number" step="0.01" value={form.ledger_balance} onChange={(e) => setForm({ ...form, ledger_balance: e.target.value })} /></label>
-      <button className="primary-btn" type="submit"><Save size={16} /> Uzlaşdırma yarat</button>
+      <label><span>Başlanğıc</span><Input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
+      <label><span>Son tarix</span><Input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></label>
+      <label><span>Bank/kassa çıxarışı</span><Input type="number" step="0.01" value={form.statement_balance} onChange={(e) => setForm({ ...form, statement_balance: e.target.value })} /></label>
+      <label><span>ERP ledger</span><Input type="number" step="0.01" value={form.ledger_balance} onChange={(e) => setForm({ ...form, ledger_balance: e.target.value })} /></label>
+      <Button variant="primary"  type="submit"><Save size={16} /> Uzlaşdırma yarat</Button>
     </form>
     <DataTable columns={["Period", "Çıxarış", "Ledger", "Fərq", "Status"]} rows={rows.map((row) => [
       <TwoLine title={`${row.period_start} — ${row.period_end}`} subtitle={row.id.slice(0, 8)} />,

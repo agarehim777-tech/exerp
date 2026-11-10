@@ -19,7 +19,7 @@ import {
   azn,
 } from "../../shared/ui/tokens.js";
 
-import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
+import { Button, Input, Select, Table } from "../../shared/ui/primitives.tsx";
 
 const STATUS_TONE = {
   draft: "neutral", issued: "warning", partial: "warning", paid: "success", overdue: "danger", cancelled: "neutral",
@@ -242,7 +242,7 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
         )}
 
 
-        <div className="ui-table-wrap"><table className="ui-table">
+        <div className="ui-table-wrap"><Table className="ui-table">
           <thead>
             <tr>
               <th >№</th><th >Tarix</th><th >Müştəri</th>
@@ -267,7 +267,7 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
               <tr><td  colSpan={8}>Faktura tapılmadı.</td></tr>
             )}
           </tbody>
-        </table></div>
+        </Table></div>
         <LoadMoreBar hasMore={ar.hasMore} onLoadMore={ar.loadMore} loading={ar.loading} />
       </div>
     </div>
@@ -389,7 +389,7 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
         <Input type="date" placeholder="Son ödəniş" value={header.due_date} onChange={(e) => setHeader({ ...header, due_date: e.target.value })}  />
       </div>
 
-      <div className="ui-table-wrap"><table className="ui-table">
+      <div className="ui-table-wrap"><Table className="ui-table">
         <thead>
           <tr>
             <th >Məhsul / təsvir</th><th >Say</th><th >Qiymət</th>
@@ -429,7 +429,7 @@ export function InvoiceForm({ customers, products, onSubmit, onCancel }) {
             </tr>
           ))}
         </tbody>
-      </table></div>
+      </Table></div>
 
       <div className="ui-toolbar ui-spacer-bottom">
         <Button type="button" variant="secondary" onClick={() => setLines((prev) => [...prev, emptyLine()])}>+ Sətir</Button>
@@ -523,7 +523,7 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
             <Button type="button" variant="secondary" onClick={src.refresh}>Yenidən cəhd</Button>
           </div>}
           {tab === "orders" ? (
-            <div className="ui-table-wrap"><table className="ui-table">
+            <div className="ui-table-wrap"><Table className="ui-table">
               <thead>
                 <tr>
                   <th >Sifariş №</th><th >Müştəri</th><th >Sətir</th>
@@ -552,9 +552,9 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
                 ))}
                 {!pendingOrders.length && <tr><td  colSpan={6}>Fakturalanmamış sifariş yoxdur.</td></tr>}
               </tbody>
-            </table></div>
+            </Table></div>
           ) : (
-            <div className="ui-table-wrap"><table className="ui-table">
+            <div className="ui-table-wrap"><Table className="ui-table">
               <thead>
                 <tr>
                   <th >Layihə</th><th >Büdcə</th><th >Müştəri</th>
@@ -601,7 +601,7 @@ function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreat
                 })}
                 {!pendingProjects.length && <tr><td  colSpan={5}>Fakturalanmamış layihə yoxdur.</td></tr>}
               </tbody>
-            </table></div>
+            </Table></div>
           )}
         </div>
       )}
@@ -718,7 +718,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
           ))}
         </div>
 
-        <div className="ui-table-wrap"><table className="ui-table">
+        <div className="ui-table-wrap"><Table className="ui-table">
           <thead>
             <tr>
               <th >#</th><th >Təsvir</th><th >Say</th>
@@ -780,7 +780,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             {!totals.rows.length && <tr><td  colSpan={8}>Sətir yoxdur.</td></tr>}
 
           </tbody>
-        </table></div>
+        </Table></div>
 
         <div className="ui-toolbar ui-spacer-bottom">
           <Button type="button" variant="secondary" onClick={addLine}>+ Sətir</Button>

@@ -3,6 +3,7 @@ import { DataTable, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from 
 import { money } from "../services/format.js";
 import { useMemo, useState } from "react";
 import { Customer360Modal, CustomerCreditHistory, buildCrmPipelineRows, buildCustomer360, matchesCrmCustomerSearch, matchesCrmCustomerSegment, matchesCrmPipelineFilter } from "../shared/lib/appDomain.jsx";
+import { Button, Input, Select } from "../shared/ui/primitives.tsx";
 export default function CrmPage({ customers, credits, orders = [], contracts = [], onOpenSalesOrder, onOpenCredit, onDeleteCustomer }) {
   const [pipelineFilter, setPipelineFilter] = useState("Hamısı");
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
@@ -219,7 +220,7 @@ export default function CrmPage({ customers, credits, orders = [], contracts = [
             <span>Axtarış</span>
             <div>
               <Search size={15} />
-              <input
+              <Input
                 value={customerSearch}
                 onChange={(event) => setCustomerSearch(event.target.value)}
                 placeholder="Müştəri, FİN, müqavilə, cihaz..."
@@ -228,14 +229,14 @@ export default function CrmPage({ customers, credits, orders = [], contracts = [
           </label>
           <label>
             <span>Segment</span>
-            <select value={customerSegment} onChange={(event) => setCustomerSegment(event.target.value)}>
+            <Select value={customerSegment} onChange={(event) => setCustomerSegment(event.target.value)}>
               {customerSegments.map((segment) => (
                 <option key={segment}>{segment}</option>
               ))}
-            </select>
+            </Select>
           </label>
-          <button
-            className="secondary-btn icon-only"
+          <Button variant="secondary"
+            className="icon-only"
             type="button"
             title="Filterləri sıfırla"
             onClick={() => {
@@ -244,7 +245,7 @@ export default function CrmPage({ customers, credits, orders = [], contracts = [
             }}
           >
             <RefreshCw size={16} />
-          </button>
+          </Button>
           <div className="crm-registry-count">
             <span>Görünən müştəri</span>
             <strong>{visibleCustomerProfiles.length}</strong>
@@ -280,9 +281,9 @@ export default function CrmPage({ customers, credits, orders = [], contracts = [
               nextPayment ? `${money(nextPayment.monthly)} · ${nextPayment.nextDue}` : "Yoxdur",
               <StatusBadge status={status} />,
               onDeleteCustomer ? (
-                <button
+                <Button variant="danger"
                   type="button"
-                  className="danger-btn"
+                  
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteCustomer(customer.fin);
@@ -290,7 +291,7 @@ export default function CrmPage({ customers, credits, orders = [], contracts = [
                   title="Müştərini sil"
                 >
                   Sil
-                </button>
+                </Button>
               ) : null,
             ];
           })}

@@ -8,6 +8,7 @@ import {
   lockAccountingPeriod,
   reopenAccountingPeriod,
 } from "../../../services/coreOperations.js";
+import { Button, Input, Table } from "../../../shared/ui/primitives.tsx";
 
 function dayRange(date) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
@@ -103,7 +104,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
         <div className="accounting-period-form">
           <label className="field">
             <span>Bağlanış tarixi</span>
-            <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
+            <Input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
           </label>
           <label className="field full">
             <span>Bağlanış səbəbi</span>
@@ -121,21 +122,21 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
             <span>Seçilmiş tarix daxil olmaqla bütün keçmiş dövrün bloklanacağını təsdiq edirəm.</span>
           </label>
           {error && <div className="period-error" role="alert">{error}</div>}
-          <button
-            className="primary-btn"
+          <Button variant="primary"
+            
             type="button"
             onClick={closePeriod}
             disabled={!tenantId || !canManage || !confirmed || reason.trim().length < 3 || loading || Boolean(currentLock)}
           >
             <LockKeyhole size={17} /> {currentLock ? "Bu tarixədək artıq bağlıdır" : loading ? "İcra olunur..." : "Bu tarixədək bağla"}
-          </button>
+          </Button>
           {!canManage && <small className="period-permission-note">Bu əməliyyat üçün Maliyyə idarəetməsi icazəsi tələb olunur.</small>}
         </div>
 
         <div className="accounting-period-history">
           <h3>Bağlanış tarixçəsi</h3>
           <div className="table-wrap">
-            <table>
+            <Table>
               <thead><tr><th>Tarix</th><th>Status</th><th>Səbəb</th><th>Əməliyyat</th></tr></thead>
               <tbody>
                 {locks.map((lock) => (
@@ -149,15 +150,15 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
                     <td>{lock.reason || "-"}</td>
                     <td>
                       {lock.status === "locked" && canManage ? (
-                        <button className="secondary-btn compact" type="button" onClick={() => reopenPeriod(lock)} disabled={loading}>
+                        <Button variant="secondary" size="compact"  type="button" onClick={() => reopenPeriod(lock)} disabled={loading}>
                           <RotateCcw size={14} /> Yenidən aç
-                        </button>
+                        </Button>
                       ) : "-"}
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
             {!locks.length && !error && <div className="period-empty">Hələ bağlanmış period yoxdur.</div>}
           </div>
         </div>
