@@ -6,7 +6,7 @@ import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { azn, card as baseCard, primaryBtn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
+import { azn, primaryBtn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
