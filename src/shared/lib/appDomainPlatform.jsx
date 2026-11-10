@@ -1,4 +1,3 @@
-import { normalize } from "../../services/format.js";
 import { buildModulePermissionCatalog, defaultRoles, getDefaultModuleAccessForRole as getDefaultModuleAccessForRoleFromCatalog, getModuleForPermission as getModuleForPermissionFromCatalog, normalizeUserModuleAccess as normalizeUserModuleAccessFromCatalog, permissionCatalog, uniquePermissionModuleIds } from "../../services/permissions.js";
 import { initialState, navItems } from "../../data.js";
 
