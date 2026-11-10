@@ -3769,8 +3769,132 @@ export type Database = {
           },
         ]
       }
+      production_batch_materials: {
+        Row: {
+          batch_id: string
+          id: string
+          product_id: string
+          quantity: number
+          stock_movement_id: string
+          total_cost: number
+        }
+        Insert: {
+          batch_id: string
+          id?: string
+          product_id: string
+          quantity: number
+          stock_movement_id: string
+          total_cost: number
+        }
+        Update: {
+          batch_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          stock_movement_id?: string
+          total_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_batch_materials_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "production_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batch_materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batch_materials_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_batches: {
+        Row: {
+          batch_no: string
+          completed_at: string
+          created_by: string
+          id: string
+          journal_entry_id: string
+          product_id: string
+          quantity: number
+          tenant_id: string
+          total_cost: number
+          unit_cost: number
+          valuation_method: string
+          warehouse_id: string
+        }
+        Insert: {
+          batch_no: string
+          completed_at?: string
+          created_by: string
+          id?: string
+          journal_entry_id: string
+          product_id: string
+          quantity: number
+          tenant_id: string
+          total_cost: number
+          unit_cost: number
+          valuation_method: string
+          warehouse_id: string
+        }
+        Update: {
+          batch_no?: string
+          completed_at?: string
+          created_by?: string
+          id?: string
+          journal_entry_id?: string
+          product_id?: string
+          quantity?: number
+          tenant_id?: string
+          total_cost?: number
+          unit_cost?: number
+          valuation_method?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_batches_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
+          cost_price: number
           created_at: string
           created_by: string | null
           currency: string
@@ -3781,6 +3905,7 @@ export type Database = {
           name: string
           price: number
           recommended_order_qty: number
+          serial_tracked: boolean
           sku: string
           tenant_id: string
           unit: string
@@ -3788,6 +3913,7 @@ export type Database = {
           vat_rate: number
         }
         Insert: {
+          cost_price?: number
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -3798,6 +3924,7 @@ export type Database = {
           name: string
           price?: number
           recommended_order_qty?: number
+          serial_tracked?: boolean
           sku: string
           tenant_id: string
           unit?: string
@@ -3805,6 +3932,7 @@ export type Database = {
           vat_rate?: number
         }
         Update: {
+          cost_price?: number
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -3815,6 +3943,7 @@ export type Database = {
           name?: string
           price?: number
           recommended_order_qty?: number
+          serial_tracked?: boolean
           sku?: string
           tenant_id?: string
           unit?: string
@@ -6064,6 +6193,10 @@ export type Database = {
         Args: { _code: string; _tenant: string }
         Returns: string
       }
+      import_warehouse_stock_atomic: {
+        Args: { _request_key: string; _rows: Json; _tenant_id: string }
+        Returns: Json
+      }
       is_period_locked: {
         Args: { _date: string; _tenant: string }
         Returns: boolean
@@ -6220,6 +6353,10 @@ export type Database = {
       post_manual_journal_entry: {
         Args: { _entry: string }
         Returns: undefined
+      }
+      post_material_production: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       post_payment_to_gl: { Args: { _payment_id: string }; Returns: string }
       preview_sales_order_reversal: {
