@@ -135,7 +135,8 @@ import { resolveOrderCustomer } from "./shared/lib/orderCustomer.js";
 import { withoutDbBackedData } from "./shared/state/tenantPersistence.js";
 import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 
-import { OrderProductLines, baseDeliveryDate, currentBusinessDate, getDeliveryPlan, getDeliveryStockCheck, getEmployeeKey, getKpiPeriodKey, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./shared/lib/appDomain.jsx";
+import { currentBusinessDate, getEmployeeKey, getKpiPeriodKey } from "./shared/lib/appDomain.jsx";
+import { OrderProductLines, baseDeliveryDate, getDeliveryPlan, getDeliveryStockCheck, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "./modules/warehouse/deliveryDomain.jsx";
 import { isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
 import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getFreeQuantity, getModuleForPermission, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
 
@@ -253,7 +254,7 @@ function App() {
     ordersLoaded: dbOrdersLoaded, inventory: dbInventory, setState,
   });
 
-  const { active, setActive, location, navigate } = useModuleNavigation();
+  const { active, setActive, navigate } = useModuleNavigation();
 
 
   const [query, setQuery] = useState("");
@@ -266,7 +267,7 @@ function App() {
       refreshDbInventory();
     }
   }, [modal?.type, activeTenantId, refreshDbCustomers, refreshDbProducts, refreshDbInventory]);
-  const { toasts, setToasts, notify } = useToasts();
+  const { toasts, notify } = useToasts();
   const [selectedKpiPeriod, setSelectedKpiPeriod] = useState(getKpiPeriodKey);
   const [kpiAccountId, setKpiAccountId] = useState("");
   const kpiLedger = useKpiLedger(active === "kpi" ? activeTenantId : null);

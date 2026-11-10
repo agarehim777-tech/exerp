@@ -8,16 +8,8 @@ import { formatDateInput, formatPaymentDate, parsePaymentDate } from "../../serv
 import { navPermissionByType, pageActionPermissionByType, pageActionlessModules } from "../../services/permissions.js";
 import { defaultDbProvider, localDbBaselineVersion, localDbKey, localDbSchemaVersion } from "../../services/persistence.js";
 import { total } from "../utils/aggregate.js";
-import {
-  baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026,
-  currentBusinessDate, currentBusinessYear, enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk,
-  getDeliveryStockCheck, getEmployeeKey, getInvoiceAgingBucket, getOrderBalance, getOrderPaymentMethod,
-  getSupportThreadId, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts,
-  baseCreditDate, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCreditOrder,
-  getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen,
-  ensureSettings, getActiveRole, getAvailableQuantity, getModuleForPermission, hasExpenseCashImpact,
-  isLowStockItem, isSerialTrackedProduct, normalizeUserModuleAccess, targetDbProvider,
-} from "./appDomain.jsx";
+import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, getEmployeeKey, getInvoiceAgingBucket, getSupportThreadId, baseCreditDate, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCreditOrder, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getActiveRole, getAvailableQuantity, getModuleForPermission, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, normalizeUserModuleAccess, targetDbProvider } from "./appDomain.jsx";
+import { enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk, getDeliveryStockCheck, getOrderBalance, getOrderPaymentMethod, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import {
   addDays, applyCreditPrincipalPayment, buildCreditPlan, daysBetween, getCreditDisplayPlan,
   getCreditPaymentState, isCreditClosed, roundMoney,
