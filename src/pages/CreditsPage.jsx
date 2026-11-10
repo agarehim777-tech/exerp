@@ -31,6 +31,7 @@ import {
   matchesCreditSourceFilter,
   monthNamesAz,
 } from "../shared/lib/appDomain.jsx";
+import { Button, Input, Select, Table } from "../shared/ui/primitives.tsx";
 
 export default CreditsPage;
 
@@ -234,14 +235,14 @@ function CreditsPage({
       {error ? (
         <div role="alert" className="form-error">
           <p>Kredit məlumatları yüklənmədi: {error.message || String(error)}</p>
-          <button type="button" className="secondary-btn" disabled={loading} onClick={onRefresh}>
+          <Button variant="secondary" type="button"  disabled={loading} onClick={onRefresh}>
             <RefreshCw size={16} /> Yenidən yüklə
-          </button>
+          </Button>
         </div>
       ) : loading ? <p role="status">Kredit məlumatları yüklənir...</p> : null}
       {!loading && !error && detailCreditId && !detailItem && <div role="alert" className="ui-notice ui-notice-warning">
         Kredit tapılmadı və ya bu şirkətdə əlçatan deyil.
-        <button type="button" className="text-btn" onClick={closeDetail}>Bağla</button>
+        <Button variant="ghost" type="button" className="text-btn" onClick={closeDetail}>Bağla</Button>
       </div>}
       <section className="metric-grid four">
         <MetricCard label="Aktiv kreditlər" value={activeCredits.length} icon={CreditCard} tone="primary" />
@@ -301,35 +302,35 @@ function CreditsPage({
           <div className="credit-directory-filters">
             <label>
               <span>Göstər</span>
-              <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+              <Select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
                 {[10, 25, 50, 100].map((size) => (
                   <option key={size} value={size}>{size}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               <span>Ay</span>
-              <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
+              <Select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
                 <option>Bütün aylar</option>
                 {monthNamesAz.map((month) => (
                   <option key={month}>{month}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               <span>İl</span>
-              <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
+              <Select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
                 <option>Bütün illər</option>
                 {yearOptions.map((year) => (
                   <option key={year}>{year}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="credit-search-field">
               <span>Axtarış</span>
               <div>
                 <Search size={15} />
-                <input
+                <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Müştəri, kredit kodu, müqavilə..."
@@ -338,22 +339,22 @@ function CreditsPage({
             </label>
             <label>
               <span>Mənbə</span>
-              <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+              <Select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
                 {sourceFilters.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
-              </select>
+              </Select>
             </label>
-            <button className="primary-btn icon-only" title="Filterləri tətbiq et" type="button" onClick={applyFilters}>
+            <Button variant="primary" className="icon-only" title="Filterləri tətbiq et" type="button" onClick={applyFilters}>
               <Filter size={16} />
-            </button>
-            <button className="secondary-btn icon-only" title="Filterləri sıfırla" type="button" onClick={resetFilters}>
+            </Button>
+            <Button variant="secondary" className="icon-only" title="Filterləri sıfırla" type="button" onClick={resetFilters}>
               <RefreshCw size={16} />
-            </button>
-            <button className="secondary-btn credit-excel-btn" type="button" onClick={exportVisibleCredits}>
+            </Button>
+            <Button variant="secondary" className="credit-excel-btn" type="button" onClick={exportVisibleCredits}>
               <Download size={16} />
               Excel
-            </button>
+            </Button>
           </div>
 
           <DataTable
@@ -424,8 +425,8 @@ function CreditsPage({
                   {paymentState.isOverdue && <strong className="credit-overdue-days">{paymentState.daysOverdue} gün gecikmə</strong>}
                 </div>,
                 <div className="credit-table-actions">
-                  <button
-                    className="primary-btn compact"
+                  <Button variant="primary" size="compact"
+                    
                     type="button"
                     title="Kredit üzrə ödəniş götür"
                     aria-label="Kredit üzrə ödəniş götür"
@@ -434,12 +435,12 @@ function CreditsPage({
                   >
                     <Wallet size={15} />
                     <span className="credit-action-label">Ödəniş götür</span>
-                  </button>
+                  </Button>
                   {!isCreditStarted(credit) && !isCreditClosed(credit, plan) ? (
-                    <button className="primary-btn compact" type="button" title="Krediti başlat" aria-label="Krediti başlat" onClick={() => setStartCreditId(credit.id)}>
+                    <Button variant="primary" size="compact"  type="button" title="Krediti başlat" aria-label="Krediti başlat" onClick={() => setStartCreditId(credit.id)}>
                       <Play size={15} />
                       <span className="credit-action-label">Krediti başlat</span>
-                    </button>
+                    </Button>
                   ) : null}
                   <ModuleLink className="icon-btn" title="Kredit kartına bax" aria-label="Kredit kartına bax" to={pathForRecord('credits', credit.id)} onSelect={() => setDetailCreditId(credit.id)}>
                     <Eye size={16} />
@@ -564,7 +565,7 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
             <h2 id="start-credit-title">Krediti başlat</h2>
             <p>{item.credit.customer} · {item.credit.contractId || item.credit.id}</p>
           </div>
-          <button className="icon-btn" type="button" disabled={Boolean(saving)} onClick={onClose} aria-label="Bağla">×</button>
+          <Button variant="ghost" className="icon-btn" type="button" disabled={Boolean(saving)} onClick={onClose} aria-label="Bağla">×</Button>
         </div>
         <form className="credit-payment-form" onSubmit={submit} aria-busy={Boolean(saving)}>
           {saveError ? <p role="alert" className="form-error">{saveError}</p> : null}
@@ -580,7 +581,7 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
               <>
               <label className="field">
                 <span>Qəbul ediləcək məbləğ</span>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   disabled={Boolean(saving)}
@@ -591,14 +592,14 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
                 />
               </label>
               {depositError ? <p className="bonus-note bonus-note--error">{depositError}</p> : null}
-              <button
+              <Button variant="secondary"
                 type="button"
-                className="secondary-btn"
+                
                 onClick={collectDeposit}
                 disabled={Boolean(saving) || Boolean(depositError) || depositValue <= 0}
               >
                 {saving === "deposit" ? "Qəbul edilir..." : "Behi kassaya qəbul et"}
-              </button>
+              </Button>
               <p className="form-help">
                 İlkin ödəniş tam yığılmayınca kredit başladıla bilməz. Hədəf tamamlananda cədvəl avtomatik aktivləşir.
               </p>
@@ -617,7 +618,7 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
           />
           <label className="field">
             <span>Kreditin başlanma tarixi</span>
-            <input type="date" required disabled={Boolean(saving)} value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            <Input type="date" required disabled={Boolean(saving)} value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           </label>
           <div className="credit-payment-preview">
             <span>İlk ödəniş tarixi <strong>{firstPaymentDate}</strong></span>
@@ -634,7 +635,7 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
               </p>
             ) : null}
             <div className="credit-schedule-preview-scroll">
-              <table className="credit-schedule-preview-table">
+              <Table className="credit-schedule-preview-table">
                 <thead>
                   <tr><th>#</th><th>Ödəniş tarixi</th><th>Məbləğ</th></tr>
                 </thead>
@@ -647,15 +648,15 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
           </div>
           <p className="form-help">Təsdiqdən sonra bu cədvəl yadda saxlanacaq və kredit aktiv portfelə keçəcək.</p>
           <div className="modal-actions">
-            <button type="button" className="secondary-btn" disabled={Boolean(saving)} onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={Boolean(saving) || !initialComplete}>
+            <Button variant="secondary" type="button"  disabled={Boolean(saving)} onClick={onClose}>Ləğv et</Button>
+            <Button variant="primary" type="submit"  disabled={Boolean(saving) || !initialComplete}>
               <Play size={15} /> {saving === "start" ? "Başladılır..." : "Krediti başlat"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -694,13 +695,13 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
             <h2>Ödəniş götür</h2>
             <p>{credit.customer} · {credit.contractId || credit.id} · qalıq {money(debt.balance)}</p>
           </div>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</button>
+          <Button variant="ghost" className="icon-btn" type="button" onClick={onClose} aria-label="Bağla">×</Button>
         </div>
         <form className="credit-payment-form" onSubmit={submit}>
           <div className="credit-payment-inputs">
             <label>
               <span>Əsas məbləğ</span>
-              <input
+              <Input
                 aria-label="Əsas məbləğ"
                 type="number"
                 min="0"
@@ -710,7 +711,7 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
             </label>
             <label>
               <span>Gecikmə faizi</span>
-              <input
+              <Input
                 aria-label="Gecikmə faizi"
                 type="number"
                 min="0"
@@ -724,10 +725,10 @@ function QuickCollectModal({ item, onReceivePayment, onClose }) {
             <span>Kassaya daxil olur <strong>{money(principal + penalty)}</strong></span>
           </div>
           <div className="modal-actions">
-            <button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button>
-            <button type="submit" className="primary-btn" disabled={principal <= 0 && penalty <= 0}>
+            <Button variant="secondary" type="button"  onClick={onClose}>Ləğv et</Button>
+            <Button variant="primary" type="submit"  disabled={principal <= 0 && penalty <= 0}>
               Ödənişi qeyd et
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthProvider.jsx';
 import { usePipelines } from '../../shared/hooks/usePipelines.js';
 import { useDeals } from '../../shared/hooks/useDeals.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
+import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 
 export default function CrmDealsPage() {
   const { activeTenantId } = useAuth();
@@ -25,7 +26,7 @@ export default function CrmDealsPage() {
   if (!activePipeline) {
     return <div className="u-padding-40px u-text-align-center">
       <p>Pipeline hazırlanır...</p>
-      <button onClick={seedDefault} className="u-background-action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-cursor-pointer u-font-weight-700">Standart pipeline yarat</button>
+      <Button variant="ghost" onClick={seedDefault} className="u-background-action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-cursor-pointer u-font-weight-700">Standart pipeline yarat</Button>
     </div>;
   }
 
@@ -51,8 +52,8 @@ export default function CrmDealsPage() {
           <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">{activePipeline.name}</h1>
           <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
         </div>
-        <button onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
-          className="sx-ef4ac23 sx-4eb23a8 sx-012333e sx-618e663 sx-3c85720 sx-83e4487 sx-b202c6d">+ Sövdələşmə</button>
+        <Button variant="ghost" onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
+          className="sx-ef4ac23 sx-4eb23a8 sx-012333e sx-618e663 sx-3c85720 sx-83e4487 sx-b202c6d">+ Sövdələşmə</Button>
       </header>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
@@ -94,7 +95,7 @@ function StageColumn({ stage, count, sum, onAdd, children }) {
           <span className="u-background-surface u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{count}</span>
         </div>
         <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{sum.toFixed(0)} ₼</div>
-        <button onClick={onAdd} className="u-margin-top-6px u-width-100 u-background-transparent u-border-1px_dashed_line_strong u-padding-6px u-border-radius-8px u-cursor-pointer u-color-text_secondary u-font-size-12px">+ əlavə et</button>
+        <Button variant="ghost" onClick={onAdd} className="u-margin-top-6px u-width-100 u-background-transparent u-border-1px_dashed_line_strong u-padding-6px u-border-radius-8px u-cursor-pointer u-color-text_secondary u-font-size-12px">+ əlavə et</Button>
       </div>
       <div className="u-padding-8px u-display-flex u-flex-direction-column u-gap-8px u-min-height-100px u-flex-1">
         {children}
@@ -144,30 +145,30 @@ function NewDealModal({ stages, defaultStage, customers, onClose, onCreate }) {
       <form onClick={e => e.stopPropagation()} onSubmit={submit}
  className="u-background-surface u-border-radius-16px u-padding-24px u-width-480px u-max-width-92vw u-display-flex u-flex-direction-column u-gap-12px">
         <h2 className="u-margin-0">Yeni sövdələşmə</h2>
-        <label>Başlıq *<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="crm-deals-page-inp" required /></label>
+        <label>Başlıq *<Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="crm-deals-page-inp" required /></label>
         <label>Müştəri
-          <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} className="crm-deals-page-inp">
+          <Select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} className="crm-deals-page-inp">
             <option value="">—</option>
             {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          </Select>
         </label>
         <div className="u-display-grid u-grid-template-columns-2fr_1fr u-gap-8px">
-          <label>Məbləğ<input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="crm-deals-page-inp" /></label>
+          <label>Məbləğ<Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="crm-deals-page-inp" /></label>
           <label>Valyuta
-            <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} className="crm-deals-page-inp">
+            <Select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} className="crm-deals-page-inp">
               <option>AZN</option><option>USD</option><option>EUR</option>
-            </select>
+            </Select>
           </label>
         </div>
         <label>Mərhələ
-          <select value={form.stage_id} onChange={e => setForm({ ...form, stage_id: e.target.value })} className="crm-deals-page-inp">
+          <Select value={form.stage_id} onChange={e => setForm({ ...form, stage_id: e.target.value })} className="crm-deals-page-inp">
             {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          </Select>
         </label>
-        <label>Gözlənilən bağlanma<input type="date" value={form.expected_close} onChange={e => setForm({ ...form, expected_close: e.target.value })} className="crm-deals-page-inp" /></label>
+        <label>Gözlənilən bağlanma<Input type="date" value={form.expected_close} onChange={e => setForm({ ...form, expected_close: e.target.value })} className="crm-deals-page-inp" /></label>
         <div className="u-display-flex u-justify-content-flex_end u-gap-8px">
-          <button type="button" onClick={onClose} className="u-padding-8px_16px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</button>
-          <button type="submit" disabled={busy} className="u-background-action u-color-surface u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-700">{busy ? '...' : 'Yarat'}</button>
+          <Button variant="ghost" type="button" onClick={onClose} className="u-padding-8px_16px u-border-1px_solid_border u-border-radius-8px u-cursor-pointer u-background-surface">Ləğv</Button>
+          <Button variant="ghost" type="submit" disabled={busy} className="u-background-action u-color-surface u-border-0 u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-weight-700">{busy ? '...' : 'Yarat'}</Button>
         </div>
       </form>
     </div>
