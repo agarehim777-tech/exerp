@@ -11,8 +11,8 @@ export const dbBackedCollections = Object.freeze([
   "accounting",
 ]);
 
-// Transitional modules are persisted as individual rows in
-// `tenant_collection_records`; they must never be copied into browser storage
+// Operational modules are persisted in dedicated domain tables;
+// they must never be copied into browser storage
 // or the last-write-wins tenant snapshot.
 export const snapshotBackedCollections = Object.freeze([
   "warehouseStock",

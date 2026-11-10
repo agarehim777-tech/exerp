@@ -7,6 +7,7 @@ import { receivableItemView } from "../services/financialSettlement.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
+import { Button, Select } from "../shared/ui/primitives";
 export default function ReceivablesPage({ onOpenSalesOrder }) {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
@@ -230,7 +231,7 @@ function DebtDetail({ row, onClose, onOpenSalesOrder }) {
       <div className="u-display-grid u-grid-template-columns-repeat_2_minmax_0_1fr u-gap-9px">
         {detailRows.map(([label, value]) => <div key={label} className="u-padding-11px u-border-1px_solid_border u-border-radius-9px u-background-surface_subtle"><small className="u-display-block u-color-text_secondary u-margin-bottom-4px">{label}</small><strong className="u-overflow-wrap-anywhere">{value || "—"}</strong></div>)}
       </div>
-      {orderId && <button type="button" onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} style={{ width: "100%", marginTop: 14, padding: 10, border: 0, borderRadius: 9, background: "#075e4b", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Əlaqəli sifarişə bax</button>}
+      {orderId && <Button onClick={() => { onClose(); onOpenSalesOrder?.(orderId); }} className="u-width-100 u-margin-top-14px">Əlaqəli sifarişə bax</Button>}
     </aside>
   </div>;
 }

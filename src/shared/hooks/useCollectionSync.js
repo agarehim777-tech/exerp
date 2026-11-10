@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useTenantRequestScope } from "./useTenantRequestScope";
+import { definitionFor, fromDedicatedRow, toDedicatedRow } from "../adapters/dedicatedCollections";
 
-const TABLE = "tenant_collection_records";
 export const recordKey = (item, index) => String(item?.id ?? item?.key ?? item?.code ?? `idx-${index}`);
 
 export function rowToApp(row) {
@@ -55,15 +55,19 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
         const { upserts, deletes } = collectionChanges(session.baseline, next);
         if (!upserts.length && !deletes.length) break;
         if (upserts.length) {
-          const { error } = await supabase.from(TABLE).upsert(upserts, { onConflict: "tenant_id,collection,record_key" });
-          if (error) throw error;
-          if (!session.alive) return;
-          upserts.forEach(row => session.baseline.set(identity(row), row));
+          for (const name of names) {
+            const batch = upserts.filter(row => row.collection === name);
+            if (!batch.length) continue;
+            const { error } = await supabase.from(definitionFor(name).table).upsert(batch.map(toDedicatedRow), { onConflict: "tenant_id,record_key" });
+            if (error) throw error;
+            if (!session.alive) return;
+            batch.forEach(row => session.baseline.set(identity(row), row));
+          }
         }
         for (const row of deletes) {
           if (!session.alive) return;
-          const { error } = await supabase.from(TABLE).delete()
-            .eq("tenant_id", tenantId).eq("collection", row.collection).eq("record_key", row.record_key);
+          const { error } = await supabase.from(definitionFor(row.collection).table).delete()
+            .eq("tenant_id", tenantId).eq("record_key", row.record_key);
           if (error) throw error;
           session.baseline.delete(identity(row));
         }
@@ -90,14 +94,14 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
       // sort every collection while loading later pages of a large tenant.
       for (const name of names) {
         for (let offset = 0; ;) {
-          const { data, error, count } = await supabase.from(TABLE).select("collection,record_key,position,data", { count: "exact" })
-            .eq("tenant_id", tenantId).eq("collection", name)
-            .order("position").order("record_key").range(offset, offset + 499);
+          const { data, error, count } = await supabase.from(definitionFor(name).table).select("*", { count: "exact" })
+            .eq("tenant_id", tenantId)
+            .order("sort_position").order("record_key").range(offset, offset + 499);
           if (error) throw error;
           if (!session.alive) return;
           if (!Number.isInteger(count)) throw new Error("Collection read requires an exact count");
           if (!data?.length && offset < count) throw new Error("Collection read ended before all records were loaded");
-          rows.push(...(data || []));
+          rows.push(...(data || []).map(row => fromDedicatedRow(row, name)));
           offset += data?.length || 0;
           if (offset >= count) break;
         }

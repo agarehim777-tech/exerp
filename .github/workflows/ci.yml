@@ -38,6 +38,9 @@ jobs:
       - name: Dependency security audit
         run: npm audit --audit-level=high
 
+      - name: Type safety gate
+        run: npm run typecheck
+
       - name: Require authenticated E2E account
         run: |
           test -n "$E2E_TEST_USER"
