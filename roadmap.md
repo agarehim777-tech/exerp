@@ -1,5 +1,13 @@
 # ExERP təkmilləşdirmə yol xəritəsi
 
+## 10 noyabr: tamamlanma tələbi
+- [ ] Kadr və maliyyə üçün xüsusi, sahələri müəyyən edilmiş cədvəllər; məlumatların köçürülməsi və reload yoxlaması
+- [ ] TypeScript keçidi və CI-də tip yoxlaması
+- [ ] App orkestrasiya hissələrinin müstəqil modullara bölünməsi
+- [ ] Qalan inline stillərin vahid görünüşə keçirilməsi
+- [ ] KPI dövrləri və debitor bağlanmasının canlı tətbiqi və yoxlaması
+- [ ] Baza funksiyalarının təhlükəsizlik auditi və təhlükəsiz düzəlişlər
+
 1. [x] Kadr və maliyyə siyahılarını (işçi, şöbə, məzuniyyət, vakansiya, müqavilə, kassa qeydləri, hesablar, kreditlər) ayrıca sətir-sətir bazaya köçürmək — `tenant_collection_records` cədvəli + `useCollectionSync`
 2. [x] Ölü səhifələri silmək (FinancePage, köhnə AccountingPage)
 3. [x] Çatışmayan xarici açar indekslərini əlavə etmək (19 indeks)
