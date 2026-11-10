@@ -85,6 +85,13 @@
       "when": 1794302558254,
       "tag": "0011_fix_reverse_cash_transaction_direction_cast",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794304837466,
+      "tag": "0012_restrict_finance_reversals_and_internal_triggers",
+      "breakpoints": true
     }
   ]
 }
