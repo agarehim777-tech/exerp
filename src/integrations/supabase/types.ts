@@ -2561,40 +2561,52 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          cash_transaction_id: string | null
           created_at: string
           created_by: string | null
           currency: string
           id: string
           invoice_id: string
+          journal_entry_id: string | null
           method: string
           paid_at: string
           reference: string | null
+          reversal_journal_entry_id: string | null
+          reversed_at: string | null
           tenant_id: string
         }
         Insert: {
           account_id?: string | null
           amount: number
+          cash_transaction_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
           invoice_id: string
+          journal_entry_id?: string | null
           method?: string
           paid_at?: string
           reference?: string | null
+          reversal_journal_entry_id?: string | null
+          reversed_at?: string | null
           tenant_id: string
         }
         Update: {
           account_id?: string | null
           amount?: number
+          cash_transaction_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
           invoice_id?: string
+          journal_entry_id?: string | null
           method?: string
           paid_at?: string
           reference?: string | null
+          reversal_journal_entry_id?: string | null
+          reversed_at?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -2606,10 +2618,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoice_payments_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "cash_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoice_payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_reversal_journal_entry_id_fkey"
+            columns: ["reversal_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -6030,6 +6063,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_sales_invoice_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       create_sales_order: {
         Args: {
           _currency: string
@@ -6388,6 +6425,10 @@ export type Database = {
           _warehouse_id: string
         }
         Returns: string
+      }
+      record_invoice_payment_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       record_problem_stock_action: {
         Args: {
