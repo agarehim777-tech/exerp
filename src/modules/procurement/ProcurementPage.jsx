@@ -1,3 +1,4 @@
+import { formatAmount } from "../../services/format.js";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { readAllRows } from "../../services/readAllRows.js";
@@ -39,8 +40,7 @@ import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import { toLocalIsoDate } from "../../services/date.js";
 
-const money = (value, currency = "AZN") =>
-  `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+const money = (value, currency = "AZN") => formatAmount(value, { currency });
 
 const qty = (value) => Number(value || 0).toLocaleString("az-AZ", { maximumFractionDigits: 3 });
 

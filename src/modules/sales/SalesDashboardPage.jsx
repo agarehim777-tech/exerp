@@ -1,3 +1,4 @@
+import { formatAmount } from "../../services/format.js";
 import React from 'react';
 import { BarChart3, CircleDollarSign, ReceiptText, ShoppingCart, TrendingUp } from 'lucide-react';
 import {
@@ -8,7 +9,7 @@ import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useSalesDashboard } from '../../shared/hooks/useSalesDashboard.js';
 import { Table } from "../../shared/ui/primitives.tsx";
 
-const money = (value) => `${Number(value || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })} ₼`;
+const money = (value) => formatAmount(value, { decimals: 0 });
 
 const STATUS_META = {
   draft: { label: 'Qaralama', color: '#94a3b8' },

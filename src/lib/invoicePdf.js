@@ -1,3 +1,4 @@
+import { formatAmount } from "../services/format.js";
 import { csvCell } from "../shared/lib/csvCell.js";
 import { toLocalIsoDate } from "../services/date.js";
 // Faktura PDF/çap ixracı — xarici kitabxana olmadan, brauzerin çap mühərriki ilə.
@@ -8,8 +9,7 @@ const escapeHtml = (value) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-const money = (value, currency = 'AZN') =>
-  `${(Number(value) || 0).toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+const money = (value, currency = "AZN") => formatAmount(value, { currency });
 
 const date = (value) => (value ? new Date(value).toLocaleDateString('az-AZ') : '—');
 
