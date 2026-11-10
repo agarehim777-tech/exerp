@@ -36,6 +36,13 @@
       "when": 1794300924140,
       "tag": "0004_vendor_invoice_tax_accrual",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794300953663,
+      "tag": "0005_hash_cashbook_reversal_lookup",
+      "breakpoints": true
     }
   ]
 }

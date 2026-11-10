@@ -5598,6 +5598,7 @@ export type Database = {
         Args: { _invoice_id: string }
         Returns: undefined
       }
+      cashbook_ledger_summary: { Args: { _tenant_id: string }; Returns: Json }
       check_my_access: { Args: never; Returns: Json }
       check_project_access: { Args: { _project: string }; Returns: Json }
       complete_sales_delivery: {
