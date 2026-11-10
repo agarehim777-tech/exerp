@@ -1,3 +1,4 @@
+import { sellableQty } from "../../shared/lib/stockMath.js";
 import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useProducts } from "../../shared/hooks/useProducts.js";
@@ -60,7 +61,7 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
         totalStock: inventory.total,
         reservedStock: inventory.reserved,
         problemStock: Number(inventory.problemQty || inventory.problem_qty || 0),
-        availableStock: inventory.total - inventory.reserved - Number(inventory.problemQty || inventory.problem_qty || 0),
+        availableStock: sellableQty(inventory),
         reorderLevel: inventory.reorderLevel,
       };
     });

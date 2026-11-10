@@ -1,3 +1,4 @@
+import { sellableQty } from "./stockMath.js";
 import { csvCell } from "./csvCell.js";
 import { enrichDeliveryOrder, getDeliveryStockCheck, getDeliveryDisplayStage, getDeliveryTotalQuantity, isDeliveryQueueOrder, getOrderPaymentMethod, summarizeOrderProducts, exportDeliveryQueueCsv, OrderProductLines, getOrderBalance, normalizeOrderProductLines, getDeliveryPlan, getDeliveredQuantities, getDeliveryStageIndex, getDeliveryAgeDays, getDeliveryRisk, getOrderDeliveryStatus, baseDeliveryDate } from "../../modules/warehouse/deliveryDomain.jsx";
 export { enrichDeliveryOrder, getDeliveryStockCheck, getDeliveryDisplayStage, getDeliveryTotalQuantity, isDeliveryQueueOrder, getOrderPaymentMethod, summarizeOrderProducts, exportDeliveryQueueCsv, OrderProductLines, getOrderBalance, normalizeOrderProductLines, getDeliveryPlan, getDeliveredQuantities, getDeliveryStageIndex, getDeliveryAgeDays, getDeliveryRisk, getOrderDeliveryStatus, baseDeliveryDate };
@@ -2811,7 +2812,7 @@ export function buildAggregateWarehouseStock(warehouses, warehouseStock) {
       current.distribution.push({
         warehouse: warehouse?.name || warehouseId,
         total: Number(item.total || 0),
-        available: Number(item.total || 0) - Number(item.reserved || 0) - Number(item.problemQty ?? item.problem_qty ?? 0),
+        available: sellableQty(item),
       });
       byProduct.set(item.product, current);
     });
@@ -3147,7 +3148,7 @@ export function getActiveRole(settings = {}) {
 }
 
 export function getAvailableQuantity(item) {
-  return Number(item.total || 0) - Number(item.reserved || 0) - Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0);
+  return sellableQty(item);
 }
 
 // Satış üçün real sərbəst qalıq — mənfi ola bilər (backorder / sifariş gözləyən miqdar).
