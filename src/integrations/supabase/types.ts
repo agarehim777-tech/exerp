@@ -6989,6 +6989,14 @@ export type Database = {
         }
         Returns: Json
       }
+      report_monthly_trend: {
+        Args: { _anchor?: string; _months?: number; _tenant_id: string }
+        Returns: Json
+      }
+      report_risk_rows: {
+        Args: { _limit?: number; _tenant_id: string }
+        Returns: Json
+      }
       report_totals: {
         Args: { _from?: string; _tenant_id: string; _to?: string }
         Returns: Json

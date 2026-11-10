@@ -134,6 +134,13 @@
       "when": 1794313077092,
       "tag": "0018_report_totals_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794313796919,
+      "tag": "0019_report_trend_and_risks",
+      "breakpoints": true
     }
   ]
 }

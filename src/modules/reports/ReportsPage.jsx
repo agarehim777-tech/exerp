@@ -26,7 +26,7 @@ import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
-import { useReportTotals } from "../../shared/hooks/useReportTotals.ts";
+import { useReportSeries, useReportTotals } from "../../shared/hooks/useReportTotals.ts";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
 
@@ -95,6 +95,7 @@ export function ReportsPage({
   const live = useLiveReportData(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
   const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate);
+  const serverSeries = useReportSeries(activeTenantId, snapshotDate);
   const [moduleFilter, setModuleFilter] = useState("Hamısı");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
@@ -218,9 +219,10 @@ export function ReportsPage({
   const activeCustomers = serverTotals ? serverTotals.active_customers : new Set(filteredOrders.map((order) => order.fin || order.customer).filter(Boolean)).size;
   const orderCount = serverTotals ? serverTotals.order_count : filteredOrders.length;
   const averageOrder = orderCount ? revenue / orderCount : 0;
+  // Chart and risk register come from the database; row-based builders are the offline fallback.
   const trendRows = useMemo(
-    () => buildMonthlyTrend(orders, reportExpenses, snapshotDate),
-    [orders, reportExpenses, snapshotDate],
+    () => serverSeries?.trend || buildMonthlyTrend(orders, reportExpenses, snapshotDate),
+    [serverSeries, orders, reportExpenses, snapshotDate],
   );
   const maxTrendValue = Math.max(1, ...trendRows.flatMap((row) => [row.revenue, row.expense]));
 
@@ -250,7 +252,7 @@ export function ReportsPage({
       priority: "Yüksək",
       status: "Xammal riski",
     }));
-  const allRiskRows = [...productionRisks, ...reportPackage.riskRows];
+  const allRiskRows = [...productionRisks, ...(serverSeries?.risks || reportPackage.riskRows)];
   const riskAreas = ["Hamısı", ...new Set(allRiskRows.map((row) => row.area))];
   const visibleRiskRows = allRiskRows.filter(
     (row) =>
