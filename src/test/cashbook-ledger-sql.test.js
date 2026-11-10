@@ -6,6 +6,8 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 const tenant = '00000000-0000-0000-0000-000000000001';
 const other = '00000000-0000-0000-0000-000000000002';
 const account = '10000000-0000-0000-0000-000000000001';
+const HASH_MIGRATION = new URL('../../supabase/migrations/20261008130228_hash_cashbook_reversal_lookup.sql', import.meta.url);
+const DEFINER_MIGRATION = new URL('../../supabase/migrations/20261110090000_cashbook_ledger_summary_definer.sql', import.meta.url);
 let db;
 beforeAll(async () => {
   db = new PGlite();
@@ -37,6 +39,8 @@ beforeAll(async () => {
   await db.exec(await readFile(new URL('../../supabase/migrations/20261003054612_optimize_cashbook_ledger_read.sql', import.meta.url), 'utf8'));
   expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
   await db.exec(await readFile(new URL('../../supabase/migrations/20261008130228_hash_cashbook_reversal_lookup.sql', import.meta.url), 'utf8'));
+  expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
+  await db.exec(await readFile(DEFINER_MIGRATION, 'utf8'));
   expect((await db.query('select cashbook_ledger_summary($1) as data', [tenant])).rows[0].data).toEqual(oldSummary);
   await db.exec(await readFile(new URL('../../supabase/migrations/20261002122938_atomic_expense_edit.sql', import.meta.url), 'utf8'));
 }, 60000);
@@ -163,6 +167,39 @@ it('preserves legacy-marker semantics without duplicate sums or cross-tenant rev
     const expected = await summary();
     await db.exec(await readFile(new URL('../../supabase/migrations/20261008130228_hash_cashbook_reversal_lookup.sql', import.meta.url), 'utf8'));
     expect(await summary()).toEqual(expected);
+    await db.exec(await readFile(DEFINER_MIGRATION, 'utf8'));
+    expect(await summary()).toEqual(expected);
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+it('returns exactly the previous totals on a mixed ledger with reversals, markers and transfers', async () => {
+  await db.exec('BEGIN');
+  try {
+    const usd = '10000000-0000-0000-0000-000000000010';
+    const usd2 = '10000000-0000-0000-0000-000000000011';
+    await db.exec(`INSERT INTO cash_accounts VALUES ('${usd}','${tenant}','USD',50,true), ('${usd2}','${tenant}','USD',0,true);
+      INSERT INTO cash_transactions(id,tenant_id,account_id,direction,amount,currency,category)
+        SELECT ('30000000-0000-0000-0000-' || lpad(g::text, 12, '0'))::uuid, '${tenant}', CASE WHEN g % 3 = 0 THEN '${usd2}'::uuid ELSE '${usd}'::uuid END,
+          CASE WHEN g % 4 = 0 THEN 'out' ELSE 'in' END, (g % 17) + 1, 'USD',
+          CASE WHEN g % 11 = 0 THEN 'internal_transfer' WHEN g % 13 = 0 THEN NULL ELSE 'sale' END
+        FROM generate_series(1, 400) g;
+      INSERT INTO cash_transactions(tenant_id,account_id,direction,amount,currency,category,reversal_of)
+        SELECT tenant_id,account_id,CASE WHEN direction = 'in' THEN 'out' ELSE 'in' END,amount,currency,'transaction_reversal',id
+        FROM cash_transactions WHERE currency = 'USD' AND amount = 5;
+      INSERT INTO cash_transactions(tenant_id,account_id,direction,amount,currency,category,description)
+        SELECT tenant_id,account_id,'out',amount,currency,'transaction_reversal','legacy REVERSAL_OF:' || id
+        FROM cash_transactions WHERE currency = 'USD' AND amount = 7 AND reversal_of IS NULL AND category = 'sale';
+      INSERT INTO cash_transactions(tenant_id,account_id,direction,amount,currency,category,description)
+        VALUES ('${tenant}','${usd}','in',3,'USD','sale','note mentions REVERSAL_OF:30000000-0000-0000-0000-000000000001 but is no reversal');
+      INSERT INTO expenses(id,tenant_id,amount,currency,status) VALUES
+        ('40000000-0000-0000-0000-000000000001','${tenant}',9,'USD','pending'),
+        ('40000000-0000-0000-0000-000000000002','${tenant}',4,'USD','refund_pending'),
+        ('40000000-0000-0000-0000-000000000003','${tenant}',6,'USD','approved');`);
+    await db.exec(await readFile(HASH_MIGRATION, 'utf8'));
+    const expected = await summary();
+    expect(expected.currencies.map(row => row.currency)).toEqual(['AZN', 'USD']);
+    await db.exec(await readFile(DEFINER_MIGRATION, 'utf8'));
+    expect(await summary()).toEqual(expected);
   } finally { await db.exec('ROLLBACK'); }
 });
 
@@ -178,7 +215,30 @@ it('aggregates 6000 additional entries without changing complete ledger totals',
   } finally { await db.exec('ROLLBACK'); }
 });
 
-it('retains invoker security and denies anonymous function execution', async () => {
-  expect((await db.query("SELECT prosecdef FROM pg_proc WHERE oid='cashbook_ledger_summary(uuid)'::regprocedure")).rows[0].prosecdef).toBe(false);
+// The summary runs as SECURITY DEFINER so the per-row RLS membership check does not run once per
+// cash entry. The explicit access check at the top of the function is therefore the only guard:
+// these tests pin it down.
+it('runs as definer with an empty search_path and denies anonymous execution', async () => {
+  const fn = (await db.query("SELECT prosecdef, proconfig FROM pg_proc WHERE oid='cashbook_ledger_summary(uuid)'::regprocedure")).rows[0];
+  expect(fn.prosecdef).toBe(true);
+  expect(fn.proconfig).toContain('search_path=""');
   expect((await db.query("SELECT has_function_privilege('anon','cashbook_ledger_summary(uuid)','execute') AS allowed")).rows[0].allowed).toBe(false);
+  expect((await db.query("SELECT has_function_privilege('authenticated','cashbook_ledger_summary(uuid)','execute') AS allowed")).rows[0].allowed).toBe(true);
+});
+
+it('denies a signed-out caller, a missing tenant and a tenant without finance access before reading', async () => {
+  await expect(db.query('select cashbook_ledger_summary($1)', [other])).rejects.toThrow('permission_denied');
+  await expect(db.query('select cashbook_ledger_summary(NULL)')).rejects.toThrow('permission_denied');
+  await db.exec('BEGIN');
+  try {
+    await db.exec(`CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;`);
+    await expect(db.query('select cashbook_ledger_summary($1)', [tenant])).rejects.toThrow('permission_denied');
+  } finally { await db.exec('ROLLBACK'); }
+  await db.exec('BEGIN');
+  try {
+    await db.exec(`CREATE OR REPLACE FUNCTION private.has_module_access(uuid,text,text) RETURNS boolean LANGUAGE sql AS $$
+      SELECT $1 = '${tenant}'::uuid AND $2 = 'finance' AND $3 = 'edit' $$;`);
+    await expect(db.query('select cashbook_ledger_summary($1)', [tenant])).rejects.toThrow('permission_denied');
+  } finally { await db.exec('ROLLBACK'); }
+  expect((await summary()).accounts.every(row => row.id !== '10000000-0000-0000-0000-000000000002')).toBe(true);
 });
