@@ -507,38 +507,53 @@ export type Database = {
       credit_adjustments: {
         Row: {
           adjustment_type: string
+          approval_status: string
           created_at: string
           created_by: string
           credit_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
           id: string
           installment_id: string | null
           new_value: Json
           old_value: Json
           reason: string
+          requested_amount: number | null
           tenant_id: string
         }
         Insert: {
           adjustment_type: string
+          approval_status?: string
           created_at?: string
           created_by?: string
           credit_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           id?: string
           installment_id?: string | null
           new_value?: Json
           old_value?: Json
           reason: string
+          requested_amount?: number | null
           tenant_id: string
         }
         Update: {
           adjustment_type?: string
+          approval_status?: string
           created_at?: string
           created_by?: string
           credit_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           id?: string
           installment_id?: string | null
           new_value?: Json
           old_value?: Json
           reason?: string
+          requested_amount?: number | null
           tenant_id?: string
         }
         Relationships: [
@@ -558,6 +573,57 @@ export type Database = {
           },
           {
             foreignKeyName: "credit_adjustments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_collection_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credit_id: string
+          id: string
+          next_action_at: string | null
+          note: string | null
+          outcome: string | null
+          stage: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credit_id: string
+          id?: string
+          next_action_at?: string | null
+          note?: string | null
+          outcome?: string | null
+          stage: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credit_id?: string
+          id?: string
+          next_action_at?: string | null
+          note?: string | null
+          outcome?: string | null
+          stage?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_collection_events_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credit_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_collection_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5749,6 +5815,37 @@ export type Database = {
           sales_total: number
         }[]
       }
+      decide_credit_adjustment: {
+        Args: {
+          _adjustment: string
+          _decision: string
+          _note?: string
+          _tenant: string
+        }
+        Returns: {
+          adjustment_type: string
+          approval_status: string
+          created_at: string
+          created_by: string
+          credit_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          installment_id: string | null
+          new_value: Json
+          old_value: Json
+          reason: string
+          requested_amount: number | null
+          tenant_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credit_adjustments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_sales_order_safe: {
         Args: { _order_id: string }
         Returns: undefined
@@ -6029,6 +6126,16 @@ export type Database = {
           _quantity?: number
           _tenant_id: string
           _warehouse_id: string
+        }
+        Returns: string
+      }
+      restructure_credit_contract: {
+        Args: {
+          _credit: string
+          _reason: string
+          _start_date: string
+          _tenant: string
+          _term: number
         }
         Returns: string
       }
