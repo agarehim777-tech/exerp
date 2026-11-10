@@ -6,12 +6,10 @@ import ValuationPanel from "./ValuationPanel.jsx";
 import StockAgingPanel from "./StockAgingPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { azn, badge, card as baseCard, input, msgBox, primaryBtn, statValue, tabBtn, td } from "../../shared/ui/tokens.js";
+import { azn, card as baseCard, primaryBtn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
-const card = { ...baseCard, minWidth: 0 };
-const fieldLabel = { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#334b43" };
 const secondaryActionBtn = { background: "#f6f3e8", color: "#385248", border: "1px solid #d8d1b9", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 function useTablePage(rows) {
@@ -52,7 +50,7 @@ export default function StockPage({ inventory: stock, products = [] }) {
     return { qty, value, low };
   }, [stock.balances]);
 
-  if (!tenantId) return <div style={card}>Aktiv şirkət seçilməyib.</div>;
+  if (!tenantId) return <div className="stock-page-card">Aktiv şirkət seçilməyib.</div>;
 
   return (
     <div className="u-display-grid u-gap-16px u-min-width-0">
@@ -77,13 +75,13 @@ export default function StockPage({ inventory: stock, products = [] }) {
         </div>
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Kritik səviyyə</div>
-          <div style={{ ...statValue, color: totals.low ? "#b23a3a" : "#064e3b" }}>{totals.low}</div>
+          <div className={`ui-tok-stat-value ${totals.low ? "sx-9d7a4ce" : "sx-7c2de19"}`}>{totals.low}</div>
         </div>
       </div>
 
       <div className="ui-tok-tab-bar">
         {[["warehouses", "Anbarlar"], ["balances", "Anbarlar üzrə qalıqlar"], ["transfer", "Daxili transfer"], ["movements", "Hərəkətlər"], ["valuation", "Dəyərləmə"], ["aging", "Stok yaşlandırması"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} style={tabBtn(tab === k)}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`${tabClass(tab === k)}`}>{l}</button>
         ))}
       </div>
 
@@ -154,7 +152,7 @@ function BalancesPanel({ stock }) {
   };
 
   return (
-    <div style={card}>
+    <div className="stock-page-card">
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h3 className="u-margin-0">Anbar qalıqları ({filteredBalances.length}/{stock.balances.length})</h3>
         {(filters.warehouseId || filters.query || filters.status !== "all") && (
@@ -179,7 +177,7 @@ function BalancesPanel({ stock }) {
           <option value="normal">Normal qalıq</option>
         </select>
       </div>
-      {editError && <div style={{ ...msgBox, marginBottom: 12 }}>{editError}</div>}
+      {editError && <div className="ui-tok-msg-box sx-fa3e1c7">{editError}</div>}
       {stock.loading && <div>Yüklənir…</div>}
       <div className="u-overflow-x-auto">
       <table className="ui-tok-table">
@@ -200,10 +198,10 @@ function BalancesPanel({ stock }) {
                 <td className="ui-tok-td">{b.warehouse?.name || "—"}</td>
                 <td className="ui-tok-td">{b.product?.name || b.sku || "—"}</td>
                 <td className="ui-tok-td">{b.product?.sku || b.sku || "—"}</td>
-                <td style={{ ...td, fontWeight: 600 }}>{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td sx-e634e6d">{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
                 <td className="ui-tok-td">{Number(b.reserved || 0).toLocaleString("az-AZ")}</td>
-                <td style={{ ...td, color: Number(b.problem_qty || 0) > 0 ? "#b23a3a" : undefined, fontWeight: 650 }}>{Number(b.problem_qty || 0).toLocaleString("az-AZ")}</td>
-                <td style={{ ...td, fontWeight: 650 }}>{saleable.toLocaleString("az-AZ")}</td>
+                <td className={`ui-tok-td ${Number(b.problem_qty || 0) > 0 ? "sx-9d7a4ce" : ""} sx-4777d93`}>{Number(b.problem_qty || 0).toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td sx-4777d93">{saleable.toLocaleString("az-AZ")}</td>
                 <td className="ui-tok-td">
                   {isEditing ? (
                     <div className="u-display-flex u-align-items-center u-gap-6px">
@@ -218,20 +216,20 @@ function BalancesPanel({ stock }) {
                           if (event.key === "Enter") saveCriticalLevel(b);
                           if (event.key === "Escape") cancelEditing();
                         }}
-                        style={{ ...input, width: 88 }}
+                        className="ui-tok-input sx-17ac2e7"
  />
-                      <button type="button" disabled={editBusy} onClick={() => saveCriticalLevel(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi yadda saxla"><Check size={16} /></button>
-                      <button type="button" disabled={editBusy} onClick={cancelEditing} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Redaktəni ləğv et"><X size={16} /></button>
+                      <button type="button" disabled={editBusy} onClick={() => saveCriticalLevel(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi yadda saxla"><Check size={16} /></button>
+                      <button type="button" disabled={editBusy} onClick={cancelEditing} className="stock-page-secondary-action-btn sx-296600a" aria-label="Redaktəni ləğv et"><X size={16} /></button>
                     </div>
                   ) : (
                     <div className="u-display-flex u-align-items-center u-gap-8px">
                       <span className="u-min-width-28px u-font-weight-650">{Number(b.reorder_point || 0).toLocaleString("az-AZ")}</span>
-                      <button type="button" onClick={() => startEditing(b)} style={{ ...secondaryActionBtn, padding: 7 }} aria-label="Kritik həddi redaktə et"><Pencil size={15} /></button>
+                      <button type="button" onClick={() => startEditing(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi redaktə et"><Pencil size={15} /></button>
                     </div>
                   )}
                 </td>
                 <td className="ui-tok-td">
-                  <span style={badge(low ? "red" : "green")}>{low ? "Sifariş et" : "Normal"}</span>
+                  <span className={`${badgeClass(low ? "red" : "green")}`}>{low ? "Sifariş et" : "Normal"}</span>
                 </td>
               </tr>
             );
@@ -272,7 +270,7 @@ function MovementsPanel({ stock, products }) {
   };
 
   return (
-    <div style={card}>
+    <div className="stock-page-card">
       <h3 className="u-margin-top-0">
         Anbar hərəkətləri ({stock.movementsTotal.toLocaleString("az-AZ")})
       </h3>
@@ -305,7 +303,7 @@ function MovementsPanel({ stock, products }) {
               <td className="ui-tok-td">{new Date(m.moved_at).toLocaleDateString("az-AZ")}</td>
               <td className="ui-tok-td">{m.warehouse?.name || "—"}</td>
               <td className="ui-tok-td">{m.product?.name || m.sku || "—"}</td>
-              <td className="ui-tok-td"><span style={badge(m.move_type === "out" ? "red" : "green")}>{MOVE_LABEL[m.move_type]}</span></td>
+              <td className="ui-tok-td"><span className={`${badgeClass(m.move_type === "out" ? "red" : "green")}`}>{MOVE_LABEL[m.move_type]}</span></td>
               <td className="ui-tok-td">{Number(m.qty).toLocaleString("az-AZ")}</td>
               <td className="ui-tok-td">{m.doc_no || "—"}</td>
             </tr>
@@ -360,7 +358,7 @@ function TransferPanel({ stock }) {
   };
 
   return (
-    <div style={card}>
+    <div className="stock-page-card">
       <h2 className="stock-page-section-title">Daxili anbar transferi</h2>
       <p className="stock-page-section-subtitle">Məhsulu bir anbardan digərinə köçürün. Çıxış və giriş birlikdə qeydə alınır.</p>
       {msg && <div className="ui-tok-msg-box">{msg}</div>}
@@ -369,10 +367,10 @@ function TransferPanel({ stock }) {
         <label className="stock-page-field-label">Hədəf anbar<select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} className="ui-tok-input"><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
         <label className="stock-page-field-label">Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
         <label className="stock-page-field-label">Miqdar<input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="ui-tok-input" /></label>
-        <label style={{ ...fieldLabel, gridColumn: "1 / -1" }}>Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" className="ui-tok-input" /></label>
+        <label className="stock-page-field-label sx-b452654">Qeyd<input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" className="ui-tok-input" /></label>
         <div className="u-grid-column-1_1 u-display-flex u-justify-content-flex_end"><button type="submit" disabled={busy || stock.warehouses.length < 2} className="ui-tok-primary-btn">{busy ? "Köçürülür…" : "Transfer et"}</button></div>
       </form>
-      {stock.warehouses.length < 2 && <div style={{ ...msgBox, marginTop: 12 }}>Transfer üçün ən azı iki anbar yaradılmalıdır.</div>}
+      {stock.warehouses.length < 2 && <div className="ui-tok-msg-box sx-002535c">Transfer üçün ən azı iki anbar yaradılmalıdır.</div>}
     </div>
   );
 }
@@ -432,7 +430,7 @@ function WarehousesPanel({ stock, isAdmin }) {
   };
 
   return (
-    <div style={card}>
+    <div className="stock-page-card">
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h2 className="stock-page-section-title">Anbarlar ({stock.warehouses.length})</h2>
         {isAdmin && (
@@ -442,7 +440,7 @@ function WarehousesPanel({ stock, isAdmin }) {
         )}
       </div>
       <p className="stock-page-section-subtitle">Anbar yaratmaq, redaktə etmək və silmək üçün vahid idarəetmə ekranı.</p>
-      <input type="search" aria-label="Anbar axtarışı" placeholder="Anbar axtar..." value={query} onChange={event => setQuery(event.target.value)} style={{ ...input, marginBottom: 14 }} />
+      <input type="search" aria-label="Anbar axtarışı" placeholder="Anbar axtar..." value={query} onChange={event => setQuery(event.target.value)} className="ui-tok-input sx-6179637" />
       {msg && <div className="ui-tok-msg-box">{msg}</div>}
       {isAdmin && isFormOpen && (
         <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_min_100_140px_1fr u-gap-10px u-margin-bottom-18px u-align-items-end">
@@ -462,7 +460,7 @@ function WarehousesPanel({ stock, isAdmin }) {
               <td className="ui-tok-td"><b>{w.code}</b></td>
               <td className="ui-tok-td">{w.name}</td>
               <td className="ui-tok-td">{w.address || "—"}</td>
-              {isAdmin && <td style={{ ...td, whiteSpace: "nowrap" }}><button className="stock-page-secondary-action-btn" onClick={() => edit(w)}>Redaktə et</button><button className="ui-tok-del-btn" onClick={() => remove(w)}>Sil</button></td>}
+              {isAdmin && <td className="ui-tok-td sx-4ddbe90"><button className="stock-page-secondary-action-btn" onClick={() => edit(w)}>Redaktə et</button><button className="ui-tok-del-btn" onClick={() => remove(w)}>Sil</button></td>}
             </tr>
           ))}
           {!filteredWarehouses.length && <tr><td className="ui-tok-td" colSpan={4}>Anbar yoxdur.</td></tr>}
