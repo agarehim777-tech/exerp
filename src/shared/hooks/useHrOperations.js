@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 import { supabase } from "../../integrations/supabase/client";
 
 export function useHrOperations(tenantId, seedEmployees = []) {
+  const { scope, begin } = useTenantRequestScope(tenantId);
   const [employees, setEmployees] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -9,9 +11,10 @@ export function useHrOperations(tenantId, seedEmployees = []) {
 
   const refresh = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin("hr-read");
     setLoading(true);
     try {
-      let [employeeRes, eventRes] = await Promise.all([
+      const [employeeRes, eventRes] = await Promise.all([
         supabase.from("employees")
           .select("id,full_name,position,department,email,phone,salary,status")
           .eq("tenant_id", tenantId)
@@ -26,45 +29,18 @@ export function useHrOperations(tenantId, seedEmployees = []) {
       if (employeeRes.error) throw employeeRes.error;
       if (eventRes.error) throw eventRes.error;
 
-      if (!(employeeRes.data || []).length && seedEmployees.length) {
-        const uniqueEmployees = [...new Map(seedEmployees
-          .filter((employee) => String(employee.name || employee.full_name || "").trim())
-          .map((employee) => {
-            const fullName = String(employee.name || employee.full_name).trim();
-            return [fullName.toLocaleLowerCase("az-AZ"), {
-              tenant_id: tenantId,
-              full_name: fullName,
-              position: employee.position || null,
-              department: employee.department || null,
-              email: employee.email || null,
-              phone: employee.phone || null,
-              salary: Number(employee.salary || 0),
-              status: "active",
-            }];
-          })).values()];
-
-        if (uniqueEmployees.length) {
-          const seedResult = await supabase.from("employees").insert(uniqueEmployees);
-          if (seedResult.error) throw seedResult.error;
-          employeeRes = await supabase.from("employees")
-            .select("id,full_name,position,department,email,phone,salary,status")
-            .eq("tenant_id", tenantId)
-            .order("full_name")
-            .limit(500);
-          if (employeeRes.error) throw employeeRes.error;
-        }
-      }
+      if (!isCurrent()) return;
       setEmployees(employeeRes.data || []);
       setEvents(eventRes.data || []);
       setError(null);
     } catch (nextError) {
-      setError(nextError);
+      if (isCurrent()) setError(nextError);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [seedEmployees, tenantId]);
+  }, [begin, seedEmployees, tenantId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { setEmployees([]); setEvents([]); setError(null); refresh(); }, [scope, refresh]);
 
   const createEvent = useCallback(async (event) => {
     if (!tenantId) throw new Error("Aktiv şirkət yoxdur");
@@ -85,10 +61,10 @@ export function useHrOperations(tenantId, seedEmployees = []) {
   const updateEventStatus = useCallback(async (eventId, status) => {
     const { error: updateError } = await supabase.from("employee_events")
       .update({ status, approved_at: status === "approved" ? new Date().toISOString() : null })
-      .eq("id", eventId);
+      .eq("id", eventId).eq("tenant_id", tenantId);
     if (updateError) throw updateError;
     await refresh();
-  }, [refresh]);
+  }, [refresh, tenantId]);
 
   const byType = useMemo(() => ({
     attendance: events.filter((row) => row.event_type === "attendance"),
