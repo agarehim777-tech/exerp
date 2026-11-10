@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { enrichDeliveryOrder, getDeliveryStockCheck, getDeliveryDisplayStage, getDeliveryTotalQuantity, isDeliveryQueueOrder, getOrderPaymentMethod, summarizeOrderProducts, exportDeliveryQueueCsv, OrderProductLines, getOrderBalance, normalizeOrderProductLines, getDeliveryPlan, getDeliveredQuantities, getDeliveryStageIndex, getDeliveryAgeDays, getDeliveryRisk, getOrderDeliveryStatus, baseDeliveryDate } from "../../modules/warehouse/deliveryDomain.jsx";
 export { enrichDeliveryOrder, getDeliveryStockCheck, getDeliveryDisplayStage, getDeliveryTotalQuantity, isDeliveryQueueOrder, getOrderPaymentMethod, summarizeOrderProducts, exportDeliveryQueueCsv, OrderProductLines, getOrderBalance, normalizeOrderProductLines, getDeliveryPlan, getDeliveredQuantities, getDeliveryStageIndex, getDeliveryAgeDays, getDeliveryRisk, getOrderDeliveryStatus, baseDeliveryDate };
 
@@ -3555,7 +3556,7 @@ export function filterWarehouseBalanceRows(rows, filters, globalQuery = "") {
 
 export function exportWarehouseBalanceCsv(rows, view) {
   const headers = ["Kateqoriya", "Məhsul", "SKU", "Anbar", "Qalıq", "Minimum", "Rezerv", "Problemli", "Satışa uyğun", "Sifarişdə", "Tövsiyə", "Əlavə alınmalı", "Vahid", "Maya", "Stok dəyəri", "Satış qiyməti", "Status"];
-  const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const escapeValue = (value) => csvCell(value);
   const csvRows = rows.map((row) => [
     row.category,
     row.product,

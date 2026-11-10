@@ -1,3 +1,4 @@
+import { csvCell } from "@/shared/lib/csvCell";
 import { toLocalIsoDate } from "../services/date.js";
 // Faktura PDF/çap ixracı — xarici kitabxana olmadan, brauzerin çap mühərriki ilə.
 const escapeHtml = (value) =>
@@ -217,7 +218,7 @@ function resolveColumns(columns) {
 export function exportInvoicesCsv(invoices, { fileName, columns } = {}) {
   const rows = registerRows(invoices);
   const cols = resolveColumns(columns);
-  const esc = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const esc = (value) => csvCell(value);
   const cell = (row, column) => (column.type === 'money' ? (Number(row[column.key]) || 0).toFixed(2) : row[column.key]);
   const header = cols.map((column) => esc(column.label)).join(',');
   const body = rows.map((row) => cols.map((column) => esc(cell(row, column))).join(','));

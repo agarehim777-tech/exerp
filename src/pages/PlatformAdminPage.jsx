@@ -131,7 +131,7 @@ export default function PlatformAdminPage() {
           if (provErr || prov?.error) {
             throw new Error(provErr?.message || prov?.error || "Admin yaradıla bilmədi");
           }
-          setCredential({ email: prov.email, password: prov.password });
+          setCredential({ email: prov.email, password: prov.password || null });
         }
       }
       cancelEdit();
@@ -267,7 +267,9 @@ export default function PlatformAdminPage() {
             <div className="u-font-size-13px u-color-0f2a20">Bu məlumatı admin ilə paylaşın — bu pəncərəni bağladıqdan sonra parolu yenidən görə bilməyəcəksiniz.</div>
             <div className="u-margin-top-8px u-display-grid u-gap-4px u-font-family-monospace u-font-size-14px">
               <div><strong>E-poçt:</strong> {credential.email}</div>
-              <div><strong>Müvəqqəti parol:</strong> {credential.password}</div>
+              {credential.password
+                ? <div><strong>Müvəqqəti parol:</strong> {credential.password}</div>
+                : <div>Bu hesab artıq mövcuddur: şirkətə admin kimi əlavə edildi, parolu dəyişmədi.</div>}
             </div>
             <div className="u-margin-top-10px u-display-flex u-gap-8px">
               <button type="button" className="secondary-btn"
