@@ -7,7 +7,7 @@ import {
   azn,
 } from "../../shared/ui/tokens.js";
 
-import { Button, Card, Input, Notice, PageStack, StatGrid, Tabs, Toolbar } from "../../shared/ui/primitives.tsx";
+import { Button, Card, Input, Notice, PageStack, StatGrid, Table, Tabs, Toolbar } from "../../shared/ui/primitives.tsx";
 
 const TABS = [
   ["pl", "Mənfəət-Zərər"],
@@ -114,7 +114,7 @@ export default function FinancialStatementsPage() {
       {tab === "cf" && (
         <Card>
           <h3 className="ui-section-title">Pul axını (kassa/bank)</h3>
-          <div className="ui-table-wrap"><table className="ui-table">
+          <div className="ui-table-wrap"><Table className="ui-table">
             <thead>
               <tr>
                 <th >Ay</th><th >Mədaxil</th><th >Məxaric</th>
@@ -133,7 +133,7 @@ export default function FinancialStatementsPage() {
               ))}
               {!cf.rows.length && <tr><td  colSpan={5}>Seçilmiş dövrdə kassa əməliyyatı yoxdur.</td></tr>}
             </tbody>
-          </table></div>
+          </Table></div>
           <div className="ui-summary-line">
             Ümumi: mədaxil {azn(cf.inflow)} · məxaric {azn(cf.outflow)} · xalis {azn(cf.net)}
           </div>
@@ -143,7 +143,7 @@ export default function FinancialStatementsPage() {
       {tab === "ar" && (
         <Card>
           <h3 className="ui-section-title">Debitor borclarının yaşlanması ({aging.asOf})</h3>
-          <div className="ui-table-wrap"><table className="ui-table">
+          <div className="ui-table-wrap"><Table className="ui-table">
             <thead>
               <tr>
                 <th >Müştəri</th>
@@ -176,10 +176,10 @@ export default function FinancialStatementsPage() {
                 <td className="ui-emphasis is-numeric">{azn(aging.grandTotal)}</td>
               </tr>
             </tfoot>
-          </table></div>
+          </Table></div>
         </Card>
       )}
-      {tab === "forecast" && <Card><h3 className="ui-section-title">Növbəti 3 ay üzrə cash-flow proqnozu</h3><p className="ui-help-text">Mədaxil açıq fakturaların son tarixindən, məxaric isə seçilmiş dövrün aylıq ortalamasından hesablanır.</p><div className="ui-table-wrap"><table className="ui-table"><thead><tr><th >Ay</th><th >Gözlənilən mədaxil</th><th >Proqnoz məxaric</th><th >Xalis dəyişmə</th><th >Proqnoz qalıq</th></tr></thead><tbody>{fs.cashFlowForecast.rows.map(row=><tr key={row.month}><td >{row.month}</td><td >{azn(row.expectedInflow)}</td><td >{azn(row.expectedOutflow)}</td><td className={row.net < 0 ? "amount-due is-numeric" : "amount-positive is-numeric"}>{azn(row.net)}</td><td className={`ui-emphasis is-numeric ${row.cumulative < 0 ? "amount-due" : ""}`}>{azn(row.cumulative)}</td></tr>)}</tbody></table></div></Card>}
+      {tab === "forecast" && <Card><h3 className="ui-section-title">Növbəti 3 ay üzrə cash-flow proqnozu</h3><p className="ui-help-text">Mədaxil açıq fakturaların son tarixindən, məxaric isə seçilmiş dövrün aylıq ortalamasından hesablanır.</p><div className="ui-table-wrap"><Table className="ui-table"><thead><tr><th >Ay</th><th >Gözlənilən mədaxil</th><th >Proqnoz məxaric</th><th >Xalis dəyişmə</th><th >Proqnoz qalıq</th></tr></thead><tbody>{fs.cashFlowForecast.rows.map(row=><tr key={row.month}><td >{row.month}</td><td >{azn(row.expectedInflow)}</td><td >{azn(row.expectedOutflow)}</td><td className={row.net < 0 ? "amount-due is-numeric" : "amount-positive is-numeric"}>{azn(row.net)}</td><td className={`ui-emphasis is-numeric ${row.cumulative < 0 ? "amount-due" : ""}`}>{azn(row.cumulative)}</td></tr>)}</tbody></Table></div></Card>}
     </PageStack>
   );
 }
@@ -188,7 +188,7 @@ function SectionTable({ title, rows, total }) {
   return (
     <div className="ui-spacer-top">
       <h4 className="ui-section-title">{title}</h4>
-      <div className="ui-table-wrap"><table className="ui-table">
+      <div className="ui-table-wrap"><Table className="ui-table">
         <thead>
           <tr><th >Kod</th><th >Hesab</th><th >Məbləğ</th></tr>
         </thead>
@@ -208,7 +208,7 @@ function SectionTable({ title, rows, total }) {
             <td className="ui-emphasis is-numeric">{azn(total)}</td>
           </tr>
         </tfoot>
-      </table></div>
+      </Table></div>
     </div>
   );
 }

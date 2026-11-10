@@ -5,7 +5,7 @@ import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
-import { Tabs } from '../shared/ui/primitives.jsx';
+import { Button, Input, Select, Tabs } from '../shared/ui/primitives.jsx';
 import { getEmployeeKey } from "../shared/lib/appDomain.jsx";
 import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({
@@ -105,17 +105,17 @@ export default function HrPage({
             <div className="hr-team-controls">
               <label className="hr-team-search">
                 <Search size={16} />
-                <input value={teamQuery} onChange={(event) => setTeamQuery(event.target.value)} placeholder="Əməkdaş, vəzifə və ya rəhbər axtar..." />
+                <Input value={teamQuery} onChange={(event) => setTeamQuery(event.target.value)} placeholder="Əməkdaş, vəzifə və ya rəhbər axtar..." />
               </label>
-              <select value={teamDepartment} onChange={(event) => setTeamDepartment(event.target.value)}>
+              <Select value={teamDepartment} onChange={(event) => setTeamDepartment(event.target.value)}>
                 <option>Hamısı</option>
                 {teamDepartments.map((department) => <option key={department}>{department}</option>)}
-              </select>
-              <select value={teamStatus} onChange={(event) => setTeamStatus(event.target.value)}>
+              </Select>
+              <Select value={teamStatus} onChange={(event) => setTeamStatus(event.target.value)}>
                 <option>Hamısı</option>
                 <option>Stabil</option>
                 <option>Məlumat gözləyir</option>
-              </select>
+              </Select>
               <strong>{visibleHrEmployeeRecords.length} əməkdaş</strong>
             </div>
             <HrEmployeePlatform
@@ -195,7 +195,7 @@ export default function HrPage({
         <Panel className="hr-tree-panel">
           <PanelHeader title="Struktur ağacı" subtitle="Şöbə, rəhbər və komanda xətti" icon={Building2} />
           <div className="hr-structure-actions">
-            <button className="secondary-btn" onClick={onCreateDepartment}><Plus size={16} /> Şöbə əlavə et</button>
+            <Button variant="secondary"  onClick={onCreateDepartment}><Plus size={16} /> Şöbə əlavə et</Button>
           </div>
           <HrStructureTree structure={structure} employees={allEmployees} onSelectEmployee={setSelectedEmployeeKey} />
         </Panel>
@@ -214,8 +214,8 @@ export default function HrPage({
             money(employee.salary),
             <ProgressRow label={`${employee.kpi}%`} value={employee.kpi} compact />,
             <div className="hr-row-actions">
-              <button className="icon-btn hr-row-edit" title="Əməkdaşı redaktə et" aria-label={`${employee.name} əməkdaşını redaktə et`} onClick={() => onEditEmployee(employee)}><Pencil size={16} /></button>
-              <button className="icon-btn hr-row-delete" title="Əməkdaşı sil" aria-label={`${employee.name} əməkdaşını sil`} onClick={() => onDeleteEmployee(employee)}><Trash2 size={16} /></button>
+              <Button variant="ghost" className="icon-btn hr-row-edit" title="Əməkdaşı redaktə et" aria-label={`${employee.name} əməkdaşını redaktə et`} onClick={() => onEditEmployee(employee)}><Pencil size={16} /></Button>
+              <Button variant="ghost" className="icon-btn hr-row-delete" title="Əməkdaşı sil" aria-label={`${employee.name} əməkdaşını sil`} onClick={() => onDeleteEmployee(employee)}><Trash2 size={16} /></Button>
             </div>,
           ])}
         />
@@ -225,8 +225,8 @@ export default function HrPage({
               <div className="hr-mobile-employee-head">
                 <AvatarLine initials={employee.initials} title={employee.name} subtitle={employee.position} />
                 <div className="hr-row-actions">
-                  <button className="icon-btn hr-row-edit" title="Əməkdaşı redaktə et" aria-label={`${employee.name} əməkdaşını redaktə et`} onClick={() => onEditEmployee(employee)}><Pencil size={16} /></button>
-                  <button className="icon-btn hr-row-delete" title="Əməkdaşı sil" aria-label={`${employee.name} əməkdaşını sil`} onClick={() => onDeleteEmployee(employee)}><Trash2 size={16} /></button>
+                  <Button variant="ghost" className="icon-btn hr-row-edit" title="Əməkdaşı redaktə et" aria-label={`${employee.name} əməkdaşını redaktə et`} onClick={() => onEditEmployee(employee)}><Pencil size={16} /></Button>
+                  <Button variant="ghost" className="icon-btn hr-row-delete" title="Əməkdaşı sil" aria-label={`${employee.name} əməkdaşını sil`} onClick={() => onDeleteEmployee(employee)}><Trash2 size={16} /></Button>
                 </div>
               </div>
               <div className="hr-mobile-employee-meta">

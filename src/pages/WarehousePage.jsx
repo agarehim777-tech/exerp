@@ -42,6 +42,7 @@ import {
   getAvailableQuantity,
   getWarehouseStockSummary,
 } from "../shared/lib/appDomain.jsx";
+import { Button, Select } from "../shared/ui/primitives.tsx";
 
 export default WarehousePage;
 
@@ -182,19 +183,19 @@ function WarehousePage({
       </section>
 
       <div className="warehouse-head-actions">
-        <button className="secondary-btn" onClick={onCreateProduct}>
+        <Button variant="secondary"  onClick={onCreateProduct}>
           <Plus size={16} />
           Məhsul yarat
-        </button>
-        <button
-          className="primary-btn"
+        </Button>
+        <Button variant="primary"
+          
           disabled={warehouses.length === 0}
           title={warehouses.length === 0 ? "Əvvəl anbar yaradın" : "Anbara məhsul mədaxil edin"}
           onClick={onReceiveStock}
         >
           <Plus size={16} />
           Mədaxil et
-        </button>
+        </Button>
       </div>
 
       <WarehouseControlPanel
@@ -270,7 +271,7 @@ function WarehousePage({
               return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
             })(),
             product.serialTracked ? "IMEI / Serial" : "Batch",
-            <button className="text-btn" onClick={() => onEditProduct(product.id)}>Redaktə</button>,
+            <Button variant="ghost" className="text-btn" onClick={() => onEditProduct(product.id)}>Redaktə</Button>,
           ])}
         />
       </Panel>
@@ -279,7 +280,7 @@ function WarehousePage({
         <Panel>
           <PanelHeader title="Anbarlar" subtitle="Ümumi və ya konkret anbar seçin" />
           <div className="warehouse-filter-row">
-            <select
+            <Select
               aria-label="Anbar status filteri"
               value={warehouseStatusFilter}
               onChange={(event) => setWarehouseStatusFilter(event.target.value)}
@@ -288,7 +289,7 @@ function WarehousePage({
               <option>Aktiv</option>
               <option>Passiv</option>
               <option>Təmir</option>
-            </select>
+            </Select>
           </div>
           <div className="warehouse-card-list">
             <article className={`warehouse-card ${isAllWarehouses ? "active" : ""}`}>
@@ -309,9 +310,9 @@ function WarehousePage({
                 <ProgressRow label="" value={(aggregateSummary.available / Math.max(aggregateSummary.total, 1)) * 100} compact />
               </button>
               <div className="warehouse-actions">
-                <button className="text-btn" onClick={() => onSelect("all")}>
+                <Button variant="ghost" className="text-btn" onClick={() => onSelect("all")}>
                   Ümumiyə bax
-                </button>
+                </Button>
               </div>
             </article>
             {warehouseList.map((warehouse) => {
@@ -339,15 +340,15 @@ function WarehousePage({
                     <ProgressRow label="" value={warehouseSummary.utilization} compact />
                   </button>
                   <div className="warehouse-actions">
-                    <button className="text-btn" onClick={() => onSelect(warehouse.id)}>
+                    <Button variant="ghost" className="text-btn" onClick={() => onSelect(warehouse.id)}>
                       Daxil ol
-                    </button>
-                    <button className="text-btn" onClick={() => onEdit(warehouse.id)}>
+                    </Button>
+                    <Button variant="ghost" className="text-btn" onClick={() => onEdit(warehouse.id)}>
                       Redaktə
-                    </button>
-                    <button className="text-btn danger" onClick={() => onDelete(warehouse.id)}>
+                    </Button>
+                    <Button variant="ghost" className="text-btn danger" onClick={() => onDelete(warehouse.id)}>
                       Sil
-                    </button>
+                    </Button>
                   </div>
                 </article>
               );
@@ -409,12 +410,12 @@ function WarehousePage({
                   </p>
                 </div>
                 <div className="warehouse-head-actions">
-                  <button className="secondary-btn" onClick={() => onEdit(selectedWarehouse.id)}>
+                  <Button variant="secondary"  onClick={() => onEdit(selectedWarehouse.id)}>
                     Redaktə et
-                  </button>
-                  <button className="secondary-btn danger-outline" onClick={() => onDelete(selectedWarehouse.id)}>
+                  </Button>
+                  <Button variant="danger"  onClick={() => onDelete(selectedWarehouse.id)}>
                     Sil
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="warehouse-info-grid">

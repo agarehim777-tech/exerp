@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { Button, Input, Select, Table } from "../../shared/ui/primitives.tsx";
 
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
 const dispositionLabel = { restock: "Yenidən satış stoku", quarantine: "Problemli stok", vendor_return: "Vendor qaytarması", write_off: "Silinmə" };
@@ -68,23 +69,23 @@ export default function ProductReturnsPanel({ product, warehouses = [] }) {
     <h3><RotateCcw size={17} /> Problemli məhsul və silinmə</h3>
     <p className="u-margin-4px_0_14px u-color-66756f u-font-size-13px">Anbarda olan məhsulu problemli stoka keçirin və ya fiziki qalıqdan silin.</p>
     <form onSubmit={submit} className="product-return-form">
-      <label>Anbar<select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}><option value="">Seçin</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select></label>
-      <label>Miqdar<input required type="number" min="0.001" step="0.001" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></label>
-      <label>Əməliyyat<select value={form.disposition} onChange={(e) => setForm({ ...form, disposition: e.target.value })}><option value="quarantine">Problemli stok kimi qeyd et</option><option value="write_off">Məhsulu sil</option></select></label>
-      <label className="wide">Səbəb *<input required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Zədə, nasazlıq və ya silinmə səbəbi" /></label>
-      <button className="primary-btn" disabled={busy}>{busy ? "İşlənir..." : form.disposition === "quarantine" ? "Problemli stoka keçir" : "Məhsulu sil"}</button>
+      <label>Anbar<Select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}><option value="">Seçin</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</Select></label>
+      <label>Miqdar<Input required type="number" min="0.001" step="0.001" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></label>
+      <label>Əməliyyat<Select value={form.disposition} onChange={(e) => setForm({ ...form, disposition: e.target.value })}><option value="quarantine">Problemli stok kimi qeyd et</option><option value="write_off">Məhsulu sil</option></Select></label>
+      <label className="wide">Səbəb *<Input required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Zədə, nasazlıq və ya silinmə səbəbi" /></label>
+      <Button variant="primary"  disabled={busy}>{busy ? "İşlənir..." : form.disposition === "quarantine" ? "Problemli stoka keçir" : "Məhsulu sil"}</Button>
     </form>
     {message && <p className="product-return-message">{message}</p>}
-    <div className="warehouse-balance-table-wrap"><table className="warehouse-balance-table"><thead><tr><th>Nömrə</th><th>Miqdar</th><th>Əməliyyat</th><th>Səbəb</th><th>Anbar</th><th>Təmir statusu</th><th>İdarəetmə</th></tr></thead><tbody>
+    <div className="warehouse-balance-table-wrap"><Table className="warehouse-balance-table"><thead><tr><th>Nömrə</th><th>Miqdar</th><th>Əməliyyat</th><th>Səbəb</th><th>Anbar</th><th>Təmir statusu</th><th>İdarəetmə</th></tr></thead><tbody>
       {rows.map((row) => <tr key={row.id}><td>{row.return?.return_no}</td><td>{number(row.quantity)}</td><td>{dispositionLabel[row.disposition]}</td><td>{row.return?.reason || "—"}</td><td>{row.return?.warehouse?.name || "—"}</td><td>{repairStatusLabel[row.repair_status] || (row.disposition === "quarantine" ? "Təmir gözləyir" : "Tələb olunmur")}</td><td>
         {row.disposition === "quarantine" && row.return?.status === "completed" && !["repaired", "not_repairable"].includes(row.repair_status) ? (
           <span className="u-display-inline_flex u-gap-8px">
-            {(row.repair_status === "pending" || !row.repair_status) && <button type="button" className="secondary-btn" disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "start")}>Təmirə başla</button>}
-            <button type="button" className="primary-btn" disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "complete")}>Təmiri tamamla</button>
+            {(row.repair_status === "pending" || !row.repair_status) && <Button variant="secondary" type="button"  disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "start")}>Təmirə başla</Button>}
+            <Button variant="primary" type="button"  disabled={busyRow === row.id} onClick={() => changeRepairStatus(row, "complete")}>Təmiri tamamla</Button>
           </span>
         ) : "—"}
       </td></tr>)}
       {!rows.length && <tr><td colSpan="7">Bu məhsul üzrə problemli stok və silinmə əməliyyatı yoxdur.</td></tr>}
-    </tbody></table></div>
+    </tbody></Table></div>
   </section>;
 }

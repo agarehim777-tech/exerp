@@ -1,3 +1,4 @@
+import { Button, Select } from "../../shared/ui/primitives.tsx";
 import { useMemo, useState } from "react";
 import {
   BarChart3,
@@ -312,30 +313,30 @@ export function ReportsPage({
         <div><Filter size={17} /><strong>Hesabat filtrləri</strong></div>
         <label>
           <span>Dövr</span>
-          <select aria-label="Dövr" value={period} onChange={(event) => setPeriod(event.target.value)}>
+          <Select aria-label="Dövr" value={period} onChange={(event) => setPeriod(event.target.value)}>
             <option>Bu ay</option><option>Bu rüb</option><option>Bu il</option><option>Hamısı</option>
-          </select>
+          </Select>
         </label>
         <label>
           <span>Modul</span>
-          <select aria-label="Modul" value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
+          <Select aria-label="Modul" value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
             <option>Hamısı</option><option>Satış</option><option>Kredit</option><option>Anbar</option>
             <option>Vendor / PO</option><option>İstehsalat</option><option>Maliyyə</option><option>Faktura</option><option>HR</option>
-          </select>
+          </Select>
         </label>
         <label>
           <span>Anbar</span>
-          <select aria-label="Anbar" value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
+          <Select aria-label="Anbar" value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
             <option value="all">Bütün anbarlar</option>
             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
-          </select>
+          </Select>
         </label>
-        <button className="primary-btn" disabled={!exportReady || Boolean(exporting)} onClick={() => runDownload({ title: `İdarəetmə paketi · ${period}` }, "Excel")}>
+        <Button variant="primary"  disabled={!exportReady || Boolean(exporting)} onClick={() => runDownload({ title: `İdarəetmə paketi · ${period}` }, "Excel")}>
           <Download size={16} /> Excel
-        </button>
-        <button className="secondary-btn" type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
+        </Button>
+        <Button variant="secondary"  type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
           <RefreshCw size={16} /> {live.loading ? "Yenilənir" : "Yenilə"}
-        </button>
+        </Button>
       </section>
 
       {live.error && <div role="alert" className="inline-alert danger">Hesabat məlumatları yüklənmədi. Export dayandırılıb. {live.error.message}</div>}
@@ -430,8 +431,8 @@ export function ReportsPage({
                 <div><strong>{report.title}</strong><span>{report.desc}</span><small>{report.cadence} · {reportPackage.rows} data sətri</small></div>
                 <StatusBadge status={report.cadence} />
                 <div className="report-actions">
-                  <button className="secondary-btn compact" onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</button>
-                  <button className="primary-btn compact" data-testid="report-template-export" onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</button>
+                  <Button variant="secondary" size="compact"  onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</Button>
+                  <Button variant="primary" size="compact"  data-testid="report-template-export" onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</Button>
                 </div>
               </article>
             ))}

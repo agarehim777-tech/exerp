@@ -3,6 +3,7 @@ import { supabase } from "../../integrations/supabase/client";
 import { readAllRows } from "../../services/readAllRows.js";
 import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import { buildAgingRows, isMissingAgingView } from "./stockAging.js";
+import { Select, Table } from "../../shared/ui/primitives.tsx";
 
 export default function StockAgingPanel({ tenantId }) {
   const [rows, setRows] = useState([]);
@@ -86,9 +87,9 @@ export default function StockAgingPanel({ tenantId }) {
           <h3 className="u-margin-0">Stok yaşlandırması</h3>
           <p className="u-margin-4px_0_0 u-color-text_secondary">FIFO maya layları üzrə yavaş hərəkət edən mallar</p>
         </div>
-        <select value={bucket} onChange={(event) => setBucket(event.target.value)} className="ui-tok-input sx-1dfda96">
+        <Select value={bucket} onChange={(event) => setBucket(event.target.value)} className="ui-tok-input sx-1dfda96">
           {["Hamısı", "0-30", "31-90", "91-180", "180+"].map((item) => <option key={item}>{item}</option>)}
-        </select>
+        </Select>
       </div>
 
       <div className="u-display-flex u-gap-10px u-margin-14px_0 u-flex-wrap-wrap">
@@ -99,7 +100,7 @@ export default function StockAgingPanel({ tenantId }) {
       {error && <div className="u-color-danger u-margin-bottom-12px">Stok yaşlandırması yüklənmədi: {error}</div>}
 
       <div className="u-overflow-x-auto">
-        <table className="ui-tok-table">
+        <Table className="ui-tok-table">
           <thead>
             <tr>
               <th className="ui-tok-th">Məhsul</th>
@@ -131,7 +132,7 @@ export default function StockAgingPanel({ tenantId }) {
               <tr><td className="ui-tok-td" colSpan={7}>{loading ? "Yüklənir…" : "Yaşlandırma məlumatı yoxdur."}</td></tr>
             )}
           </tbody>
-        </table>
+        </Table>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { money, normalize } from "../services/format.js";
 import { currentBusinessDate } from "../shared/lib/appDomain.jsx";
 import { OrderProductLines, enrichDeliveryOrder, exportDeliveryQueueCsv, getDeliveryDisplayStage, getDeliveryStockCheck, getDeliveryTotalQuantity, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../modules/warehouse/deliveryDomain.jsx";
+import { Button, Input, Select } from "../shared/ui/primitives.tsx";
 
 function getSalesDocumentNumber(order) {
   return order?.orderNo || order?.order_no || order?.id || "—";
@@ -149,28 +150,28 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
           <div className="delivery-filter-actions">
             <label className="delivery-driver-filter">
               <span>Anbar</span>
-              <select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
+              <Select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
                 <option value="all">Bütün anbarlar</option>
                 {warehouses.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
                     {warehouse.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="delivery-search">
               <Search size={16} />
-              <input
+              <Input
                 value={deliverySearch}
                 placeholder="Müştəri, sifariş və ya məhsul axtar..."
                 onChange={(event) => setDeliverySearch(event.target.value)}
               />
             </label>
             <span className="delivery-result-count">{visibleOrders.length} sifariş göstərilir</span>
-            <button className="secondary-btn delivery-export-btn" type="button" onClick={exportVisibleDeliveries}>
+            <Button variant="secondary" className="delivery-export-btn" type="button" onClick={exportVisibleDeliveries}>
               <Download size={16} />
               CSV ixrac
-            </button>
+            </Button>
           </div>
         </div>
       </Panel>
@@ -199,13 +200,13 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 title={order.paymentStatus || getOrderPaymentMethod(order)}
                 subtitle={order.balance > 0 ? `${money(order.balance)} qalıq` : "Qalıq yoxdur"}
               />,
-              <button
+              <Button variant="ghost"
                 className="text-btn"
                 title={order.stockCheck.reason}
                 onClick={() => openDeliveryCard(order.id)}
               >
                 Kartı aç
-              </button>,
+              </Button>,
 
             ])}
           />
@@ -269,15 +270,15 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 <strong>Təhvil aktı</strong>
                 <label>
                   Təhvil alanın ad-soyadı
-                  <input value={acceptance.recipientName} onChange={(event) => setAcceptance({ ...acceptance, recipientName: event.target.value })} placeholder="Müştəri və ya nümayəndə" />
+                  <Input value={acceptance.recipientName} onChange={(event) => setAcceptance({ ...acceptance, recipientName: event.target.value })} placeholder="Müştəri və ya nümayəndə" />
                 </label>
                 <label>
                   Anbardan götürən əməkdaş
-                  <input value={acceptance.warehouseEmployeeName} onChange={(event) => setAcceptance({ ...acceptance, warehouseEmployeeName: event.target.value })} placeholder="Əməkdaşın adı və soyadı" />
+                  <Input value={acceptance.warehouseEmployeeName} onChange={(event) => setAcceptance({ ...acceptance, warehouseEmployeeName: event.target.value })} placeholder="Əməkdaşın adı və soyadı" />
                 </label>
                 <label>
                   Sənəd nömrəsi *
-                  <input required value={acceptance.documentNo} onChange={(event) => setAcceptance({ ...acceptance, documentNo: event.target.value })} placeholder="Ş/V və ya etibarnamə" />
+                  <Input required value={acceptance.documentNo} onChange={(event) => setAcceptance({ ...acceptance, documentNo: event.target.value })} placeholder="Ş/V və ya etibarnamə" />
                 </label>
                 <label className="delivery-acceptance-note">
                   Qeyd
@@ -288,8 +289,8 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                   <span>Təhvil alan şəxs elektron imzanı təsdiqlədi</span>
                 </label>
               </div>
-              <button
-                className="primary-btn full"
+              <Button variant="primary"
+                className="full"
                 disabled={!selectedOrder.stockCheck.ok || !acceptance.recipientName.trim() || !acceptance.documentNo.trim() || !acceptance.warehouseEmployeeName.trim() || !acceptance.signatureConfirmed}
                 title={selectedOrder.stockCheck.reason}
                 onClick={() => completeSelected(selectedOrder)}
@@ -298,7 +299,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
                 {selectedOrder.stockCheck.partial
                   ? `Qismən təhvil ver (${selectedOrder.stockCheck.plan.deliverableTotal})`
                   : "Təhvil verildi"}
-              </button>
+              </Button>
 
             </div>
           ) : (
