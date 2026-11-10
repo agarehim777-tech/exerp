@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { readAllRows } from '../../services/readAllRows.js';
 
 export function useTasks(tenantId, { customerId, dealId, mineOnly = false } = {}) {
   const [items, setItems] = useState([]);
@@ -9,12 +10,14 @@ export function useTasks(tenantId, { customerId, dealId, mineOnly = false } = {}
     if (!tenantId) return;
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    let q = supabase.from('crm_tasks').select('*, customer:customers(id,name)').eq('tenant_id', tenantId);
-    if (customerId) q = q.eq('customer_id', customerId);
-    if (dealId) q = q.eq('deal_id', dealId);
-    if (mineOnly && user) q = q.eq('assigned_to', user.id);
-    q = q.order('done').order('due_at', { ascending: true, nullsFirst: false });
-    const { data } = await q;
+    // Paged: a tenant's tasks can exceed the 1000 rows PostgREST returns per request.
+    const { data } = await readAllRows(() => {
+      let q = supabase.from('crm_tasks').select('*, customer:customers(id,name)').eq('tenant_id', tenantId);
+      if (customerId) q = q.eq('customer_id', customerId);
+      if (dealId) q = q.eq('deal_id', dealId);
+      if (mineOnly && user) q = q.eq('assigned_to', user.id);
+      return q.order('done').order('due_at', { ascending: true, nullsFirst: false }).order('id');
+    });
     setItems(data || []);
     setLoading(false);
   }, [tenantId, customerId, dealId, mineOnly]);
