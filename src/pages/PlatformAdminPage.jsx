@@ -132,7 +132,7 @@ export default function PlatformAdminPage() {
             throw new Error(provErr?.message || prov?.error || "Admin yaradıla bilmədi");
           }
           if (prov.password) setCredential({ email: prov.email, password: prov.password });
-          else alert(` artıq mövcud hesabdır; şirkətə admin kimi əlavə edildi, parolu dəyişmədi.`);
+          else alert(`${prov.email} artıq mövcud hesabdır; şirkətə admin kimi əlavə edildi, parolu dəyişmədi.`);
         }
       }
       cancelEdit();
