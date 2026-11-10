@@ -6015,6 +6015,10 @@ export type Database = {
         }
         Returns: Json
       }
+      reverse_vendor_invoice_payment: {
+        Args: { _payment: string; _reason: string }
+        Returns: Json
+      }
       sales_dashboard: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: Json
