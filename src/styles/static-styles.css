@@ -1836,3 +1836,76 @@
 }
 
 .procurement-page-styles-icon-button:disabled { opacity: 0.5; }
+
+.shipments-td { padding: 10px 12px; }
+.shipments-align-left { text-align: left; }
+.shipments-align-right { text-align: right; }
+.shipments-align-center { text-align: center; }
+.messenger-status-sent { color: var(--success, #15803d); }
+.messenger-status-failed { color: var(--danger, #b91c1c); }
+.messenger-status-pending { color: var(--warning, #b45309); }
+
+.line-items-table-cell {
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+.sx-8f77872.sx-8f77872 { width: 200px; }
+
+.sx-f95ebd2.sx-f95ebd2 { width: 70px; }
+
+.sx-ee0435f.sx-ee0435f { width: 100px; }
+
+.sx-1a30558.sx-1a30558 { width: 110px; }
+
+.sx-f6e3d7f.sx-f6e3d7f { text-align: right; }
+
+.sx-93de2d4.sx-93de2d4 { width: 40px; }
+
+.line-items-table-inp {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  padding: 4px;
+  background: transparent;
+  font-size: 13px;
+}
+
+.sx-13076d9.sx-13076d9 { text-align: center; }
+
+.sx-8cd4ae7.sx-8cd4ae7 { color: #94a3b8; }
+
+.sx-7fa5638.sx-7fa5638 { padding: 20px; }
+
+.crm-deals-page-inp {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.birth-date-input-select-style {
+  min-width: 0;
+  width: 100%;
+  height: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 8px;
+  font-size: 14px;
+}
+
+.sx-dd518b1.sx-dd518b1 { width: 4px; }
+
+.sx-eeb774e.sx-eeb774e { height: 24px; }
+
+.sx-0384986.sx-0384986 { border-radius: 2px; }
+
+.sx-da5cd67.sx-da5cd67 { flex: 1; }
+
+.sx-c9b77c9.sx-c9b77c9 { text-decoration: line-through; }
+
+.sx-116e33d.sx-116e33d { text-decoration: none; }

@@ -1,7 +1,5 @@
 import React from 'react';
 import ProductPicker from './ProductPicker.jsx';
-const cell = { padding: '6px 8px', border: '1px solid #e2e8f0', fontSize: 13 };
-const inp = { width: '100%', border: 0, outline: 0, padding: 4, background: 'transparent', fontSize: 13 };
 
 function lineNet(it) {
   const qty = Number(it.qty) || 0;
@@ -38,37 +36,37 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
         <table className="u-width-100 u-border-collapse-collapse u-min-width-720px">
           <thead className="u-background-surface_subtle">
             <tr>
-              <th style={{ ...cell, width: 200, textAlign: 'left' }}>Məhsul</th>
-              <th style={{ ...cell, textAlign: 'left' }}>Təsvir</th>
-              <th style={{ ...cell, width: 70 }}>Miqdar</th>
-              <th style={{ ...cell, width: 100 }}>Qiymət</th>
-              <th style={{ ...cell, width: 70 }}>End %</th>
-              <th style={{ ...cell, width: 70 }}>ƏDV %</th>
-              <th style={{ ...cell, width: 110, textAlign: 'right' }}>Cəm</th>
-              <th style={{ ...cell, width: 40 }}></th>
+              <th className="line-items-table-cell sx-8f77872 sx-200a92a">Məhsul</th>
+              <th className="line-items-table-cell sx-200a92a">Təsvir</th>
+              <th className="line-items-table-cell sx-f95ebd2">Miqdar</th>
+              <th className="line-items-table-cell sx-ee0435f">Qiymət</th>
+              <th className="line-items-table-cell sx-f95ebd2">End %</th>
+              <th className="line-items-table-cell sx-f95ebd2">ƏDV %</th>
+              <th className="line-items-table-cell sx-1a30558 sx-f6e3d7f">Cəm</th>
+              <th className="line-items-table-cell sx-93de2d4"></th>
             </tr>
           </thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>
-                <td style={cell}>
+                <td className="line-items-table-cell">
                   <ProductPicker products={products} value={it.product_id} onPick={p => set(i, {
                     product_id: p.id, description: it.description || p.name, unit_price: Number(p.price) || 0,
                   })} />
                 </td>
-                <td style={cell}><input style={inp} value={it.description} onChange={e => set(i, { description: e.target.value })} /></td>
-                <td style={cell}><input type="number" step="0.01" style={{ ...inp, textAlign: 'right' }} value={it.qty} onChange={e => set(i, { qty: e.target.value })} /></td>
-                <td style={cell}><input type="number" step="0.01" style={{ ...inp, textAlign: 'right' }} value={it.unit_price} onChange={e => set(i, { unit_price: e.target.value })} /></td>
-                <td style={cell}><input type="number" step="0.01" style={{ ...inp, textAlign: 'right' }} value={it.discount_pct} onChange={e => set(i, { discount_pct: e.target.value })} /></td>
-                <td style={cell}><input type="number" step="0.01" style={{ ...inp, textAlign: 'right' }} value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
-                <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>{lineTotal(it).toFixed(2)} ₼</td>
-                <td style={cell}>
+                <td className="line-items-table-cell"><input className="line-items-table-inp" value={it.description} onChange={e => set(i, { description: e.target.value })} /></td>
+                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.qty} onChange={e => set(i, { qty: e.target.value })} /></td>
+                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.unit_price} onChange={e => set(i, { unit_price: e.target.value })} /></td>
+                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.discount_pct} onChange={e => set(i, { discount_pct: e.target.value })} /></td>
+                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
+                <td className="line-items-table-cell sx-f6e3d7f sx-e634e6d">{lineTotal(it).toFixed(2)} ₼</td>
+                <td className="line-items-table-cell">
                   <button type="button" onClick={() => remove(i)} className="u-border-0 u-background-transparent u-cursor-pointer u-color-danger u-font-size-18px">×</button>
                 </td>
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td colSpan={8} style={{ ...cell, textAlign: 'center', color: '#94a3b8', padding: 20 }}>Sətir yoxdur — aşağıdan əlavə edin</td></tr>
+              <tr><td colSpan={8} className="line-items-table-cell sx-13076d9 sx-8cd4ae7 sx-7fa5638">Sətir yoxdur — aşağıdan əlavə edin</td></tr>
             )}
           </tbody>
         </table>

@@ -50,5 +50,5 @@ export default function ShipmentsPage() {
     </div>
   );
 }
-const Th = ({ children, align }) => <th className="sx-f5c04ae sx-d2abea5 sx-83e4487 sx-6b9c179 sx-5f7abeb sx-03c5603" style={{ textAlign: align || 'left' }}>{children}</th>;
-const Td = ({ children, align, style }) => <td style={{ padding: '10px 12px', textAlign: align || 'left', ...(style || {}) }}>{children}</td>;
+const Th = ({ children, align }) => <th className={`sx-f5c04ae sx-d2abea5 sx-83e4487 sx-6b9c179 sx-5f7abeb sx-03c5603 shipments-align-${align || 'left'}`}>{children}</th>;
+const Td = ({ children, align }) => <td className={`shipments-td shipments-align-${align || 'left'}`}>{children}</td>;
