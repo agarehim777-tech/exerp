@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
-import { azn, badge, input, statValue, td } from "../../shared/ui/tokens.js";
+import { azn, badgeClass } from "../../shared/ui/tokens.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
@@ -48,7 +48,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
     <div className="ui-tok-card">
       <div className="u-display-flex u-align-items-center u-justify-content-space_between u-gap-12px u-flex-wrap-wrap">
         <h3 className="u-margin-top-0 u-margin-bottom-0">Dəyərləmə və maya dəyəri</h3>
-        <select value={method} onChange={(e) => setMethod(e.target.value)} style={{ ...input, width: 220 }}>
+        <select value={method} onChange={(e) => setMethod(e.target.value)} className="ui-tok-input sx-69e6838">
           <option value="fifo">FIFO (ilk giriş — ilk çıxış)</option>
           <option value="average">Çəkili orta maya</option>
         </select>
@@ -69,7 +69,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
         </div>
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Çatışmazlıq (backorder)</div>
-          <div style={{ ...statValue, color: totals.shortageQty ? "#b23a3a" : "#064e3b" }}>
+          <div className={`ui-tok-stat-value ${totals.shortageQty ? "sx-9d7a4ce" : "sx-7c2de19"}`}>
             {totals.shortageQty.toLocaleString("az-AZ")}
           </div>
         </div>
@@ -97,14 +97,14 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
               <tr key={row.productId || "unknown"}>
                 <td className="ui-tok-td">{product.name || "Naməlum məhsul"}</td>
                 <td className="ui-tok-td">{product.sku || "—"}</td>
-                <td style={{ ...td, fontWeight: 600, color: row.qtyOnHand < 0 ? "#b23a3a" : undefined }}>
+                <td className={`ui-tok-td sx-e634e6d ${row.qtyOnHand < 0 ? "sx-9d7a4ce" : ""}`}>
                   {row.qtyOnHand.toLocaleString("az-AZ")}
                 </td>
                 <td className="ui-tok-td">{azn(row.unitCost)}</td>
                 <td className="ui-tok-td">{azn(row.inventoryValue)}</td>
                 <td className="ui-tok-td">{azn(row.cogs)}</td>
                 <td className="ui-tok-td">
-                  <span style={badge(row.shortageQty || quantityMismatch ? "red" : "green")}>
+                  <span className={`${badgeClass(row.shortageQty || quantityMismatch ? "red" : "green")}`}>
                     {row.shortageQty
                       ? `Çatışmazlıq ${row.shortageQty}`
                       : quantityMismatch

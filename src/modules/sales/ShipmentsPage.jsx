@@ -38,7 +38,7 @@ export default function ShipmentsPage() {
                       </button>
                     )}
                     <button onClick={async () => (await appConfirm('Göndəriş silinsin?', { danger: true })) && remove(s.id)}
-                      style={{ background: '#fff', color: '#ef4444', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>×</button>
+                      className="sx-0695ff9 sx-c9e3486 sx-2388b5c sx-cd22087 sx-9aae82e sx-b202c6d sx-6b9c179">×</button>
                   </div>
                 </Td>
               </tr>
@@ -50,5 +50,5 @@ export default function ShipmentsPage() {
     </div>
   );
 }
-const Th = ({ children, align }) => <th style={{ padding: '10px 12px', textAlign: align || 'left', color: '#64748b', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 }}>{children}</th>;
+const Th = ({ children, align }) => <th className="sx-f5c04ae sx-d2abea5 sx-83e4487 sx-6b9c179 sx-5f7abeb sx-03c5603" style={{ textAlign: align || 'left' }}>{children}</th>;
 const Td = ({ children, align, style }) => <td style={{ padding: '10px 12px', textAlign: align || 'left', ...(style || {}) }}>{children}</td>;

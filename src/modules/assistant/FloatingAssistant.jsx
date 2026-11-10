@@ -413,7 +413,7 @@ function MessageBubble({ m }) {
   const isUser = m.role === "user";
   const parts = m.parts || [];
   return (
-    <div className="floating-assistant-row" style={{ justifyContent: isUser ? "flex-end" : "flex-start" }}>
+    <div className={`floating-assistant-row ${isUser ? "sx-36b745a" : "sx-fa4778e"}`} >
       {!isUser && <Avatar role="assistant" />}
       <div className={`floating-assistant-bubble ${isUser ? "floating-assistant-bubble-user" : "floating-assistant-bubble-bot"}`}>
         {parts.map((p, i) => {
@@ -444,11 +444,7 @@ function MessageBubble({ m }) {
 function Avatar({ role }) {
   const isUser = role === "user";
   return (
-    <div style={{
-      width: 28, height: 28, borderRadius: 8, display: "grid", placeItems: "center",
-      background: isUser ? "#0f172a" : "linear-gradient(135deg,#10b981,#059669)",
-      color: "#fff", flexShrink: 0,
-    }}>
+    <div className={`sx-37fa247 sx-aac7ab4 sx-a50337b sx-998b746 sx-9906a51 ${isUser ? "sx-bf1a6ab" : "sx-ef4ac23"} sx-4eb23a8 sx-5cd105e`}>
       {isUser ? <UserIcon size={14} /> : <Bot size={14} />}
     </div>
   );

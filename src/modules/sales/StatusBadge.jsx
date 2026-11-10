@@ -25,11 +25,6 @@ const MAP = {
 export default function StatusBadge({ status, size = 'sm' }) {
   const s = MAP[status] || { bg: '#e2e8f0', fg: '#475569', label: status || '—' };
   return (
-    <span style={{
-      background: s.bg, color: s.fg,
-      padding: size === 'sm' ? '2px 8px' : '4px 12px',
-      borderRadius: 999, fontSize: size === 'sm' ? 11 : 13, fontWeight: 600,
-      display: 'inline-block', whiteSpace: 'nowrap',
-    }}>{s.label}</span>
+    <span className={`${size === 'sm' ? "sx-1e18ab4" : "sx-6ab3aa8"} sx-1eb7905 ${size === 'sm' ? "sx-8b68521" : "sx-3044b60"} sx-e634e6d sx-6a19fc1 sx-4ddbe90`} style={{ background: s.bg, color: s.fg }}>{s.label}</span>
   );
 }

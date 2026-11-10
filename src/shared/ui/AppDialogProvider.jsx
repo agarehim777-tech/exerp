@@ -25,15 +25,11 @@ export default function AppDialogProvider({ children }) {
         <p className="app-dialog-provider-message">{dialog.message}</p>
         {dialog.kind === "prompt" && <input autoFocus value={value} onChange={(event) => setValue(event.target.value)} className="app-dialog-provider-input" onKeyDown={(event) => { if (event.key === "Enter") close(true); }} />}
         <div className="app-dialog-provider-actions">
-          {dialog.kind !== "alert" && <button type="button" style={secondary} onClick={() => close(false)}>Ləğv et</button>}
-          <button type="button" autoFocus={dialog.kind !== "prompt"} style={dialog.danger ? danger : primary} onClick={() => close(true)}>{dialog.confirmLabel || (dialog.kind === "alert" ? "Bağla" : "Təsdiqlə")}</button>
+          {dialog.kind !== "alert" && <button type="button" className="app-dialog-provider-secondary" onClick={() => close(false)}>Ləğv et</button>}
+          <button type="button" autoFocus={dialog.kind !== "prompt"} className={`${dialog.danger ? "app-dialog-provider-danger" : "app-dialog-provider-primary"}`} onClick={() => close(true)}>{dialog.confirmLabel || (dialog.kind === "alert" ? "Bağla" : "Təsdiqlə")}</button>
         </div>
       </section>
     </div>}
   </>;
 }
 
-const baseButton = { minHeight: 38, borderRadius: 6, padding: "0 16px", cursor: "pointer", fontWeight: 700 };
-const primary = { ...baseButton, border: "1px solid #08765d", background: "#08765d", color: "#fff" };
-const danger = { ...baseButton, border: "1px solid #b42318", background: "#b42318", color: "#fff" };
-const secondary = { ...baseButton, border: "1px solid #cbd8d3", background: "#fff", color: "#23453a" };

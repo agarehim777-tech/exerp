@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAuditLogs } from "../../shared/hooks/useAuditLogs.js";
-import { badge, input, td } from "../../shared/ui/tokens.js";
+import { badgeClass } from "../../shared/ui/tokens.js";
 
 const TABLE_LABEL = {
   journal_entries: "Jurnal yazılışları",
@@ -75,7 +75,7 @@ export default function AuditLogPage() {
             <option value="DELETE">Silindi</option>
           </select>
           <input
-            style={{ ...input, minWidth: 200 }}
+            className="ui-tok-input sx-513ea21"
             placeholder="Axtar…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -113,8 +113,8 @@ function AuditRow({ log }) {
       <tr className="u-cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <td className="ui-tok-td">{new Date(log.created_at).toLocaleString("az-AZ")}</td>
         <td className="ui-tok-td">{TABLE_LABEL[log.table_name] || log.table_name}</td>
-        <td className="ui-tok-td"><span style={badge(ACTION_TONE[log.action])}>{ACTION_LABEL[log.action] || log.action}</span></td>
-        <td style={{ ...td, fontFamily: "monospace", fontSize: 11 }}>{String(log.record_id || "—").slice(0, 8)}</td>
+        <td className="ui-tok-td"><span className={`${badgeClass(ACTION_TONE[log.action])}`}>{ACTION_LABEL[log.action] || log.action}</span></td>
+        <td className="ui-tok-td sx-e89ae9a sx-8b68521">{String(log.record_id || "—").slice(0, 8)}</td>
         <td className="ui-tok-td">{changed.length ? changed.join(", ") : "—"}</td>
       </tr>
       {open && (

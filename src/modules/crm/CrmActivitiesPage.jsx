@@ -37,11 +37,7 @@ export default function CrmActivitiesPage() {
       <div className="u-display-flex u-gap-6px u-flex-wrap-wrap">
         {['all', 'call', 'meeting', 'email', 'note', 'sms'].map(t => (
           <button key={t} onClick={() => setFilter(t)}
-            style={{
-              padding: '6px 12px', borderRadius: 999, border: '1px solid #e2e8f0', cursor: 'pointer',
-              background: filter === t ? '#10b981' : '#fff', color: filter === t ? '#fff' : '#475569',
-              fontWeight: 600, fontSize: 12,
-            }}>{t === 'all' ? 'Hamısı' : `${icon[t] || ''} ${t}`}</button>
+            className={`sx-0352431 sx-1eb7905 sx-4fd67c1 sx-b202c6d ${filter === t ? "sx-534bc5a" : "sx-0695ff9"} ${filter === t ? "sx-4eb23a8" : "sx-53deb6e"} sx-e634e6d sx-6b9c179`}>{t === 'all' ? 'Hamısı' : `${icon[t] || ''} ${t}`}</button>
         ))}
       </div>
 

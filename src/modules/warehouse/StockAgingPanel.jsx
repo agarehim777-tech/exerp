@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { readAllRows } from "../../services/readAllRows.js";
-import { azn, badge, input } from "../../shared/ui/tokens.js";
+import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import { buildAgingRows, isMissingAgingView } from "./stockAging.js";
 
 export default function StockAgingPanel({ tenantId }) {
@@ -86,13 +86,13 @@ export default function StockAgingPanel({ tenantId }) {
           <h3 className="u-margin-0">Stok yaşlandırması</h3>
           <p className="u-margin-4px_0_0 u-color-text_secondary">FIFO maya layları üzrə yavaş hərəkət edən mallar</p>
         </div>
-        <select value={bucket} onChange={(event) => setBucket(event.target.value)} style={{ ...input, width: 180 }}>
+        <select value={bucket} onChange={(event) => setBucket(event.target.value)} className="ui-tok-input sx-1dfda96">
           {["Hamısı", "0-30", "31-90", "91-180", "180+"].map((item) => <option key={item}>{item}</option>)}
         </select>
       </div>
 
       <div className="u-display-flex u-gap-10px u-margin-14px_0 u-flex-wrap-wrap">
-        <span style={badge(slow.length ? "red" : "green")}>{slow.length} yavaş məhsul</span>
+        <span className={`${badgeClass(slow.length ? "red" : "green")}`}>{slow.length} yavaş məhsul</span>
         <b>{azn(slowValue)} riskli stok dəyəri</b>
       </div>
 
@@ -121,7 +121,7 @@ export default function StockAgingPanel({ tenantId }) {
                 <td className="ui-tok-td">{azn(row.unit_cost)}</td>
                 <td className="ui-tok-td">{azn(row.stock_value)}</td>
                 <td className="ui-tok-td">
-                  <span style={badge(Number(row.age_days) > 180 ? "red" : Number(row.age_days) > 90 ? "yellow" : "green")}>
+                  <span className={`${badgeClass(Number(row.age_days) > 180 ? "red" : Number(row.age_days) > 90 ? "yellow" : "green")}`}>
                     {Number(row.age_days) > 180 ? "Donmuş" : Number(row.age_days) > 90 ? "Yavaş" : "Normal"}
                   </span>
                 </td>

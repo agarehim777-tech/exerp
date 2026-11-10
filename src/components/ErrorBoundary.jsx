@@ -53,7 +53,7 @@ export default class ErrorBoundary extends React.Component {
             <pre className="error-boundary-pre">{String(this.state.error?.message || this.state.error)}</pre>
             <div className="u-display-flex u-gap-10px u-margin-top-14px">
               <button onClick={this.reset} className="error-boundary-btn">Yenidən cəhd</button>
-              <button onClick={() => (window.location.href = import.meta.env.BASE_URL || "/")} style={{ ...btn, background: "#fff", color: "#064e3b", border: "1px solid #d4c9a3" }}>Ana səhifə</button>
+              <button onClick={() => (window.location.href = import.meta.env.BASE_URL || "/")} className="error-boundary-btn sx-0695ff9 sx-7c2de19 sx-ddc9f87">Ana səhifə</button>
             </div>
           </div>
         </main>
@@ -63,4 +63,3 @@ export default class ErrorBoundary extends React.Component {
   }
 }
 
-const btn = { padding: "10px 14px", borderRadius: 12, background: "linear-gradient(135deg,#0d7a5f,#064e3b)", color: "#f5f0e0", border: 0, cursor: "pointer", fontWeight: 700, fontFamily: "Sora, sans-serif" };

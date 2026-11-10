@@ -47,7 +47,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
   return (
     <Panel>
       <PanelHeader title="Sifariş üzrə bonus bölgüsü" subtitle="Yeni bölgü seçilən tarixdən sonrakı kassa daxilolmalarına tətbiq edilir" icon={History} />
-      <div className="bonus-assignment-actions" style={{ marginBottom: open ? 12 : 0 }}>
+      <div className={`bonus-assignment-actions ${open ? "sx-fa3e1c7" : "sx-e7ec540"}`} >
         <button type="button" className="secondary-btn compact" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
           {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
           {open ? "Bölgü formasını bağla" : "Bölgü formasını aç"}

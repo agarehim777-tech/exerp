@@ -92,7 +92,7 @@ export default function AssistantPage() {
         ))}
 
         {status === "submitted" && (
-          <div style={{ ...styles.row, justifyContent: "flex-start" }}>
+          <div className="assistant-page-styles-row sx-fa4778e">
             <Avatar role="assistant" />
             <div className="assistant-page-styles-thinking"><Loader2 size={14} className="spin" /> Düşünürəm…</div>
           </div>
@@ -115,7 +115,7 @@ export default function AssistantPage() {
  className="assistant-page-styles-input"
  />
         {busy ? (
-          <button type="button" onClick={stop} style={{ ...styles.send, background: "#ef4444" }}>
+          <button type="button" onClick={stop} className="assistant-page-styles-send sx-82b6eff">
             Dayandır
           </button>
         ) : (
@@ -133,9 +133,9 @@ function MessageBubble({ m }) {
   const isUser = m.role === "user";
   const parts = m.parts || [];
   return (
-    <div style={{ ...styles.row, justifyContent: isUser ? "flex-end" : "flex-start" }}>
+    <div className={`assistant-page-styles-row ${isUser ? "sx-36b745a" : "sx-fa4778e"}`}>
       {!isUser && <Avatar role="assistant" />}
-      <div style={{ ...styles.bubble, ...(isUser ? styles.bubbleUser : styles.bubbleBot) }}>
+      <div className={`assistant-page-styles-bubble ${isUser ? "assistant-page-styles-bubble-user" : "assistant-page-styles-bubble-bot"}`}>
         {parts.map((p, i) => {
           if (p.type === "text") {
             return <div key={i} className="u-white-space-pre_wrap u-line-height-1_55">{p.text}</div>;
@@ -164,37 +164,9 @@ function MessageBubble({ m }) {
 function Avatar({ role }) {
   const isUser = role === "user";
   return (
-    <div style={{
-      width: 32, height: 32, borderRadius: 10, display: "grid", placeItems: "center",
-      background: isUser ? "#0f172a" : "linear-gradient(135deg,#10b981,#059669)",
-      color: "#fff", flexShrink: 0,
-    }}>
+    <div className={`sx-f128df3 sx-1e7da8c sx-3c85720 sx-998b746 sx-9906a51 ${isUser ? "sx-bf1a6ab" : "sx-ef4ac23"} sx-4eb23a8 sx-5cd105e`}>
       {isUser ? <UserIcon size={16} /> : <Bot size={16} />}
     </div>
   );
 }
 
-const styles = {
-  wrap: { display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", padding: 24, gap: 16, maxWidth: 960, margin: "0 auto", width: "100%" },
-  header: { display: "flex", gap: 12, alignItems: "center", background: "#fff", padding: 16, borderRadius: 14, border: "1px solid #e2e8f0" },
-  headerIcon: { width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", display: "grid", placeItems: "center" },
-  headerTitle: { fontSize: 16, fontWeight: 800, color: "#0f172a" },
-  headerSub: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  thread: { flex: 1, overflowY: "auto", background: "#f8fafc", borderRadius: 14, padding: 20, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 14 },
-  empty: { textAlign: "center", padding: "32px 12px", color: "#64748b" },
-  emptyTitle: { fontSize: 16, fontWeight: 700, color: "#334155", marginBottom: 16 },
-  suggestGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8, maxWidth: 700, margin: "0 auto" },
-  suggestion: { padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#0f172a", textAlign: "left", transition: "all .15s" },
-  row: { display: "flex", gap: 10, alignItems: "flex-start" },
-  bubble: { maxWidth: "78%", padding: "10px 14px", borderRadius: 14, fontSize: 14 },
-  bubbleUser: { background: "#0f172a", color: "#fff", borderTopRightRadius: 4 },
-  bubbleBot: { background: "#fff", color: "#0f172a", border: "1px solid #e2e8f0", borderTopLeftRadius: 4 },
-  thinking: { padding: "10px 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, fontSize: 13, color: "#64748b", display: "flex", gap: 8, alignItems: "center" },
-  tool: { marginTop: 8, background: "#f1f5f9", borderRadius: 8, padding: "6px 10px", fontSize: 12 },
-  toolSummary: { cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center", color: "#475569", fontWeight: 600 },
-  pre: { margin: "6px 0 0", fontSize: 11, color: "#334155", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 240, overflow: "auto" },
-  errorBox: { padding: 12, background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", borderRadius: 10, fontSize: 13 },
-  composer: { display: "flex", gap: 8, background: "#fff", padding: 12, borderRadius: 14, border: "1px solid #e2e8f0" },
-  input: { flex: 1, border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none" },
-  send: { display: "inline-flex", gap: 6, alignItems: "center", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", border: 0, padding: "10px 18px", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 14 },
-};
