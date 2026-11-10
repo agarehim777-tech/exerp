@@ -1,5 +1,5 @@
 // Focused domain commands; dependencies are explicit and supplied by App.
-export function createProductCatalogActions({ activeTenantId, appConfirm, auditCurrentState, dbProducts, deleteDbProduct, ensureStockItemSerials, normalize, notify, removeDbProductImage, requirePermission, setModal, setState, state, updateDbProduct, uploadDbProductImage, warehouseId, wid }) {
+export function createProductCatalogActions({ activeTenantId, appConfirm, auditCurrentState, dbProducts, deleteDbProduct, ensureStockItemSerials, normalize, notify, removeDbProductImage, requirePermission, setModal, setState, state, updateDbProduct, uploadDbProductImage }) {
 async function updateProduct(productId, values) {
     if (!requirePermission("warehouse.manage", "məhsul kataloqunu redaktə etmək")) return;
 

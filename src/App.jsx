@@ -841,14 +841,14 @@ function App() {
 
   
 
-  const { updateWarehouse, recordStockIntake, importWarehouseStock, deleteWarehouse, completeWarehouseDelivery, transferWarehouseStock } = createWarehouseActions({ acceptance, activeRoleInfo, activeTenantId, addStockToRows, adjustStockRows, appendAudit, auditCurrentState, auditOperation, baseDeliveryDate, beginTenantRequest, buildQuantityMap, currentUser, dbInventory, dbOrders, describeStockError, error, formatPaymentDate, fromWarehouseId, getActiveRole, getAvailableQuantity, getDeliveryPlan, getDeliveryStockCheck, importWarehouseStockAtomic, isDeliveryQueueOrder, normalize, notify, parsePaymentDate, refreshDbOrders, refreshDbProducts, requirePermission, selectedWarehouseId, setModal, setSelectedWarehouseId, setState, state, summarizeOrderProducts, supabase, toWarehouseId, updateSerialStatuses });
+  const { updateWarehouse, recordStockIntake, importWarehouseStock, deleteWarehouse, completeWarehouseDelivery, transferWarehouseStock } = createWarehouseActions({ activeRoleInfo, activeTenantId, addStockToRows, adjustStockRows, appendAudit, auditCurrentState, auditOperation, baseDeliveryDate, beginTenantRequest, buildQuantityMap, currentUser, dbInventory, dbOrders, describeStockError, formatPaymentDate, getActiveRole, getAvailableQuantity, getDeliveryPlan, getDeliveryStockCheck, importWarehouseStockAtomic, isDeliveryQueueOrder, normalize, notify, parsePaymentDate, refreshDbOrders, refreshDbProducts, requirePermission, selectedWarehouseId, setModal, setSelectedWarehouseId, setState, state, summarizeOrderProducts, supabase, updateSerialStatuses });
 
 
   
 
   
 
-  const { updateProduct, deleteProduct } = createProductCatalogActions({ activeTenantId, appConfirm, auditCurrentState, dbProducts, deleteDbProduct, ensureStockItemSerials, normalize, notify, removeDbProductImage, requirePermission, setModal, setState, state, updateDbProduct, uploadDbProductImage, warehouseId, wid });
+  const { updateProduct, deleteProduct } = createProductCatalogActions({ activeTenantId, appConfirm, auditCurrentState, dbProducts, deleteDbProduct, ensureStockItemSerials, normalize, notify, removeDbProductImage, requirePermission, setModal, setState, state, updateDbProduct, uploadDbProductImage });
 
 
   
