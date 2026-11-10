@@ -141,6 +141,13 @@
       "when": 1794313796919,
       "tag": "0019_report_trend_and_risks",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794314375254,
+      "tag": "0020_report_module_summary",
+      "breakpoints": true
     }
   ]
 }
