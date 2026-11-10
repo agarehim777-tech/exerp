@@ -1746,6 +1746,8 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          cash_account_id: string | null
+          cash_transaction_id: string | null
           category: string
           created_at: string
           created_by: string | null
@@ -1766,6 +1768,8 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number
+          cash_account_id?: string | null
+          cash_transaction_id?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1786,6 +1790,8 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          cash_account_id?: string | null
+          cash_transaction_id?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1809,6 +1815,20 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_cash_account_id_fkey"
+            columns: ["cash_account_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "cash_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -5621,6 +5641,10 @@ export type Database = {
         Returns: Json
       }
       convert_quote_to_order: { Args: { _quote_id: string }; Returns: string }
+      create_cash_expense_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       create_credit_contract: {
         Args: {
           _contract_no: string
@@ -5728,6 +5752,10 @@ export type Database = {
       delete_sales_order_safe: {
         Args: { _order_id: string }
         Returns: undefined
+      }
+      edit_cash_expense_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
       }
       ensure_inventory_accounts: {
         Args: { _tenant: string }
@@ -5968,6 +5996,10 @@ export type Database = {
           updated_installments: number
         }[]
       }
+      refund_cash_expense_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       register_order_payment: {
         Args: { _account_id: string; _amount: number; _order_id: string }
         Returns: string
@@ -6054,6 +6086,10 @@ export type Database = {
         Returns: Json
       }
       sync_grn_landed_cost_shipment: { Args: { _grn: string }; Returns: string }
+      transfer_cash_atomic: {
+        Args: { _payload: Json; _request_key: string; _tenant_id: string }
+        Returns: Json
+      }
       trial_balance: {
         Args: { _from: string; _tenant: string; _to: string }
         Returns: {

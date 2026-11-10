@@ -43,6 +43,13 @@
       "when": 1794301823451,
       "tag": "0005_reverse_procurement_receipt",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794302091814,
+      "tag": "0006_atomic_cash_expense_commands",
+      "breakpoints": true
     }
   ]
 }
