@@ -504,7 +504,7 @@ export default function RolesPermissionsPage({
                 <td className={""}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
                 <td className={""}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
                 <td className={""}><Button onClick={() => copyInviteLink(inv.id)} className="u-background-f0e6c8 u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px">Kopyala</Button></td>
-                <td className={""}><Button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} style={{ background: "none", color: "#b23a3a", border: "1px solid #e6c8c8", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Ləğv et</Button></td>
+                <td className={""}><Button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} variant="danger" size="compact">Ləğv et</Button></td>
               </tr>
             ))}
           </tbody>
@@ -513,35 +513,3 @@ export default function RolesPermissionsPage({
     </div>
   );
 }
-
-const card = { background: "#fff", border: "1px solid #e6dfc9", borderRadius: 12, padding: 20, boxShadow: "0 4px 18px rgba(6,78,59,0.06)" };
-const table = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
-const th = { textAlign: "left", padding: "8px 10px", background: "#f0e6c8", color: "#5a4a1e", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid #e6dfc9" };
-const subTh = { textAlign: "center", padding: "4px 6px", background: "#faf5e2", color: "#8a6a1e", fontSize: 12, borderBottom: "1px solid #e6dfc9", fontWeight: 500 };
-const td = { padding: "8px 10px", borderBottom: "1px solid #f0ecdb", verticalAlign: "middle", textAlign: "center" };
-const select = { padding: "4px 8px", borderRadius: 6, border: "1px solid #d4c9a3", background: "#fff", fontSize: 13 };
-const lockBadge = { fontSize: 12, background: "#064e3b", color: "#fbe89a", padding: "1px 5px", borderRadius: 4, marginLeft: 6, verticalAlign: "middle" };
-const overviewCard = { display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 1, overflow: "hidden", background: "#e6dfc9", border: "1px solid #e6dfc9", borderRadius: 8 };
-const overviewItem = { padding: "14px 16px", background: "#fff" };
-const overviewLabel = { display: "block", color: "#6b7a72", fontSize: 11, marginBottom: 5 };
-const overviewValue = { display: "block", color: "#123c31", fontSize: 22 };
-const activeBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#e7f6ef", color: "#147052", fontSize: 11, fontWeight: 700 };
-const pendingBadge = { display: "inline-flex", padding: "4px 8px", borderRadius: 6, background: "#fff5d8", color: "#8a6517", fontSize: 11, fontWeight: 700 };
-const permissionButton = { border: "1px solid #b8cfc5", background: "#f4faf7", color: "#075e49", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const disabledPermissionButton = { ...permissionButton, opacity: 0.45, cursor: "not-allowed" };
-const permissionPanel = { marginTop: 16, borderTop: "1px solid #e6dfc9", paddingTop: 16 };
-const permissionGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 8 };
-const permissionOption = { display: "flex", alignItems: "center", gap: 8, minHeight: 36, padding: "7px 10px", border: "1px solid #dbe8e2", borderRadius: 6, background: "#fbfdfc", color: "#28483e", fontSize: 12, cursor: "pointer" };
-const disabledPermissionOption = { ...permissionOption, opacity: 0.48, cursor: "not-allowed" };
-const permissionCount = { whiteSpace: "nowrap", padding: "5px 8px", borderRadius: 6, background: "#edf6f1", color: "#17634d", fontSize: 11, fontWeight: 700 };
-const userForm = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12, alignItems: "end" };
-const fieldLabel = { display: "grid", gap: 6, color: "#526b62", fontSize: 12, fontWeight: 600 };
-const input = { width: "100%", minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid #d4c9a3", background: "#fff", boxSizing: "border-box" };
-const primaryButton = { minHeight: 40, border: 0, borderRadius: 8, padding: "8px 16px", background: "#08785c", color: "#fff", fontWeight: 700, cursor: "pointer" };
-const actionGroup = { display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6 };
-const editButton = { ...permissionButton, background: "#fff" };
-const editPanel = { ...permissionPanel, padding: 16, border: "1px solid #dbe8e2", borderRadius: 10, background: "#f8fbf9" };
-const editHeader = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
-const closeButton = { border: 0, background: "transparent", color: "#6b7a72", cursor: "pointer" };
-const sectionHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 14, flexWrap: "wrap" };
-const secondaryButton = { minHeight: 38, border: "1px solid #08785c", borderRadius: 8, padding: "8px 14px", background: "#fff", color: "#08785c", fontWeight: 700, cursor: "pointer" };

@@ -1,4 +1,4 @@
-import { Button, Input, Select } from '../../shared/ui/primitives';
+import { Badge, Button, DataTable, Input, Select } from '../../shared/ui/primitives';
 import React, { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
@@ -251,13 +251,9 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
 }
 
 function StatusChip({ status }) {
-  const map = {
-    draft: { label: "Gözləyir", bg: "#fffbeb", color: "#b45309" },
-    approved: { label: "Təsdiqləndi", bg: "#f0fdf4", color: "#15803d" },
-    rejected: { label: "İmtina", bg: "#fef2f2", color: "#b91c1c" },
-  };
-  const tone = map[status] || { label: status, bg: "#f1f5f9", color: "#475569" };
-  return <span style={{ background: tone.bg, color: tone.color, padding: "3px 9px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{tone.label}</span>;
+  const labels = { draft: "Gözləyir", approved: "Təsdiqləndi", rejected: "İmtina" };
+  const tone = status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'warning';
+  return <Badge tone={tone}>{labels[status] || status}</Badge>;
 }
 
 function Total({ label, value, tone }) {
@@ -278,52 +274,5 @@ function SectionTitle({ title, subtitle }) {
 }
 
 function Table({ columns, rows }) {
-  if (!rows.length) return <div className={"ui-empty-box"}>Qeyd yoxdur</div>;
-  return (
-    <div className="u-overflow-x-auto">
-      <Table className={"ui-table"}>
-        <thead>
-          <tr>{columns.map((column) => <th key={column} className={""}>{column}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex} className={""}>{cell}</td>)}</tr>
-          ))}
-        </tbody>
-      </Table>
-    </div>
-  );
+  return <DataTable columns={columns} rows={rows} emptyText="Qeyd yoxdur" />;
 }
-
-const S = {
-  wrap: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 16, display: "grid", gap: 12 },
-  head: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  title: { fontSize: 15, fontWeight: 800, color: "#0f172a" },
-  sub: { fontSize: 12, color: "#64748b" },
-  tabs: { display: "flex", gap: 8, flexWrap: "wrap" },
-  tab: { display: "inline-flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 },
-  tabOn: { background: "#0f172a", color: "#fff", borderColor: "#0f172a" },
-  guide: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", border: "1px solid #d7e5e1", borderRadius: 8, color: "#0f766e", background: "#f5faf8", flexWrap: "wrap" },
-  guideText: { minWidth: 220, display: "grid", flex: 1, gap: 2, color: "#0f172a", fontSize: 13 },
-  source: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11 },
-  form: { display: "grid", gridTemplateColumns: "minmax(180px,1.2fr) minmax(150px,.8fr) minmax(140px,.7fr) minmax(220px,1.5fr) auto", gap: 10, alignItems: "end", background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid #e5e7eb" },
-  field: { minWidth: 0, display: "grid", gap: 5 },
-  fieldLabel: { color: "#334155", fontSize: 12, fontWeight: 700 },
-  fieldHint: { minHeight: 14, color: "#94a3b8", fontSize: 10 },
-  input: { width: "100%", minWidth: 0, height: 40, boxSizing: "border-box", padding: "8px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" },
-  unitInput: { position: "relative" },
-  unit: { position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 11, pointerEvents: "none" },
-  primary: { minHeight: 40, display: "inline-flex", gap: 6, alignItems: "center", justifyContent: "center", padding: "8px 14px", borderRadius: 7, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13, whiteSpace: "nowrap", marginBottom: 19 },
-  mini: { padding: "5px 10px", borderRadius: 7, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 13 },
-  th: { textAlign: "left", padding: "8px 10px", color: "#64748b", fontSize: 12, borderBottom: "1px solid #e2e8f0", whiteSpace: "nowrap" },
-  td: { padding: "8px 10px", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" },
-  totals: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 },
-  total: { border: "1px solid #e2e8f0", borderRadius: 10, padding: 10, display: "grid", gap: 3 },
-  sectionTitle: { display: "flex", justifyContent: "space-between", alignItems: "end", paddingTop: 3 },
-  empty: { padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 13 },
-  ok: { background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d", padding: 10, borderRadius: 8, fontSize: 13 },
-  err: { background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", padding: 10, borderRadius: 8, fontSize: 13 },
-  loading: { background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: 10, borderRadius: 8, fontSize: 13 },
-};
-

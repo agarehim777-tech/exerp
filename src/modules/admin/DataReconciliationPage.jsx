@@ -1,4 +1,4 @@
-import { Button, Input, Select, Table } from '../../shared/ui/primitives';
+import { Badge, Button, Input, Table } from '../../shared/ui/primitives';
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { toLocalIsoDate } from "../../services/date.js";
@@ -8,10 +8,7 @@ import { useRecoveryStatus } from "../../shared/hooks/useRecoveryStatus.js";
 import { reconciliationToCsv } from "../../shared/lib/blobReconciliation.js";
 import { supabase } from "../../integrations/supabase/client.js";
 import { createIdempotencyKey } from "../../services/coreOperations.js";
-import {
-  badge, card, msgBox, primaryBtn, secondaryBtn,
-  statLabel, statTile, statValue, tabBar, tabBtn, table, td, th,
-} from "../../shared/ui/tokens.js";
+
 
 const TABS = [
   ["operations", "Əməliyyat sağlamlığı"],
@@ -31,8 +28,8 @@ const KIND_LABELS = {
 const SEV_LABELS = { ok: "Uyğun", warn: "Diqqət", error: "Uyğunsuz" };
 
 function SevBadge({ severity }) {
-  const tone = severity === "error" ? "#b23a3a" : severity === "warn" ? "#a16207" : "#047857";
-  return <span style={{ ...badge, color: tone, borderColor: tone }}>{SEV_LABELS[severity] || severity}</span>;
+  const tone = severity === "error" ? "danger" : severity === "warn" ? "warning" : "success";
+  return <Badge tone={tone}>{SEV_LABELS[severity] || severity}</Badge>;
 }
 
 function EmptyRow({ colSpan, text = "Uyğunsuzluq tapılmadı." }) {
