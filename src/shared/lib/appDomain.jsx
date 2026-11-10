@@ -8,6 +8,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { round2 } from "../utils/invoiceMath.js";
+import { currentBusinessDate } from "./businessDate";
+export { currentBusinessDate };
 import { createIdempotencyKey } from "../../services/coreOperations.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate, toDateInputValue, toLocalIsoDate } from "../../services/date.js";
 import { daysBetween, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRiskLabel, getCreditSourceLabel, isCreditClosed, isCreditStarted, roundMoney } from "./credit.js";
@@ -128,8 +130,6 @@ export function buildKpiEmployeeScoreRows(employees = [], salesBonuses = []) {
 export function getKpiPeriodKey(date = currentBusinessDate) {
   return String(date || currentBusinessDate).slice(0, 7);
 }
-
-export const currentBusinessDate = formatDateInput(new Date());
 
 export function buildHrEmployeeRecords(employees, leaveRequests = []) {
   const leaveUsage = buildHrLeaveUsageMap(leaveRequests);

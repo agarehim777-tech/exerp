@@ -2,7 +2,7 @@ import { stages } from "../../data.js";
 import { normalize } from "../../services/format.js";
 import { parsePaymentDate, toLocalIsoDate } from "../../services/date.js";
 import { daysBetween } from "../../shared/lib/credit.js";
-import { currentBusinessDate } from "../../shared/lib/appDomain.jsx";
+import { currentBusinessDate } from "../../shared/lib/businessDate";
 
 export function enrichDeliveryOrder(order) {
   const stageIndex = getDeliveryStageIndex(order);
