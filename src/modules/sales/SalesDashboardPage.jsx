@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useSalesDashboard } from '../../shared/hooks/useSalesDashboard.js';
+import { Table } from "../../shared/ui/primitives.tsx";
 
 const money = (value) => `${Number(value || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })} ₼`;
 
@@ -154,7 +155,7 @@ function MiniTable({ rows, columns }) {
 
   return (
     <div className="sales-ranking-scroll">
-      <table className="sales-ranking-table">
+      <Table className="sales-ranking-table">
         <thead><tr><th aria-label="Sıra" />{columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'is-right' : ''}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, index) => (
@@ -173,7 +174,7 @@ function MiniTable({ rows, columns }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }

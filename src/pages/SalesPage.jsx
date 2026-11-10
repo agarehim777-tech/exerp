@@ -7,6 +7,7 @@ import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { WorkflowSteps, buildSalesBonusRows, getOrderBalance, getOrderBonusAmount, getOrderBonusText, getOrderDeliveryStatus, getOrderPaymentMethod, getOrderSellerBonuses, getSalesCashImpact, getSalesOrderRiskStatus, getShortSellerName, matchesSalesDateRange, matchesSalesOrderFilter, matchesSalesOrderSearch, summarizeOrderProducts } from "../shared/lib/appDomain.jsx";
 import { toLocalIsoDate } from "../services/date.js";
+import { Button, Input, Select } from "../shared/ui/primitives.tsx";
 export default function SalesPage({
   orders,
   stock,
@@ -323,19 +324,19 @@ export default function SalesPage({
               )}
               <WorkflowSteps activeStage={selected.status} compact />
               <div className="operation-row-actions">
-                <button className="secondary-btn" onClick={() => onEditOrder(selected.id)}>
+                <Button variant="secondary"  onClick={() => onEditOrder(selected.id)}>
                   <Pencil size={16} />
                   Redaktə
-                </button>
-                <button className="secondary-btn danger-outline" onClick={() => onDeleteOrder(selected.id)}>
+                </Button>
+                <Button variant="danger"  onClick={() => onDeleteOrder(selected.id)}>
                   <Trash2 size={16} />
                   Sil
-                </button>
+                </Button>
               </div>
-              <button className="secondary-btn full" onClick={() => advanceOrder(selected.id)}>
+              <Button variant="secondary" className="full" onClick={() => advanceOrder(selected.id)}>
                 <ChevronRight size={16} />
                 Növbəti mərhələ
-              </button>
+              </Button>
             </div>
           ) : (
             <EmptyState title="Sifariş seçilməyib" />
@@ -359,7 +360,7 @@ export default function SalesPage({
               <span>Axtarış</span>
               <div>
                 <Search size={15} />
-                <input
+                <Input
                   value={salesSearch}
                   onChange={(event) => setSalesSearch(event.target.value)}
                   placeholder="Sifariş, müştəri, FİN, cihaz..."
@@ -368,37 +369,37 @@ export default function SalesPage({
             </label>
             <label className="sales-seller-filter">
               <span>Satıcı</span>
-              <select value={sellerFilter} onChange={(event) => setSellerFilter(event.target.value)}>
+              <Select value={sellerFilter} onChange={(event) => setSellerFilter(event.target.value)}>
                 <option>Bütün satıcılar</option>
                 {sellerOptions.map((seller) => (
                   <option key={seller}>{seller}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="sales-seller-filter">
               <span>Anbar</span>
-              <select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
+              <Select value={warehouseFilter} onChange={(event) => setWarehouseFilter(event.target.value)}>
                 <option>Bütün anbarlar</option>
                 {warehouseOptions.map((warehouse) => (
                   <option key={warehouse}>{warehouse}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="sales-date-filter">
               <span>Başlanğıc</span>
-              <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+              <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
             </label>
             <label className="sales-date-filter">
               <span>Son</span>
-              <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+              <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
             </label>
-            <button className="secondary-btn icon-only" type="button" title="Filterləri sıfırla" onClick={resetSalesFilters}>
+            <Button variant="secondary" className="icon-only" type="button" title="Filterləri sıfırla" onClick={resetSalesFilters}>
               <RefreshCw size={16} />
-            </button>
-            <button className="secondary-btn sales-export-btn" type="button" onClick={exportVisibleSales}>
+            </Button>
+            <Button variant="secondary" className="sales-export-btn" type="button" onClick={exportVisibleSales}>
               <Download size={16} />
               Excel
-            </button>
+            </Button>
           </div>
         </div>
         <DataTable
@@ -419,8 +420,8 @@ export default function SalesPage({
             getOrderBalance(order) > 0 ? <strong>{money(getOrderBalance(order))}</strong> : <StatusBadge status="Ödənilib" />,
             <StatusBadge status={order.status} />,
             <div className="row-actions operation-table-actions">
-              <button className="text-btn" onClick={() => onEditOrder(order.id)}>Redaktə</button>
-              <button className="text-btn danger" onClick={() => onDeleteOrder(order.id)}>Sil</button>
+              <Button variant="ghost" className="text-btn" onClick={() => onEditOrder(order.id)}>Redaktə</Button>
+              <Button variant="ghost" className="text-btn danger" onClick={() => onDeleteOrder(order.id)}>Sil</Button>
             </div>,
           ])}
         />

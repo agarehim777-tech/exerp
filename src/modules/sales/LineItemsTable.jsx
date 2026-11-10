@@ -1,5 +1,6 @@
 import React from 'react';
 import ProductPicker from './ProductPicker.jsx';
+import { Button, Input, Table } from "../../shared/ui/primitives.tsx";
 
 function lineNet(it) {
   const qty = Number(it.qty) || 0;
@@ -33,7 +34,7 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
   return (
     <div>
       <div className="u-overflow-x-auto u-border-1px_solid_border u-border-radius-10px">
-        <table className="u-width-100 u-border-collapse-collapse u-min-width-720px">
+        <Table className="u-width-100 u-border-collapse-collapse u-min-width-720px">
           <thead className="u-background-surface_subtle">
             <tr>
               <th className="line-items-table-cell sx-8f77872 sx-200a92a">Məhsul</th>
@@ -54,14 +55,14 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
                     product_id: p.id, description: it.description || p.name, unit_price: Number(p.price) || 0,
                   })} />
                 </td>
-                <td className="line-items-table-cell"><input className="line-items-table-inp" value={it.description} onChange={e => set(i, { description: e.target.value })} /></td>
-                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.qty} onChange={e => set(i, { qty: e.target.value })} /></td>
-                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.unit_price} onChange={e => set(i, { unit_price: e.target.value })} /></td>
-                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.discount_pct} onChange={e => set(i, { discount_pct: e.target.value })} /></td>
-                <td className="line-items-table-cell"><input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
+                <td className="line-items-table-cell"><Input className="line-items-table-inp" value={it.description} onChange={e => set(i, { description: e.target.value })} /></td>
+                <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.qty} onChange={e => set(i, { qty: e.target.value })} /></td>
+                <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.unit_price} onChange={e => set(i, { unit_price: e.target.value })} /></td>
+                <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.discount_pct} onChange={e => set(i, { discount_pct: e.target.value })} /></td>
+                <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
                 <td className="line-items-table-cell sx-f6e3d7f sx-e634e6d">{lineTotal(it).toFixed(2)} ₼</td>
                 <td className="line-items-table-cell">
-                  <button type="button" onClick={() => remove(i)} className="u-border-0 u-background-transparent u-cursor-pointer u-color-danger u-font-size-18px">×</button>
+                  <Button variant="ghost" type="button" onClick={() => remove(i)} className="u-border-0 u-background-transparent u-cursor-pointer u-color-danger u-font-size-18px">×</Button>
                 </td>
               </tr>
             ))}
@@ -69,10 +70,10 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
               <tr><td colSpan={8} className="line-items-table-cell sx-13076d9 sx-8cd4ae7 sx-7fa5638">Sətir yoxdur — aşağıdan əlavə edin</td></tr>
             )}
           </tbody>
-        </table>
+        </Table>
       </div>
       <div className="u-display-flex u-justify-content-space_between u-align-items-flex_start u-margin-top-12px">
-        <button type="button" onClick={add} className="u-background-surface_subtle u-border-1px_dashed_line_strong u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-size-13px">+ Sətir əlavə et</button>
+        <Button variant="ghost" type="button" onClick={add} className="u-background-surface_subtle u-border-1px_dashed_line_strong u-padding-8px_16px u-border-radius-8px u-cursor-pointer u-font-size-13px">+ Sətir əlavə et</Button>
         <div className="u-min-width-260px u-background-surface_subtle u-padding-12px u-border-radius-10px u-font-size-13px">
           <Row label="Aralıq cəm" value={totals.sub} />
           <Row label="Endirim" value={-totals.disc} />
