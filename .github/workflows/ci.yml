@@ -87,7 +87,7 @@ jobs:
           version: 2.39.2
 
       - name: Start local Supabase and apply every migration
-        run: supabase start -x studio,imgproxy,vector,logflare,postgres-meta,supavisor,edge-runtime
+        run: supabase start --debug -x studio,imgproxy,vector,logflare,postgres-meta,supavisor,edge-runtime
 
       - name: Export local Supabase endpoints
         run: supabase status -o env | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=' >> "$GITHUB_ENV"
