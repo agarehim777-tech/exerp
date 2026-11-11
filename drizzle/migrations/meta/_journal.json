@@ -127,6 +127,41 @@
       "when": 1794311988955,
       "tag": "0017_problem_stock_excluded_from_reservation_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794313077092,
+      "tag": "0018_report_totals_rpc",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794313796919,
+      "tag": "0019_report_trend_and_risks",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794314375254,
+      "tag": "0020_report_module_summary",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794314423330,
+      "tag": "0021_report_module_summary_cash_fix",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794314475065,
+      "tag": "0022_report_module_summary_credit_fix",
+      "breakpoints": true
     }
   ]
 }

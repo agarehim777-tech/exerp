@@ -1,3 +1,4 @@
+import { sellableQty } from '../../../shared/lib/stockMath.js';
 import { normalize } from "../../../services/format.js";
 import { buildProductLookup, buildPurchaseOrderCoverage, getReorderPoint } from "../../../shared/lib/appDomain.jsx";
 
@@ -8,7 +9,7 @@ export function getProductProcurementSnapshot(productName, warehouseStock = {}, 
   const stockRows = Object.values(warehouseStock).flatMap((items) => items || []).filter((item) => item.product === productName);
   const total = stockRows.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const reserved = stockRows.reduce((sum, item) => sum + Number(item.reserved || 0), 0);
-  const available = total - reserved;
+  const available = sellableQty({ total, reserved, problem: stockRows.reduce((sum, item) => sum + Number(item.problem ?? item.problemQty ?? item.problem_qty ?? 0), 0) });
   const reorderPoint = getReorderPoint({
     product: productName,
     total,

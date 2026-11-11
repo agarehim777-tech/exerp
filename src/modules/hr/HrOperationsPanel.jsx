@@ -1,3 +1,4 @@
+import { formatAmount } from "../../services/format.js";
 import { Badge, Button, DataTable, Input, Select } from '../../shared/ui/primitives';
 import React, { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "lucide-react";
@@ -12,7 +13,7 @@ const TABS = [
   { id: "payroll", label: "Əmək haqqı", icon: Wallet, description: "Seçilmiş ay üzrə davamiyyətə əsaslanan əmək haqqını hesablayın və dövrü bağlayın." },
 ];
 
-const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
+const money = (value) => formatAmount(value);
 const todayIso = () => toLocalIsoDate();
 const currentPeriod = () => toLocalIsoDate().slice(0, 7);
 

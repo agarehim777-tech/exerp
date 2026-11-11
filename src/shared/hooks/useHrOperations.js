@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { readAllRows } from "../../services/readAllRows.js";
 import { useTenantRequestScope } from "./useTenantRequestScope";
 import { supabase } from "../../integrations/supabase/client";
 
@@ -15,16 +16,16 @@ export function useHrOperations(tenantId) {
     setLoading(true);
     try {
       const [employeeRes, eventRes] = await Promise.all([
-        supabase.from("employees")
+        readAllRows(() => supabase.from("employees")
           .select("id,full_name,position,department,email,phone,salary,status")
           .eq("tenant_id", tenantId)
           .order("full_name")
-          .limit(500),
-        supabase.from("employee_events")
+          .order('id')),
+        readAllRows(() => supabase.from("employee_events")
           .select("id,employee_id,event_type,status,start_date,end_date,amount,payload,created_at")
           .eq("tenant_id", tenantId)
           .order("start_date", { ascending: false, nullsFirst: false })
-          .limit(1000),
+          .order('id')),
       ]);
       if (employeeRes.error) throw employeeRes.error;
       if (eventRes.error) throw eventRes.error;

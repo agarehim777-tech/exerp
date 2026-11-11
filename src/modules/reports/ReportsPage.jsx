@@ -26,6 +26,7 @@ import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
+import { useReportSeries, useReportTotals } from "../../shared/hooks/useReportTotals.ts";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
 
@@ -93,6 +94,8 @@ export function ReportsPage({
   const { scope, begin } = useTenantRequestScope(activeTenantId);
   const live = useLiveReportData(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
+  const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate);
+  const serverSeries = useReportSeries(activeTenantId, snapshotDate);
   const [moduleFilter, setModuleFilter] = useState("Hamısı");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
@@ -190,7 +193,9 @@ export function ReportsPage({
     () => new Map(products.map((product) => [normalize(product.name), product])),
     [products],
   );
-  const revenue = sumRows(filteredOrders, "amount");
+  // Headline totals come from the database for the whole company; a warehouse filter falls back to row sums.
+  const serverTotals = warehouseFilter === "all" ? serverTotalsRaw : null;
+  const revenue = serverTotals ? serverTotals.revenue : sumRows(filteredOrders, "amount");
   const salesCost = filteredOrders.reduce(
     (sum, order) =>
       sum +
@@ -200,7 +205,7 @@ export function ReportsPage({
       }, 0),
     0,
   );
-  const operatingExpense = filteredExpenses
+  const operatingExpense = serverTotals ? serverTotals.operating_expense : filteredExpenses
     .filter((row) => !isCancelledExpense(row))
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const grossProfit = revenue - salesCost;
@@ -210,12 +215,14 @@ export function ReportsPage({
     (sum, row) => sum + Number(row.total || 0) * Number(row.costPrice || row.price || 0),
     0,
   );
-  const productionCost = filteredProduction.reduce((sum, row) => sum + Number(row.totalCost || 0), 0);
-  const activeCustomers = new Set(filteredOrders.map((order) => order.fin || order.customer).filter(Boolean)).size;
-  const averageOrder = filteredOrders.length ? revenue / filteredOrders.length : 0;
+  const productionCost = serverTotals ? serverTotals.production_cost : filteredProduction.reduce((sum, row) => sum + Number(row.totalCost || 0), 0);
+  const activeCustomers = serverTotals ? serverTotals.active_customers : new Set(filteredOrders.map((order) => order.fin || order.customer).filter(Boolean)).size;
+  const orderCount = serverTotals ? serverTotals.order_count : filteredOrders.length;
+  const averageOrder = orderCount ? revenue / orderCount : 0;
+  // Chart and risk register come from the database; row-based builders are the offline fallback.
   const trendRows = useMemo(
-    () => buildMonthlyTrend(orders, reportExpenses, snapshotDate),
-    [orders, reportExpenses, snapshotDate],
+    () => serverSeries?.trend || buildMonthlyTrend(orders, reportExpenses, snapshotDate),
+    [serverSeries, orders, reportExpenses, snapshotDate],
   );
   const maxTrendValue = Math.max(1, ...trendRows.flatMap((row) => [row.revenue, row.expense]));
 
@@ -245,7 +252,7 @@ export function ReportsPage({
       priority: "Yüksək",
       status: "Xammal riski",
     }));
-  const allRiskRows = [...productionRisks, ...reportPackage.riskRows];
+  const allRiskRows = [...productionRisks, ...(serverSeries?.risks || reportPackage.riskRows)];
   const riskAreas = ["Hamısı", ...new Set(allRiskRows.map((row) => row.area))];
   const visibleRiskRows = allRiskRows.filter(
     (row) =>
@@ -344,7 +351,7 @@ export function ReportsPage({
       {exportError && <div className="inline-alert danger">{exportError}</div>}
 
       <section className="metric-grid four">
-        <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${filteredOrders.length} sifariş`} icon={Wallet} tone="success" />
+        <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${orderCount} sifariş`} icon={Wallet} tone="success" />
         <MetricCard label="Ümumi mənfəət" value={money(grossProfit)} trend={`Marja ${percent(revenue ? (grossProfit / revenue) * 100 : 0)}`} icon={TrendingUp} tone={grossProfit >= 0 ? "success" : "danger"} />
         <MetricCard label="Xalis nəticə" value={money(netResult)} trend={`${money(operatingExpense)} xərc`} icon={BarChart3} tone={netResult >= 0 ? "primary" : "danger"} />
         <MetricCard label="Açıq borc" value={money(reportPackage.creditBalance + reportPackage.invoiceBalance)} trend={`${activeCustomers} müştəri`} icon={CreditCard} tone="warning" />

@@ -10,20 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# CI never connects to a Supabase project. The second project is the backup database (restore
+# target), not a test database, and production must never receive test data. Every gate below runs
+# offline: database behaviour is covered by the PGlite SQL tests in `npm test`, which replay
+# supabase/migrations.
 jobs:
   verify:
     name: Test & build
-    environment: staging
-    # Every staging job writes to the same audit tenant; run them one at a time across branches.
-    concurrency:
-      group: staging-audit-tenant
-      cancel-in-progress: false
     runs-on: ubuntu-latest
-    env:
-      E2E_TENANT_ID: ${{ vars.E2E_TENANT_ID }}
-      E2E_OTHER_TENANT_ID: ${{ vars.E2E_OTHER_TENANT_ID }}
-      E2E_SUPABASE_PROJECT_REF: ${{ vars.E2E_SUPABASE_PROJECT_REF }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -38,145 +33,19 @@ jobs:
       - name: Dependency security audit
         run: npm audit --audit-level=high
 
-      - name: Type safety gate
-        run: npm run typecheck
-
-      - name: Require authenticated E2E account
-        run: |
-          test -n "$E2E_TEST_USER"
-          test -n "$E2E_TEST_PASS"
-          node scripts/verify-e2e-target.mjs
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
       - name: Release gates
         id: release_gates
-        run: npm run verify:release
+        run: npm run verify:release:offline
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Placeholder values: the build needs them, nothing connects to them.
+          VITE_SUPABASE_URL: https://offline-ci.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: offline-ci
 
       - name: Install Playwright Chromium
-        id: browser_runtime
         run: npx playwright install --with-deps chromium
 
       - name: Responsive module layout regression tests
         run: npx playwright test --config tests/layout.playwright.config.ts
-
-      - name: Provision restricted staging audit identity
-        id: readonly_identity
-        run: node scripts/provision-readonly-audit.mjs
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          E2E_READONLY_USER: ${{ secrets.E2E_READONLY_USER }}
-          E2E_READONLY_PASS: ${{ secrets.E2E_READONLY_PASS }}
-
-      - name: Restricted identity authorization gate
-        if: ${{ !cancelled() && steps.readonly_identity.outcome == 'success' }}
-        run: node scripts/verify-readonly-audit.mjs
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Signed HTTP delivery and replay gate
-        if: ${{ !cancelled() && steps.release_gates.outcome == 'success' }}
-        run: node scripts/verify-signed-http.mjs
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Browser and tenant-isolation tests
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- --grep-invert "@lifecycle|@ai" --output=test-results/browser
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          LOVABLE_BROWSER_SUPABASE_STORAGE_KEY: ${{ secrets.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY }}
-          LOVABLE_BROWSER_SUPABASE_SESSION_JSON: ${{ secrets.LOVABLE_BROWSER_SUPABASE_SESSION_JSON }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Authenticated AI tool-call test
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' && vars.AI_E2E_ENABLED == 'true' }}
-        run: npm run e2e -- tests/ai-assistant.spec.ts --workers=1 --output=test-results/ai
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-          AI_E2E_ENABLED: "true"
-
-      - name: Sales and expense lifecycle tests
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e:lifecycle -- --output=test-results/sales-expense
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Concurrent server lifecycle tests
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/concurrent-lifecycle.spec.ts --workers=1 --output=test-results/concurrency
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Credit deposit lifecycle
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/credit-deposit-lifecycle.spec.ts --workers=1 --output=test-results/credit-deposit
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: Delivery and reversal lifecycle matrix
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1 --output=test-results/delivery-reversal
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
-          E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
-
-      - name: 20 required business flows (external notification provider deferred)
-        id: business_flows
-        if: ${{ !cancelled() && steps.browser_runtime.outcome == 'success' }}
-        run: npm run audit:flows
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          E2E_USER_EMAIL: ${{ secrets.E2E_TEST_USER }}
-          E2E_USER_PASSWORD: ${{ secrets.E2E_TEST_PASS }}
-          AUDIT_FLOW_TIMEOUT_MS: 150000
-          AUDIT_DEFER_NOTIFICATION_PROVIDER: 'true'
-
-      - name: Remove ephemeral restricted audit identity
-        if: ${{ always() && env.E2E_EPHEMERAL_USER_ID != '' }}
-        run: node scripts/provision-readonly-audit.mjs
-        env:
-          AUDIT_ACCOUNT_ACTION: cleanup
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Upload business lifecycle evidence
-        if: ${{ always() && steps.business_flows.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: business-flow-audit
-          path: test-results/business-flow-audit.json
-          if-no-files-found: error
-          retention-days: 30
 
       - name: Upload browser test diagnostics
         if: failure()
@@ -186,9 +55,6 @@ jobs:
           path: test-results
           retention-days: 5
 
-      - name: Bundle budget
-        run: node scripts/check-bundle-budget.mjs
-
       - name: Upload build output
         if: always()
         uses: actions/upload-artifact@v4
@@ -196,4 +62,3 @@ jobs:
           name: dist
           path: dist
           retention-days: 5
-

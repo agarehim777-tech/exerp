@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { readAllRows } from '../../services/readAllRows.js';
 import { supabase } from '../../integrations/supabase/client';
 import { buildReconciliationReport } from '../lib/blobReconciliation.js';
 
@@ -18,14 +19,14 @@ export function useBlobReconciliation(tenantId) {
     try {
       const [snapRes, unitsRes, reservationRes, balanceRes, wfRes, notifRes, prodRes] = await Promise.all([
         supabase.from('tenant_state_snapshots').select('state, updated_at').eq('tenant_id', tenantId).maybeSingle(),
-        supabase.from('inventory_units').select('id, product_id, warehouse_id, serial_no, imei, quantity, status').eq('tenant_id', tenantId).limit(5000),
-        supabase.from('stock_reservations')
+        readAllRows(() => supabase.from('inventory_units').select('id, product_id, warehouse_id, serial_no, imei, quantity, status').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('stock_reservations')
           .select('id, product_id, warehouse_id, order_id, quantity, status, order:orders(order_no)')
-          .eq('tenant_id', tenantId).limit(5000),
-        supabase.from('stock_balances').select('product_id, warehouse_id, reserved').eq('tenant_id', tenantId).limit(5000),
-        supabase.from('workflow_records').select('id, module, record_no, title, status').eq('tenant_id', tenantId).eq('module', 'production').limit(2000),
-        supabase.from('notification_deliveries').select('id, template_code, status, sent_at, scheduled_at, created_at, metadata').eq('tenant_id', tenantId).limit(2000),
-        supabase.from('products').select('id, name').eq('tenant_id', tenantId).limit(5000),
+          .eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('stock_balances').select('product_id, warehouse_id, reserved').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('workflow_records').select('id, module, record_no, title, status').eq('tenant_id', tenantId).eq('module', 'production').order('id')),
+        readAllRows(() => supabase.from('notification_deliveries').select('id, template_code, status, sent_at, scheduled_at, created_at, metadata').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('products').select('id, name').eq('tenant_id', tenantId).order('id')),
       ]);
 
       const firstError = [snapRes, unitsRes, reservationRes, balanceRes, wfRes, notifRes, prodRes].find((r) => r.error)?.error;

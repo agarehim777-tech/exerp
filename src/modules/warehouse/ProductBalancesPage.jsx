@@ -1,3 +1,4 @@
+import { formatAmount } from "../../services/format.js";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, CircleDollarSign, ExternalLink, History, Package, RotateCcw, ShoppingCart, Users, X } from "lucide-react";
 import { getRecommendedOrderPlan, WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
@@ -9,7 +10,7 @@ import ProductReturnsPanel from "./ProductReturnsPanel.jsx";
 import { buildAverageCostHistory, movementKind } from "./inventory360.js";
 import { Button, Table } from "../../shared/ui/primitives.tsx";
 
-const money = (value) => `${Number(value || 0).toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
+const money = (value) => formatAmount(value);
 const number = (value) => Number(value || 0).toLocaleString("az-AZ");
 const dateTime = (value) => value ? new Date(value).toLocaleString("az-AZ") : "—";
 const movementType = (item) => item?.movement_type || item?.move_type || "";
