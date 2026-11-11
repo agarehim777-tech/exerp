@@ -62,3 +62,40 @@ jobs:
           name: dist
           path: dist
           retention-days: 5
+
+  # Database-backed checks against a throwaway local Supabase built from supabase/migrations inside
+  # this job. It never reaches a hosted project (the seed script refuses non-local URLs) and is
+  # deleted with the runner. Non-blocking until it has proven stable.
+  local-database:
+    name: Local Supabase (migrations + seed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - uses: supabase/setup-cli@v1
+        with:
+          # 2.39.2 mis-split a plpgsql body in 20260812090000; 3.1.0 applies all migrations.
+          version: 3.1.0
+
+      - name: Start local Supabase and apply every migration
+        run: supabase start -x studio,imgproxy,vector,logflare,postgres-meta,supavisor,edge-runtime
+
+      - name: Export local Supabase endpoints
+        run: supabase status -o env | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=' >> "$GITHUB_ENV"
+
+      - name: Seed E2E users and tenants, then check tenant isolation
+        run: node scripts/local-e2e-seed.mjs
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
