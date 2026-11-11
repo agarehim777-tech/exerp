@@ -53,15 +53,18 @@ npx playwright install chromium
   protected GitHub `production` environment. GitHub encrypts secrets and
   workflow artifacts at rest.
 - Configure `RESTORE_DATABASE_URL` only in the protected `disaster-recovery`
-  environment. It must point to a disposable Supabase project and must never
-  contain the production project reference.
+  environment. It points to the backup project `cvjctwgdyzhijhzhhjqd`, which
+  holds a copy of production restored from the nightly backup, and must never
+  contain the production project reference (`tcqdhwtnjrwpfdxoijmv`).
+- CI does not connect to any Supabase project. The backup project is not a test
+  database: no workflow other than the manual restore drill writes to it.
 - Run `Supabase restore drill` at least monthly, enter `RESTORE`, and retain the
   successful workflow result as recovery evidence.
 - Target **RPO: 24 hours** for scheduled logical backup and **RTO: 4 hours** for
   a verified restore. Enable Supabase PITR to reduce production RPO further.
 - Take a verified backup before destructive migrations.
 - A production restore requires approval by the platform owner and finance/data
-  owner. The drill workflow restores only into the disposable recovery project.
+  owner. The drill workflow restores only into the backup project.
 
 ## Hosting
 
@@ -113,8 +116,9 @@ npm run build
 GitHub Actions additionally runs `supabase db lint --linked --level error`, a post-deploy page health check and the scheduled production monitor. Configure `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VITE_SUPABASE_PUBLISHABLE_KEY` and the disaster-recovery database secret in the corresponding protected GitHub environments.
 # Backup və bərpa hədəfləri
 
-- **RPO:** maksimum 24 saat. Supabase backup hər gecə işləyir və 30 gün saxlanılır.
-- **RTO:** 2 saat. Son uğurlu artifact ayrıca staging Supabase layihəsinə bərpa edilir.
+- **RPO:** maksimum 24 saat. Supabase backup hər gecə işləyir və 90 gün saxlanılır.
+- **RTO:** 2 saat. Son uğurlu artifact ehtiyat Supabase layihəsinə (`cvjctwgdyzhijhzhhjqd`) bərpa edilir.
+- Ehtiyat layihə sınaq bazası deyil: CI heç bir Supabase layihəsinə qoşulmur, ehtiyat layihəyə yalnız `Supabase Restore Drill` yazır.
 - Ayda ən azı bir dəfə `Supabase Restore Drill` workflow-u `RESTORE` təsdiqi ilə işlədilməlidir.
-- Production backup GitHub runner-larında IPv4 uyğun Supabase session pooler üzərindən `SUPABASE_DB_PASSWORD` ilə işləyir. `SUPABASE_DB_URL` yalnız production hədəfini restore zamanı ayırd etmək, `RESTORE_DATABASE_URL` isə yalnız qeyri-production sınaq bazası üçün istifadə olunur.
+- Production backup GitHub runner-larında IPv4 uyğun Supabase session pooler üzərindən `SUPABASE_DB_PASSWORD` ilə işləyir. `SUPABASE_DB_URL` yalnız production hədəfini restore zamanı ayırd etmək, `RESTORE_DATABASE_URL` isə yalnız ehtiyat layihə üçün istifadə olunur.
 - Deploy lifecycle gate üçün `E2E_TEST_USER` və `E2E_TEST_PASS` ayrıca, demo datası olan test tenantına aid olmalıdır; production administrator hesabı istifadə edilməməlidir.
