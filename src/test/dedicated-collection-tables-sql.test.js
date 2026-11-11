@@ -25,6 +25,12 @@ it('applies cleanly on the replayed repo schema', () => {
   expect(skipped.map((row) => row.file)).not.toContain(FILE);
 });
 
+// A local Supabase in CI is built from supabase/migrations alone, so every migration must apply
+// on an empty database (with versions recorded as the CLI does).
+it('replays every repo migration on a fresh database without a failure', () => {
+  expect(skipped).toEqual([]);
+});
+
 it('creates every table and column the app adapter writes, with RLS and module policies', async () => {
   for (const [collection, definition] of Object.entries(collectionDefinitions)) {
     const columns = (await db.query(
