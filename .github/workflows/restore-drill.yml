@@ -77,11 +77,22 @@ jobs:
           done
           echo "Disposable database remained unavailable for 5 minutes."
           exit 1
+      - name: Require an empty restore target
+        # pg_restore --clean cannot be used: on an empty database its DROP POLICY ... ON <missing table>
+        # fails even with --if-exists, and on a database with other objects their dependencies block
+        # the drops. The target is emptied by hand first (see README_DEPLOYMENT.md); this step only checks it.
+        run: |
+          OBJECTS="$(psql -v ON_ERROR_STOP=1 -At -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','private') and c.relkind in ('r','p','v','m','S')")"
+          if [ "$OBJECTS" != "0" ]; then
+            echo "Restore target is not empty ($OBJECTS tables, views or sequences in public/private)."
+            echo "Empty the backup project first, then run the drill again."
+            exit 1
+          fi
       - name: Restore into isolated target
         run: |
           test -s backup/application.dump || (echo "Backup has no atomic application archive; refuse legacy destructive restore" && exit 1)
           pg_restore --list backup/application.dump > backup/application.toc
-          pg_restore --clean --if-exists --single-transaction --exit-on-error --no-owner --no-privileges --dbname=postgres backup/application.dump
+          pg_restore --single-transaction --exit-on-error --no-owner --no-privileges --dbname=postgres backup/application.dump
       - name: Validate restored database
         run: |
           psql -v ON_ERROR_STOP=1 -c "select count(*) from public.tenants;"
