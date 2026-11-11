@@ -92,7 +92,9 @@ jobs:
         run: |
           test -s backup/application.dump || (echo "Backup has no atomic application archive; refuse legacy destructive restore" && exit 1)
           pg_restore --list backup/application.dump > backup/application.toc
-          pg_restore --single-transaction --exit-on-error --no-owner --no-privileges --dbname=postgres backup/application.dump
+          # Supabase always has schema public; restoring its CREATE SCHEMA entry would fail.
+          grep -v -E '^[0-9]+; [0-9]+ [0-9]+ SCHEMA - public ' backup/application.toc > backup/restore.toc
+          pg_restore --use-list=backup/restore.toc --single-transaction --exit-on-error --no-owner --no-privileges --dbname=postgres backup/application.dump
       - name: Validate restored database
         run: |
           psql -v ON_ERROR_STOP=1 -c "select count(*) from public.tenants;"
