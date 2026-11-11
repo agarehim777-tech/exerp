@@ -1,10 +1,15 @@
-export const protectedProjects = ['tcqdhwtnjrwpfdxoijmv', 'cvjctwgdyzhijhzhhjqd'];
+// Production is never a restore target. The backup project (cvjctwgdyzhijhzhhjqd) is the planned
+// restore target: it holds a copy of production restored from the nightly backup, and CI no
+// longer writes to it.
+export const PRODUCTION_PROJECT_REF = 'tcqdhwtnjrwpfdxoijmv';
+export const BACKUP_PROJECT_REF = 'cvjctwgdyzhijhzhhjqd';
+export const protectedProjects = [PRODUCTION_PROJECT_REF];
 
 export function validateRestoreTarget(env) {
   if (env.RESTORE_CONFIRMATION !== 'RESTORE') throw new Error("confirmation == 'RESTORE' required");
   const ref = env.RESTORE_PROJECT_REF;
   if (!/^[a-z]{20}$/.test(ref ?? '') || protectedProjects.includes(ref)) {
-    throw new Error('Restore target must be a separate disposable project, never production or CI staging');
+    throw new Error('Restore target must be a separate project (the backup project), never production');
   }
   const url = new URL(env.RESTORE_DATABASE_URL);
   if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.password) throw new Error('Invalid restore database URL');
@@ -20,5 +25,5 @@ export function validateRestoreTarget(env) {
 
 if (process.argv[1]?.endsWith('restore-target-guard.mjs')) {
   validateRestoreTarget(process.env);
-  console.log('Disposable restore target verified');
+  console.log('Restore target verified');
 }
