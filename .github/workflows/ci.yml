@@ -96,6 +96,12 @@ jobs:
       - name: Seed E2E users and tenants, then check tenant isolation
         run: node scripts/local-e2e-seed.mjs
 
+      - name: E2E target guard accepts only this local database
+        run: node scripts/verify-e2e-target.mjs
+
+      - name: Core backend contract (tables and RPCs the app needs)
+        run: npm run verify:core-backend
+
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup

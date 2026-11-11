@@ -72,7 +72,7 @@ if (process.argv[1]?.endsWith('local-e2e-seed.mjs')) {
   if (env.GITHUB_ENV) {
     console.log(`::add-mask::${seed.password}`);
     await appendFile(env.GITHUB_ENV, [
-      `VITE_SUPABASE_URL=${apiUrl}`, `VITE_SUPABASE_PUBLISHABLE_KEY=${anonKey}`,
+      `E2E_LOCAL=1`, `VITE_SUPABASE_URL=${apiUrl}`, `VITE_SUPABASE_PUBLISHABLE_KEY=${anonKey}`,
       `E2E_TEST_USER=${seed.email}`, `E2E_TEST_PASS=${seed.password}`,
       `E2E_TENANT_ID=${seed.tenantId}`, `E2E_OTHER_TENANT_ID=${seed.otherTenantId}`, '',
     ].join('\n'));

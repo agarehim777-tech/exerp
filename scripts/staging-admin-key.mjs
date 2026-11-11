@@ -1,6 +1,16 @@
+import { assertLocalSupabaseUrl, isLocalE2e } from '../tests/e2e-target.mjs';
+
 // Reads the staging project's server key through the Management API so CI scripts never store it.
+// With E2E_LOCAL=1 the key is the local Supabase service key that `supabase status` prints
+// (SERVICE_ROLE_KEY); it is accepted only together with a local URL.
 // `request` must throw errors ending in `HTTP <status>` for non-2xx responses.
 export async function stagingAdminHeaders(env, request, mask = () => {}) {
+  if (isLocalE2e(env)) {
+    assertLocalSupabaseUrl(env.VITE_SUPABASE_URL);
+    if (!env.SERVICE_ROLE_KEY) throw new Error('AUDIT_ACCOUNT_LOCAL_SERVICE_KEY_REQUIRED');
+    mask(env.SERVICE_ROLE_KEY);
+    return { apikey: env.SERVICE_ROLE_KEY, authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, 'content-type': 'application/json' };
+  }
   if (!env.SUPABASE_ACCESS_TOKEN) throw new Error('AUDIT_ACCOUNT_PROVISION_TOKEN_REQUIRED');
   let keys;
   try {
