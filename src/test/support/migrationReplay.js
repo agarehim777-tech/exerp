@@ -24,8 +24,10 @@ const supabaseStubs = `
   CREATE FUNCTION storage.foldername(text) RETURNS text[] LANGUAGE sql AS $$ SELECT string_to_array($1, '/') $$;
 `;
 
-// Replays every migration in order. A few historical migrations only applied to databases that
-// already had hand-made objects; they are reported instead of aborting the replay.
+// Replays every migration in order, recording versions the way the Supabase CLI does. Failures are
+// collected in `skipped` instead of aborting; on a fresh database the list must stay empty
+// (dedicated-collection-tables-sql.test.js asserts it), so CI can build a local Supabase from
+// supabase/migrations alone.
 export async function replayMigrations() {
   const db = new PGlite();
   await db.exec(supabaseStubs);
@@ -34,6 +36,9 @@ export async function replayMigrations() {
   for (const file of files) {
     try {
       await db.exec(await readFile(new URL(file, migrationsDir), 'utf8'));
+      // Like the Supabase CLI, record each applied version: some migrations check earlier versions.
+      await db.query('INSERT INTO supabase_migrations.schema_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING',
+        [file.split('_')[0]]);
     } catch (error) {
       skipped.push({ file, error: error.message.split('\n')[0] });
     }
