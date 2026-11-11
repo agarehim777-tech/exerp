@@ -84,7 +84,8 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # 2.39.2 mis-split a plpgsql body in 20260812090000; 3.1.0 applies all migrations.
+          version: 3.1.0
 
       - name: Start local Supabase and apply every migration
         run: supabase start -x studio,imgproxy,vector,logflare,postgres-meta,supavisor,edge-runtime
