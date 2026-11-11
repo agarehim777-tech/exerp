@@ -83,11 +83,18 @@ jobs:
         # the drops. The target is emptied by hand first (see README_DEPLOYMENT.md); this step only checks it.
         run: |
           OBJECTS="$(psql -v ON_ERROR_STOP=1 -At -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname in ('public','private') and c.relkind in ('r','p','v','m','S')")"
-          if [ "$OBJECTS" != "0" ]; then
-            echo "Restore target is not empty ($OBJECTS tables, views or sequences in public/private)."
+          USERS="$(psql -v ON_ERROR_STOP=1 -At -c "select count(*) from auth.users")"
+          if [ "$OBJECTS" != "0" ] || [ "$USERS" != "0" ]; then
+            echo "Restore target is not empty ($OBJECTS tables, views or sequences in public/private; $USERS auth users)."
             echo "Empty the backup project first, then run the drill again."
             exit 1
           fi
+      - name: Restore user accounts
+        # Application tables reference auth.users (audit_events.actor_id, ...). They live outside the
+        # application archive, so restore their rows from the full data dump first.
+        run: |
+          pg_restore --data-only --schema=auth --table=users --single-transaction --exit-on-error --no-owner --no-privileges --dbname=postgres backup/data.dump
+          psql -v ON_ERROR_STOP=1 -c "select count(*) as restored_users from auth.users;"
       - name: Restore into isolated target
         run: |
           test -s backup/application.dump || (echo "Backup has no atomic application archive; refuse legacy destructive restore" && exit 1)
