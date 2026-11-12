@@ -1,6 +1,7 @@
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
 import { dbCustomerToLegacy, dbProductToLegacy, dbOrderToLegacy } from '../src/shared/adapters/erpShape.js';
 import { moduleRoutes } from '../src/config/routes.js';
+import { collectionDefinitions, fromDedicatedRow } from '../src/shared/adapters/dedicatedCollections.ts';
 
 const historicalModules = { 1: 'crm', 2: 'sales', 3: 'stock', 4: 'deliveries', 5: 'cashbook',
   6: 'ar-invoices', 7: 'accounting', 8: 'tax', 9: 'credits', 10: 'receivables', 11: 'vendors',
@@ -123,6 +124,20 @@ export async function createAuditBackend(env, fetcher = fetch) {
   }
   const capabilities = await request('rest/v1/rpc/erp_runtime_capabilities', { method: 'POST', data: {}, token });
   if (Number(capabilities?.schema_version) < 3) throw new Error('ERP_SCHEMA_MIGRATION_REQUIRED');
+  // HR and contract collections live in dedicated tables; rows come back in the app's collection shape.
+  const stateCollections = ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts'];
+  const readDedicatedCollections = async (names, name) => {
+    const rows = [];
+    for (const collection of names) {
+      const definition = collectionDefinitions[collection];
+      if (!definition) throw new Error(`AUDIT_COLLECTION_UNKNOWN: ${collection}`);
+      const nameColumn = definition.fields.name ? definition.fields.name : 'metadata->>name';
+      const nameFilter = name === undefined ? '' : `&${nameColumn}=eq.${encodeURIComponent(name)}`;
+      const found = await read(definition.table, '*', `${nameFilter}&order=sort_position.asc,record_key.asc`);
+      rows.push(...found.map(row => fromDedicatedRow(row, collection)));
+    }
+    return rows;
+  };
   return {
     tenantId,
     readCanonical: read,
@@ -131,8 +146,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         throw new Error('AUDIT_COLLECTION_NAMES_REQUIRED');
       }
       if (name !== undefined && typeof name !== 'string') throw new Error('AUDIT_COLLECTION_RECORD_NAME_INVALID');
-      const recordFilter = name === undefined ? '' : `&data->>name=eq.${encodeURIComponent(name)}`;
-      return read('tenant_collection_records', '*', `&collection=in.(${names.join(',')})${recordFilter}&order=collection.asc,position.asc,record_key.asc`);
+      return readDedicatedCollections(names, name);
     },
     command: (name, data) => request(`rest/v1/rpc/${name}`, { method: 'POST', data, token }),
     invokeEdge: (name, data) => request(`functions/v1/${name}`, { method: 'POST', data, token }),
@@ -142,8 +156,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
       if (!['all', 'sales', 'sales-ledger', 'credit-ledger', 'finance', 'reports', 'hr', 'ui'].includes(scope)) throw new Error('AUDIT_STATE_SCOPE_INVALID');
       const salesTables = new Set(['customers', 'products', 'orders', 'credit_contracts', 'credit_installments',
         'credit_payments', 'warehouses', 'stock_balances', 'order_bonus_assignments']);
-      const hrTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events', 'expenses']);
-      const uiTables = new Set(['tenant_state_snapshots', 'tenant_collection_records', 'audit_events']);
+      const hrTables = new Set(['tenant_state_snapshots', 'audit_events', 'expenses']);
+      const uiTables = new Set(['tenant_state_snapshots', 'audit_events']);
       const salesLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions', 'expenses', 'audit_events']);
       const creditLedgerTables = new Set([...salesTables, 'cash_accounts', 'cash_transactions']);
       const financeTables = new Set(['cash_accounts', 'cash_transactions', 'expenses']);
@@ -164,9 +178,6 @@ export async function createAuditBackend(env, fetcher = fetch) {
         }
         if (scope === 'hr' && !hrTables.has(table)) return [];
         if (scope === 'ui' && !uiTables.has(table)) return [];
-        if (scope === 'hr' && table === 'tenant_collection_records') {
-          filter += '&collection=in.(employees,departments,leaveRequests,vacancies,contracts)';
-        }
         if (scope === 'hr' && table === 'audit_events') filter += '&module=in.(HR,HR/Payroll)';
         if (customerId && ['customers', 'orders', 'credit_contracts'].includes(table)) {
           filter += `&${table === 'customers' ? 'id' : 'customer_id'}=eq.${encodeURIComponent(customerId)}`;
@@ -182,7 +193,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
       };
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
         balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines, reportExports] = await Promise.all([
-        scopedRead('tenant_state_snapshots'), scopedRead('tenant_collection_records', '*', '&order=collection.asc,position.asc,record_key.asc'),
+        scopedRead('tenant_state_snapshots'),
+        ['all', 'hr', 'ui'].includes(scope) ? readDedicatedCollections(stateCollections) : [],
         scopedRead('customers'), scopedRead('products'), scopedRead('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         scopedRead('credit_contracts'), scopedRead('credit_installments'), scopedRead('credit_payments'), scopedRead('warehouses'), scopedRead('stock_balances'),
         ['all','sales-ledger','credit-ledger','finance'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },
@@ -192,7 +204,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
         scopedRead('workflow_records', '*', '&module=eq.reports&record_type=eq.report_export&order=created_at.desc,id.desc'),
       ]);
       const state = { ...(snapshots[0]?.state ?? {}) };
-      for (const name of ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts']) {
+      for (const name of stateCollections) {
         state[name] = collections.filter((r) => r.collection === name).map((r) => ({ ...r.data, id: r.data?.id ?? r.record_key }));
       }
       const productById = new Map(products.map((p) => [p.id, p]));

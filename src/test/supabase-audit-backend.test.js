@@ -69,22 +69,23 @@ it('narrows fixture reads and paginates composite stock identities with a stable
   expect(balances.every(url => url.searchParams.get('warehouse_id') === 'eq.warehouse')).toBe(true);
   urls.length = 0;
   await backend.readCollections(['employees','departments']);
-  expect(urls[0].searchParams.get('collection')).toBe('in.(employees,departments)');
-  expect(urls[0].searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
+  expect(urls.map(url => url.pathname.split('/').pop())).toEqual(['employees', 'hr_departments']);
+  expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
   urls.length = 0;
   await backend.readCollections(['employees'], { name: 'QA & Seller' });
-  expect(urls[0].searchParams.get('data->>name')).toBe('eq.QA & Seller');
-  expect(urls[0].searchParams.get('collection')).toBe('in.(employees)');
+  expect(urls[0].pathname.endsWith('/employees')).toBe(true);
+  expect(urls[0].searchParams.get('full_name')).toBe('eq.QA & Seller');
   expect(urls[0].searchParams.get('tenant_id')).toBe(`eq.${tenant}`);
-  expect(urls[0].searchParams.get('order')).toBe('collection.asc,position.asc,record_key.asc');
+  expect(urls[0].searchParams.get('order')).toBe('sort_position.asc,record_key.asc');
   await expect(backend.readCollections(['employees'], { name: {} })).rejects.toThrow('NAME_INVALID');
   await expect(backend.readCollections(['employees)&tenant_id=eq.foreign'])).rejects.toThrow('COLLECTION');
   await expect(backend.readState({ scope: 'unknown' })).rejects.toThrow('SCOPE');
   urls.length = 0;
   await backend.readState({ scope: 'hr' });
-  expect(urls.every(url => /snapshot|collection|audit_events|expenses/.test(url.pathname))).toBe(true);
-  expect(urls.find(url => url.pathname.endsWith('/tenant_collection_records')).searchParams.get('collection'))
-    .toBe('in.(employees,departments,leaveRequests,vacancies,contracts)');
+  expect(urls.every(url => /snapshot|employees|hr_|business_contracts|audit_events|expenses/.test(url.pathname))).toBe(true);
+  expect(urls.some(url => url.pathname.endsWith('/tenant_collection_records'))).toBe(false);
+  expect(urls.map(url => url.pathname.split('/').pop())).toEqual(expect.arrayContaining(
+    ['employees', 'hr_departments', 'hr_leave_requests', 'hr_vacancies', 'business_contracts']));
   expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module'))
     .toBe('in.(HR,HR/Payroll)');
   expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
@@ -339,7 +340,7 @@ it('reads actual deposit and unreversed principal without subtracting penalties 
     if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
     if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
     if (path.endsWith('/customers')) return response([{ id: 'customer', name: 'QA', tax_id: 'Q123456' }]);
-    if (path.endsWith('/tenant_collection_records')) return response([{collection:'contracts',record_key:'obsolete',data:{id:'IN-QA',orderId:'old-order'}}]);
+    if (path.endsWith('/business_contracts')) return response([{record_key:'obsolete',order_id:'old-order',metadata:{id:'IN-QA'}}]);
     if (path.endsWith('/orders')) return response([{id:'order',customer_id:'customer',total:1200,items:[],
       reservations:[{warehouse_id:'warehouse',status:'active'}]}]);
     if (path.endsWith('/credit_contracts')) return response([{ id: 'credit', customer_id: 'customer', principal: 1200,
