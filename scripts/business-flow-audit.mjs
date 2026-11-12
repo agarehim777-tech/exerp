@@ -605,7 +605,7 @@ async function auditSeparateCreditContracts(browser) {
     await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     let customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
-    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('tab', { name: 'Kreditlər', exact: true }).click();
     await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true }).waitFor();
     await customerCard.getByRole('article', { name: secondSale.contract.id, exact: true }).waitFor();
     assert(await customerCard.getByRole('button', { name: 'Kreditə bax', exact: true }).count() === 2,
@@ -623,7 +623,7 @@ async function auditSeparateCreditContracts(browser) {
     await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
-    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('tab', { name: 'Kreditlər', exact: true }).click();
     await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true })
       .getByRole('button', { name: 'Kreditə bax', exact: true }).click();
     await page.locator(".page-header h1").filter({ hasText: "Kredit" }).waitFor();
@@ -1618,7 +1618,7 @@ async function auditHrStructure(browser) {
       renamedState.employees.find((employee) => employee.name === specialistName)?.managerName === leadName,
       "Employee rename did not update direct reports' manager names",
     );
-    await page.locator(".hr-structure-actions .secondary-btn").click();
+    await page.locator('.hr-structure-actions').getByRole('button', { name: 'Şöbə əlavə et', exact: true }).click();
     const departmentModal = page.locator('[role="dialog"]');
     await departmentModal.locator("input").nth(0).fill(departmentName);
     await departmentModal.locator("textarea").fill("QA department for hierarchy validation");
