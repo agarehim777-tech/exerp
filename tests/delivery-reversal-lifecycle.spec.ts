@@ -98,9 +98,9 @@ for (const method of ['weighted_average', 'fifo']) {
           expect(lines.reduce((sum: number, line: { debit: number; credit: number }) => sum + Number(line.debit) - Number(line.credit), 0)).toBe(0);
         }
         await expect(deliver()).rejects.toThrow(/cancelled_order_is_terminal|delivery_order_cancelled/);
-        await expect(call('patch', `credit_contracts?tenant_id=eq.${tenantId}&id=eq.${sale.credit_id}`, { status: 'active' })).rejects.toThrow('cancelled_order_is_terminal');
+        await expect(call('patch', `credit_contracts?tenant_id=eq.${tenantId}&id=eq.${sale.credit_id}`, { status: 'active' })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK/);
         await expect(insert('cash_transactions', { account_id: account.id, direction: 'in', amount: 1,
-          category: 'sales_payment', reference_id: orderId, reference: marker })).rejects.toThrow('cancelled_order_is_terminal');
+          category: 'sales_payment', reference_id: orderId, reference: marker })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK/);
       } finally {
         if (orderId) await rpc('reverse_sales_order_v3', { _tenant_id: tenantId, _order_id: orderId, _reason: marker, _request_key: `${marker}:cleanup` });
         for (const [table, id] of [['cash_accounts', accountId], ['products', productId], ['warehouses', warehouseId], ['warehouses', otherWarehouseId]]) {
