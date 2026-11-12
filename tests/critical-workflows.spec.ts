@@ -45,7 +45,7 @@ test.describe("Kritik ERP axınları", () => {
 
   test("HR əməkdaş forması ayrıca dialog kimi açılır", async ({ page }) => {
     const hydrated = page.waitForResponse(async response => response.request().method() === 'GET'
-      && new URL(response.url()).pathname.endsWith('/tenant_collection_records')
+      && new URL(response.url()).pathname.endsWith('/employees')
       && (!process.env.E2E_TENANT_ID || new URL(response.url()).searchParams.get('tenant_id') === `eq.${process.env.E2E_TENANT_ID}`)
       && (!response.ok() || isLastCollectionPage(await response.headerValue('content-range'))), { timeout: 0 });
     const [result] = await Promise.all([hydrated, page.goto("/hr/emekdaslar", { waitUntil: "domcontentloaded" })]);

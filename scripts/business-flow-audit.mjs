@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { assertE2eTarget } from '../tests/e2e-target.mjs';
-import { auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, runBoundedFlow, selectAuditOption, waitForAuditModule } from './audit-flow-runner.mjs';
+import { AUDIT_WAIT_TIMEOUT_MS, auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, runBoundedFlow, selectAuditOption, waitForAuditModule } from './audit-flow-runner.mjs';
 import { auditModulePath, createAuditBackend, findNewLinkedCreditSale, verifyRestrictedRoleAudit } from './supabase-audit-backend.mjs';
 import { navItems } from '../src/data.js';
 import { moduleRoutes } from '../src/config/routes.js';
@@ -177,7 +177,7 @@ async function selectPath(page, path) {
   await sidebar.getByRole('link', { name: item.label, exact: true }).click();
   await waitForAuditModule(page, path, item.label);
   if (path === '/satinalma') {
-    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: 0 });
+    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: AUDIT_WAIT_TIMEOUT_MS });
   }
   assert(new URL(page.url()).pathname === path, `AUDIT_MODULE_REDIRECTED: expected ${path}, received ${new URL(page.url()).pathname}`);
   await page.locator('main.main').waitFor();
@@ -329,7 +329,7 @@ async function createCreditSaleFromCurrentData(page, expectedFin) {
   await modal.getByRole('option').filter({ hasText: 'QA Audit Seller' }).first().click();
   const creation = await auditResponse(page, response => response.request().method() === 'POST'
     && new URL(response.url()).pathname.endsWith('/rpc/create_sales_order_complete'),
-    () => modal.locator(".order-modal-form button[type=submit]").click(), { timeout: 0 });
+    () => modal.locator(".order-modal-form button[type=submit]").click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
   assert(creation.ok(), 'Sale creation failed: ' + await creation.text());
   await modal.waitFor({ state: 'hidden' });
   const after = await waitForState(s => Boolean(findNewLinkedCreditSale(s, before.orders, expectedFin)),
@@ -485,12 +485,12 @@ async function auditCreditPayment(browser) {
     await startModal.getByLabel('Qəbul ediləcək məbləğ', { exact: true }).fill('200');
     const deposit = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/post_credit_initial_payment'),
-      () => startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click(), { timeout: 0 });
+      () => startModal.getByRole('button', { name: 'Behi kassaya qəbul et', exact: true }).click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(deposit.ok(), 'Deposit command failed: ' + await deposit.text());
     await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.initialPaid === 200, 'Deposit was not posted', readScope);
     const activation = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/start_credit_contract'),
-      () => clickAuditReady(page, startModal.getByRole('button', { name: 'Krediti başlat', exact: true })), { timeout: 0 });
+      () => clickAuditReady(page, startModal.getByRole('button', { name: 'Krediti başlat', exact: true })), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(activation.ok(), 'Activation command failed: ' + await activation.text());
     await startModal.waitFor({ state: 'hidden' });
     await waitForState(s => s.credits.find(c => c.id === sale.credit.id)?.status === 'active', 'Credit was not activated', readScope);
@@ -528,7 +528,7 @@ async function auditCreditPayment(browser) {
     await paymentForm.getByLabel('Gecikmə faizi', { exact: true }).fill(String(penaltyPayment));
     const paid = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/post_credit_payment'),
-      () => page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click(), { timeout: 0 });
+      () => page.locator(".credit-detail-modal-card .credit-payment-form button[type=submit]").click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(paid.ok(), 'Credit payment command failed: ' + await paid.text());
     // Separate HTTP reads can straddle a transaction commit; require every linked effect.
     const after = await waitForState(s => {
@@ -669,7 +669,7 @@ async function auditWarehouseDelivery(browser) {
     await card.getByLabel('Təhvil alan şəxs elektron imzanı təsdiqlədi', { exact: true }).check();
     const fulfillment = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/complete_sales_delivery'),
-      () => card.getByRole('button', { name: 'Təhvil verildi', exact: true }).click(), { timeout: 0 });
+      () => card.getByRole('button', { name: 'Təhvil verildi', exact: true }).click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(fulfillment.ok(), 'Delivery command failed: ' + await fulfillment.text());
     const after = await waitForState(s => s.orders.find(o => o.id === sale.order.id)?.status === 'Təhvil verilib',
       'Delivery acceptance was not persisted', scope);
@@ -768,7 +768,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     await invoiceForm.getByLabel('Faktura nömrəsi', { exact: true }).fill(invoiceNumber);
     await invoiceForm.getByRole('button', { name: 'Faktura yarat', exact: true }).click();
     const [invoice] = await waitForCanonical(() => read('vendor_invoices', '&invoice_number=eq.' + invoiceNumber), rows => rows.length === 1 && rows[0].status === 'matched', 'Invoice did not pass three-way matching');
-    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: 0 });
+    await page.locator('.procurement-page[aria-busy="false"]').waitFor({ state: 'visible', timeout: AUDIT_WAIT_TIMEOUT_MS });
     if (viaReceivables) {
       await selectModule(page, 10);
       await page.locator('[data-testid="receivable-control-panel"] tr').filter({ hasText: invoiceNumber })
@@ -781,7 +781,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     const paymentCommand = viaReceivables ? 'settle_receivable_atomic' : 'pay_vendor_invoice_atomic';
     const response = await auditResponse(page,
       r => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/rpc/' + paymentCommand),
-      () => payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: 0 });
+      () => payment.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(response.ok(), 'Purchase payment RPC failed: ' + await response.text());
     const first = await response.json();
     const replay = await auditBackend.command(paymentCommand, response.request().postDataJSON());
@@ -1032,7 +1032,7 @@ async function auditReceivableCreditorWorkflow(browser) {
     await dialog.getByLabel('Borc bağlanışı hesabı', { exact: true }).selectOption(deposit.account_id);
     const response = await auditResponse(page, r => r.request().method() === 'POST'
       && new URL(r.url()).pathname.endsWith('/rpc/settle_receivable_atomic'),
-      () => dialog.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: 0 });
+      () => dialog.getByRole('button', { name: 'Ödənişi təsdiq et', exact: true }).click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
     assert(response.ok(), 'Debtor settlement failed: ' + await response.text());
     const receipt = await response.json();
     const replay = await auditBackend.command('settle_receivable_atomic', response.request().postDataJSON());
@@ -1415,10 +1415,11 @@ async function createHrEmployee(page, values) {
   if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   const saved = await auditResponse(page, response => {
-    if (response.request().method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/tenant_collection_records')) return false;
+    // The app upserts employees into the dedicated employees table (full_name holds the app's name).
+    if (response.request().method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/employees')) return false;
     const payload = response.request().postDataJSON();
-    return (Array.isArray(payload) ? payload : [payload]).some(row => row.collection === 'employees' && row.data?.name === values.name);
-  }, () => modal.locator('button[type="submit"]').click(), { timeout: 0 });
+    return (Array.isArray(payload) ? payload : [payload]).some(row => row.full_name === values.name);
+  }, () => modal.locator('button[type="submit"]').click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
   assert(saved.ok(), 'Employee write was rejected: ' + await saved.text());
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
   await waitForCanonical(() => auditBackend.readCollections(['employees'], { name: values.name }),
@@ -1460,7 +1461,7 @@ async function auditKpiPeriodPayoutWorkflow(browser) {
     const action = async name => {
       const result = await auditResponse(page, r => r.request().method() === 'POST'
         && new URL(r.url()).pathname.endsWith('/rpc/run_kpi_period_atomic'),
-        () => page.locator('[data-testid="kpi-' + name + '-period"]').click(), { timeout: 0 });
+        () => page.locator('[data-testid="kpi-' + name + '-period"]').click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
       assert(result.ok(), 'KPI ' + name + ' failed: ' + await result.text());
       return { response: result, receipt: await result.json() };
     };
@@ -1783,7 +1784,7 @@ async function auditSupportMessaging(browser) {
       const payload = request.postDataJSON();
       return payload?.tenant_id === auditBackend.tenantId && payload.state?.supportTickets?.some(
         ticket => ticket.comments?.some(comment => comment.text === text));
-    }, action, { timeout: 0 });
+    }, action, { timeout: AUDIT_WAIT_TIMEOUT_MS });
     // The unchanged outer flow deadline bounds queueing and the actual server acknowledgement.
     assert(response.ok(), 'Linked support message save was rejected: ' + response.status());
   };

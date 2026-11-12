@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-import { auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, legacyAuditCompatibilityError, runBoundedFlow, selectAuditOption, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
+import { AUDIT_WAIT_TIMEOUT_MS, auditResponse, auditServerArguments, clickAuditReady, createAuditCustomerIdentity, legacyAuditCompatibilityError, runBoundedFlow, selectAuditOption, waitForAuditModule } from '../../scripts/audit-flow-runner.mjs';
 
 afterEach(() => vi.useRealTimers());
 it('waits for the exact canonical option before interacting with a hydrated selector', async () => {
@@ -9,7 +9,7 @@ it('waits for the exact canonical option before interacting with a hydrated sele
   const select = { locator: vi.fn(() => ({ waitFor })), selectOption: vi.fn() };
   const pending = selectAuditOption(select, 'warehouse-id');
   expect(select.locator).toHaveBeenCalledWith('option[value="warehouse-id"]');
-  expect(waitFor).toHaveBeenCalledWith({ state: 'attached', timeout: 0 });
+  expect(waitFor).toHaveBeenCalledWith({ state: 'attached', timeout: AUDIT_WAIT_TIMEOUT_MS });
   expect(select.selectOption).not.toHaveBeenCalled();
   hydrated();
   await pending;
@@ -24,7 +24,7 @@ it('keeps the HR hydration guard until the specific create button is enabled', a
   const button = { and: vi.fn(() => ({ waitFor })), click: vi.fn() };
   const pending = clickAuditReady(page, button);
   expect(button.and).toHaveBeenCalledWith(enabled);
-  expect(waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: 0 });
+  expect(waitFor).toHaveBeenCalledWith({ state: 'visible', timeout: AUDIT_WAIT_TIMEOUT_MS });
   expect(button.click).not.toHaveBeenCalled();
   hydrated();
   await pending;
