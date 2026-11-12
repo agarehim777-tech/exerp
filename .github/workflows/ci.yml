@@ -67,9 +67,9 @@ jobs:
   # this job. It never reaches a hosted project (the seed script refuses non-local URLs) and is
   # deleted with the runner. Non-blocking until it has proven stable.
   local-database:
-    name: Local Supabase (migrations + seed)
+    name: Local Supabase E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +101,58 @@ jobs:
 
       - name: Core backend contract (tables and RPCs the app needs)
         run: npm run verify:core-backend
+
+      - name: Install Playwright Chromium
+        if: ${{ !cancelled() }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Provision restricted audit identity (local)
+        id: readonly_identity
+        if: ${{ !cancelled() }}
+        run: node scripts/provision-readonly-audit.mjs
+
+      - name: Restricted identity authorization gate (local)
+        if: ${{ !cancelled() && steps.readonly_identity.outcome == success }}
+        run: node scripts/verify-readonly-audit.mjs
+
+      - name: Browser and tenant-isolation tests (local)
+        if: ${{ !cancelled() }}
+        run: npm run e2e -- --grep-invert "@lifecycle|@ai" --output=test-results/browser
+
+      - name: Sales and expense lifecycle tests (local)
+        if: ${{ !cancelled() }}
+        run: npm run e2e:lifecycle -- --output=test-results/sales-expense
+
+      - name: Concurrent server lifecycle tests (local)
+        if: ${{ !cancelled() }}
+        run: npm run e2e -- tests/concurrent-lifecycle.spec.ts --workers=1 --output=test-results/concurrency
+
+      - name: Credit deposit lifecycle (local)
+        if: ${{ !cancelled() }}
+        run: npm run e2e -- tests/credit-deposit-lifecycle.spec.ts --workers=1 --output=test-results/credit-deposit
+
+      - name: Delivery and reversal lifecycle matrix (local)
+        if: ${{ !cancelled() }}
+        run: npm run e2e -- tests/delivery-reversal-lifecycle.spec.ts --workers=1 --output=test-results/delivery-reversal
+
+      - name: 20 required business flows (local)
+        id: business_flows
+        if: ${{ !cancelled() }}
+        run: npm run audit:flows
+        env:
+          E2E_USER_EMAIL: ${{ env.E2E_TEST_USER }}
+          E2E_USER_PASSWORD: ${{ env.E2E_TEST_PASS }}
+          AUDIT_FLOW_TIMEOUT_MS: 150000
+          AUDIT_DEFER_NOTIFICATION_PROVIDER: "true"
+
+      - name: Upload local E2E evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-e2e-results
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop local Supabase
         if: always()
