@@ -30,6 +30,11 @@ export async function waitForAuditModule(page, path, label) {
   await page.locator('main.main .page-suspense-loader').waitFor({ state: 'hidden' });
 }
 
+// Hydration waits used to be unbounded, so a missing element surfaced only as the generic
+// "Flow exceeded" timeout with no hint of what was missing. They now fail on their own, before the
+// flow budget, with Playwright's call log naming the locator.
+export const AUDIT_WAIT_TIMEOUT_MS = Number(process.env.AUDIT_WAIT_TIMEOUT_MS || 120000);
+
 export async function runBoundedFlow(run, timeoutMs, cleanup) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('Invalid audit timeout');
   let timer;
@@ -57,11 +62,11 @@ export async function auditResponse(page, predicate, action, options) {
 
 export async function selectAuditOption(select, value) {
   // Catalog hydration belongs to the bounded flow, not the short interaction budget.
-  await select.locator(`option[value=${JSON.stringify(value)}]`).waitFor({ state: 'attached', timeout: 0 });
+  await select.locator(`option[value=${JSON.stringify(value)}]`).waitFor({ state: 'attached', timeout: AUDIT_WAIT_TIMEOUT_MS });
   await select.selectOption(value);
 }
 
 export async function clickAuditReady(page, button) {
-  await button.and(page.locator(':enabled')).waitFor({ state: 'visible', timeout: 0 });
+  await button.and(page.locator(':enabled')).waitFor({ state: 'visible', timeout: AUDIT_WAIT_TIMEOUT_MS });
   await button.click();
 }
