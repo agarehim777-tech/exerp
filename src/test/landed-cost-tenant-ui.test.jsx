@@ -7,12 +7,13 @@ vi.mock('../modules/procurement/landedCostService.js', () => ({
   saveShipmentLine: vi.fn(), updateShipmentWarehouse: vi.fn(),
 }));
 vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
+  let start = 0, end = 499;
   const chain = {
     select: columns => { mocks.selects.push({table,columns}); return chain; },
     eq: (column,value) => { mocks.filters.push({table,column,value}); return chain; },
     order: () => chain,
-    range: () => chain,
-    then: resolve => Promise.resolve({data: table === 'warehouses' ? [{id:'warehouse',name:'QA Warehouse'}] : [], error: mocks.error }).then(resolve),
+    range: (from, to) => { start = from; end = to; return chain; },
+    then: resolve => Promise.resolve({data: (table === 'warehouses' ? [{id:'warehouse',name:'QA Warehouse'}] : []).slice(start, end + 1), error: mocks.error }).then(resolve),
   };
   return chain;
 } } }));

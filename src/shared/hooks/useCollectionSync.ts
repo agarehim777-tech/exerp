@@ -71,23 +71,17 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
         const next = collectionRows(latest.current, names, tenantId);
         const { upserts, deletes } = collectionChanges(session.baseline, next);
         if (!upserts.length && !deletes.length) break;
-        if (upserts.length) {
-          for (const name of names) {
-            const batch = upserts.filter(row => row.collection === name);
-            if (!batch.length) continue;
-            const { error } = await tableFor(name).upsert(batch.map(toDedicatedRow), { onConflict: "tenant_id,record_key" });
-            if (error) throw error;
-            if (!session.alive) return;
-            batch.forEach(row => session.baseline.set(identity(row), row));
-          }
-        }
-        for (const row of deletes) {
-          if (!session.alive) return;
-          const { error } = await tableFor(row.collection).delete()
-            .eq("tenant_id", tenantId).eq("record_key", row.record_key);
-          if (error) throw error;
-          session.baseline.delete(identity(row));
-        }
+        const { error } = await supabase.rpc('apply_collection_changes' as never, {
+          _tenant: tenantId,
+          _changes: [
+            ...upserts.map(row => ({ table: definitionFor(row.collection).table, operation: 'upsert', row: toDedicatedRow(row) })),
+            ...deletes.map(row => ({ table: definitionFor(row.collection).table, operation: 'delete', row: { record_key: row.record_key } })),
+          ],
+        } as never);
+        if (error) throw error;
+        if (!session.alive) return;
+        upserts.forEach(row => session.baseline.set(identity(row), row));
+        deletes.forEach(row => session.baseline.delete(identity(row)));
       }
       if (session.alive) setStatus({ phase: "saved", error: null });
     } catch (error) {
@@ -183,10 +177,20 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
     return session.hydrated ? flush() : hydrate(session);
   }, [scope, ready, tenantId, flush, hydrate]);
 
+  const refresh = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!ready || !tenantId || session?.scope !== scope || session.busy) return;
+    await flush();
+    if (!session.alive) return;
+    const pending = collectionChanges(session.baseline, collectionRows(latest.current, names, tenantId));
+    if (pending.upserts.length || pending.deletes.length) return;
+    await hydrate(session);
+  }, [scope, ready, tenantId, names, flush, hydrate]);
+
   useEffect(() => {
     window.addEventListener("online", retry);
     return () => window.removeEventListener("online", retry);
   }, [retry]);
 
-  return { ...status, ready: Boolean(ready && sessionRef.current?.scope === scope && sessionRef.current?.hydrated), retry, refresh: retry };
+  return { ...status, ready: Boolean(ready && sessionRef.current?.scope === scope && sessionRef.current?.hydrated), retry, refresh };
 }

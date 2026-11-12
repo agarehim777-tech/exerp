@@ -3,6 +3,8 @@ import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { toLocalIsoDate } from '../../services/date';
 import { readAllRows } from '../../services/readAllRows';
+import { useTenantRequestScope } from './useTenantRequestScope';
+import { toDateInputValue } from '../../services/date';
 import {
   buildProfitAndLoss,
   buildBalanceSheet,
@@ -26,8 +28,10 @@ function defaultRange(): DateRange {
   return { from, to };
 }
 
-const amount = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
-const inRange = (value: unknown, range: DateRange) => String(value || '') >= range.from && String(value || '') <= range.to;
+export const inRange = (value: unknown, range: DateRange) => {
+  const day = toDateInputValue(value);
+  return Boolean(day && day >= range.from && day <= range.to);
+};
 
 function cleanReversedTransactions(rows: any[] = []) {
   const reversedIds = new Set(rows.flatMap((row) => {
@@ -43,6 +47,8 @@ function cleanReversedTransactions(rows: any[] = []) {
  */
 export function useFinancialStatements(tenantId?: string | null, initialRange: DateRange = defaultRange()) {
   const [range, setRange] = useState<DateRange>(initialRange);
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, range.from, range.to]));
+  const [loadedScope, setLoadedScope] = useState<object | null>(null);
   const [trialRows, setTrialRows] = useState<TrialBalanceRow[]>([]);
   const [invoices, setInvoices] = useState<InvoiceLike[]>([]);
   const [transactions, setTransactions] = useState<CashTransactionLike[]>([]);
@@ -55,7 +61,11 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
 
   const load = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
+    setLoadedScope(null);
+    setError(null);
+    try {
     const [tb, ar, cash, accountResult, stockResult, payableResult] = await Promise.all([
       supabase.rpc('trial_balance', { _tenant: tenantId, _from: range.from, _to: range.to }),
       readAllRows(() => supabase
@@ -73,7 +83,9 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
       readAllRows(() => supabase.from('stock_balances').select('product_id,on_hand,avg_cost').eq('tenant_id', tenantId).order('warehouse_id').order('product_id')),
       readAllRows(() => supabase.from('vendor_invoices').select('id,status,invoice_date,due_date,lines:vendor_invoice_lines(qty_invoiced,unit_price,tax_rate)').eq('tenant_id', tenantId).order('id')),
     ]);
-    setError(tb.error || ar.error || cash.error || accountResult.error || stockResult.error || payableResult.error || null);
+    if (!isCurrent()) return;
+    const failure = tb.error || ar.error || cash.error || accountResult.error || stockResult.error || payableResult.error;
+    if (failure) throw failure;
     const journalRows = (tb.data as TrialBalanceRow[]) || [];
     const cleanCash = cleanReversedTransactions(cash.data || []);
     // P&L and balance sheet are authoritative only when posted journal lines
@@ -85,8 +97,13 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
     setAccounts(accountResult.data || []);
     setStock(stockResult.data || []);
     setVendorInvoices(payableResult.data || []);
-    setLoading(false);
-  }, [tenantId, range.from, range.to]);
+    setLoadedScope(scope);
+    } catch (error) {
+      if (isCurrent()) { setError(error); setLoadedScope(null); }
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  }, [tenantId, range.from, range.to, scope, begin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -125,5 +142,9 @@ export function useFinancialStatements(tenantId?: string | null, initialRange: D
     return { rows, opening: cashFlow.net, monthlyOutflow };
   }, [cashFlow, invoices, range.to]);
 
-  return { range, setRange, loading, error, degraded, source, reload: load, trialRows, accounts, stock, vendorInvoices, profitAndLoss, balanceSheet, aging, cashFlow, cashFlowForecast };
+  const ready = Boolean(tenantId && loadedScope === scope && !loading && !error);
+  return { range, setRange, ready, loading, error, degraded, source, reload: load,
+    trialRows: ready ? trialRows : [], accounts: ready ? accounts : [], stock: ready ? stock : [], vendorInvoices: ready ? vendorInvoices : [],
+    profitAndLoss: ready ? profitAndLoss : null, balanceSheet: ready ? balanceSheet : null,
+    aging: ready ? aging : null, cashFlow: ready ? cashFlow : null, cashFlowForecast: ready ? cashFlowForecast : null };
 }

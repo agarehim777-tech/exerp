@@ -17,6 +17,10 @@ function fakeTable(total, maxRows = 1000) {
 }
 
 describe("readAllRows", () => {
+  it('continues past a server cap smaller than the requested page', async () => {
+    const { query } = fakeTable(225, 100);
+    expect((await readAllRows(query)).data).toHaveLength(225);
+  });
   it("reads past the 1000-row response cap", async () => {
     const { query } = fakeTable(2345);
     const { data, error } = await readAllRows(query);
@@ -52,7 +56,7 @@ describe("readRowsByIds", () => {
     const chunks = [];
     const queryForChunk = (chunk) => {
       chunks.push(chunk);
-      return { range: async (from, to) => ({ data: chunk.slice(from, to + 1).map((id) => ({ id })), error: null }) };
+      return { range: async (from, to) => ({ data: chunk.slice(from, to + 1).map((id) => ({ id })), count: chunk.length, error: null }) };
     };
     return { chunks, queryForChunk };
   }

@@ -31,8 +31,29 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: { from: table => {
   };
   return chain;
 } } }));
-import { readInventoryBase } from '../services/inventoryRead.js';
+import { readInventoryBase, readStockMovementHistory } from '../services/inventoryRead.js';
 beforeEach(() => { mocks.requests = []; mocks.rows = {}; mocks.error = null; mocks.afterRead = null; });
+it('reads the complete movement history past server caps with tenant scope and deterministic chronology', async () => {
+  mocks.rows.stock_movements = Array.from({ length: 225 }, (_, i) => ({
+    id: `m-${String(i).padStart(3, '0')}`, created_at: i < 100 ? '2026-02-01' : '2026-01-01',
+  }));
+  const rows = await readStockMovementHistory('tenant', '*');
+  expect(rows).toHaveLength(225);
+  expect(rows[0].id).toBe('m-100');
+  expect(rows.at(-1).id).toBe('m-099');
+  expect(mocks.requests).toHaveLength(3);
+  expect(mocks.requests.every(r => r.filters.some(([k,v]) => k === 'tenant_id' && v === 'tenant'))).toBe(true);
+});
+it('rejects a movement history when a later page fails instead of returning partial valuation data', async () => {
+  mocks.rows.stock_movements = Array.from({ length: 225 }, (_, i) => ({ id: `m-${i}` }));
+  mocks.afterRead = () => { mocks.error = new Error('Second page failed'); };
+  await expect(readStockMovementHistory('tenant', '*')).rejects.toThrow('Second page failed');
+});
+it('discards movement history if the tenant scope expires during a request', async () => {
+  let current = true;
+  mocks.afterRead = () => { current = false; };
+  expect(await readStockMovementHistory('tenant', '*', () => current)).toBeNull();
+});
 it('reads past the API cap without dropping warehouses or composite stock balances', async () => {
   mocks.rows.warehouses = Array.from({length:225},(_,i)=>({id:`w-${i}`}));
   mocks.rows.stock_balances = Array.from({length:215},(_,i)=>({warehouse_id:'w',product_id:`p-${i}`}));

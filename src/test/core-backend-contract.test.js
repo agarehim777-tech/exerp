@@ -19,14 +19,17 @@ it('requires deployed HR, settlement, procurement, production and invoice capabi
   for (const [address, init] of calls) {
     expect(init.headers.authorization).toBeUndefined();
     expect(init.headers.Authorization).toBeUndefined();
-    if (init.method === 'POST') expect(JSON.parse(init.body)._tenant_id).toBe('00000000-0000-0000-0000-000000000000');
+    if (init.method === 'POST') {
+      const body = JSON.parse(init.body);
+      expect(body._tenant_id ?? body._tenant).toBe('00000000-0000-0000-0000-000000000000');
+    }
     else expect(new URL(address).searchParams.get('limit')).toBe('0');
   }
 });
 
 it('blocks release for each missing new table and RPC even when old contracts pass', async () => {
   for (const name of ['tenant_collection_records', 'receivable_settlements', 'kpi_periods', 'vendor_invoice_payments',
-    'settle_receivable_atomic', 'run_kpi_period_atomic', 'pay_vendor_invoice_atomic']) {
+    'settle_receivable_atomic', 'run_kpi_period_atomic', 'pay_vendor_invoice_atomic', 'apply_collection_changes']) {
     const report = await checkCoreBackend(url, 'test-public', (address, init) =>
       response(new URL(address).pathname.split('/').at(-1) === name ? 404 : success(address, init).status));
     expect(report.ok).toBe(false);

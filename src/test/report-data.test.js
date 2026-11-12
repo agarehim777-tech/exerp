@@ -32,7 +32,7 @@ it('reads every page with an explicit tenant and stable ordering, including a la
   expect(result.cashEntries).toHaveLength(999);
   expect(result.cashEntries.some(row => row.id === original || row.id === 'reversal')).toBe(false);
   expect(result.productionPlans[0]).toMatchObject({ product: 'Device', totalCost: 150, qty: 2, warehouseId: 'warehouse' });
-  expect(mocks.queries.filter(row => row.table === 'cash_transactions').map(row => row.start)).toEqual([0, 500, 1000]);
+  expect(mocks.queries.filter(row => row.table === 'cash_transactions').map(row => row.start)).toEqual([0, 500, 1000, 1001]);
   expect(mocks.queries.every(row => row.filters.some(([key, value]) => key === 'tenant_id' && value === 'tenant-a'))).toBe(true);
   expect(mocks.queries.every(row => row.orders.includes('id'))).toBe(true);
 });

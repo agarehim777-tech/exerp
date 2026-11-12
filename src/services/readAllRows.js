@@ -6,13 +6,23 @@
 export const READ_PAGE_SIZE = 500;
 
 export async function readAllRows(query, pageSize = READ_PAGE_SIZE) {
+  if (!Number.isInteger(pageSize) || pageSize <= 0) throw new Error('Invalid page size');
   const rows = [];
-  for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await query().range(offset, offset + pageSize - 1);
+  const seenPages = new Set();
+  for (let offset = 0; ;) {
+    const { data, error, count } = await query().range(offset, offset + pageSize - 1);
     if (error) return { data: null, error };
     const page = data || [];
+    if (page.length) {
+      const signature = JSON.stringify(page);
+      if (seenPages.has(signature)) return { data: null, error: new Error('Repeated page in complete read') };
+      seenPages.add(signature);
+    }
     rows.push(...page);
-    if (page.length < pageSize) return { data: rows, error: null };
+    if (Number.isInteger(count) && rows.length >= count) return { data: rows, error: null };
+    if (!page.length) return Number.isInteger(count) && rows.length < count
+      ? { data: null, error: new Error('Incomplete paginated read') } : { data: rows, error: null };
+    offset += page.length;
   }
 }
 

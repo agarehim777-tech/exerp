@@ -9,6 +9,7 @@ export const coreTables = [
 const tenant = '00000000-0000-0000-0000-000000000000';
 const command = { _tenant_id: tenant, _request_key: 'anonymous-contract-probe', _payload: {} };
 export const coreRpcProbes = [
+  ['apply_collection_changes', { _tenant: tenant, _changes: [] }],
   ['cashbook_ledger_summary', { _tenant_id: tenant }],
   ['create_cash_expense_atomic', command], ['transfer_cash_atomic', command],
   ['refund_cash_expense_atomic', command], ['pay_vendor_invoice_atomic', command],

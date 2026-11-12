@@ -24,6 +24,12 @@ export default function FinancialStatementsPage() {
   const [tab, setTab] = useState("pl");
 
   if (!tenantId) return <Notice>Aktiv şirkət seçilməyib.</Notice>;
+  if (!fs.ready) return <PageStack>
+    <Notice tone={fs.error ? "danger" : undefined}>
+      {fs.error ? `Hesabat yüklənmədi: ${fs.error.message || "Naməlum xəta"}` : "Hesabat yüklənir…"}
+    </Notice>
+    {fs.error && <Button onClick={fs.reload}>Yenidən cəhd et</Button>}
+  </PageStack>;
 
   const { profitAndLoss: pl, balanceSheet: bs, cashFlow: cf, aging } = fs;
   const applyPeriod = mode => { const now=new Date(); let from; if(mode==='month') from=new Date(now.getFullYear(),now.getMonth(),1); else if(mode==='quarter') from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1); else from=new Date(now.getFullYear(),0,1); fs.setRange({from:toLocalIsoDate(from),to:toLocalIsoDate(now)}); };

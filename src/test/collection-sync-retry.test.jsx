@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useCollectionSync } from '../shared/hooks/useCollectionSync';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), eq: vi.fn() }));
-vi.mock('../integrations/supabase/client', () => ({ supabase: { from: (table) => {
+vi.mock('../integrations/supabase/client', () => ({ supabase: { rpc: (_name, args) => mocks.save(args._changes), from: (table) => {
   mocks.eq('table', table);
   const query = { select: () => query, eq: (...args) => { mocks.eq(...args); return query; }, in: () => query, order: () => query,
     range: mocks.load, upsert: mocks.save };
@@ -17,6 +17,35 @@ beforeEach(() => {
   mocks.eq.mockReset();
 });
 afterEach(() => vi.useRealTimers());
+
+it('refresh reads changes made by another user after hydration', async () => {
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { state, sync };
+  });
+  await waitFor(() => expect(result.current.sync.ready).toBe(true));
+  mocks.load.mockResolvedValue({ data: [{ record_key: 'remote', sort_position: 0, metadata: { id: 'remote' }, full_name: 'Remote' }], count: 1, error: null });
+  await act(async () => result.current.sync.refresh());
+  expect(result.current.state.employees[0].name).toBe('Remote');
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('does not replace unsaved local edits when refresh cannot save them', async () => {
+  mocks.save.mockResolvedValue({ error: new Error('offline') });
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections, state, setState });
+    return { state, setState, sync };
+  });
+  await waitFor(() => expect(result.current.sync.ready).toBe(true));
+  vi.useFakeTimers();
+  act(() => result.current.setState({ employees: [{ id: 'local', name: 'Keep' }] }));
+  await act(async () => result.current.sync.refresh());
+  expect(result.current.sync.phase).toBe('error');
+  expect(result.current.state.employees[0].name).toBe('Keep');
+  expect(mocks.load).toHaveBeenCalledTimes(1);
+});
 
 it('reads collections separately and publishes no partial state when a later collection fails', async () => {
   const names = ['employees', 'departments'];
@@ -120,7 +149,7 @@ it('serializes newer edits behind an in-flight save', async () => {
   expect(mocks.save).toHaveBeenCalledTimes(1);
   await act(async () => finish({ error: null }));
   expect(mocks.save).toHaveBeenCalledTimes(2);
-  expect(mocks.save.mock.calls[1][0][0].full_name).toBe('Second');
+  expect(mocks.save.mock.calls[1][0][0].row.full_name).toBe('Second');
 });
 
 it('does not starve an employee write when unrelated inventory reads keep updating state', async () => {
@@ -138,7 +167,7 @@ it('does not starve an employee write when unrelated inventory reads keep updati
     act(() => result.current.setState(current => ({ ...current, warehouses: [{ id: `w${read}` }] })));
   }
   expect(mocks.save).toHaveBeenCalledTimes(1);
-  expect(mocks.save.mock.calls[0][0][0].full_name).toBe('Pending');
+  expect(mocks.save.mock.calls[0][0][0].row.full_name).toBe('Pending');
   expect(result.current.sync.phase).toBe('saved');
 });
 
@@ -158,5 +187,5 @@ it('preserves edits during hydration without backfilling unchanged browser recor
   expect(result.current.state.employees.map(row => row.id)).toEqual(['server', 'new']);
   await act(async () => vi.advanceTimersByTimeAsync(450));
   expect(mocks.save).toHaveBeenCalledTimes(1);
-  expect(mocks.save.mock.calls[0][0].map(row => row.record_key)).toEqual(['new']);
+  expect(mocks.save.mock.calls[0][0].map(change => change.row.record_key)).toEqual(['new']);
 });

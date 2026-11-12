@@ -1,5 +1,6 @@
 node_modules/
 .vitest-cache/
+.staging-migration-workdir/
 dist/
 .env
 .env.*

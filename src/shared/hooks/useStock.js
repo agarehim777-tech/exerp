@@ -5,7 +5,7 @@ import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
 import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { receiveStock } from '../../services/coreOperations.js';
-import { readInventoryBase } from '../../services/inventoryRead.js';
+import { readInventoryBase, readStockMovementHistory } from '../../services/inventoryRead.js';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -21,7 +21,6 @@ export const normalizeBalance = (row) => ({
   avg_cost: Number(row?.avg_cost ?? 0),
 });
 const normalizeMovement = normalizeStockMovement;
-
 export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {}) {
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [loadedScope, setLoadedScope] = useState(null);
@@ -67,21 +66,19 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
   /** Dəyərləmə (FIFO/orta) üçün bütün hərəkətləri səhifələnmiş şəkildə yükləyir. */
   const fetchAllMovements = useCallback(async () => {
     if (!tenantId) return [];
-    const chunk = 1000;
-    const all = [];
-    for (let offset = 0; ; offset += chunk) {
-      const { data, error: err } = await supabase
-        .from('stock_movements')
-        .select(MOVEMENT_SELECT)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .range(offset, offset + chunk - 1);
-      if (err) { setError(err); break; }
-      all.push(...(data || []).map(normalizeMovement));
-      if (!data || data.length < chunk) break;
+    const lane = Symbol('movement-history');
+    const isCurrent = begin(lane);
+    try {
+      const rows = await readStockMovementHistory(tenantId, MOVEMENT_SELECT, isCurrent);
+      if (!rows || !isCurrent()) throw new Error('Inventory request is no longer current');
+      return rows.map(normalizeMovement);
+    } catch (err) {
+      if (isCurrent()) setError(err);
+      throw err;
+    } finally {
+      scope.requests.delete(lane);
     }
-    return all;
-  }, [tenantId]);
+  }, [tenantId, begin, scope]);
 
   // --- Warehouses + balances -------------------------------------------
   const fetchBase = useCallback(async () => {

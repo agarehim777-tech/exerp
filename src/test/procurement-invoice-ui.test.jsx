@@ -19,12 +19,13 @@ vi.mock('../integrations/supabase/client', () => ({ supabase: {
   removeChannel: vi.fn(),
   from: table => {
     const filters = [];
+    let start = 0, end = 499;
     const chain = {
       select: columns => { mocks.selects.push({ table, columns }); return chain; },
       eq: (column, value) => { filters.push({ column, value }); mocks.filters.push({ table, column, value }); return chain; },
       order: () => chain,
-      range: () => chain,
-      then: resolve => (mocks.pending?.(table, filters) || Promise.resolve({ data: mocks.rows[table] || [], error: null })).then(resolve),
+      range: (from, to) => { start = from; end = to; return chain; },
+      then: resolve => (mocks.pending?.(table, filters) || Promise.resolve({ data: (mocks.rows[table] || []).slice(start, end + 1), error: null })).then(resolve),
     };
     return chain;
   },
@@ -78,7 +79,7 @@ it('debounces related table events into one registry reload', async () => {
     });
     expect(mocks.selects).toHaveLength(before);
     await act(async () => vi.advanceTimersByTimeAsync(1200));
-    expect(mocks.selects).toHaveLength(before + 8);
+    expect(mocks.selects.slice(before)).toEqual(mocks.selects.slice(0, before));
     expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false');
   } finally { vi.useRealTimers(); }
 });

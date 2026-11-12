@@ -12,13 +12,20 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
   const [method, setMethod] = useState("fifo");
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.resolve(loadMovements ? loadMovements() : []).then((rows) => {
+    setLoadError(null);
+    setMovements([]);
+    Promise.resolve().then(() => loadMovements ? loadMovements() : []).then((rows) => {
       if (cancelled) return;
       setMovements(rows || []);
+      setLoading(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setLoadError('Anbar tarixçəsi yüklənmədi. Hesabatı yenidən açın.');
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -44,6 +51,9 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
   const ledgerQty = rows.reduce((sum, row) => sum + Number(row.qtyOnHand || 0), 0);
   const currentQty = [...balanceQtyByProduct.values()].reduce((sum, qty) => sum + qty, 0);
   const hasQuantityMismatch = Math.abs(ledgerQty - currentQty) > 0.0001;
+
+  if (loadError) return <div role="alert" className="ui-tok-card">{loadError}</div>;
+  if (loading) return <div role="status" className="ui-tok-card">Tarixçə yüklənir...</div>;
 
   return (
     <div className="ui-tok-card">

@@ -3,6 +3,7 @@ import { useTenantRequestScope } from "./useTenantRequestScope";
 import { useRealtimeResync } from "./useRealtimeResync";
 import { supabase } from "../../integrations/supabase/client";
 import { toLocalIsoDate } from "../../services/date.js";
+import { readAllRows } from '../../services/readAllRows.js';
 
 // The database stores canonical English status codes (shared with the cashbook
 // and the accept/cancel RPCs); the app state uses the Azerbaijani labels.
@@ -70,15 +71,11 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
     session.busy = true;
     setStatus({ phase: "loading", error: null });
     try {
-      const rows = [];
-      for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from("expenses").select(SELECT_COLUMNS)
-          .eq("tenant_id", tenantId).order("expense_date", { ascending: false }).order("id").range(offset, offset + 499);
-        if (error) throw error;
-        if (!session.alive) return;
-        rows.push(...(data || []).map(expenseRowToApp));
-        if (!data || data.length < 500) break;
-      }
+      const { data, error } = await readAllRows(() => supabase.from("expenses").select(SELECT_COLUMNS, { count: 'exact' })
+        .eq("tenant_id", tenantId).order("expense_date", { ascending: false }).order("id"));
+      if (error) throw error;
+      if (!session.alive) return;
+      const rows = (data || []).map(expenseRowToApp);
       // Loading never inserts snapshot/browser rows back into the database.
       session.baseline = new Map(rows.map(row => [String(row.id), signature(row)]));
       session.hydrated = true;

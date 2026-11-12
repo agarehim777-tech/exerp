@@ -161,6 +161,7 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
   const [selectedId, setSelectedId] = useState(null);
   const [movements, setMovements] = useState(stockMovements);
   const [loadingMovements, setLoadingMovements] = useState(false);
+  const [movementsError, setMovementsError] = useState(false);
   const [reservations, setReservations] = useState([]);
   const [receiptLinks, setReceiptLinks] = useState({});
   const [loadingLinks, setLoadingLinks] = useState(false);
@@ -203,7 +204,19 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
     return () => { active = false; };
   }, [activeTenantId, products]);
 
-  useEffect(() => { if (!selectedId || !fetchAllMovements) return; let active = true; setLoadingMovements(true); fetchAllMovements().then((rows) => active && setMovements(rows || [])).finally(() => active && setLoadingMovements(false)); return () => { active = false; }; }, [selectedId, fetchAllMovements]);
+  useEffect(() => {
+    if (!selectedId || !fetchAllMovements) return;
+    let active = true;
+    setLoadingMovements(true);
+    setMovementsError(false);
+    setMovements([]);
+    Promise.resolve().then(() => fetchAllMovements()).then(rows => {
+      if (active) setMovements(rows || []);
+    }).catch(() => {
+      if (active) { setMovementsError(true); setSelectedId(null); }
+    }).finally(() => { if (active) setLoadingMovements(false); });
+    return () => { active = false; };
+  }, [selectedId, fetchAllMovements]);
 
   useEffect(() => {
     if (!selectedId || !activeTenantId) return;
@@ -243,6 +256,7 @@ export default function ProductBalancesPage({ warehouses = [], warehouseStock = 
   }, [selectedId, activeTenantId]);
 
   return <div className="stack warehouse-module product-balances-page">
+    {movementsError && <div role="alert">Stok tarixçəsi yüklənmədi. Yenidən cəhd etmək üçün məhsulu açın.</div>}
     <WarehouseBalancesWorkspace warehouses={warehouses} warehouseStock={warehouseStock} products={products} purchaseOrders={livePurchaseOrders??purchaseOrders} query={query} onQueryChange={setQuery} onReceiveStock={onReceiveStock} onOpenImport={onOpenImport} onCreateProduct={onCreateProduct} onEditProduct={onEditProduct} onOpenProduct={setSelectedId} onOpenOperations={() => onOpenWarehouse?.("all")} onTrackAction={onTrackAction} />
     {selectedProduct && <Product360Modal product={selectedProduct} warehouses={warehouses} warehouseStock={warehouseStock} inventoryBalances={inventoryBalances} purchaseOrders={livePurchaseOrders ?? purchaseOrders} orders={orders} movements={movements} loadingMovements={loadingMovements} reservations={reservations} receiptLinks={receiptLinks} loadingLinks={loadingLinks} onClose={() => setSelectedId(null)} onEdit={onEditProduct} onOpenOrder={onOpenSalesOrder} onOpenProcurement={onOpenProcurementDocument} />}
   </div>;

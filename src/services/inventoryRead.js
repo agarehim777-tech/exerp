@@ -15,12 +15,27 @@ async function readPages(query, isCurrent, identity) {
       seen.add(key);
     }
     rows.push(...(data || []));
-    if (!data?.length) return rows;
     if (!Number.isInteger(count)) throw new Error('Inventory pagination requires an exact count');
+    if (!data?.length) {
+      if (count > 0) throw new Error('Incomplete inventory history response');
+      return rows;
+    }
     // Count is for the remaining cursor window, not the original table.
     if (data.length >= count) return rows;
   }
   return null;
+}
+
+export async function readStockMovementHistory(tenantId, select, isCurrent = () => true) {
+  if (!tenantId) throw new Error('Active tenant is required');
+  const rows = await readPages(last => {
+    let query = supabase.from('stock_movements').select(select, { count: 'exact' })
+      .eq('tenant_id', tenantId).order('id');
+    if (last) query = query.gt('id', last.id);
+    return query;
+  }, isCurrent, row => row.id);
+  return rows?.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)
+    || String(a.id).localeCompare(String(b.id))) ?? null;
 }
 
 export async function readInventoryBase(tenantId, balanceSelect, isCurrent = () => true) {
