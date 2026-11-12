@@ -1,5 +1,5 @@
 import { Button, Select } from "../../shared/ui/primitives.tsx";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Boxes,
@@ -26,7 +26,7 @@ import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
-import { useReportSeries, useReportTotals } from "../../shared/hooks/useReportTotals.ts";
+import { mapModuleSummary, useReportModules, useReportSeries, useReportTotals } from "../../shared/hooks/useReportTotals.ts";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
 
@@ -92,15 +92,18 @@ export function ReportsPage({
 }) {
   const { activeTenantId } = useAuth();
   const { scope, begin } = useTenantRequestScope(activeTenantId);
-  const live = useLiveReportData(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
+  const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const [pendingExport, setPendingExport] = useState(null);
+  // Full rows load only for a warehouse filter (server functions are company-wide) or an export.
+  const live = useLiveReportData(activeTenantId, { enabled: warehouseFilter !== "all" || Boolean(pendingExport) });
+  const serverModulesRaw = useReportModules(activeTenantId, period, snapshotDate);
   const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate);
   const serverSeries = useReportSeries(activeTenantId, snapshotDate);
   const [moduleFilter, setModuleFilter] = useState("Hamısı");
-  const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [exportState, setExportState] = useState(null);
-  const exporting = exportState?.scope === scope ? exportState.key : '';
+  const exporting = pendingExport?.scope === scope ? `${pendingExport.report.title}:${pendingExport.format}` : exportState?.scope === scope ? exportState.key : '';
   const exportError = exportState?.scope === scope ? exportState.error : '';
   const reportExpenses = live.expenses;
   const reportVendors = live.vendors;
@@ -108,7 +111,8 @@ export function ReportsPage({
   const reportInvoices = live.invoices;
   const reportCashEntries = live.cashEntries;
   const reportProduction = live.productionPlans;
-  const exportReady = canExport && live.loaded && !live.loading && !live.error;
+  const exportReady = canExport && !live.error;
+  const dataReady = live.loaded && !live.loading;
 
   const filteredOrders = useMemo(
     () =>
@@ -226,7 +230,16 @@ export function ReportsPage({
   );
   const maxTrendValue = Math.max(1, ...trendRows.flatMap((row) => [row.revenue, row.expense]));
 
+  const serverModules = useMemo(
+    () => (warehouseFilter === "all" && serverModulesRaw ? mapModuleSummary(serverModulesRaw, money) : null),
+    [warehouseFilter, serverModulesRaw],
+  );
   const moduleRows = useMemo(() => {
+    if (serverModules) {
+      const hr = reportPackage.moduleRows.filter((row) => row.module === "HR");
+      const rows = [...serverModules.rows, ...hr, serverModules.production];
+      return moduleFilter === "Hamısı" ? rows : rows.filter((row) => row.module === moduleFilter);
+    }
     const rows = [...reportPackage.moduleRows];
     rows.push({
       module: "İstehsalat",
@@ -238,9 +251,9 @@ export function ReportsPage({
       status: filteredProduction.some((row) => normalize(row.status).includes("risk")) ? "Risk" : "Hazır",
     });
     return moduleFilter === "Hamısı" ? rows : rows.filter((row) => row.module === moduleFilter);
-  }, [reportPackage.moduleRows, productionCost, filteredProduction, moduleFilter]);
+  }, [serverModules, reportPackage.moduleRows, productionCost, filteredProduction, moduleFilter]);
 
-  const productionRisks = filteredProduction
+  const productionRisks = serverModules ? serverModules.productionRisks : filteredProduction
     .filter((row) => normalize(row.status).includes("risk") || row.materials?.some((item) => !item.enough))
     .map((row) => ({
       id: row.id,
@@ -296,7 +309,8 @@ export function ReportsPage({
   };
 
   const runDownload = async (report, format) => {
-    if (!exportReady || exporting) return;
+    if (!exportReady || (exporting && !pendingExport)) return;
+    if (!dataReady) { setPendingExport({ scope, report, format }); return; }
     const isCurrent = begin('download');
     const key = `${report.title}:${format}`;
     setExportState({ scope, key, error: '' });
@@ -313,6 +327,14 @@ export function ReportsPage({
       if (isCurrent()) setExportState(current => ({ ...current, key: '' }));
     }
   };
+
+  useEffect(() => {
+    if (!pendingExport || !dataReady) return;
+    setPendingExport(null);
+    if (pendingExport.scope === scope) runDownload(pendingExport.report, pendingExport.format);
+    // runDownload reads the freshly loaded rows of this render; rerunning only on these inputs is intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingExport, dataReady, scope]);
 
   return (
     <div className="stack reports-module">

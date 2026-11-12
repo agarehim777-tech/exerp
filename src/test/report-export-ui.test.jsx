@@ -60,7 +60,10 @@ it('blocks exports on an unacknowledged or failed load and surfaces an unsuccess
   const save = vi.fn().mockResolvedValue(null);
   mocks.live.loaded = false;
   const { rerender } = render(<ReportsPage {...props} onExport={save} />);
-  expect(screen.getByTestId('report-template-export')).toBeDisabled();
+  // Rows are not loaded up front: the click queues the export until the load finishes.
+  fireEvent.click(screen.getByTestId('report-template-export'));
+  expect(mocks.csv).not.toHaveBeenCalled();
+  expect(save).not.toHaveBeenCalled();
   mocks.live.loaded = true; mocks.live.error = new Error('offline');
   rerender(<ReportsPage {...props} onExport={save} />);
   expect(screen.getByTestId('report-template-export')).toBeDisabled();

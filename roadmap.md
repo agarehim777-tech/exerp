@@ -39,3 +39,4 @@ Yoxlama: dashboard, təhvil, kredit, mühasibat, HR ekranları girişli önizlə
 - [x] appDomain.jsx 6 bölməyə bölündü (Finance/Hr/Platform/Procurement/Sales/Warehouse); köhnə fayl yalnız ötürücüdür
 - [x] ProcurementPage 2252 → 1248 sətir; tablar və ortaq hissələr ayrı fayllarda
 - [x] Hesabatın əsas kartları (gəlir, xərc, istehsal, müştəri, sifariş sayı) bazadakı report_totals ilə hesablanır; anbar filtri seçiləndə köhnə hesablamaya keçir
+- [x] Modullar üzrə analitika və istehsal riskləri report_module_summary ilə bazada; bütün qeydlər yalnız anbar filtri və ya ixracda yüklənir

@@ -92,3 +92,52 @@ export function useReportSeries(tenantId: string | null | undefined, snapshotDat
   }, [tenantId, snapshotDate]);
   return series;
 }
+
+export interface ReportModuleRow { module: string; metric: string; count: string; signal: string; status: string }
+
+type Section = Record<string, unknown>;
+const num = (section: unknown, key: string) => Number((section as Section | undefined)?.[key]) || 0;
+
+// Maps report_module_summary to the analytics table rows (HR stays client-side) and production risks.
+export function mapModuleSummary(raw: unknown, money: (value: number) => string) {
+  const r = (raw || {}) as Section;
+  const sales = r.sales, credit = r.credit, stock = r.stock, po = r.procurement, fin = r.finance, inv = r.invoices, pr = r.production;
+  const openDeliveries = num(sales, "open_deliveries"), overdue = num(credit, "overdue"), low = num(stock, "low");
+  const openPo = num(po, "open"), pending = num(fin, "pending"), invOverdue = num(inv, "overdue"), invOpen = num(inv, "open_balance");
+  const prodRisk = num(pr, "risk");
+  const rows: ReportModuleRow[] = [
+    { module: "Satış", metric: money(num(sales, "revenue")), count: `${num(sales, "count")} sifariş`,
+      signal: openDeliveries > 0 ? `${openDeliveries} təhvil gözləyir` : "Bağlı axın", status: openDeliveries > 5 ? "Nəzarət" : "Hazır" },
+    { module: "Kredit", metric: money(num(credit, "balance")), count: `${num(credit, "count")} müqavilə`,
+      signal: overdue > 0 ? `${overdue} gecikmə` : "Gecikmə yoxdur", status: overdue > 0 ? "Risk" : "Hazır" },
+    { module: "Anbar", metric: `${num(stock, "sellable")}/${num(stock, "total")}`, count: `${num(stock, "sku")} SKU`,
+      signal: low > 0 ? `${low} minimum qalıq` : "Stok sağlam", status: low > 0 ? "Nəzarət" : "Hazır" },
+    { module: "Vendor / PO", metric: money(num(po, "approved_amount")), count: `${num(po, "count")} PO`,
+      signal: openPo > 0 ? `${openPo} təsdiqdə` : `${num(po, "vendors")} vendor aktiv`, status: openPo > 0 ? "Nəzarət" : "Hazır" },
+    { module: "Maliyyə", metric: money(num(fin, "cash_inflow")), count: `${num(fin, "count")} xərc`,
+      signal: pending > 0 ? `${pending} xərc təsdiqdə` : `${money(num(fin, "approved_amount"))} təsdiqli xərc`, status: pending > 0 ? "Nəzarət" : "Hazır" },
+    { module: "Faktura", metric: money(invOpen), count: `${num(inv, "count")} faktura`,
+      signal: invOverdue > 0 ? `${invOverdue} gecikmiş faktura` : "Gecikmiş faktura yoxdur", status: invOverdue > 0 || invOpen > 0 ? "Nəzarət" : "Hazır" },
+  ];
+  const production: ReportModuleRow = { module: "İstehsalat", metric: money(num(pr, "cost")), count: `${num(pr, "count")} plan`,
+    signal: prodRisk > 0 ? "Xammal riski var" : "Xammal təmin olunub", status: prodRisk > 0 ? "Risk" : "Hazır" };
+  return { rows, production, productionRisks: mapRiskRows(r.production_risks) };
+}
+
+// Server-computed module analytics for the selected period; null while loading or on failure.
+export function useReportModules(tenantId: string | null | undefined, period: string, snapshotDate: string) {
+  const [summary, setSummary] = useState<unknown>(null);
+  useEffect(() => {
+    let current = true;
+    setSummary(null);
+    if (!tenantId) return undefined;
+    const { from, to } = reportPeriodRange(period, snapshotDate);
+    supabase.rpc("report_module_summary", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined }).then(({ data, error }) => {
+      if (!current) return;
+      if (error || !data) { console.warn("report_module_summary failed", error); return; }
+      setSummary(data);
+    });
+    return () => { current = false; };
+  }, [tenantId, period, snapshotDate]);
+  return summary;
+}

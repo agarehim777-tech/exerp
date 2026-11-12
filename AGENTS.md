@@ -12,4 +12,4 @@
 - Format fixed-decimal money only through services/format.js formatAmount and compute sellable stock only through shared/lib/stockMath.js; local copies drifted and showed different numbers.
 - appDomain.jsx is a barrel over appDomain<Area>.jsx modules; add new domain logic to the area module, not the barrel, so areas stay independently editable.
 - Tenant-wide reads must page with readAllRows, never .limit(N); PostgREST silently caps at 1000 rows.
-- Report headline totals, the monthly trend and the risk register come from report_* database functions; client row sums are only the fallback for filters the function does not support.
+- Report totals, trend, risk register and module analytics come from report_* database functions; full rows load only for a warehouse filter or an export, so client sums are just the fallback.
