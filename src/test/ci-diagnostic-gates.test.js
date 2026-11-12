@@ -32,3 +32,11 @@ it('still deploys only after successful CI', () => {
   const deploy = read('deploy-pages.yml');
   expect(deploy).toContain("github.event.workflow_run.conclusion == 'success'");
 });
+
+// The local Supabase E2E job (browser, lifecycle and 20 business flows) gates merges; a failure
+// there must fail CI rather than be reported and ignored.
+it('makes the local Supabase E2E job blocking', () => {
+  const job = ci.slice(ci.indexOf('  local-database:'));
+  expect(job).toContain('npm run audit:flows');
+  expect(ci).not.toMatch(/continue-on-error/);
+});
