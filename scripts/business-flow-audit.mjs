@@ -605,7 +605,7 @@ async function auditSeparateCreditContracts(browser) {
     await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     let customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
-    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('tab', { name: 'Kreditlər', exact: true }).click();
     await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true }).waitFor();
     await customerCard.getByRole('article', { name: secondSale.contract.id, exact: true }).waitFor();
     assert(await customerCard.getByRole('button', { name: 'Kreditə bax', exact: true }).count() === 2,
@@ -623,7 +623,7 @@ async function auditSeparateCreditContracts(browser) {
     await page.getByPlaceholder('Axtar: ad, telefon, FİN, VÖEN, vəsiqə...', { exact: true }).fill(fin);
     await page.locator('main.main tr').filter({ hasText: fin }).click();
     customerCard = page.getByRole('dialog', { name: 'Müştəri kartı', exact: true });
-    await customerCard.getByRole('button', { name: 'Kreditlər', exact: true }).click();
+    await customerCard.getByRole('tab', { name: 'Kreditlər', exact: true }).click();
     await customerCard.getByRole('article', { name: firstSale.contract.id, exact: true })
       .getByRole('button', { name: 'Kreditə bax', exact: true }).click();
     await page.locator(".page-header h1").filter({ hasText: "Kredit" }).waitFor();
@@ -851,7 +851,9 @@ async function auditVendorLifecycle(browser) {
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
     await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('70');
     await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
-    state = await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.po_number === poNumber), 'Vendor PO was not persisted');
+    // The page inserts the PO header and then its lines in a second request; wait for both.
+    state = await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.po_number === poNumber
+      && s.purchaseOrderLines.some(l => l.po_id === p.id)), 'Vendor PO was not persisted');
     const po = state.purchaseOrders.find(p => p.po_number === poNumber);
     assert(po.vendor_id === vendor.id && po.status === 'draft', 'PO lost the vendor foreign key or draft status');
     assert(state.purchaseOrderLines.some(l => l.po_id === po.id && Number(l.qty_ordered) === 2), 'PO line did not persist');
@@ -1618,7 +1620,7 @@ async function auditHrStructure(browser) {
       renamedState.employees.find((employee) => employee.name === specialistName)?.managerName === leadName,
       "Employee rename did not update direct reports' manager names",
     );
-    await page.locator(".hr-structure-actions .secondary-btn").click();
+    await page.locator('.hr-structure-actions').getByRole('button', { name: 'Şöbə əlavə et', exact: true }).click();
     const departmentModal = page.locator('[role="dialog"]');
     await departmentModal.locator("input").nth(0).fill(departmentName);
     await departmentModal.locator("textarea").fill("QA department for hierarchy validation");
@@ -1638,7 +1640,7 @@ async function auditHrStructure(browser) {
     const deleteModal = page.locator('[role="dialog"]');
     await deleteModal.locator('.hr-delete-reassignment select').selectOption(
       employees.find(employee => employee.name === directorName).id);
-    await deleteModal.locator(".danger-outline").click();
+    await deleteModal.getByRole('button', { name: 'Sil', exact: true }).click();
     await deleteModal.waitFor({ state: "hidden" });
     const deletedState = await waitForHrState(s => !s.employees.some(e => e.id === renamedManager.id),
       'HR manager deletion was not persisted');
