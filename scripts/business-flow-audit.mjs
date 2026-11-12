@@ -1415,10 +1415,15 @@ async function createHrEmployee(page, values) {
   if (values.documentsComplete != null) await modal.getByLabel('Sənəd uyğunluğu, %', { exact: true }).fill(String(values.documentsComplete));
   if (values.leaveBalance != null) await modal.getByLabel('Məzuniyyət balansı', { exact: true }).fill(String(values.leaveBalance));
   const saved = await auditResponse(page, response => {
-    // The app upserts employees into the dedicated employees table (full_name holds the app's name).
-    if (response.request().method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/employees')) return false;
+    // The app saves collections through the apply_collection_changes RPC (one batch per flush) into
+    // the dedicated employees table; full_name holds the app's name. A direct table upsert also counts.
+    if (response.request().method() !== 'POST') return false;
+    const path = new URL(response.url()).pathname;
     const payload = response.request().postDataJSON();
-    return (Array.isArray(payload) ? payload : [payload]).some(row => row.full_name === values.name);
+    const rows = path.endsWith('/rpc/apply_collection_changes')
+      ? (payload?._changes || []).filter(change => change.table === 'employees' && change.operation === 'upsert').map(change => change.row)
+      : path.endsWith('/employees') ? (Array.isArray(payload) ? payload : [payload]) : [];
+    return rows.some(row => row?.full_name === values.name);
   }, () => modal.locator('button[type="submit"]').click(), { timeout: AUDIT_WAIT_TIMEOUT_MS });
   assert(saved.ok(), 'Employee write was rejected: ' + await saved.text());
   await page.locator('[role="dialog"]').waitFor({ state: "hidden" });
