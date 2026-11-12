@@ -112,7 +112,7 @@ jobs:
         run: node scripts/provision-readonly-audit.mjs
 
       - name: Restricted identity authorization gate (local)
-        if: ${{ !cancelled() && steps.readonly_identity.outcome == success }}
+        if: ${{ !cancelled() && steps.readonly_identity.outcome == 'success' }}
         run: node scripts/verify-readonly-audit.mjs
 
       - name: Browser and tenant-isolation tests (local)
