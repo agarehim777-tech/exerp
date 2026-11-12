@@ -46,6 +46,13 @@ export async function seedLocal({ apiUrl, anonKey, serviceKey, fetcher = fetch, 
     body: { name: 'E2E Şirkət B', slug: 'e2e-b', created_by: other.id } });
   await call('/rest/v1/tenant_members', { method: 'POST', body: { tenant_id: tenantB.id, user_id: other.id, role: 'owner' } });
 
+  // Lifecycle tests and the isolation test need a customer in tenant A; one in tenant B gives the
+  // isolation test real foreign rows that must stay invisible.
+  await call('/rest/v1/customers', { method: 'POST', body: [
+    { tenant_id: tenantId, name: 'E2E Müştəri A' },
+    { tenant_id: tenantB.id, name: 'E2E Müştəri B' },
+  ] });
+
   return { email: tester.email, password, tenantId, otherTenantId: tenantB.id, ownerId: owner.id, testerId: tester.id };
 }
 

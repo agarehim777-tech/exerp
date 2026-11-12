@@ -28,7 +28,7 @@ it('seeds tenant A through create_tenant, the E2E user as admin of A, and tenant
   expect(calls).toEqual([
     'POST /auth/v1/admin/users', 'POST /auth/v1/admin/users', 'POST /auth/v1/admin/users', 'POST /auth/v1/token',
     'POST /rest/v1/rpc/create_tenant', 'POST /rest/v1/tenant_members', 'PATCH /rest/v1/profiles',
-    'POST /rest/v1/tenants', 'POST /rest/v1/tenant_members',
+    'POST /rest/v1/tenants', 'POST /rest/v1/tenant_members', 'POST /rest/v1/customers',
   ]);
 });
 
