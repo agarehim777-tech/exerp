@@ -28,6 +28,7 @@ export async function seedLocal({ apiUrl, anonKey, serviceKey, fetcher = fetch, 
   const signIn = async (email) => (await call('/auth/v1/token?grant_type=password', { method: 'POST', key: anonKey, body: { email, password } })).access_token;
 
   const owner = await createUser('e2e-owner@example.test');
+  const tester = await createUser('e2e-admin@example.test');
   const other = await createUser('e2e-other@example.test');
 
   // First tenant creator becomes platform admin (create_tenant); that is the app's real bootstrap path.
@@ -35,15 +36,24 @@ export async function seedLocal({ apiUrl, anonKey, serviceKey, fetcher = fetch, 
   const tenantId = await call('/rest/v1/rpc/create_tenant', { method: 'POST', key: anonKey, token: ownerToken,
     body: { _name: 'E2E Şirkət A', _slug: 'e2e-a' } });
 
+  // The E2E user must not be an owner or platform admin (tests/supabase-lifecycle.ts and
+  // supabase-audit-backend.mjs refuse those), so it joins tenant A as admin.
+  await call('/rest/v1/tenant_members', { method: 'POST', body: { tenant_id: tenantId, user_id: tester.id, role: 'admin' } });
+  await call(`/rest/v1/profiles?id=eq.${tester.id}`, { method: 'PATCH', body: { active_tenant_id: tenantId } });
+
   // Tenant B belongs only to the other user. Created with the service role so the E2E user never joins it.
   const [tenantB] = await call('/rest/v1/tenants', { method: 'POST', prefer: 'return=representation',
     body: { name: 'E2E Şirkət B', slug: 'e2e-b', created_by: other.id } });
   await call('/rest/v1/tenant_members', { method: 'POST', body: { tenant_id: tenantB.id, user_id: other.id, role: 'owner' } });
 
-  // A platform admin may see across tenants; the E2E user must be an ordinary tenant owner.
-  await call(`/rest/v1/platform_admins?user_id=eq.${owner.id}`, { method: 'DELETE' });
+  // Lifecycle tests and the isolation test need a customer in tenant A; one in tenant B gives the
+  // isolation test real foreign rows that must stay invisible.
+  await call('/rest/v1/customers', { method: 'POST', body: [
+    { tenant_id: tenantId, name: 'E2E Müştəri A' },
+    { tenant_id: tenantB.id, name: 'E2E Müştəri B' },
+  ] });
 
-  return { email: owner.email, password, tenantId, otherTenantId: tenantB.id, ownerId: owner.id };
+  return { email: tester.email, password, tenantId, otherTenantId: tenantB.id, ownerId: owner.id, testerId: tester.id };
 }
 
 // The E2E user must see tenant A and must not see tenant B.
