@@ -455,8 +455,10 @@ async function auditSalesAndExpenseMutations(browser) {
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 150, 'Expense edit did not update its cash debit');
     await expenseRow.getByRole('button', { name: 'Ləğv et', exact: true }).click();
     await page.getByRole('dialog', { name: 'Təsdiq', exact: true }).getByRole('button', { name: 'Təsdiqlə', exact: true }).click();
+    const expenseLedger = s => s.cashEntries.filter(tx => tx.reference === `EXPENSE:${expense.id}` || tx.reference === `EXPENSE-REVERSAL:${expense.id}`);
     state = await waitForState(s => s.expenses.find(e => e.id === expense.id)?.status === 'cancelled'
-      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not persist its cash reversal', financeScope);
+      && s.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600
+      && expenseLedger(s).length === 2, 'Expense cancellation did not persist its cash reversal', financeScope);
     assert(state.financeAccounts.find(a => a.id === account.id)?.currentBalance === 600, 'Expense cancellation did not restore opening balance');
     const ledger = state.cashEntries.filter(tx => tx.reference === `EXPENSE:${expense.id}` || tx.reference === `EXPENSE-REVERSAL:${expense.id}`);
     assert(ledger.length === 2 && ledger.reduce((sum, tx) => sum + (tx.direction === 'in' ? tx.amount : -tx.amount), 0) === 0,
@@ -1256,7 +1258,8 @@ async function auditProjectRoiWorkflow(browser) {
 
     await page.locator(".page-header .primary-btn").click();
     const state = await waitForState(state => state.reportExports?.some(row =>
-      row.title === 'Layihə ROI' && row.workflowId && row.snapshot?.projects?.some(project => project.orders?.includes(sale.order.id))),
+      row.title === 'Layihə ROI' && row.workflowId && row.snapshot?.projects?.some(project => project.orders?.includes(sale.order.id)))
+      && state.auditLog?.some(entry => entry.module === 'Layihə ROI' && entry.action === 'ROI export'),
     'Project ROI export was not persisted for the isolated sale');
     const snapshot = state.projectRoiSnapshot;
     const exportRow = state.reportExports?.find((item) => item.title === "Layihə ROI");
@@ -1761,7 +1764,8 @@ async function auditReportsAnalytics(browser) {
     assert(download.suggestedFilename().endsWith('.csv'), 'Report export did not download a CSV file');
     const exportedCsv = await readFile(await download.path(), 'utf8');
     assert(exportedCsv.includes(sale.order.orderNo), 'Downloaded report did not contain the created sale');
-    const state = await waitForState(s => s.reportExports?.[0]?.id !== previousExportId && s.reportExports?.[0]?.snapshot,
+    const state = await waitForState(s => s.reportExports?.[0]?.id !== previousExportId && s.reportExports?.[0]?.snapshot
+      && s.auditLog?.some(entry => entry.module === 'Hesabat' && entry.action === 'Export hazırlandı'),
       'New report export snapshot was not persisted');
     const exportRow = state.reportExports?.[0];
     assert(exportRow?.snapshot, "Report export did not persist a snapshot");
