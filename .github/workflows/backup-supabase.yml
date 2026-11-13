@@ -24,7 +24,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ secrets.BACKUP_AWS_REGION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Require production database secret
         run: test -n "$PGPASSWORD" || (echo "SUPABASE_DB_PASSWORD secret yoxdur" && exit 1)
       - name: Install PostgreSQL 17 client
@@ -50,7 +50,7 @@ jobs:
       - name: Create integrity manifest
         run: (cd backup && sha256sum roles.sql schema.sql data.dump application.dump > SHA256SUMS)
       - name: Upload encrypted-at-rest artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: supabase-backup-${{ github.run_id }}
           path: backup/

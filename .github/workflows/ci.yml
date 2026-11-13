@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload browser test diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-diagnostics
           path: test-results
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload build output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist
@@ -72,9 +72,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -82,7 +82,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
           # 2.39.2 mis-split a plpgsql body in 20260812090000; 3.1.0 applies all migrations.
           version: 3.1.0
@@ -151,7 +151,7 @@ jobs:
 
       - name: Upload local E2E evidence
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: local-e2e-results
           path: test-results

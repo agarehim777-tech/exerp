@@ -40,3 +40,13 @@ it('makes the local Supabase E2E job blocking', () => {
   expect(job).toContain('npm run audit:flows');
   expect(ci).not.toMatch(/continue-on-error/);
 });
+
+// The local E2E job builds its database with the same Supabase CLI that applies migrations to
+// production; 2.39.2 mis-split a plpgsql body, so a version gap lets CI pass what production breaks.
+it('uses one Supabase CLI version for CI and production migrations', () => {
+  const ciVersion = ci.match(/setup-cli@v\d+\s+with:\s+(?:#[^\n]*\s+)*version: ([\d.]+)/)?.[1];
+  const prodVersions = [...read('migrate-production.yml').matchAll(/supabase@([\d.]+)/g)].map(m => m[1]);
+  expect(ciVersion).toMatch(/^\d+\.\d+\.\d+$/);
+  expect(prodVersions.length).toBeGreaterThan(0);
+  expect(new Set(prodVersions)).toEqual(new Set([ciVersion]));
+});
