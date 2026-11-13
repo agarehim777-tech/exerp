@@ -490,49 +490,22 @@ function ProcurementWorkspace({ tenantId, user }) {
       created_by: user?.id || null,
     };
 
+    // Header and lines are saved in one transaction (save_purchase_order); lines that already have
+    // receipts or vendor invoices are kept and only the header changes.
+    const { data: saved, error: saveError } = await supabase.rpc("save_purchase_order", {
+      _tenant_id: tenantId,
+      _po_id: editingPoId || null,
+      _header: payload,
+      _lines: validLines,
+    });
+    if (saveError) {
+      setError(getError(saveError));
+      setSaving(false);
+      return;
+    }
     if (editingPoId) {
-      const currentPoLines = linesByPo.get(editingPoId) || [];
-      const hasMovements =
-        receiptLines.some((line) => currentPoLines.some((poLine) => poLine.id === line.po_line_id)) ||
-        invoiceLines.some((line) => currentPoLines.some((poLine) => poLine.id === line.po_line_id));
-      const { error: poError } = await supabase.from("purchase_orders").update(payload).eq("id", editingPoId);
-      if (poError) {
-        setError(getError(poError));
-        setSaving(false);
-        return;
-      }
-      if (!hasMovements) {
-        const { error: deleteError } = await supabase.from("purchase_order_lines").delete().eq("po_id", editingPoId);
-        if (deleteError) {
-          setError(getError(deleteError));
-          setSaving(false);
-          return;
-        }
-        const { error: lineError } = await supabase.from("purchase_order_lines").insert(validLines.map((line) => ({ ...line, po_id: editingPoId })));
-        if (lineError) {
-          setError(getError(lineError));
-          setSaving(false);
-          return;
-        }
-      }
-      setNotice(hasMovements ? "PO başlığı yeniləndi. Mədaxil/faktura olan PO sətirləri qorundu." : "PO yeniləndi.");
+      setNotice(saved?.lines_replaced === false ? "PO başlığı yeniləndi. Mədaxil/faktura olan PO sətirləri qorundu." : "PO yeniləndi.");
     } else {
-      const { data: po, error: poError } = await supabase
-        .from("purchase_orders")
-        .insert({ ...payload, tenant_id: tenantId, status: "draft" })
-        .select()
-        .single();
-      if (poError) {
-        setError(getError(poError));
-        setSaving(false);
-        return;
-      }
-      const { error: lineError } = await supabase.from("purchase_order_lines").insert(validLines.map((line) => ({ ...line, po_id: po.id })));
-      if (lineError) {
-        setError(getError(lineError));
-        setSaving(false);
-        return;
-      }
       setNotice("PO yaradıldı və qaralama statusunda saxlanıldı.");
     }
 
