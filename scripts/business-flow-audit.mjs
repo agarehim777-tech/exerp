@@ -523,7 +523,10 @@ async function auditCreditPayment(browser) {
     await orderCard.waitFor({ state: 'hidden' });
     await selectModule(page, 9);
     await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
-    await page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id }).locator(".credit-table-actions .icon-btn").first().click();
+    // Coming back from the sales page reloads the credit directory; wait for the row before clicking.
+    const returnedCreditRow = page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id });
+    await returnedCreditRow.waitFor({ timeout: AUDIT_WAIT_TIMEOUT_MS });
+    await returnedCreditRow.locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
     const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
     await paymentForm.getByLabel('Əsas məbləğ', { exact: true }).fill(String(principalPayment));
