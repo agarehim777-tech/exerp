@@ -63,9 +63,18 @@ it('plans production migrations by default and applies only on explicit confirma
   const plan = step('Plan');
   const apply = step('Apply ordered migrations');
   expect(plan).not.toContain('if:');
-  expect(plan).toContain('db push --linked --include-all --dry-run');
+  expect(plan).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run');
   expect(apply).toContain("if: inputs.mode == 'apply'");
-  expect(apply).toContain('db push --linked --include-all --password');
+  expect(apply).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all');
   expect(apply).not.toContain('--dry-run');
   expect(wf.match(/db push(?![^\n]*--dry-run)/g)).toHaveLength(1);
+});
+
+// GitHub runners have no IPv6: the CLI's direct `link` connection failed there (run 43562616809), so
+// production commands go through the IPv4 session pooler URL instead.
+it('reaches production through the IPv4 pooler, not the IPv6-only direct link', () => {
+  const wf = read('migrate-production.yml');
+  expect(wf).not.toMatch(/supabase@[\d.]+ link\b/);
+  expect(wf).not.toContain('--linked');
+  expect(wf).toContain('node scripts/production-db-url.mjs');
 });

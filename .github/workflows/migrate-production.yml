@@ -35,31 +35,19 @@ jobs:
         env:
           MIGRATION_CONFIRMATION: ${{ inputs.confirmation }}
         run: test "$MIGRATION_CONFIRMATION" = "MIGRATE"
-      - name: Require database credentials
+      # GitHub runners have no IPv6, so the CLI's direct `link` connection fails; every command uses the
+      # IPv4 session pooler (the same host as the nightly backup) through --db-url instead.
+      - name: Build the pooler connection string
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$SUPABASE_DB_PASSWORD"
-      - name: Link and lint production schema
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          npx --yes supabase@3.1.0 link --project-ref tcqdhwtnjrwpfdxoijmv --password "$SUPABASE_DB_PASSWORD"
-          npx --yes supabase@3.1.0 db lint --linked --level error
+        run: node scripts/production-db-url.mjs
+      - name: Lint production schema
+        run: npx --yes supabase@3.1.0 db lint --db-url "$PRODUCTION_DB_URL" --level error
       # Plan runs in both modes with the same flags as apply, so the log shows exactly what apply does.
       - name: Plan (migration history and dry run, no changes)
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          npx --yes supabase@3.1.0 migration list --linked --password "$SUPABASE_DB_PASSWORD"
-          npx --yes supabase@3.1.0 db push --linked --include-all --dry-run --password "$SUPABASE_DB_PASSWORD"
+          npx --yes supabase@3.1.0 migration list --db-url "$PRODUCTION_DB_URL"
+          npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run
       - name: Apply ordered migrations
         if: inputs.mode == 'apply'
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: npx --yes supabase@3.1.0 db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
+        run: npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all
