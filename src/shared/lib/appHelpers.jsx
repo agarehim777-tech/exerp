@@ -8,7 +8,7 @@ import { formatDateInput, formatPaymentDate, parsePaymentDate } from "../../serv
 import { navPermissionByType, pageActionPermissionByType, pageActionlessModules } from "../../services/permissions.js";
 import { defaultDbProvider, localDbBaselineVersion, localDbKey, localDbSchemaVersion } from "../../services/persistence.js";
 import { total } from "../utils/aggregate.js";
-import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, getEmployeeKey, getInvoiceAgingBucket, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getActiveRole, getAvailableQuantity, getModuleForPermission, hasExpenseCashImpact, isLowStockItem, isSerialTrackedProduct, normalizeUserModuleAccess, targetDbProvider } from "./appDomain.jsx";
+import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, getEmployeeKey, getInvoiceAgingBucket, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getActiveRole, getAvailableQuantity, getModuleForPermission, hasExpenseCashImpact, isLowStockItem, normalizeUserModuleAccess, targetDbProvider } from "./appDomain.jsx";
 import { enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk, getDeliveryStockCheck, getOrderBalance, getOrderPaymentMethod, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import {
   addDays, applyCreditPrincipalPayment, buildCreditPlan, daysBetween, getCreditDisplayPlan,
@@ -29,6 +29,10 @@ import {
   getInitials, buildSupportMessageFromComment, buildSupportConversation, normalizeMessageThread,
   buildMessageParticipantOptions, buildMessageContextOptions, getMessageContextPayload, upsertSupportConversation,
 } from "./messagingHelpers.ts";
+import {
+  buildQuantityMap, buildSerialPrefix, ensureStockItemSerials, ensureWarehouseSerials, getAvailableSerialsForProduct,
+  updateSerialStatuses, releaseOrderSerialReservations, adjustStockRows, addStockToRows,
+} from "./serialStockHelpers.ts";
 
 export const deploymentToolkitReady = true;
 
@@ -1620,162 +1624,6 @@ function matchesFinanceSearch(row, query) {
   ].join(" ")).includes(normalize(query));
 }
 
-function buildQuantityMap(items) {
-  return items.reduce((map, item) => {
-    if (!item.product) return map;
-    map.set(item.product, (map.get(item.product) || 0) + Number(item.qty || 0));
-    return map;
-  }, new Map());
-}
-
-function buildSerialPrefix(product = "", warehouseId = "") {
-  const productCode = normalize(product).replace(/[^a-z0-9]/g, "").slice(0, 4).toLocaleUpperCase("az-AZ") || "SKU";
-  const warehouseCode = String(warehouseId || "WH").replace(/[^A-Z0-9]/gi, "").slice(-3).toLocaleUpperCase("az-AZ");
-  return `${productCode}${warehouseCode}`;
-}
-
-function ensureStockItemSerials(item, warehouseId = "WH") {
-  if (!isSerialTrackedProduct(item)) return { ...item, serials: item.serials || [] };
-
-  const totalCount = Math.max(0, Math.round(Number(item.total || 0)));
-  const reservedCount = Math.max(0, Math.round(Number(item.reserved || 0)));
-  const existingSerials = Array.isArray(item.serials) ? item.serials : [];
-  const nonSoldSerials = existingSerials.filter((serial) => serial.status !== "Satılıb");
-  const serials = [...existingSerials];
-  const prefix = buildSerialPrefix(item.product, warehouseId);
-
-  for (let index = nonSoldSerials.length; index < totalCount; index += 1) {
-    serials.push({
-      imei: `${prefix}-${String(index + 1).padStart(5, "0")}`,
-      status: index < reservedCount ? "Rezervdə" : "Anbarda",
-      warehouseId,
-      product: item.product,
-    });
-  }
-
-  let reservedSeen = 0;
-  const normalizedSerials = serials.map((serial) => {
-    if (serial.status === "Satılıb") return serial;
-    reservedSeen += 1;
-    return {
-      ...serial,
-      status: reservedSeen <= reservedCount ? "Rezervdə" : "Anbarda",
-      warehouseId: serial.warehouseId || warehouseId,
-      product: serial.product || item.product,
-    };
-  });
-
-  return {
-    ...item,
-    serials: normalizedSerials,
-  };
-}
-
-function ensureWarehouseSerials(warehouseStock = {}) {
-  return Object.fromEntries(
-    Object.entries(warehouseStock).map(([warehouseId, rows]) => [
-      warehouseId,
-      (rows || []).map((item) => ensureStockItemSerials(item, warehouseId)),
-    ]),
-  );
-}
-
-function getAvailableSerialsForProduct(warehouseStock = {}, warehouseId, product) {
-  const item = (warehouseStock?.[warehouseId] || []).find((row) => row.product === product);
-  if (!item || !isSerialTrackedProduct(item)) return [];
-  return (item.serials || []).filter((serial) => serial.status === "Anbarda").map((serial) => serial.imei);
-}
-
-function updateSerialStatuses(rows, productLines, nextStatus, orderId) {
-  return rows.map((item) => {
-    const matchingLines = productLines.filter((line) => line.product === item.product);
-    if (matchingLines.length === 0 || !Array.isArray(item.serials) || item.serials.length === 0) return item;
-
-    const requestedSerials = new Set(matchingLines.flatMap((line) => line.serials || []).filter(Boolean));
-    const neededFallback = matchingLines.reduce((sum, line) => sum + Number(line.qty || 0), 0);
-    let fallbackCount = 0;
-
-    return {
-      ...item,
-      serials: item.serials.map((serial) => {
-        const explicit = requestedSerials.has(serial.imei);
-        const fallback =
-          requestedSerials.size === 0 &&
-          serial.status !== "Satılıb" &&
-          fallbackCount < neededFallback &&
-          (nextStatus === "Satılıb" ? serial.status === "Rezervdə" : serial.status === "Anbarda");
-
-        if (!explicit && !fallback) return serial;
-        fallbackCount += fallback ? 1 : 0;
-        return {
-          ...serial,
-          status: nextStatus,
-          orderId,
-          reservedAt: nextStatus === "Rezervdə" ? currentBusinessDate : serial.reservedAt,
-          soldAt: nextStatus === "Satılıb" ? currentBusinessDate : serial.soldAt,
-        };
-      }),
-    };
-  });
-}
-
-function releaseOrderSerialReservations(rows, productLines, orderId) {
-  return rows.map((item) => {
-    const matchingLines = productLines.filter((line) => line.product === item.product);
-    if (matchingLines.length === 0 || !Array.isArray(item.serials) || item.serials.length === 0) return item;
-
-    const requestedSerials = new Set(matchingLines.flatMap((line) => line.serials || []).filter(Boolean));
-    const fallbackLimit = matchingLines.reduce((sum, line) => sum + Number(line.qty || 0), 0);
-    let releasedCount = 0;
-
-    return {
-      ...item,
-      serials: item.serials.map((serial) => {
-        const explicit = requestedSerials.has(serial.imei);
-        const sameOrder = serial.orderId === orderId;
-        const fallback = requestedSerials.size === 0 && sameOrder && releasedCount < fallbackLimit;
-        if (serial.status !== "Rezervdə" || (!explicit && !fallback)) return serial;
-        releasedCount += 1;
-        return {
-          ...serial,
-          status: "Anbarda",
-          orderId: "",
-          reservedAt: "",
-        };
-      }),
-    };
-  });
-}
-
-function adjustStockRows(rows, quantities, { totalDelta = 0, reservedDelta = 0, createMissing = false }) {
-  const seen = new Set();
-  const next = rows.map((item) => {
-    const qty = quantities.get(item.product) || 0;
-    if (!qty) return item;
-    seen.add(item.product);
-    return {
-      ...item,
-      // Qalıq heç vaxt mənfi olmur; rezerv qalıqdan çox ola bilər (backorder).
-      total: Math.max(0, item.total + totalDelta * qty),
-      reserved: Math.max(0, item.reserved + reservedDelta * qty),
-    };
-  });
-  if (!createMissing) return next;
-  // Anbarda sətri olmayan məhsul da satıla bilər — sıfır qalıqla rezerv sətri açılır.
-  quantities.forEach((qty, product) => {
-    if (!qty || seen.has(product) || next.some((item) => item.product === product)) return;
-    next.push({
-      product,
-      total: 0,
-      reserved: Math.max(0, reservedDelta * qty),
-      price: 0,
-      serials: [],
-    });
-  });
-  return next;
-}
-
-
 function normalizeOperationalLabels(snapshot = {}) {
   return {
     ...snapshot,
@@ -2539,53 +2387,6 @@ function buildModuleReadiness(snapshot = {}, integrityReport = {}) {
     score,
     items,
   };
-}
-
-function addStockToRows(rows, product, qty, price, warehouseId = "", productMeta = {}) {
-  const amount = Math.max(0, Math.round(Number(qty || 0)));
-  if (!product || amount <= 0) return rows;
-
-  const exists = rows.some((item) => item.product === product);
-  if (exists) {
-    return rows.map((item) => {
-      if (item.product !== product) return item;
-
-      const nextItem = {
-        ...item,
-        total: Number(item.total || 0) + amount,
-        price: Number(price || item.price || 0),
-        ...(Number.isFinite(Number(productMeta.costPrice)) ? { costPrice: Number(productMeta.costPrice) } : {}),
-        ...(productMeta.sku ? { sku: productMeta.sku } : {}),
-        ...(productMeta.category ? { category: productMeta.category } : {}),
-        ...(productMeta.unit ? { unit: productMeta.unit } : {}),
-        ...(typeof productMeta.serialTracked === "boolean" ? { serialTracked: productMeta.serialTracked } : {}),
-        ...(Number.isFinite(Number(productMeta.reorderLevel)) ? { reorderLevel: Number(productMeta.reorderLevel) } : {}),
-      };
-      return {
-        ...nextItem,
-        serials: ensureStockItemSerials(nextItem, warehouseId).serials,
-      };
-    });
-  }
-
-  return [
-    ...rows,
-    ensureStockItemSerials(
-      {
-        product,
-        total: amount,
-        reserved: 0,
-        price: Number(price || 0),
-        ...(Number.isFinite(Number(productMeta.costPrice)) ? { costPrice: Number(productMeta.costPrice) } : {}),
-        ...(productMeta.sku ? { sku: productMeta.sku } : {}),
-        ...(productMeta.category ? { category: productMeta.category } : {}),
-        ...(productMeta.unit ? { unit: productMeta.unit } : {}),
-        ...(typeof productMeta.serialTracked === "boolean" ? { serialTracked: productMeta.serialTracked } : {}),
-        ...(Number.isFinite(Number(productMeta.reorderLevel)) ? { reorderLevel: Number(productMeta.reorderLevel) } : {}),
-      },
-      warehouseId,
-    ),
-  ];
 }
 
 function buildPayrollExpense(employees) {
