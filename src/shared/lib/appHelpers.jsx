@@ -5,10 +5,10 @@ import { initialState, navItems } from "../../data.js";
 import { pageMeta } from "../../config/page-meta.js";
 import { money, normalize } from "../../services/format.js";
 import { formatDateInput, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
-import { navPermissionByType, pageActionPermissionByType, pageActionlessModules } from "../../services/permissions.js";
+import { navPermissionByType } from "../../services/permissions.js";
 import { defaultDbProvider, localDbBaselineVersion, localDbKey, localDbSchemaVersion } from "../../services/persistence.js";
 import { total } from "../utils/aggregate.js";
-import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, getEmployeeKey, getInvoiceAgingBucket, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getActiveRole, getAvailableQuantity, getModuleForPermission, hasExpenseCashImpact, isLowStockItem, normalizeUserModuleAccess, targetDbProvider } from "./appDomain.jsx";
+import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, calculatePayrollTax2026, currentBusinessDate, currentBusinessYear, getEmployeeKey, getInvoiceAgingBucket, buildProductLookup, buildSalesBonusRows, currentBusinessQuarter, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getAvailableQuantity, hasExpenseCashImpact, isLowStockItem, targetDbProvider } from "./appDomain.jsx";
 import { enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk, getDeliveryStockCheck, getOrderBalance, getOrderPaymentMethod, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import {
   addDays, applyCreditPrincipalPayment, buildCreditPlan, daysBetween, getCreditDisplayPlan,
@@ -33,6 +33,10 @@ import {
   buildQuantityMap, buildSerialPrefix, ensureStockItemSerials, ensureWarehouseSerials, getAvailableSerialsForProduct,
   updateSerialStatuses, releaseOrderSerialReservations, adjustStockRows, addStockToRows,
 } from "./serialStockHelpers.ts";
+import {
+  getCurrentUser, hasRolePermission, hasUserModuleAccess, hasEffectivePermission, canAccessNavItem,
+  getPageActionPermission, hasPageAction,
+} from "./permissionHelpers.ts";
 
 export const deploymentToolkitReady = true;
 
@@ -1752,28 +1756,6 @@ function loadPersistentState() {
   }
 }
 
-function getCurrentUser(settings = {}) {
-  const safeSettings = ensureSettings(settings);
-  return safeSettings.users.find((user) => user.id === safeSettings.sessionUserId) || null;
-}
-
-function hasRolePermission(settings, permission) {
-  if (!permission) return true;
-  const user = getCurrentUser(settings);
-  if (!user) return false;
-  if (user.role === "Platform Super Admin") return true;
-  const role = getActiveRole(settings);
-  return Array.isArray(role?.permissions) && role.permissions.includes(permission);
-}
-
-function hasUserModuleAccess(settings, moduleId) {
-  if (!moduleId) return true;
-  const user = getCurrentUser(settings);
-  if (!user) return false;
-  if (user.role === "Platform Super Admin") return true;
-  return normalizeUserModuleAccess(user, ensureSettings(settings).roles).includes(moduleId);
-}
-
 function getDuplicateValues(rows = [], key, label) {
   const seen = new Set();
   const duplicates = new Set();
@@ -2412,24 +2394,6 @@ function buildPayrollExpense(employees) {
     employerCost,
     payrollRows,
   };
-}
-
-function hasEffectivePermission(settings, permission) {
-  if (!hasRolePermission(settings, permission)) return false;
-  return hasUserModuleAccess(settings, getModuleForPermission(permission));
-}
-
-function canAccessNavItem(settings, id) {
-  const permission = navPermissionByType[id];
-  return hasUserModuleAccess(settings, id) && (!permission || hasRolePermission(settings, permission));
-}
-
-function getPageActionPermission(moduleId) {
-  return pageActionPermissionByType[moduleId] || null;
-}
-
-function hasPageAction(moduleId) {
-  return Boolean(pageMeta[moduleId]?.action) && !pageActionlessModules.has(moduleId);
 }
 
 export {
