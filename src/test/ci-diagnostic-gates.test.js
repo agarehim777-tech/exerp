@@ -70,6 +70,13 @@ it('plans production migrations by default and applies only on explicit confirma
   expect(wf.match(/db push(?![^\n]*--dry-run)/g)).toHaveLength(1);
 });
 
+// A function that writes a dropped column passes every migration and only fails when called, so CI
+// lints the local database's functions and fails on errors.
+it('fails CI on database function lint errors', () => {
+  const job = ci.slice(ci.indexOf('\n  local-database:'));
+  expect(job).toContain('supabase db lint --local --level error --fail-on error');
+});
+
 // GitHub runners have no IPv6: the CLI's direct `link` connection failed there (run 43562616809), so
 // production commands go through the IPv4 session pooler URL instead.
 it('reaches production through the IPv4 pooler, not the IPv6-only direct link', () => {
