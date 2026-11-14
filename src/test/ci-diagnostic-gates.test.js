@@ -65,7 +65,7 @@ it('plans production migrations by default and applies only on explicit confirma
   expect(plan).not.toContain('if:');
   expect(plan).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run');
   expect(apply).toContain("if: inputs.mode == 'apply'");
-  expect(apply).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all');
+  expect(apply).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all --yes');
   expect(apply).not.toContain('--dry-run');
   expect(wf.match(/db push(?![^\n]*--dry-run)/g)).toHaveLength(1);
 });
