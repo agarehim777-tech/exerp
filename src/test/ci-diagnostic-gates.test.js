@@ -77,6 +77,18 @@ it('fails CI on database function lint errors', () => {
   expect(job).toContain('supabase db lint --local --level error --fail-on error');
 });
 
+// Production drifted from the repo twice unnoticed; the daily health run now fails on broken
+// production functions and on merged migrations that were never applied. It must stay read-only.
+it('checks production schema drift daily without changing it', () => {
+  const wf = read('operational-health.yml');
+  const job = wf.slice(wf.indexOf('\n  schema-drift:'));
+  expect(job).toContain('node scripts/production-db-url.mjs');
+  expect(job).toContain('db lint --db-url "$PRODUCTION_DB_URL" --level error --fail-on error');
+  expect(job).toContain('db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run');
+  expect(job).toContain('Remote database is up to date');
+  expect(job.match(/db push(?![^\n]*--dry-run)/g)).toBeNull();
+});
+
 // GitHub runners have no IPv6: the CLI's direct `link` connection failed there (run 43562616809), so
 // production commands go through the IPv4 session pooler URL instead.
 it('reaches production through the IPv4 pooler, not the IPv6-only direct link', () => {

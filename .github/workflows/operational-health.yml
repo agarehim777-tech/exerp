@@ -25,4 +25,27 @@ jobs:
           E2E_TEST_USER: ${{ secrets.E2E_TEST_USER }}
           E2E_TEST_PASS: ${{ secrets.E2E_TEST_PASS }}
 
-
+  # Production drifted from supabase/migrations twice (missing functions, stale bodies) and nobody
+  # noticed until a deploy gate failed. This job only reads: it fails when a production function no
+  # longer lints, or when a migration merged into the repo has not been applied yet.
+  schema-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Build the pooler connection string
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: node scripts/production-db-url.mjs
+      - name: Production functions lint clean
+        run: npx --yes supabase@3.1.0 db lint --db-url "$PRODUCTION_DB_URL" --level error --fail-on error
+      - name: Every repo migration is applied to production
+        run: |
+          npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run 2>&1 | tee push-plan.txt
+          if ! grep -q "Remote database is up to date" push-plan.txt; then
+            echo "::error::Production is behind supabase/migrations. Run Migrate Production Database: plan, then apply."
+            exit 1
+          fi
