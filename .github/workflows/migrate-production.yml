@@ -48,6 +48,8 @@ jobs:
         run: |
           npx --yes supabase@3.1.0 migration list --db-url "$PRODUCTION_DB_URL"
           npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all --dry-run
+      # The CLI asks before applying and cannot prompt in CI ("Nothing was changed", run 43565675512);
+      # --yes answers it. The MIGRATE gate above is the human confirmation.
       - name: Apply ordered migrations
         if: inputs.mode == 'apply'
-        run: npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all
+        run: npx --yes supabase@3.1.0 db push --db-url "$PRODUCTION_DB_URL" --include-all --yes
