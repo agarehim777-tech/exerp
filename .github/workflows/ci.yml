@@ -102,6 +102,12 @@ jobs:
       - name: Core backend contract (tables and RPCs the app needs)
         run: npm run verify:core-backend
 
+      # plpgsql only checks a statement when it runs, so a function writing a dropped column passes every
+      # migration and fails in production (delete_sales_order_safe, complete_inventory_return). The
+      # linter (plpgsql_check) finds those statically.
+      - name: Database function lint (plpgsql_check)
+        run: supabase db lint --local --level error --fail-on error
+
       - name: Install Playwright Chromium
         if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium
