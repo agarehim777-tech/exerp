@@ -50,3 +50,22 @@ it('uses one Supabase CLI version for CI and production migrations', () => {
   expect(prodVersions.length).toBeGreaterThan(0);
   expect(new Set(prodVersions)).toEqual(new Set([ciVersion]));
 });
+
+// Production migrations default to a dry run; only mode=apply with MIGRATE changes the database, and
+// the plan uses the same push flags so its output is exactly what apply will do.
+it('plans production migrations by default and applies only on explicit confirmation', () => {
+  const wf = read('migrate-production.yml');
+  expect(wf).toMatch(/mode:\s+description:[^\n]*\n\s+type: choice\n\s+options: \[plan, apply\]\n\s+default: plan/);
+  const steps = wf.split('\n      - name: ').slice(1);
+  const step = (name) => steps.find((s) => s.startsWith(name)) || '';
+  expect(step('Explicit production safety gate')).toContain("if: inputs.mode == 'apply'");
+  expect(step('Explicit production safety gate')).toContain('test "$MIGRATION_CONFIRMATION" = "MIGRATE"');
+  const plan = step('Plan');
+  const apply = step('Apply ordered migrations');
+  expect(plan).not.toContain('if:');
+  expect(plan).toContain('db push --linked --include-all --dry-run');
+  expect(apply).toContain("if: inputs.mode == 'apply'");
+  expect(apply).toContain('db push --linked --include-all --password');
+  expect(apply).not.toContain('--dry-run');
+  expect(wf.match(/db push(?![^\n]*--dry-run)/g)).toHaveLength(1);
+});
