@@ -3,13 +3,12 @@ import {
 } from "lucide-react";
 import { initialState } from "../../data.js";
 import { money, normalize } from "../../services/format.js";
-import { parsePaymentDate } from "../../services/date.js";
 import { defaultDbProvider, localDbBaselineVersion, localDbKey, localDbSchemaVersion } from "../../services/persistence.js";
 import { total } from "../utils/aggregate.js";
 import { baseFinanceDate, buildHrEmployeeRecords, buildInvoiceControlSummary, currentBusinessDate, getEmployeeKey, getInvoiceAgingBucket, buildProductLookup, buildSalesBonusRows, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits, getReorderPoint, isPurchaseOrderOpen, ensureSettings, getAvailableQuantity, hasExpenseCashImpact, isLowStockItem, targetDbProvider } from "./appDomain.jsx";
-import { enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk, getDeliveryStockCheck, getOrderBalance, getOrderPaymentMethod, isDeliveryQueueOrder, normalizeOrderProductLines, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
+import { enrichDeliveryOrder, getDeliveryAgeDays, getDeliveryRisk, getDeliveryStockCheck, getOrderBalance, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import {
-  applyCreditPrincipalPayment, buildCreditPlan, getCreditDisplayPlan,
+  getCreditDisplayPlan,
   getCreditPaymentState, isCreditClosed,
 } from "./credit.js";
 import { flattenWarehouseStock } from "./warehouseStockRows.ts";
@@ -48,6 +47,11 @@ import {
 import { buildProjectPortfolioSource, isDateWithinProject, getProjectOrderCost, buildProjectRoiRows } from "./projectHelpers.ts";
 import { buildProductionPlanRows } from "./productionHelpers.ts";
 import { buildOnboardingRows, buildHelpModuleGuides, buildHelpArticles } from "./onboardingHelpers.ts";
+import { buildSellerBonusRows, summarizeSellerBonusRows, calculateOrderLineTotal, productLineSignature, buildSalesCreditForOrder } from "./salesOrderHelpers.ts";
+import {
+  getDeliveryActionLabel, matchesDeliveryFilter, buildDriverDeliveryStats, matchesFinanceFilter, matchesFinanceDateRange,
+  matchesFinanceSearch,
+} from "./listFilterHelpers.ts";
 
 export const deploymentToolkitReady = true;
 
@@ -480,183 +484,6 @@ function buildReportPackage({
       { label: "HR payroll və sənəd tamamlığı", status: moduleRows.find((row) => row.module === "HR")?.status || "Hazır" },
     ],
   };
-}
-
-function buildSellerBonusRows(rows = []) {
-  return rows
-    .filter((row) => row?.seller)
-    .slice(0, 3)
-    .map((row) => ({
-      seller: row.seller,
-      bonus: Math.max(0, Number(row.bonus || 0)),
-    }));
-}
-
-function summarizeSellerBonusRows(rows = []) {
-  return buildSellerBonusRows(rows)
-    .map((row) => `${row.seller} ${Number(row.bonus || 0)}%`)
-    .join(", ");
-}
-
-function calculateOrderLineTotal(productLines = []) {
-  return normalizeOrderProductLines(productLines).reduce(
-    (sum, line) => sum + Number(line.qty || 0) * Number(line.price || 0),
-    0,
-  );
-}
-
-function productLineSignature(productLines = []) {
-  return normalizeOrderProductLines(productLines)
-    .map((line) => `${line.product}:${line.qty}:${line.price}`)
-    .join("|");
-}
-
-function buildSalesCreditForOrder(order, storedCredit) {
-  const totalAmount = Number(order.amount || 0);
-  const initialPayment = Number(order.initialPayment || 0);
-  const months = Number(order.creditMonths || storedCredit?.months || 12);
-  const creditPlan = buildCreditPlan({ total: totalAmount, initialPayment, months });
-  const payments = Array.isArray(storedCredit?.payments) ? storedCredit.payments : [];
-  const installments = creditPlan.installments.map((installment, index) => ({
-    ...installment,
-    due: storedCredit?.installments?.[index]?.due || installment.due,
-  }));
-  const baseCredit = {
-    ...(storedCredit || {}),
-    id: order.creditId || storedCredit?.id || getCreditIdForOrder(order),
-    salesSource: true,
-    createdFrom: "Satış modulu",
-    orderId: order.id,
-    orderNo: order.orderNo || order.order_no || order.id,
-    contractId: order.contractId || storedCredit?.contractId || `MQ-${order.id}`,
-    customer: order.customer,
-    fin: order.fin,
-    product: summarizeOrderProducts(order),
-    device: summarizeOrderProducts(order),
-    productLines: order.productLines || [],
-    seller: order.seller,
-    warehouseName: order.warehouseName,
-    total: creditPlan.total,
-    initialPayment: creditPlan.initialPayment,
-    balance: creditPlan.balance,
-    monthly: creditPlan.monthly,
-    lastPayment: creditPlan.lastPayment,
-    months: creditPlan.months,
-    paidMonths: 0,
-    rate: 0,
-    next: installments[0]?.due || "—",
-    status: storedCredit?.status || "Başlanmamış",
-    startDate: storedCredit?.startDate ?? null,
-    startedAt: storedCredit?.startedAt ?? null,
-    installments,
-    payments,
-  };
-  const paidPrincipal = payments.reduce((sum, payment) => sum + Number(payment.principal || 0), 0);
-  if (paidPrincipal <= 0) {
-    return isCreditClosed(storedCredit || baseCredit, { ...creditPlan, installments })
-      ? { ...baseCredit, balance: 0, paidMonths: creditPlan.months, rate: 100, status: "Tamamlandı" }
-      : baseCredit;
-  }
-
-  const paymentResult = applyCreditPrincipalPayment(baseCredit, paidPrincipal);
-  return {
-    ...baseCredit,
-    balance: paymentResult.nextBalance,
-    installments: paymentResult.installments,
-    paidMonths: paymentResult.nextPaidMonths,
-    rate: Math.round((paymentResult.nextPaidMonths / Math.max(1, creditPlan.months)) * 100),
-    next: paymentResult.nextDue,
-    monthly: paymentResult.nextMonthly,
-    status: paymentResult.nextBalance <= 0 ? "Tamamlandı" : paymentResult.status,
-  };
-}
-
-function getDeliveryActionLabel(order) {
-  if (order.status === "Təhvil verilib") return "Tamamlanıb";
-  if (order.status === "Təhvilə çıxıb") return "Təhvili tamamla";
-  return "Növbəti mərhələ";
-}
-
-function matchesDeliveryFilter(order, filter) {
-  if (filter === "Hamısı") return true;
-  if (filter === "Aktiv") return order.status !== "Təhvil verilib";
-  if (filter === "Gecikmə riski") return order.risk === "Gecikmə riski";
-  if (filter === "Sürücü yoxdur") return order.risk === "Sürücü yoxdur";
-  if (filter === "Tamamlanan") return order.status === "Təhvil verilib";
-  return order.status === filter;
-}
-
-function buildDriverDeliveryStats(orders) {
-  const driverMap = new Map();
-  orders
-    .filter((order) => order.driver && order.driver !== "—")
-    .forEach((order) => {
-      const current = driverMap.get(order.driver) || {
-        driver: order.driver,
-        active: 0,
-        completed: 0,
-        outForDelivery: 0,
-        risk: 0,
-      };
-      if (order.status === "Təhvil verilib") {
-        current.completed += 1;
-      } else {
-        current.active += 1;
-      }
-      if (order.status === "Təhvilə çıxıb" || order.status === "Yoldadır") {
-        current.outForDelivery += 1;
-      }
-      if (order.risk !== "Normal" && order.risk !== "Tamamlandı") {
-        current.risk += 1;
-      }
-      driverMap.set(order.driver, current);
-    });
-  const maxActive = Math.max(1, ...[...driverMap.values()].map((item) => item.active + item.outForDelivery));
-  return [...driverMap.values()].map((item) => ({
-    ...item,
-    load: ((item.active + item.outForDelivery) / maxActive) * 100,
-  }));
-}
-
-function matchesFinanceFilter(row, filter) {
-  if (filter === "Daxilolma") return row.direction === "in";
-  if (filter === "Xərc") return row.type === "Xərc";
-  if (filter === "Satış") return row.type === "Satış";
-  if (filter === "Kredit") return row.type === "Kredit";
-  if (filter === "Gecikmə gəliri") return Number(row.penalty || 0) > 0;
-  if (filter === "Təsdiq gözləyir") return row.direction === "pending";
-  if (filter === "Cash təsirsiz") return row.direction === "accrual";
-  return true;
-}
-
-function matchesFinanceDateRange(row, dateFrom, dateTo) {
-  const rowDate = parsePaymentDate(row.date);
-  if (!rowDate) return !dateFrom && !dateTo;
-  const fromDate = dateFrom ? parsePaymentDate(dateFrom) : null;
-  const toDate = dateTo ? parsePaymentDate(dateTo) : null;
-  if (fromDate && rowDate < fromDate) return false;
-  if (toDate && rowDate > toDate) return false;
-  return true;
-}
-
-function matchesFinanceSearch(row, query) {
-  if (!query.trim()) return true;
-  return normalize([
-    row.id,
-    row.type,
-    row.source,
-    row.category,
-    row.account,
-    row.title,
-    row.description,
-    row.party,
-    row.status,
-    row.orderId,
-    row.creditId,
-    row.contractId,
-    row.poId,
-    row.expenseId,
-  ].join(" ")).includes(normalize(query));
 }
 
 function normalizeOperationalLabels(snapshot = {}) {
