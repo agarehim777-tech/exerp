@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, CircleAlert, CreditCard, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { CircleAlert, CreditCard, Plus, Trash2, Users, X } from "lucide-react";
 import { stages } from "../../../data.js";
 import { money } from "../../../services/format.js";
 import { buildCreditPlan, creditTermOptions } from "../../../shared/lib/credit.js";
@@ -8,168 +8,26 @@ import {
   getAvailableQuantity,
   getBackorderPlan,
   getOrderSellerBonuses,
-  isSerialTrackedProduct,
   normalizeOrderProductLines,
 } from "../../../shared/lib/appDomain.jsx";
 import { createClientId } from "../../../shared/utils/id.js";
 import { calculateOrderFinancials, calculateOrderLineTotal } from "../services/orderCalculations.js";
 import { Button, Input, Select } from "../../../shared/ui/primitives.tsx";
+import { getAvailableSerialsForProduct } from "../../../shared/lib/serialStockHelpers.ts";
+import {
+  MAX_TOTAL_BONUS_RATE,
+  maxBonusForRow,
+  updateSellerRowWithLimit,
+  getCustomerIdentity,
+  customerSearchOptions,
+  productSearchOptions,
+  buildSalesProductOptions,
+  sellerSearchOptions,
+} from "../services/salesOrderForm.ts";
+import { SearchableOrderSelect } from "./SearchableOrderSelect.tsx";
 
-const MAX_TOTAL_BONUS_RATE = 3;
-
-const maxBonusForRow = (rows, rowId) => Math.max(
-  0,
-  MAX_TOTAL_BONUS_RATE - rows.reduce(
-    (sum, row) => row.id === rowId ? sum : sum + Number(row.bonus || 0),
-    0,
-  ),
-);
-
-const updateSellerRowWithLimit = (rows, rowId, field, value) => {
-  if (field !== "bonus") {
-    return rows.map((row) => row.id === rowId ? { ...row, [field]: value } : row);
-  }
-  const maximum = maxBonusForRow(rows, rowId);
-  const nextValue = value === ""
-    ? ""
-    : Math.min(maximum, Math.max(0, Number(value) || 0));
-  return rows.map((row) => row.id === rowId ? { ...row, bonus: nextValue } : row);
-};
-
-function getAvailableSerialsForProduct(warehouseStock = {}, warehouseId, product) {
-  const item = (warehouseStock?.[warehouseId] || []).find((row) => row.product === product);
-  if (!item || !isSerialTrackedProduct(item)) return [];
-  return (item.serials || []).filter((serial) => serial.status === "Anbarda").map((serial) => serial.imei);
-}
-
-function SearchableOrderSelect({ value, options, onChange, placeholder, ariaLabel, disabled = false }) {
-  const selected = options.find((option) => option.value === value);
-  const [query, setQuery] = useState(selected?.label || "");
-  const [open, setOpen] = useState(false);
-  const normalizedQuery = query.trim().toLocaleLowerCase("az");
-  const visibleOptions = (normalizedQuery
-    ? options.filter((option) => `${option.label} ${option.searchText || ""}`.toLocaleLowerCase("az").includes(normalizedQuery))
-    : options).slice(0, 50);
-
-  useEffect(() => {
-    setQuery(selected?.label || "");
-  }, [value, selected?.label]);
-
-  const choose = (option) => {
-    onChange(option.value);
-    setQuery(option.label);
-    setOpen(false);
-  };
-
-  return (
-    <div className={`order-search-select ${disabled ? "disabled" : ""}`}>
-      <Search size={16} aria-hidden="true" />
-      <Input
-        role="combobox"
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        autoComplete="off"
-        disabled={disabled}
-        value={query}
-        placeholder={placeholder}
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-        onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && open && visibleOptions[0]) {
-            event.preventDefault();
-            choose(visibleOptions[0]);
-          }
-          if (event.key === "Escape") { setOpen(false); setQuery(selected?.label || ""); }
-        }}
-      />
-      {open && !disabled && <div className="order-search-select-menu" role="listbox">
-        {visibleOptions.length ? visibleOptions.map((option) => (
-          <button type="button" role="option" aria-selected={option.value === value} key={option.value} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}>
-            <span><strong>{option.label}</strong>{option.subtitle && <small>{option.subtitle}</small>}</span>
-            {option.value === value && <Check size={15} />}
-          </button>
-        )) : <div className="order-search-select-empty">Uyğun nəticə tapılmadı</div>}
-        {options.length > 50 && !normalizedQuery && <div className="order-search-select-hint">Nəticələri azaltmaq üçün yazmağa başlayın</div>}
-      </div>}
-    </div>
-  );
-}
-
-const getCustomerIdentity = (customer = {}) => {
-  let meta = {};
-  try {
-    const prefix = "__crm_meta__:";
-    if (String(customer.notes || "").startsWith(prefix)) meta = JSON.parse(String(customer.notes).slice(prefix.length));
-  } catch { meta = {}; }
-  return {
-    value: meta.fin_code || customer.fin_code || customer.fin || customer.tax_id || customer.id || "",
-    fin: meta.fin_code || customer.fin_code || customer.fin || "",
-    identityCard: meta.identity_card_no || customer.identity_card_no || "",
-  };
-};
-
-const customerSearchOptions = (customers) => customers.map((customer) => {
-  const identity = getCustomerIdentity(customer);
-  return ({
-  value: identity.value,
-  label: customer.name,
-  subtitle: [customer.phone, identity.fin || customer.tax_id].filter(Boolean).join(" · ") || "Əlaqə məlumatı yoxdur",
-  searchText: [customer.phone, identity.fin, customer.tax_id, customer.email, identity.identityCard].filter(Boolean).join(" "),
-  });
-});
-
-const productSearchOptions = (items) => items.map((item) => ({
-  value: item.product,
-  label: item.product,
-  subtitle: `${Number(item.total || 0) - Number(item.reserved || 0)} satış üçün${item.sku ? ` · SKU: ${item.sku}` : ""}`,
-  searchText: [item.sku, item.category].filter(Boolean).join(" "),
-}));
-
-export function buildSalesProductOptions(stockRows = [], catalogProducts = []) {
-  const productKey = (value) => String(value || "").trim().toLocaleLowerCase("az");
-  const byProduct = new Map();
-
-  stockRows.forEach((item) => {
-    if (!item?.product) return;
-    byProduct.set(productKey(item.product), { ...item });
-  });
-
-  catalogProducts
-    .filter((product) => product?.name && product.status !== "Passiv")
-    .forEach((product) => {
-      const key = productKey(product.name);
-      const stockItem = byProduct.get(key);
-      byProduct.set(key, {
-        ...stockItem,
-        product: product.name,
-        productId: stockItem?.productId || product.id,
-        sku: stockItem?.sku || product.sku || "",
-        category: stockItem?.category || product.category || "",
-        total: Number(stockItem?.total || 0),
-        reserved: Number(stockItem?.reserved || 0),
-        price: Number(stockItem?.price || product.salePrice || product.price || 0),
-        serialTracked: stockItem?.serialTracked ?? product.serialTracked ?? false,
-      });
-    });
-
-  return [...byProduct.values()].sort((a, b) =>
-    String(a.product || "").localeCompare(String(b.product || ""), "az"),
-  );
-}
-
-const sellerSearchOptions = (sellers, currentSeller = "") => {
-  const options = sellers.map((seller) => ({
-    value: seller.name,
-    label: seller.name,
-    subtitle: seller.role || seller.email || "Satıcı",
-    searchText: [seller.role, seller.email].filter(Boolean).join(" "),
-  }));
-  if (currentSeller && !options.some((option) => option.value === currentSeller)) {
-    options.push({ value: currentSeller, label: currentSeller, subtitle: "Təyin edilmiş satıcı", searchText: "" });
-  }
-  return options;
-};
+// Kept for existing importers (tests, lazy imports); the implementation lives in ../services/salesOrderForm.ts.
+export { buildSalesProductOptions };
 
 export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) {
   const customers = orderOptions.customers || [];
@@ -586,8 +444,6 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       !creditValidationError,
   );
 
-
-
   function getRowSerialOptions(row) {
     const allSerials = getAvailableSerialsForProduct(warehouseStock, warehouseId, row.product);
     const rowSerials = new Set(row.serials || []);
@@ -914,7 +770,6 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               </div>
             )}
 
-
           </section>
 
           {paymentMethod === "Kredit" && (
@@ -995,8 +850,6 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
               {creditValidationError ? (
                 <p className="bonus-note bonus-note--error">{creditValidationError}</p>
               ) : null}
-
-
 
             </section>
           )}
