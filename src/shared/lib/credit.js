@@ -1,6 +1,7 @@
 import { addMonths, formatDateInput, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { normalize } from "../../services/format.js";
 import { round2 } from "../utils/invoiceMath.js";
+import { foldSearchText } from "./searchText.ts";
 
 export const creditTermOptions = [2, 3, 4, 5, 6, 12, 18, 24, 36, 48];
 export const currentBusinessDate = formatDateInput(new Date());
@@ -292,9 +293,9 @@ export function matchesCreditManagementFilter(item, filter) {
 
 export function matchesCreditSearch(item, query) {
   if (!query.trim()) return true;
-  const q = normalize(query);
+  const q = foldSearchText(query);
   const credit = item.credit;
-  return normalize([
+  return foldSearchText([
     credit.id,
     credit.customer,
     credit.fin,

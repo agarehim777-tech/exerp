@@ -8,6 +8,7 @@ import { parsePaymentDate } from "../../services/date.js";
 import { getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditSourceLabel, isCreditClosed } from "./credit.js";
 import { stages } from "../../data.js";
 import { baseCreditDate, getInstallmentStatus } from "./appDomainFinance.jsx";
+import { foldSearchText } from "./searchText.ts";
 
 export function buildSalesBonusRows(orders) {
   return orders.flatMap((order) => {
@@ -52,8 +53,8 @@ export function matchesSalesOrderFilter(order, filter) {
 
 export function matchesSalesOrderSearch(order, query) {
   if (!query.trim()) return true;
-  const q = normalize(query);
-  return normalize(
+  const q = foldSearchText(query);
+  return foldSearchText(
     [
       order.id,
       order.customer,
@@ -413,7 +414,7 @@ export function matchesCrmCustomerSegment(entry, segment) {
 
 export function matchesCrmCustomerSearch(entry, query) {
   if (!query.trim()) return true;
-  const q = normalize(query);
+  const q = foldSearchText(query);
   const { customer, profile } = entry;
   const text = [
     customer.name,
@@ -428,7 +429,7 @@ export function matchesCrmCustomerSearch(entry, query) {
       agreement.status,
     ]),
   ].join(" ");
-  return normalize(text).includes(q);
+  return foldSearchText(text).includes(q);
 }
 
 export function matchesCrmPipelineFilter(row, filter) {

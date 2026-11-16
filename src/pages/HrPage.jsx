@@ -1,7 +1,8 @@
 import HrOperationsPanel from "../modules/hr/HrOperationsPanel.jsx";
 import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge } from "../components/ui.jsx";
 import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wallet } from "lucide-react";
-import { money, normalize, percent } from "../services/format.js";
+import { money, percent } from "../services/format.js";
+import { foldSearchText } from "../shared/lib/searchText.ts";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
@@ -46,10 +47,10 @@ export default function HrPage({
     [hrEmployeeRecords],
   );
   const visibleHrEmployeeRecords = useMemo(() => {
-    const query = normalize(teamQuery);
+    const query = foldSearchText(teamQuery);
     return hrEmployeeRecords.filter((record) => {
       const matchesQuery = !query || [record.name, record.position, record.department, record.managerName]
-        .some((value) => normalize(value).includes(query));
+        .some((value) => foldSearchText(value).includes(query));
       const matchesDepartment = teamDepartment === "Hamısı" || record.department === teamDepartment;
       const matchesStatus = teamStatus === "Hamısı" || record.hrStatus === teamStatus;
       return matchesQuery && matchesDepartment && matchesStatus;

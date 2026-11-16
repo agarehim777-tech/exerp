@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { Input } from "../../../shared/ui/primitives.tsx";
 import type { SearchOption } from "../services/salesOrderForm.ts";
+import { foldSearchText } from "../../../shared/lib/searchText.ts";
 
 export function SearchableOrderSelect({ value, options, onChange, placeholder, ariaLabel, disabled = false }: {
   value: string;
@@ -15,9 +16,9 @@ export function SearchableOrderSelect({ value, options, onChange, placeholder, a
   const selected = options.find((option) => option.value === value);
   const [query, setQuery] = useState(selected?.label || "");
   const [open, setOpen] = useState(false);
-  const normalizedQuery = query.trim().toLocaleLowerCase("az");
+  const normalizedQuery = foldSearchText(query.trim());
   const visibleOptions = (normalizedQuery
-    ? options.filter((option) => `${option.label} ${option.searchText || ""}`.toLocaleLowerCase("az").includes(normalizedQuery))
+    ? options.filter((option) => foldSearchText(`${option.label} ${option.searchText || ""}`).includes(normalizedQuery))
     : options).slice(0, 50);
 
   useEffect(() => {

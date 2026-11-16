@@ -8,6 +8,7 @@ import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { azn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
 import { Button, Input, Select, Table } from "../../shared/ui/primitives.tsx";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
@@ -107,7 +108,7 @@ function BalancesPanel({ stock }) {
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState("");
   const filteredBalances = useMemo(() => {
-    const query = filters.query.trim().toLocaleLowerCase("az-AZ");
+    const query = foldSearchText(filters.query.trim());
     return stock.balances.filter((balance) => {
       const saleable = Number(balance.qty) - Number(balance.reserved || 0) - Number(balance.problem_qty || 0);
       const low = Number(balance.reorder_point) > 0 && saleable <= Number(balance.reorder_point);
@@ -115,7 +116,7 @@ function BalancesPanel({ stock }) {
       const matchesStatus = filters.status === "all"
         || (filters.status === "low" && low)
         || (filters.status === "normal" && !low);
-      const haystack = `${balance.product?.name || ""} ${balance.product?.sku || balance.sku || ""}`.toLocaleLowerCase("az-AZ");
+      const haystack = foldSearchText(`${balance.product?.name || ""} ${balance.product?.sku || balance.sku || ""}`);
       return matchesWarehouse && matchesStatus && (!query || haystack.includes(query));
     });
   }, [stock.balances, filters]);
@@ -382,8 +383,8 @@ function WarehousesPanel({ stock, isAdmin }) {
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
   const filteredWarehouses = useMemo(() => {
-    const search = query.trim().toLocaleLowerCase("az-AZ");
-    return stock.warehouses.filter(row => !search || `${row.code} ${row.name} ${row.address || ""}`.toLocaleLowerCase("az-AZ").includes(search));
+    const search = foldSearchText(query.trim());
+    return stock.warehouses.filter(row => !search || foldSearchText(`${row.code} ${row.name} ${row.address || ""}`).includes(search));
   }, [stock.warehouses, query]);
   const warehousePage = useTablePage(filteredWarehouses);
 

@@ -65,8 +65,11 @@ describe("procurement selectors", () => {
     expect(filterPurchaseOrders(purchaseOrders, "all", "alfa", vendors).map((po) => po.id)).toEqual(["PO1", "PO3"]);
     expect(filterPurchaseOrders(purchaseOrders, "draft", "", vendors).map((po) => po.id)).toEqual(["PO3"]);
     expect(filterInvoices(invoices, "all", "INV-2").map((invoice) => invoice.id)).toEqual(["I2"]);
-    // Current behaviour: az-AZ lower-casing turns "I" into dotless "ı", so a lower-case "inv" does not find "INV-2".
-    expect(filterInvoices(invoices, "all", "inv-2")).toEqual([]);
+    // Search folds i/ı/I/İ together, so az-AZ lower-casing ("I" -> "ı") no longer hides "INV-2" from "inv".
+    for (const query of ["inv-2", "inv", "İNV", "ınv"]) {
+      expect(filterInvoices(invoices, "all", query).map((invoice) => invoice.id)).toContain("I2");
+    }
+    expect(filterInvoices(invoices, "all", "inv-2").map((invoice) => invoice.id)).toEqual(["I2"]);
     expect(filterInvoices(invoices, "paid", "").map((invoice) => invoice.id)).toEqual(["I1"]);
   });
 

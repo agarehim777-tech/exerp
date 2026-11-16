@@ -7,6 +7,7 @@ import { cashAmount } from "../../services/format.js";
 import { Button, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import { toLocalIsoDate } from "../../services/date.js";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
@@ -160,7 +161,7 @@ function TransactionsPanel({ book, tenantId }) {
 
   const employeeByUser = useMemo(() => new Map(book.employees.map(item => [item.user_id, item])), [book.employees]);
   const visibleTransactions = useMemo(() => {
-    const needle = search.trim().toLocaleLowerCase("az");
+    const needle = foldSearchText(search.trim());
     const rows = showHidden ? book.transactions : book.transactions.filter(transaction => !hiddenIds.has(transaction.id));
     if (!needle) return rows;
     return rows.filter(transaction => [
@@ -173,7 +174,7 @@ function TransactionsPanel({ book, tenantId }) {
       transaction.description,
       transaction.account?.name,
       employeeByUser.get(transaction.created_by)?.full_name,
-    ].some(value => String(value || "").toLocaleLowerCase("az").includes(needle)));
+    ].some(value => foldSearchText(value || "").includes(needle)));
   }, [book.transactions, employeeByUser, hiddenIds, search, showHidden]);
   const reversedIds = useMemo(() => new Set(book.transactions.flatMap(item => {
     const markerId = String(item.description || "").match(/REVERSAL_OF:([0-9a-f-]{36})/i)?.[1];
@@ -295,9 +296,9 @@ function ExpensesPanel({ book, canApprove }) {
   const setFilters = values => updateFilters(values, { replace: true });
   const categoryNames = book.expenseCategories.map(item => item.name);
   const visibleExpenses = book.expenses.filter(expense => {
-    const search = filters.search.trim().toLocaleLowerCase("az");
+    const search = foldSearchText(filters.search.trim());
     const statusGroup = ["pending", "draft"].includes(expense.status) ? "pending" : expense.status === "rejected" ? "cancelled" : expense.status;
-    return (!search || `${expense.description || ""} ${expense.category || ""}`.toLocaleLowerCase("az").includes(search))
+    return (!search || foldSearchText(`${expense.description || ""} ${expense.category || ""}`).includes(search))
       && (!filters.category || expense.category === filters.category)
       && (!filters.status || statusGroup === filters.status)
       && (!filters.dateFrom || String(expense.expense_date || "").slice(0, 10) >= filters.dateFrom)

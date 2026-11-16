@@ -3,6 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { PackagePlus, Search } from "lucide-react";
 import { vendorInvoiceLineGross } from "./procurementMath.js";
 import { toLocalIsoDate } from "../../services/date.js";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 
 export const money = (value, currency = "AZN") => formatAmount(value, { currency });
 
@@ -10,7 +11,7 @@ export const qty = (value) => Number(value || 0).toLocaleString("az-AZ", { maxim
 
 export const today = () => toLocalIsoDate();
 
-const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase("az-AZ");
+const normalize = (value) => foldSearchText(value).trim();
 
 export const toNumber = (value) => {
   const next = Number(String(value ?? "").replace(",", "."));
