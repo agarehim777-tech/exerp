@@ -1,17 +1,15 @@
 import LandedCostPanel from "./LandedCostPanel.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { readAllRows } from "../../services/readAllRows.js";
 import { AlertTriangle, ArrowLeft, BarChart3, Building2, PackageCheck, Receipt, RefreshCw, Search, ShoppingCart, Ship, Truck, WalletCards, X } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
-import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSchema.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { ENABLE_LEGACY_PAYMENTS, INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyRfq, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyRfq, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -23,6 +21,7 @@ import {
   filterInvoices,
   buildProcurementStats,
 } from "./procurementSelectors.ts";
+import { useProcurementRegistry } from "./useProcurementRegistry.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -39,22 +38,14 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [query, setQuery] = useState("");
   const [poStatus, setPoStatusFilter] = useState("all");
   const [invoiceStatus] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [registryLoaded, setRegistryLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const [vendors, setVendors] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [poLines, setPoLines] = useState([]);
-  const [goodsReceipts, setGoodsReceipts] = useState([]);
-  const [receiptLines, setReceiptLines] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [invoiceLines, setInvoiceLines] = useState([]);
-  const [poPayments, setPoPayments] = useState([]);
-  const [poPaymentsAvailable, setPoPaymentsAvailable] = useState(ENABLE_LEGACY_PAYMENTS);
+  const {
+    loading, registryLoaded, vendors, products, purchaseOrders, poLines, goodsReceipts, receiptLines,
+    invoices, invoiceLines, poPayments, poPaymentsAvailable, load,
+  } = useProcurementRegistry({ tenantId, begin, setError });
   const [matchRows, setMatchRows] = useState({});
   const [rfqs, setRfqs] = useState([]);
   const [rfqForm, setRfqForm] = useState(emptyRfq);
@@ -84,49 +75,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
 
-  const load = useCallback(async () => {
-    if (!tenantId) { setLoading(false); return; }
-    const isCurrent = begin('registry');
-    setLoading(true);
-    setError("");
-    try {
-      const [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes, paymentRes] = await Promise.all([
-        readAllRows(() => supabase.from("vendors").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readAllRows(() => supabase.from("products").select("*").eq("tenant_id", tenantId).order("name", { ascending: true }).order("id")),
-        readAllRows(() => supabase.from("purchase_orders").select("*, vendors(name)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readAllRows(() => supabase.from("purchase_order_lines").select("*, purchase_orders!inner(tenant_id)").eq("purchase_orders.tenant_id", tenantId).order("line_no", { ascending: true }).order("id")),
-        readAllRows(() => supabase.from("goods_receipts").select("*, purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readAllRows(() => supabase.from("goods_receipt_lines").select("*, goods_receipts!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("goods_receipts.tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readAllRows(() => supabase.from("vendor_invoices").select("*, vendors(name), purchase_orders(po_number)").eq("tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readAllRows(() => supabase.from("vendor_invoice_lines").select("*, vendor_invoices!inner(tenant_id), purchase_order_lines(po_id, product_sku, line_no)").eq("vendor_invoices.tenant_id", tenantId).order("created_at", { ascending: false }).order("id")),
-        readLegacyPoPayments(supabase, tenantId, ENABLE_LEGACY_PAYMENTS),
-      ]);
-      if (!isCurrent()) return;
-
-      const coreResults = [vendorRes, productRes, poRes, lineRes, grnRes, grnLineRes, invoiceRes, invoiceLineRes];
-      const firstError = coreResults.find((result) => result.error)?.error
-        || (paymentRes.error && !isMissingPoPaymentsTable(paymentRes.error) ? paymentRes.error : null);
-      if (firstError) throw firstError;
-
-      const paymentTableMissing = isMissingPoPaymentsTable(paymentRes.error);
-      setPoPaymentsAvailable(ENABLE_LEGACY_PAYMENTS && !paymentTableMissing && !paymentRes.error);
-
-      setVendors(vendorRes.data || []);
-      setProducts(productRes.data || []);
-      setPurchaseOrders(poRes.data || []);
-      setPoLines(lineRes.data || []);
-      setGoodsReceipts(grnRes.data || []);
-      setReceiptLines(grnLineRes.data || []);
-      setInvoices(invoiceRes.data || []);
-      setInvoiceLines(invoiceLineRes.data || []);
-      setPoPayments(paymentTableMissing ? [] : (paymentRes.data || []));
-      setRegistryLoaded(true);
-    } catch (loadError) {
-      if (isCurrent()) setError(getError(loadError));
-    } finally {
-      if (isCurrent()) setLoading(false);
-    }
-  }, [tenantId, begin]);
 
 
   useEffect(() => {

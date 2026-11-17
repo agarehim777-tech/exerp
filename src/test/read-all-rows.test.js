@@ -118,7 +118,7 @@ describe("whole-tenant reads go through readAllRows", () => {
     "src/shared/hooks/useFinancialStatements.ts": ["sales_invoices", "cash_transactions", "stock_balances", "vendor_invoices"],
     "src/shared/hooks/useSalesBonusLedger.js": ["order_bonus_assignments", "sales_bonus_entries"],
     "src/shared/hooks/useCashbook.js": ["employees"],
-    "src/modules/procurement/ProcurementPage.jsx": ["vendors", "products", "purchase_orders", "purchase_order_lines", "goods_receipts", "goods_receipt_lines", "vendor_invoices", "vendor_invoice_lines"],
+    "src/modules/procurement/useProcurementRegistry.ts": ["vendors", "products", "purchase_orders", "purchase_order_lines", "goods_receipts", "goods_receipt_lines", "vendor_invoices", "vendor_invoice_lines"],
     "src/modules/procurement/LandedCostPanel.jsx": ["purchase_order_lines"],
     "src/modules/warehouse/StockAgingPanel.jsx": ["inventory_aging_v", "inventory_cost_layers"],
   };
