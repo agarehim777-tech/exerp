@@ -7,6 +7,7 @@ import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { Input, Select, Table } from "../../shared/ui/primitives.tsx";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 
 const emptyProduct = { id: "", sku: "", name: "", description: "", unit: "ədəd", price: "", currency: "AZN", vat_rate: 18, is_active: true };
 
@@ -68,9 +69,9 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
   }, [dbProducts, legacyProducts, inventoryRows]);
 
   const filtered = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase("az-AZ");
+    const term = foldSearchText(query.trim());
     return products.filter((product) => {
-      const matchesQuery = !term || [product.sku, product.name, product.description].some((value) => String(value || "").toLocaleLowerCase("az-AZ").includes(term));
+      const matchesQuery = !term || [product.sku, product.name, product.description].some((value) => foldSearchText(value || "").includes(term));
       if (!matchesQuery) return false;
       if (stockFilter === "available") return product.availableStock > 0;
       if (stockFilter === "reserved") return product.reservedStock > 0;

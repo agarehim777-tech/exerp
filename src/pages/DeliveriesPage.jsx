@@ -2,10 +2,11 @@ import { CalendarClock, Check, CircleAlert, Download, Filter, Search, Truck } fr
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { useCallback, useMemo, useState } from "react";
-import { money, normalize } from "../services/format.js";
+import { money } from "../services/format.js";
 import { currentBusinessDate } from "../shared/lib/appDomain.jsx";
 import { OrderProductLines, enrichDeliveryOrder, exportDeliveryQueueCsv, getDeliveryDisplayStage, getDeliveryStockCheck, getDeliveryTotalQuantity, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../modules/warehouse/deliveryDomain.jsx";
 import { Button, Input, Select } from "../shared/ui/primitives.tsx";
+import { foldSearchText } from "../shared/lib/searchText.ts";
 
 function getSalesDocumentNumber(order) {
   return order?.orderNo || order?.order_no || order?.id || "—";
@@ -72,7 +73,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
   ];
 
   const visibleOrders = deliveryOrders.filter((order) => {
-    const searchText = normalize(
+    const searchText = foldSearchText(
       [
         getSalesDocumentNumber(order),
         order.contractId,
@@ -83,7 +84,7 @@ export default function DeliveriesPage({ orders, warehouseStock = {}, warehouses
         getOrderPaymentMethod(order),
       ].join(" "),
     );
-    const matchesSearch = !deliverySearch.trim() || searchText.includes(normalize(deliverySearch));
+    const matchesSearch = !deliverySearch.trim() || searchText.includes(foldSearchText(deliverySearch));
     const matchesWarehouse = warehouseFilter === "all" || order.warehouseId === warehouseFilter;
     const matchesFilter =
       deliveryFilter === "Hamısı" ||

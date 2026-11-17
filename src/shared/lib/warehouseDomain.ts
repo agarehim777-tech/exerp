@@ -7,6 +7,7 @@ import { total } from "../utils/aggregate.js";
 import { sellableQty } from "./stockMath.js";
 import { csvCell } from "./csvCell.js";
 import { buildProductLookup, buildPurchaseOrderCoverage, getRecommendedOrderPlan, getReorderPoint } from "./appDomainProcurement.jsx";
+import { foldSearchText } from "./searchText.ts";
 
 type Row = Record<string, any>;
 export type WarehouseStock = Record<string, Row[] | null | undefined>;
@@ -148,8 +149,8 @@ export function buildWarehouseWmsRows(items: Row[], products: Row[] = []): Row[]
 
 export function filterRows<T extends object>(rows: T[], query: string): T[] {
   if (!query.trim()) return rows;
-  const q = normalize(query);
-  return rows.filter((row) => normalize(Object.values(row).join(" ")).includes(q));
+  const q = foldSearchText(query);
+  return rows.filter((row) => foldSearchText(Object.values(row).join(" ")).includes(q));
 }
 
 export function filterWarehouseItems(items: Row[], filter: string): Row[] {
@@ -407,9 +408,9 @@ export function buildWarehouseBalanceRows({ warehouses = [], warehouseStock = {}
 }
 
 export function filterWarehouseBalanceRows(rows: Row[], filters: Row, globalQuery = ""): Row[] {
-  const search = normalize([filters.productQuery, globalQuery].filter(Boolean).join(" "));
+  const search = foldSearchText([filters.productQuery, globalQuery].filter(Boolean).join(" "));
   return rows.filter((row) => {
-    const matchesSearch = !search || normalize(`${row.product} ${row.sku} ${row.category} ${row.warehouseName}`).includes(search);
+    const matchesSearch = !search || foldSearchText(`${row.product} ${row.sku} ${row.category} ${row.warehouseName}`).includes(search);
     const matchesCategory = filters.category === "all" || row.category === filters.category;
     const matchesStock =
       filters.stockStatus === "all" ||

@@ -1,7 +1,8 @@
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { foldSearchText } from "../shared/lib/searchText.ts";
 
-const norm = (value) => String(value || "").trim().toLocaleLowerCase("az-AZ");
+const norm = (value) => foldSearchText(value || "").trim();
 
 export default function ProductSearchSelect({ products = [], value = "", onChange, placeholder = "Məhsul adı və ya SKU yazın", disabled = false, renderMeta }) {
   const selected = products.find((item) => String(item.id) === String(value));

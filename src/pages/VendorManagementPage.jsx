@@ -3,6 +3,7 @@ import { Boxes, Building2, Eye, FileText, Package, Pencil, Plus, Search, Trash2,
 import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { money, normalize, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
+import { foldSearchText } from "../shared/lib/searchText.ts";
 import {
   buildProcurementRows,
   currentBusinessQuarter,
@@ -42,12 +43,12 @@ function VendorManagementPage({
     [normalizedVendors, warehouseStock, orders, products, purchaseOrders],
   );
   const visibleVendors = useMemo(() => {
-    const query = normalize(vendorQuery);
+    const query = foldSearchText(vendorQuery);
     return normalizedVendors.filter((vendor) => {
       const matchesStatus = vendorStatusFilter === "all" || vendor.status === vendorStatusFilter;
       const matchesQuery =
         !query ||
-        normalize(`${vendor.name} ${vendor.country} ${vendor.contact} ${vendor.phone} ${vendor.email}`).includes(query);
+        foldSearchText(`${vendor.name} ${vendor.country} ${vendor.contact} ${vendor.phone} ${vendor.email}`).includes(query);
       return matchesStatus && matchesQuery;
     });
   }, [normalizedVendors, vendorQuery, vendorStatusFilter]);

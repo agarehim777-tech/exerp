@@ -2,6 +2,7 @@
 // növ/tarix/axtarış filtrləri. appHelpers.jsx bu modulu köhnə idxallar üçün yenidən ixrac edir.
 import { normalize } from "../../services/format.js";
 import { parsePaymentDate } from "../../services/date.js";
+import { foldSearchText } from "./searchText.ts";
 
 type Row = Record<string, any>;
 
@@ -84,7 +85,7 @@ function matchesFinanceDateRange(row: Row, dateFrom?: string | null, dateTo?: st
 
 function matchesFinanceSearch(row: Row, query: string): boolean {
   if (!query.trim()) return true;
-  return normalize([
+  return foldSearchText([
     row.id,
     row.type,
     row.source,
@@ -99,7 +100,7 @@ function matchesFinanceSearch(row: Row, query: string): boolean {
     row.contractId,
     row.poId,
     row.expenseId,
-  ].join(" ")).includes(normalize(query));
+  ].join(" ")).includes(foldSearchText(query));
 }
 
 export {
