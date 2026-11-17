@@ -43,6 +43,50 @@ it('does not audit or surface a stale PDF export after A -> B -> A and exports t
 });
 afterEach(cleanup);
 
+it('cancels a queued export when filters change before rows finish loading', async () => {
+  mocks.live.loaded = false;
+  const save = vi.fn();
+  const { rerender } = render(<ReportsPage {...props} onExport={save} />);
+  fireEvent.click(screen.getByTestId('report-template-export'));
+  fireEvent.change(screen.getByLabelText('Dövr'), { target: { value: 'Hamısı' } });
+  mocks.live.loaded = true;
+  rerender(<ReportsPage {...props} onExport={save} />);
+  await act(async () => {});
+  expect(mocks.csv).not.toHaveBeenCalled();
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByTestId('report-template-export')).toBeEnabled();
+});
+
+it('releases a failed initial export so a retry can be requested', async () => {
+  mocks.live.loaded = false;
+  const save = vi.fn().mockResolvedValue({ id: 'export' });
+  const { rerender } = render(<ReportsPage {...props} onExport={save} />);
+  fireEvent.click(screen.getByTestId('report-template-export'));
+  mocks.live.error = new Error('offline');
+  rerender(<ReportsPage {...props} onExport={save} />);
+  mocks.live.error = null;
+  mocks.live.loaded = true;
+  rerender(<ReportsPage {...props} onExport={save} />);
+  expect(mocks.csv).not.toHaveBeenCalled();
+  expect(screen.getByTestId('report-template-export')).toBeEnabled();
+  fireEvent.click(screen.getByTestId('report-template-export'));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+});
+
+it('invalidates an in-flight PDF when its filter changes', async () => {
+  let resolvePdf;
+  mocks.pdf.mockImplementation(() => new Promise(resolve => { resolvePdf = resolve; }));
+  const save = vi.fn();
+  render(<ReportsPage {...props} onExport={save} />);
+  fireEvent.click(screen.getByRole('button', { name: 'PDF', exact: true }));
+  await waitFor(() => expect(mocks.pdf).toHaveBeenCalled());
+  const guard = mocks.pdf.mock.calls[0][1].isCurrent;
+  fireEvent.change(screen.getByLabelText('Dövr'), { target: { value: 'Hamısı' } });
+  expect(guard()).toBe(false);
+  await act(async () => { resolvePdf(false); });
+  expect(save).not.toHaveBeenCalled();
+});
+
 const props = { snapshotDate: '2026-10-05', buildExecutiveInsights: () => [], buildReportPackage: build,
   expenses: [{ id: 'obsolete-expense', amount: 9900 }], productionPlans: [{ id: 'obsolete-batch', totalCost: 9999 }] };
 

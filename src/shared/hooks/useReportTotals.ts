@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { toLocalIsoDate } from "../../services/date.js";
+import { useTenantRequestScope } from './useTenantRequestScope.ts';
 
 export interface ReportTotals {
   revenue: number;
@@ -28,28 +29,28 @@ export function reportPeriodRange(period: string, snapshotDate: string): { from:
 
 // Server-computed headline totals; null until loaded or when the read fails (callers fall back to row sums).
 export function useReportTotals(tenantId: string | null | undefined, period: string, snapshotDate: string) {
-  const [totals, setTotals] = useState<ReportTotals | null>(null);
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate]));
+  const [totals, setTotals] = useState<{ scope: object; value: ReportTotals } | null>(null);
   useEffect(() => {
-    let current = true;
+    const isCurrent = begin();
     setTotals(null);
     if (!tenantId) return undefined;
     const { from, to } = reportPeriodRange(period, snapshotDate);
-    supabase.rpc("report_totals", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined }).then(({ data, error }) => {
-      if (!current) return;
+    Promise.resolve(supabase.rpc("report_totals", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined })).then(({ data, error }) => {
+      if (!isCurrent()) return;
       if (error || !data) { console.warn("report_totals failed", error); return; }
       const raw = data as Record<string, unknown>;
-      setTotals({
+      setTotals({ scope, value: {
         revenue: Number(raw.revenue) || 0,
         order_count: Number(raw.order_count) || 0,
         active_customers: Number(raw.active_customers) || 0,
         operating_expense: Number(raw.operating_expense) || 0,
         production_cost: Number(raw.production_cost) || 0,
         production_count: Number(raw.production_count) || 0,
-      });
-    });
-    return () => { current = false; };
-  }, [tenantId, period, snapshotDate]);
-  return totals;
+      } });
+    }).catch(() => { if (isCurrent()) setTotals(null); });
+  }, [tenantId, period, snapshotDate, scope, begin]);
+  return totals?.scope === scope ? totals.value : null;
 }
 
 export interface ReportTrendRow { label: string; revenue: number; expense: number }
@@ -74,9 +75,10 @@ export function mapRiskRows(raw: unknown): ReportRiskRow[] {
 
 // Six-month chart and current risk register computed in the database; null while loading or on failure.
 export function useReportSeries(tenantId: string | null | undefined, snapshotDate: string) {
-  const [series, setSeries] = useState<{ trend: ReportTrendRow[]; risks: ReportRiskRow[] } | null>(null);
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, snapshotDate]));
+  const [series, setSeries] = useState<{ scope: object; value: { trend: ReportTrendRow[]; risks: ReportRiskRow[] } } | null>(null);
   useEffect(() => {
-    let current = true;
+    const isCurrent = begin();
     setSeries(null);
     if (!tenantId) return undefined;
     const anchor = snapshotDate || toLocalIsoDate(new Date());
@@ -84,13 +86,12 @@ export function useReportSeries(tenantId: string | null | undefined, snapshotDat
       supabase.rpc("report_monthly_trend", { _tenant_id: tenantId, _anchor: anchor, _months: 6 }),
       supabase.rpc("report_risk_rows", { _tenant_id: tenantId, _limit: 8 }),
     ]).then(([trend, risks]) => {
-      if (!current) return;
+      if (!isCurrent()) return;
       if (trend.error || risks.error) { console.warn("report series failed", trend.error || risks.error); return; }
-      setSeries({ trend: mapTrendRows(trend.data), risks: mapRiskRows(risks.data) });
-    });
-    return () => { current = false; };
-  }, [tenantId, snapshotDate]);
-  return series;
+      setSeries({ scope, value: { trend: mapTrendRows(trend.data), risks: mapRiskRows(risks.data) } });
+    }).catch(() => { if (isCurrent()) setSeries(null); });
+  }, [tenantId, snapshotDate, scope, begin]);
+  return series?.scope === scope ? series.value : null;
 }
 
 export interface ReportModuleRow { module: string; metric: string; count: string; signal: string; status: string }
@@ -126,18 +127,18 @@ export function mapModuleSummary(raw: unknown, money: (value: number) => string)
 
 // Server-computed module analytics for the selected period; null while loading or on failure.
 export function useReportModules(tenantId: string | null | undefined, period: string, snapshotDate: string) {
-  const [summary, setSummary] = useState<unknown>(null);
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate]));
+  const [summary, setSummary] = useState<{ scope: object; value: unknown } | null>(null);
   useEffect(() => {
-    let current = true;
+    const isCurrent = begin();
     setSummary(null);
     if (!tenantId) return undefined;
     const { from, to } = reportPeriodRange(period, snapshotDate);
-    supabase.rpc("report_module_summary", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined }).then(({ data, error }) => {
-      if (!current) return;
+    Promise.resolve(supabase.rpc("report_module_summary", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined })).then(({ data, error }) => {
+      if (!isCurrent()) return;
       if (error || !data) { console.warn("report_module_summary failed", error); return; }
-      setSummary(data);
-    });
-    return () => { current = false; };
-  }, [tenantId, period, snapshotDate]);
-  return summary;
+      setSummary({ scope, value: data });
+    }).catch(() => { if (isCurrent()) setSummary(null); });
+  }, [tenantId, period, snapshotDate, scope, begin]);
+  return summary?.scope === scope ? summary.value : null;
 }

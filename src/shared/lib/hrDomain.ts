@@ -150,7 +150,9 @@ export function buildHrLeaveUsageMap(leaveRequests: Row[] = []): Map<string, Lea
 }
 
 export function calculatePayrollTax2026(grossValue: unknown): PayrollTax {
-  const gross = Math.max(0, roundMoney(grossValue));
+  const amount = Number(grossValue ?? 0);
+  if (!Number.isFinite(amount)) throw new Error('Invalid payroll amount');
+  const gross = Math.max(0, roundMoney(amount));
   const incomeTax =
     gross <= 2500
       ? Math.max(0, Math.round((gross - 200) * 0.03))
