@@ -22,6 +22,7 @@ import {
   buildProcurementStats,
 } from "./procurementSelectors.ts";
 import { useProcurementRegistry } from "./useProcurementRegistry.ts";
+import { useVendorActions } from "./useVendorActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -62,8 +63,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [invoiceTaxAccountId, setInvoiceTaxAccountId] = useState('');
   const [recoverableTax, setRecoverableTax] = useState(false);
 
-  const [vendorForm, setVendorForm] = useState(emptyVendor);
-  const [editingVendorId, setEditingVendorId] = useState(null);
   const [poForm, setPoForm] = useState({ ...emptyPo, po_number: nextNumber("PO") });
   const [poDraftLines, setPoDraftLines] = useState([{ ...emptyPoLine }]);
   const [editingPoId, setEditingPoId] = useState(null);
@@ -254,80 +253,9 @@ function ProcurementWorkspace({ tenantId, user }) {
     });
   }
 
-  async function saveVendor(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-    if (!vendorForm.name.trim()) {
-      setError("Vendor adı tələb olunur.");
-      return;
-    }
-    setSaving(true);
-    const payload = {
-      name: vendorForm.name.trim(),
-      tax_id: vendorForm.tax_id.trim() || null,
-      email: vendorForm.email.trim() || null,
-      phone: vendorForm.phone.trim() || null,
-      address: vendorForm.address.trim() || null,
-      is_active: !!vendorForm.is_active,
-    };
-    const { error: vendorError } = editingVendorId
-      ? await supabase.from("vendors").update(payload).eq("id", editingVendorId)
-      : await supabase.from("vendors").insert({ ...payload, tenant_id: tenantId });
-
-    if (vendorError) setError(getError(vendorError));
-    else {
-      setNotice(editingVendorId ? "Vendor məlumatları yeniləndi." : "Vendor yaradıldı.");
-      setVendorForm(emptyVendor);
-      setEditingVendorId(null);
-      await load();
-    }
-    setSaving(false);
-  }
-
-  function editVendor(vendor) {
-    setEditingVendorId(vendor.id);
-    setVendorForm({
-      name: vendor.name || "",
-      tax_id: vendor.tax_id || "",
-      email: vendor.email || "",
-      phone: vendor.phone || "",
-      address: vendor.address || "",
-      is_active: vendor.is_active,
-    });
-    setTab("vendors");
-  }
-
-  async function toggleVendor(vendor) {
-    setSaving(true);
-    const { error: vendorError } = await supabase.from("vendors").update({ is_active: !vendor.is_active }).eq("id", vendor.id);
-    if (vendorError) setError(getError(vendorError));
-    else {
-      setNotice(`${vendor.name} ${vendor.is_active ? "passiv edildi" : "aktiv edildi"}.`);
-      await load();
-    }
-    setSaving(false);
-  }
-
-  async function deleteVendor(vendor) {
-    const linkedPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
-    if (linkedPo.length) {
-      setError("");
-      setNotice("Bu vendor üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
-      await supabase.from("vendors").update({ is_active: false }).eq("id", vendor.id);
-      await load();
-      return;
-    }
-    if (!(await appConfirm(`${vendor.name} vendorunu silmək istəyirsiniz?`, { danger: true }))) return;
-    setSaving(true);
-    const { error: vendorError } = await supabase.from("vendors").delete().eq("id", vendor.id);
-    if (vendorError) setError(getError(vendorError));
-    else {
-      setNotice("Vendor silindi.");
-      await load();
-    }
-    setSaving(false);
-  }
+  const {
+    vendorForm, setVendorForm, editingVendorId, setEditingVendorId, saveVendor, editVendor, toggleVendor, deleteVendor,
+  } = useVendorActions({ tenantId, purchaseOrders, load, setError, setNotice, setSaving, setTab });
 
   async function savePo(event) {
     event.preventDefault();
