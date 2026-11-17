@@ -8,7 +8,7 @@ import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyReceipt, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -24,6 +24,7 @@ import { useProcurementRegistry } from "./useProcurementRegistry.ts";
 import { useVendorActions } from "./useVendorActions.ts";
 import { useRfqActions } from "./useRfqActions.ts";
 import { usePoActions } from "./usePoActions.ts";
+import { usePoPaymentActions } from "./usePoPaymentActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -52,9 +53,9 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
-  const [paymentPoId, setPaymentPoId] = useState(null);
-  const [paymentForm, setPaymentForm] = useState(emptyPoPayment);
-  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const { paymentPoId, paymentForm, setPaymentForm, editingPaymentId, openPaymentForm, editPayment, savePoPayment, deletePayment } = usePoPaymentActions({
+    tenantId, user, poPaymentsAvailable, setExpandedPo, load, setError, setNotice, setSaving,
+  });
   const [payingInvoice, setPayingInvoice] = useState(null);
   const [paymentAccounts, setPaymentAccounts] = useState([]);
   const [invoiceAccountId, setInvoiceAccountId] = useState("");
@@ -171,75 +172,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const {
     vendorForm, setVendorForm, editingVendorId, setEditingVendorId, saveVendor, editVendor, toggleVendor, deleteVendor,
   } = useVendorActions({ tenantId, purchaseOrders, load, setError, setNotice, setSaving, setTab });
-
-  function openPaymentForm(po) {
-    if (!poPaymentsAvailable) return;
-    setPaymentPoId(po.id);
-    setEditingPaymentId(null);
-    setPaymentForm({ ...emptyPoPayment, po_id: po.id, payment_date: today() });
-    setExpandedPo(po.id);
-  }
-
-  function editPayment(payment) {
-    setPaymentPoId(payment.po_id);
-    setEditingPaymentId(payment.id);
-    setPaymentForm({
-      po_id: payment.po_id,
-      amount: String(payment.amount || ""),
-      payment_date: payment.payment_date || today(),
-      payment_method: payment.payment_method || "bank",
-      reference_no: payment.reference_no || "",
-      notes: payment.notes || "",
-    });
-    setExpandedPo(payment.po_id);
-  }
-
-  async function savePoPayment(event) {
-    event.preventDefault();
-    if (!poPaymentsAvailable) {
-      setError("Satınalma ödənişləri bağlıdır. Server ledger ödəniş komandası tətbiq edilməlidir.");
-      return;
-    }
-    if (!paymentForm.po_id || toNumber(paymentForm.amount) <= 0) {
-      setError("PO və ödəniş məbləği tələb olunur.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    const payload = {
-      po_id: paymentForm.po_id,
-      amount: toNumber(paymentForm.amount),
-      payment_date: paymentForm.payment_date || today(),
-      payment_method: paymentForm.payment_method?.trim() || "bank",
-      reference_no: paymentForm.reference_no?.trim() || null,
-      notes: paymentForm.notes?.trim() || null,
-    };
-    const { error: paymentError } = editingPaymentId
-      ? await supabase.from("po_payments").update(payload).eq("id", editingPaymentId)
-      : await supabase.from("po_payments").insert({ ...payload, tenant_id: tenantId, created_by: user?.id || null });
-    if (paymentError) setError(getError(paymentError));
-    else {
-      setNotice(editingPaymentId ? "Ödəniş yeniləndi." : "PO ödənişi qeyd edildi.");
-      setPaymentForm(emptyPoPayment);
-      setEditingPaymentId(null);
-      setPaymentPoId(null);
-      await load();
-    }
-    setSaving(false);
-  }
-
-  async function deletePayment(payment) {
-    if (!poPaymentsAvailable) return;
-    if (!(await appConfirm("Bu ödənişi silmək istəyirsiniz?", { danger: true }))) return;
-    setSaving(true);
-    const { error: paymentError } = await supabase.from("po_payments").delete().eq("id", payment.id);
-    if (paymentError) setError(getError(paymentError));
-    else {
-      setNotice("Ödəniş silindi.");
-      await load();
-    }
-    setSaving(false);
-  }
 
   function choosePoForReceipt(poId) {
     const po = purchaseOrders.find((item) => item.id === poId);
