@@ -23,6 +23,7 @@ import {
 import { useProcurementRegistry } from "./useProcurementRegistry.ts";
 import { useVendorActions } from "./useVendorActions.ts";
 import { useRfqActions } from "./useRfqActions.ts";
+import { usePoActions } from "./usePoActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -71,9 +72,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [invoiceDraftLines, setInvoiceDraftLines] = useState([]);
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
-
-
-
   useEffect(() => {
     setPayingInvoice(null); setPaymentAccounts([]); setInvoiceAccountId("");
     setTaxAccounts([]); setInvoiceTaxAccountId(''); setRecoverableTax(false);
@@ -87,7 +85,6 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   useRealtimeResync(tenantId, ['vendors', 'purchase_orders', 'goods_receipts', 'vendor_invoices',
     ...(poPaymentsAvailable ? ['po_payments'] : [])], load, { channelPrefix: 'procurement' });
-
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
   const receiptLinesByReceipt = useMemo(() => groupBy(receiptLines, "grn_id"), [receiptLines]);
@@ -103,8 +100,6 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   const paymentByPo = useMemo(() => buildPaymentByPo(invoices, invoiceTotals, poPayments), [invoices, invoiceTotals, poPayments]);
 
-
-
   const filteredVendors = useMemo(() => filterVendors(vendors, query), [vendors, query]);
 
   const filteredPurchaseOrders = useMemo(() => filterPurchaseOrders(purchaseOrders, poStatus, query, vendors), [purchaseOrders, poStatus, query, vendors]);
@@ -116,11 +111,11 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   const stats = useMemo(() => buildProcurementStats(purchaseOrders, invoices, poMetrics), [purchaseOrders, invoices, poMetrics]);
 
-  function resetPoForm() {
-    setEditingPoId(null);
-    setPoForm({ ...emptyPo, po_number: nextNumber("PO") });
-    setPoDraftLines([{ ...emptyPoLine }]);
-  }
+  const { resetPoForm, setProductOnLine, savePo, editPo, updatePoStatus, recomputePoStatus, deletePo } = usePoActions({
+    tenantId, user, products, goodsReceipts, invoices, receiptLines, linesByPo,
+    poForm, poDraftLines, editingPoId, setPoForm, setPoDraftLines, setEditingPoId,
+    load, setError, setNotice, setSaving, setTab,
+  });
 
   function resetReceiptForm() {
     setEditingReceiptId(null);
@@ -132,23 +127,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     setEditingInvoiceId(null);
     setInvoiceForm({ ...emptyInvoice, invoice_number: nextNumber("INV") });
     setInvoiceDraftLines([]);
-  }
-
-  function setProductOnLine(index, sku) {
-    const product = products.find((item) => item.sku === sku);
-    setPoDraftLines((lines) =>
-      lines.map((line, lineIndex) =>
-        lineIndex === index
-          ? {
-              ...line,
-              product_id: product?.id || line.product_id || "",
-              product_sku: sku,
-              description: product?.name || line.description,
-              unit_price: product ? String(product.price || 0) : line.unit_price,
-            }
-          : line,
-      ),
-    );
   }
 
   function buildReceiptLines(poId, receiptId = null) {
@@ -193,147 +171,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const {
     vendorForm, setVendorForm, editingVendorId, setEditingVendorId, saveVendor, editVendor, toggleVendor, deleteVendor,
   } = useVendorActions({ tenantId, purchaseOrders, load, setError, setNotice, setSaving, setTab });
-
-  async function savePo(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-    if (!poForm.vendor_id || !poForm.po_number.trim()) {
-      setError("Vendor və PO nömrəsi tələb olunur.");
-      return;
-    }
-    const validLines = poDraftLines
-      .filter((line) => line.product_sku.trim() && toNumber(line.qty_ordered) > 0 && toNumber(line.unit_price) >= 0)
-      .map((line, index) => ({
-        line_no: index + 1,
-        product_sku: line.product_sku.trim(),
-        description: line.description.trim() || null,
-        qty_ordered: toNumber(line.qty_ordered),
-        unit_price: toNumber(line.unit_price),
-        tax_rate: 0,
-        product_id: line.product_id || null,
-        unit: line.unit || "ədəd",
-      }));
-    if (!validLines.length) {
-      setError("PO üçün ən azı bir məhsul sətri tələb olunur.");
-      return;
-    }
-
-    setSaving(true);
-    const payload = {
-      vendor_id: poForm.vendor_id,
-      po_number: poForm.po_number.trim(),
-      order_date: poForm.order_date || today(),
-      expected_date: poForm.expected_date || null,
-      currency: poForm.currency || "AZN",
-      factory_name: poForm.factory_name?.trim() || null,
-      exchange_rate: toNumber(poForm.exchange_rate) || 1,
-      payment_terms: poForm.payment_terms?.trim() || null,
-      notes: poForm.notes.trim() || null,
-      created_by: user?.id || null,
-    };
-
-    // Header and lines are saved in one transaction (save_purchase_order); lines that already have
-    // receipts or vendor invoices are kept and only the header changes.
-    const { data: saved, error: saveError } = await supabase.rpc("save_purchase_order", {
-      _tenant_id: tenantId,
-      _po_id: editingPoId || null,
-      _header: payload,
-      _lines: validLines,
-    });
-    if (saveError) {
-      setError(getError(saveError));
-      setSaving(false);
-      return;
-    }
-    if (editingPoId) {
-      setNotice(saved?.lines_replaced === false ? "PO başlığı yeniləndi. Mədaxil/faktura olan PO sətirləri qorundu." : "PO yeniləndi.");
-    } else {
-      setNotice("PO yaradıldı və qaralama statusunda saxlanıldı.");
-    }
-
-    resetPoForm();
-    await load();
-    setSaving(false);
-  }
-
-  function editPo(po) {
-    const lines = linesByPo.get(po.id) || [];
-    setEditingPoId(po.id);
-    setPoForm({
-      vendor_id: po.vendor_id,
-      po_number: po.po_number || "",
-      order_date: po.order_date || today(),
-      expected_date: po.expected_date || "",
-      currency: po.currency || "AZN",
-      factory_name: po.factory_name || "",
-      exchange_rate: String(po.exchange_rate || 1),
-      payment_terms: po.payment_terms || "",
-      notes: po.notes || "",
-    });
-    setPoDraftLines(
-      lines.length
-        ? lines.map((line) => ({
-            product_sku: line.product_sku || "",
-            description: line.description || "",
-            qty_ordered: String(line.qty_ordered || ""),
-            unit_price: String(line.unit_price || ""),
-            tax_rate: String(line.tax_rate || 0),
-            product_id: line.product_id || "",
-            unit: line.unit || "ədəd",
-            unit_volume_m3: String(line.unit_volume_m3 || 0),
-            unit_net_weight_kg: String(line.unit_net_weight_kg || 0),
-            unit_gross_weight_kg: String(line.unit_gross_weight_kg || 0),
-            hs_code: line.hs_code || "",
-            duty_rate: String(line.duty_rate || 0),
-          }))
-        : [{ ...emptyPoLine }],
-    );
-    setTab("po");
-  }
-
-  async function updatePoStatus(poId, status) {
-    setSaving(true);
-    const { error: statusError } = await supabase.from("purchase_orders").update({ status }).eq("id", poId);
-    if (statusError) setError(getError(statusError));
-    else {
-      setNotice(`PO statusu dəyişdi: ${PO_STATUS[status]?.label || status}.`);
-      await load();
-    }
-    setSaving(false);
-  }
-
-  async function recomputePoStatus(poId, sourceReceiptLines = receiptLines) {
-    const lines = linesByPo.get(poId) || [];
-    if (!lines.length) return;
-    const map = new Map();
-    sourceReceiptLines.forEach((line) => {
-      const accepted = Math.max(0, toNumber(line.qty_received) - toNumber(line.qty_rejected));
-      map.set(line.po_line_id, (map.get(line.po_line_id) || 0) + accepted);
-    });
-    const anyReceived = lines.some((line) => (map.get(line.id) || 0) > 0);
-    const allReceived = lines.every((line) => (map.get(line.id) || 0) >= toNumber(line.qty_ordered));
-    const nextStatus = allReceived ? "received" : anyReceived ? "partial" : "approved";
-    await supabase.from("purchase_orders").update({ status: nextStatus }).eq("id", poId);
-  }
-
-  async function deletePo(po) {
-    const hasReceipts = goodsReceipts.some((receipt) => receipt.po_id === po.id);
-    const hasInvoices = invoices.some((invoice) => invoice.po_id === po.id);
-    if (hasReceipts || hasInvoices) {
-      setError("Bu PO üzrə mədaxil və ya faktura var. Silmək əvəzinə ləğv edin/bağlayın.");
-      return;
-    }
-    if (!(await appConfirm(`${po.po_number} PO-sunu silmək istəyirsiniz?`, { danger: true }))) return;
-    setSaving(true);
-    const { error: poError } = await supabase.from("purchase_orders").delete().eq("id", po.id);
-    if (poError) setError(getError(poError));
-    else {
-      setNotice("PO silindi.");
-      await load();
-    }
-    setSaving(false);
-  }
 
   function openPaymentForm(po) {
     if (!poPaymentsAvailable) return;
@@ -403,7 +240,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     }
     setSaving(false);
   }
-
 
   function choosePoForReceipt(poId) {
     const po = purchaseOrders.find((item) => item.id === poId);
