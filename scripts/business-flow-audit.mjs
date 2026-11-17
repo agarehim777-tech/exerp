@@ -522,10 +522,20 @@ async function auditCreditPayment(browser) {
     await orderCard.getByRole('button', { name: 'Sifariş kartını bağla', exact: true }).click();
     await orderCard.waitFor({ state: 'hidden' });
     await selectModule(page, 9);
-    await page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true }).fill(sale.contract.id);
-    // Coming back from the sales page reloads the credit directory; wait for the row before clicking.
+    // Coming back from the sales page reloads the credit directory. A reload that lands after the search
+    // was typed resets the filter, so the row never appears: re-type the search until the row shows.
     const returnedCreditRow = page.locator(".credit-directory-panel tr").filter({ hasText: sale.contract.id });
-    await returnedCreditRow.waitFor({ timeout: AUDIT_WAIT_TIMEOUT_MS });
+    const creditSearch = page.getByPlaceholder('Müştəri, kredit kodu, müqavilə...', { exact: true });
+    const rowDeadline = Date.now() + AUDIT_WAIT_TIMEOUT_MS;
+    for (;;) {
+      await creditSearch.fill(sale.contract.id);
+      try {
+        await returnedCreditRow.waitFor({ timeout: Math.min(15000, Math.max(1000, rowDeadline - Date.now())) });
+        break;
+      } catch (error) {
+        if (Date.now() >= rowDeadline) throw error;
+      }
+    }
     await returnedCreditRow.locator(".credit-table-actions .icon-btn").first().click();
     await page.locator(".credit-detail-modal-card .credit-payment-form").waitFor({ state: "visible" });
     const paymentForm = page.locator('.credit-detail-modal-card .credit-payment-form');
@@ -1305,10 +1315,10 @@ async function auditHelpOnboardingWorkflow(browser) {
     await page.locator(".page-header .primary-btn").click();
     await page.locator(".page-header h1").waitFor();
     const title = await page.locator(".page-header h1").innerText();
-    state = await readState(page);
     assert(title.includes("Tənzimləmələr"), "Onboarding action did not route to the next setup module");
-    assert(
-      state.auditLog?.some((entry) => entry.module === "Onboarding" && entry.action === "Qurulum addımına keçid"),
+    // The audit log is persisted with the same debounced snapshot as the help guide: poll, don't read once.
+    state = await waitForState(
+      (s) => s.auditLog?.some((entry) => entry.module === "Onboarding" && entry.action === "Qurulum addımına keçid"),
       "Onboarding route action was not written to the audit log",
     );
     assert(errors.length === 0, `Help/onboarding flow produced browser errors: ${errors.join(" | ")}`);

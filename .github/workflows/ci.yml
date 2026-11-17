@@ -87,8 +87,12 @@ jobs:
           # 2.39.2 mis-split a plpgsql body in 20260812090000; 3.1.0 applies all migrations.
           version: 3.1.0
 
+      # The runner's Docker sometimes fails to bind a container port ("failed to set up container
+      # networking"); that is not a migration error, so stop everything and try once more.
       - name: Start local Supabase and apply every migration
-        run: supabase start -x studio,imgproxy,vector,logflare,postgres-meta,supavisor
+        run: |
+          start() { supabase start -x studio,imgproxy,vector,logflare,postgres-meta,supavisor; }
+          start || { echo "::warning::supabase start failed, retrying once"; supabase stop --no-backup || true; start; }
 
       - name: Export local Supabase endpoints
         run: supabase status -o env | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=' >> "$GITHUB_ENV"
