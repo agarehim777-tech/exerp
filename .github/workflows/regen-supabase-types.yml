@@ -1,0 +1,43 @@
+# TEMPORARY: regenerates src/integrations/supabase/types.ts from supabase/migrations on a throwaway
+# local Supabase (same start as ci.yml "Local Supabase E2E") and commits it back to this branch.
+# Never links or connects to a hosted project. Removed again before the PR is merged.
+name: Regenerate Supabase types (temporary)
+
+on:
+  push:
+    branches: [chore/regen-supabase-types]
+    paths: [.github/workflows/regen-supabase-types.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 3.1.0
+
+      - name: Start local Supabase and apply every migration
+        run: supabase start -x studio,imgproxy,vector,logflare,supavisor
+
+      - name: Generate types from the local database
+        run: |
+          supabase gen types typescript --local > /tmp/types.ts
+          test "$(wc -l < /tmp/types.ts)" -gt 1000
+          grep -q "save_purchase_order" /tmp/types.ts
+          # The repository keeps this file with CRLF line endings.
+          sed 's/\r$//; s/$/\r/' /tmp/types.ts > src/integrations/supabase/types.ts
+
+      - name: Commit generated types
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add src/integrations/supabase/types.ts
+          git diff --cached --stat
+          git commit -m "Regenerate Supabase types from local migrations" || echo "No changes"
+          git push
