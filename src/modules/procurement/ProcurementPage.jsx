@@ -8,11 +8,21 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
 import { isMissingPoPaymentsTable, readLegacyPoPayments } from "./procurementSchema.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { vendorInvoiceTotal } from "./procurementMath.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { ENABLE_LEGACY_PAYMENTS, INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyRfq, emptyVendor, getError, groupBy, lineAmount, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { ENABLE_LEGACY_PAYMENTS, INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyRfq, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import {
+  buildAcceptedByLine,
+  buildInvoicedByLine,
+  buildPoMetrics,
+  buildInvoiceTotals,
+  buildPaymentByPo,
+  filterVendors,
+  filterPurchaseOrders,
+  filterInvoices,
+  buildProcurementStats,
+} from "./procurementSelectors.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -199,108 +209,28 @@ function ProcurementWorkspace({ tenantId, user }) {
   const receiptLinesByReceipt = useMemo(() => groupBy(receiptLines, "grn_id"), [receiptLines]);
   const invoiceLinesByInvoice = useMemo(() => groupBy(invoiceLines, "invoice_id"), [invoiceLines]);
 
-  const acceptedByLine = useMemo(() => {
-    const map = new Map();
-    receiptLines.forEach((line) => {
-      const accepted = Math.max(0, toNumber(line.qty_received) - toNumber(line.qty_rejected));
-      map.set(line.po_line_id, (map.get(line.po_line_id) || 0) + accepted);
-    });
-    return map;
-  }, [receiptLines]);
+  const acceptedByLine = useMemo(() => buildAcceptedByLine(receiptLines), [receiptLines]);
 
-  const invoicedByLine = useMemo(() => {
-    const map = new Map();
-    invoiceLines.forEach((line) => {
-      map.set(line.po_line_id, (map.get(line.po_line_id) || 0) + toNumber(line.qty_invoiced));
-    });
-    return map;
-  }, [invoiceLines]);
+  const invoicedByLine = useMemo(() => buildInvoicedByLine(invoiceLines), [invoiceLines]);
 
-  const poMetrics = useMemo(() => {
-    const map = new Map();
-    purchaseOrders.forEach((po) => {
-      const lines = linesByPo.get(po.id) || [];
-      const total = lines.reduce((sum, line) => sum + lineAmount(line), 0);
-      const ordered = lines.reduce((sum, line) => sum + toNumber(line.qty_ordered), 0);
-      const received = lines.reduce((sum, line) => sum + (acceptedByLine.get(line.id) || 0), 0);
-      const invoiced = lines.reduce((sum, line) => sum + (invoicedByLine.get(line.id) || 0), 0);
-      map.set(po.id, {
-        total,
-        ordered,
-        received,
-        invoiced,
-        lineCount: lines.length,
-        progress: ordered > 0 ? Math.min(100, Math.round((received / ordered) * 100)) : 0,
-      });
-    });
-    return map;
-  }, [purchaseOrders, linesByPo, acceptedByLine, invoicedByLine]);
+  const poMetrics = useMemo(() => buildPoMetrics(purchaseOrders, linesByPo, acceptedByLine, invoicedByLine), [purchaseOrders, linesByPo, acceptedByLine, invoicedByLine]);
 
-  const invoiceTotals = useMemo(() => {
-    const map = new Map();
-    invoices.forEach((invoice) => {
-      const lines = invoiceLinesByInvoice.get(invoice.id) || [];
-      map.set(invoice.id, vendorInvoiceTotal(lines));
-    });
-    return map;
-  }, [invoices, invoiceLinesByInvoice]);
+  const invoiceTotals = useMemo(() => buildInvoiceTotals(invoices, invoiceLinesByInvoice), [invoices, invoiceLinesByInvoice]);
 
-  const paymentByPo = useMemo(() => {
-    const map = new Map();
-    invoices.forEach((invoice) => {
-      if (!invoice.po_id || invoice.status === "cancelled") return;
-      const amount = invoiceTotals.get(invoice.id) || 0;
-      const current = map.get(invoice.po_id) || { billed: 0, paid: 0 };
-      current.billed += amount;
-      if (invoice.status === "paid") current.paid += amount;
-      map.set(invoice.po_id, current);
-    });
-    poPayments.forEach((payment) => {
-      const current = map.get(payment.po_id) || { billed: 0, paid: 0 };
-      current.paid += toNumber(payment.amount);
-      map.set(payment.po_id, current);
-    });
-    return map;
-  }, [invoices, invoiceTotals, poPayments]);
+  const paymentByPo = useMemo(() => buildPaymentByPo(invoices, invoiceTotals, poPayments), [invoices, invoiceTotals, poPayments]);
 
 
 
-  const filteredVendors = useMemo(
-    () => vendors.filter((vendor) => matchesQuery([vendor.name, vendor.tax_id, vendor.email, vendor.phone], query)),
-    [vendors, query],
-  );
+  const filteredVendors = useMemo(() => filterVendors(vendors, query), [vendors, query]);
 
-  const filteredPurchaseOrders = useMemo(
-    () =>
-      purchaseOrders.filter((po) => {
-        const statusOk = poStatus === "all" || po.status === poStatus;
-        const vendorName = po.vendors?.name || vendors.find((vendor) => vendor.id === po.vendor_id)?.name;
-        return statusOk && matchesQuery([po.po_number, vendorName, po.status, po.notes], query);
-      }),
-    [purchaseOrders, poStatus, query, vendors],
-  );
+  const filteredPurchaseOrders = useMemo(() => filterPurchaseOrders(purchaseOrders, poStatus, query, vendors), [purchaseOrders, poStatus, query, vendors]);
 
-  const filteredInvoices = useMemo(
-    () =>
-      invoices.filter((invoice) => {
-        const statusOk = invoiceStatus === "all" || invoice.status === invoiceStatus;
-        return statusOk && matchesQuery([invoice.invoice_number, invoice.vendors?.name, invoice.purchase_orders?.po_number, invoice.status], query);
-      }),
-    [invoices, invoiceStatus, query],
-  );
+  const filteredInvoices = useMemo(() => filterInvoices(invoices, invoiceStatus, query), [invoices, invoiceStatus, query]);
 
   const activePoOptions = useMemo(() => purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status)), [purchaseOrders]);
   const invoicePoOptions = useMemo(() => purchaseOrders.filter((po) => ["approved", "partial", "received"].includes(po.status)), [purchaseOrders]);
 
-  const stats = useMemo(() => {
-    const openPo = purchaseOrders.filter((po) => ["draft", "approved", "partial"].includes(po.status));
-    const waitingReceipt = purchaseOrders.filter((po) => ["approved", "partial"].includes(po.status));
-    const exceptions = invoices.filter((invoice) => invoice.status === "exception");
-    const approvedSpend = purchaseOrders
-      .filter((po) => po.status !== "cancelled")
-      .reduce((sum, po) => sum + (poMetrics.get(po.id)?.total || 0), 0);
-    return { openPo, waitingReceipt, exceptions, approvedSpend };
-  }, [purchaseOrders, invoices, poMetrics]);
+  const stats = useMemo(() => buildProcurementStats(purchaseOrders, invoices, poMetrics), [purchaseOrders, invoices, poMetrics]);
 
   function resetPoForm() {
     setEditingPoId(null);
