@@ -12,7 +12,14 @@ export function collectAuditRequests(page) {
     completed.push({ method: entry.method, path: entry.path, status, milliseconds: Date.now() - entry.started });
     if (completed.length > 100) completed.shift();
   };
-  page.on('requestfinished', async request => finish(request, (await request.response())?.status()));
+  // response() rejects once the page or context is closed (end of a flow). Diagnostics must never
+  // turn that into an unhandled rejection: it killed the whole flow run in CI after a passing flow.
+  page.on('requestfinished', request => {
+    request.response().then(
+      response => finish(request, response?.status()),
+      () => finish(request, 'closed'),
+    );
+  });
   page.on('requestfailed', request => finish(request, 'network-failure'));
   return () => ({
     completed: [...completed],
