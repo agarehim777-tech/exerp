@@ -1,15 +1,14 @@
 import LandedCostPanel from "./LandedCostPanel.jsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, BarChart3, Building2, PackageCheck, Receipt, RefreshCw, Search, ShoppingCart, Ship, Truck, WalletCards, X } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { listWorkflowRecords, saveWorkflowRecord } from "../../services/enterpriseWorkflows.js";
 import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyRfq, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyPoPayment, emptyReceipt, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -23,6 +22,7 @@ import {
 } from "./procurementSelectors.ts";
 import { useProcurementRegistry } from "./useProcurementRegistry.ts";
 import { useVendorActions } from "./useVendorActions.ts";
+import { useRfqActions } from "./useRfqActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -48,8 +48,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     invoices, invoiceLines, poPayments, poPaymentsAvailable, load,
   } = useProcurementRegistry({ tenantId, begin, setError });
   const [matchRows, setMatchRows] = useState({});
-  const [rfqs, setRfqs] = useState([]);
-  const [rfqForm, setRfqForm] = useState(emptyRfq);
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
@@ -83,70 +81,9 @@ function ProcurementWorkspace({ tenantId, user }) {
     load();
   }, [load]);
 
-  const loadRfqs = useCallback(async () => {
-    if (!tenantId) return;
-    const isCurrent = begin('rfq');
-    try {
-      const rows = await listWorkflowRecords({ tenantId, module: "procurement", recordType: "rfq" });
-      if (isCurrent()) setRfqs(rows);
-    } catch (rfqError) {
-      if (isCurrent()) setError(getError(rfqError));
-    }
-  }, [tenantId, begin]);
-
-  useEffect(() => { loadRfqs(); }, [loadRfqs]);
-
-  async function saveRfq(event) {
-    event.preventDefault();
-    if (!rfqForm.title.trim() || !rfqForm.description.trim() || Number(rfqForm.quantity) <= 0 || !rfqForm.vendor_ids.length) {
-      setError("RFQ adı, məhsul, miqdar və ən azı bir vendor tələb olunur.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      await saveWorkflowRecord({
-        tenantId,
-        module: "procurement",
-        record: {
-          record_type: "rfq", record_no: nextNumber("RFQ"), status: "sent", title: rfqForm.title.trim(),
-          due_at: rfqForm.due_at ? `${rfqForm.due_at}T18:00:00` : null,
-          payload: { vendor_ids: rfqForm.vendor_ids, selected_vendor_id: null, bids: [] },
-        },
-        lines: [{ description: rfqForm.description.trim(), quantity: Number(rfqForm.quantity), unit_price: 0 }],
-        approvals: [{ role_code: "procurement_manager" }, { role_code: "finance_manager" }],
-      });
-      setRfqForm(emptyRfq);
-      setNotice("Təklif sorğusu yaradıldı və vendor müqayisəsinə göndərildi.");
-      await loadRfqs();
-    } catch (rfqError) {
-      setError(getError(rfqError));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function updateRfq(rfq, changes) {
-    setSaving(true);
-    try {
-      const { workflow_lines: _lines, workflow_approvals: _approvals, ...record } = rfq;
-      await saveWorkflowRecord({ tenantId, module: "procurement", record: { ...record, ...changes } });
-      await loadRfqs();
-      setNotice("RFQ statusu yeniləndi.");
-    } catch (rfqError) {
-      setError(getError(rfqError));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function convertRfqToPo(rfq) {
-    const vendorId = rfq.payload?.selected_vendor_id || rfq.payload?.vendor_ids?.[0] || "";
-    const line = rfq.workflow_lines?.[0];
-    setPoForm({ ...emptyPo, vendor_id: vendorId, po_number: nextNumber("PO"), notes: `RFQ: ${rfq.record_no}` });
-    setPoDraftLines([{ ...emptyPoLine, description: line?.description || rfq.title, qty_ordered: String(line?.quantity || 1) }]);
-    setTab("po");
-  }
+  const { rfqs, rfqForm, setRfqForm, saveRfq, updateRfq, convertRfqToPo } = useRfqActions({
+    tenantId, begin, setError, setNotice, setSaving, setPoForm, setPoDraftLines, setTab,
+  });
 
   useRealtimeResync(tenantId, ['vendors', 'purchase_orders', 'goods_receipts', 'vendor_invoices',
     ...(poPaymentsAvailable ? ['po_payments'] : [])], load, { channelPrefix: 'procurement' });
