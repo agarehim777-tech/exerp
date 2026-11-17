@@ -99,10 +99,10 @@ export function usePoActions({
 
     // Header and lines are saved in one transaction (save_purchase_order); lines that already have
     // receipts or vendor invoices are kept and only the header changes.
-    // save_purchase_order is newer than the generated Supabase types, so the call is untyped here.
-    const { data: saved, error: saveError } = await (supabase.rpc as any)("save_purchase_order", {
-      _tenant_id: tenantId,
-      _po_id: editingPoId || null,
+    const { data: saved, error: saveError } = await supabase.rpc("save_purchase_order", {
+      _tenant_id: tenantId!,
+      // NULL creates a new PO; generated types declare every uuid argument as non-null.
+      _po_id: (editingPoId || null) as string,
       _header: payload,
       _lines: validLines,
     });
@@ -112,7 +112,7 @@ export function usePoActions({
       return;
     }
     if (editingPoId) {
-      setNotice(saved?.lines_replaced === false ? "PO başlığı yeniləndi. Mədaxil/faktura olan PO sətirləri qorundu." : "PO yeniləndi.");
+      setNotice((saved as { lines_replaced?: boolean } | null)?.lines_replaced === false ? "PO başlığı yeniləndi. Mədaxil/faktura olan PO sətirləri qorundu." : "PO yeniləndi.");
     } else {
       setNotice("PO yaradıldı və qaralama statusunda saxlanıldı.");
     }
