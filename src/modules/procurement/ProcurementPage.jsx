@@ -8,7 +8,7 @@ import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyReceipt, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -25,6 +25,7 @@ import { useVendorActions } from "./useVendorActions.ts";
 import { useRfqActions } from "./useRfqActions.ts";
 import { usePoActions } from "./usePoActions.ts";
 import { usePoPaymentActions } from "./usePoPaymentActions.ts";
+import { useReceiptActions } from "./useReceiptActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -66,9 +67,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [poForm, setPoForm] = useState({ ...emptyPo, po_number: nextNumber("PO") });
   const [poDraftLines, setPoDraftLines] = useState([{ ...emptyPoLine }]);
   const [editingPoId, setEditingPoId] = useState(null);
-  const [receiptForm, setReceiptForm] = useState({ ...emptyReceipt, grn_number: nextNumber("GRN") });
-  const [receiptDraftLines, setReceiptDraftLines] = useState([]);
-  const [editingReceiptId, setEditingReceiptId] = useState(null);
   const [invoiceForm, setInvoiceForm] = useState({ ...emptyInvoice, invoice_number: nextNumber("INV") });
   const [invoiceDraftLines, setInvoiceDraftLines] = useState([]);
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
@@ -118,36 +116,10 @@ function ProcurementWorkspace({ tenantId, user }) {
     load, setError, setNotice, setSaving, setTab,
   });
 
-  function resetReceiptForm() {
-    setEditingReceiptId(null);
-    setReceiptForm({ ...emptyReceipt, grn_number: nextNumber("GRN") });
-    setReceiptDraftLines([]);
-  }
-
   function resetInvoiceForm() {
     setEditingInvoiceId(null);
     setInvoiceForm({ ...emptyInvoice, invoice_number: nextNumber("INV") });
     setInvoiceDraftLines([]);
-  }
-
-  function buildReceiptLines(poId, receiptId = null) {
-    const sourceLines = linesByPo.get(poId) || [];
-    const existing = receiptId ? receiptLinesByReceipt.get(receiptId) || [] : [];
-    return sourceLines.map((line) => {
-      const existingLine = existing.find((item) => item.po_line_id === line.id);
-      const accepted = acceptedByLine.get(line.id) || 0;
-      const editAccepted = existingLine ? Math.max(0, toNumber(existingLine.qty_received) - toNumber(existingLine.qty_rejected)) : 0;
-      const outstanding = Math.max(0, toNumber(line.qty_ordered) - accepted + editAccepted);
-      return {
-        po_line_id: line.id,
-        label: `${line.product_sku}${line.description ? ` · ${line.description}` : ""}`,
-        ordered: line.qty_ordered,
-        outstanding,
-        qty_received: existingLine ? String(existingLine.qty_received) : String(outstanding || ""),
-        qty_rejected: existingLine ? String(existingLine.qty_rejected || 0) : "0",
-        unit_volume_m3: existingLine ? String(existingLine.unit_volume_m3 || 0) : "",
-      };
-    });
   }
 
   function buildInvoiceLines(poId, invoiceId = null) {
@@ -173,127 +145,13 @@ function ProcurementWorkspace({ tenantId, user }) {
     vendorForm, setVendorForm, editingVendorId, setEditingVendorId, saveVendor, editVendor, toggleVendor, deleteVendor,
   } = useVendorActions({ tenantId, purchaseOrders, load, setError, setNotice, setSaving, setTab });
 
-  function choosePoForReceipt(poId) {
-    const po = purchaseOrders.find((item) => item.id === poId);
-    if (!po) return;
-    setEditingReceiptId(null);
-    setReceiptForm({ ...emptyReceipt, po_id: poId, grn_number: nextNumber("GRN") });
-    setReceiptDraftLines(buildReceiptLines(poId));
-    setTab("grn");
-  }
-
-  function editReceipt(receipt) {
-    setEditingReceiptId(receipt.id);
-    setReceiptForm({
-      po_id: receipt.po_id,
-      grn_number: receipt.grn_number || "",
-      receipt_date: receipt.receipt_date || today(),
-      notes: receipt.notes || "",
-    });
-    setReceiptDraftLines(buildReceiptLines(receipt.po_id, receipt.id));
-    setTab("grn");
-  }
-
-  async function saveReceipt(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-    if (!receiptForm.po_id || !receiptForm.grn_number.trim()) {
-      setError("PO və GRN nömrəsi tələb olunur.");
-      return;
-    }
-    const invalidLine = receiptDraftLines.find((line) => {
-      const received = toNumber(line.qty_received);
-      const rejected = toNumber(line.qty_rejected);
-      return received < 0 || rejected < 0 || rejected > received || received > toNumber(line.outstanding) + 0.000001 || (received > rejected && toNumber(line.unit_volume_m3) <= 0);
-    });
-    if (invalidLine) {
-      setError(`${invalidLine.label}: miqdarları yoxlayın və mədaxil edilən məhsul üçün vahid həcmi daxil edin.`);
-      return;
-    }
-    const items = receiptDraftLines
-      .filter((line) => toNumber(line.qty_received) > 0)
-      .map((line) => ({
-        po_line_id: line.po_line_id,
-        qty_received: toNumber(line.qty_received),
-        qty_rejected: toNumber(line.qty_rejected),
-        unit_volume_m3: toNumber(line.unit_volume_m3),
-      }));
-    if (!items.length) {
-      setError("Ən azı bir mədaxil sətri tələb olunur.");
-      return;
-    }
-    setSaving(true);
-    let receiptId = editingReceiptId;
-    if (editingReceiptId) {
-      const { error: receiptError } = await supabase
-        .from("goods_receipts")
-        .update({
-          po_id: receiptForm.po_id,
-          grn_number: receiptForm.grn_number.trim(),
-          receipt_date: receiptForm.receipt_date || today(),
-          notes: receiptForm.notes.trim() || null,
-        })
-        .eq("id", editingReceiptId);
-      if (receiptError) {
-        setError(getError(receiptError));
-        setSaving(false);
-        return;
-      }
-      const { error: deleteError } = await supabase.from("goods_receipt_lines").delete().eq("grn_id", editingReceiptId);
-      if (deleteError) {
-        setError(getError(deleteError));
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { data: receipt, error: receiptError } = await supabase
-        .from("goods_receipts")
-        .insert({
-          tenant_id: tenantId,
-          po_id: receiptForm.po_id,
-          grn_number: receiptForm.grn_number.trim(),
-          receipt_date: receiptForm.receipt_date || today(),
-          notes: receiptForm.notes.trim() || null,
-          received_by: user?.id || null,
-        })
-        .select()
-        .single();
-      if (receiptError) {
-        setError(getError(receiptError));
-        setSaving(false);
-        return;
-      }
-      receiptId = receipt.id;
-    }
-
-    const { error: lineError } = await supabase.from("goods_receipt_lines").insert(items.map((line) => ({ ...line, grn_id: receiptId })));
-    if (lineError) {
-      setError(getError(lineError));
-      setSaving(false);
-      return;
-    }
-
-    const nextReceiptLines = [...receiptLines.filter((line) => line.grn_id !== receiptId), ...items.map((line) => ({ ...line, grn_id: receiptId }))];
-    await recomputePoStatus(receiptForm.po_id, nextReceiptLines);
-    setNotice(editingReceiptId ? "GRN yeniləndi və PO statusu hesablandı." : "Mədaxil qeyd edildi və PO statusu hesablandı.");
-    resetReceiptForm();
-    await load();
-    setSaving(false);
-  }
-
-  async function deleteReceipt(receipt) {
-    if (!(await appConfirm(`${receipt.grn_number} GRN qeydini silmək istəyirsiniz?`, { danger: true }))) return;
-    setSaving(true);
-    const { error: receiptError } = await supabase.from("goods_receipts").delete().eq("id", receipt.id);
-    if (receiptError) setError(getError(receiptError));
-    else {
-      await recomputePoStatus(receipt.po_id, receiptLines.filter((line) => line.grn_id !== receipt.id));
-      setNotice("GRN silindi və PO statusu yeniləndi.");
-      await load();
-    }
-    setSaving(false);
-  }
+  const {
+    receiptForm, setReceiptForm, receiptDraftLines, setReceiptDraftLines, editingReceiptId,
+    resetReceiptForm, buildReceiptLines, choosePoForReceipt, editReceipt, saveReceipt, deleteReceipt,
+  } = useReceiptActions({
+    tenantId, user, purchaseOrders, receiptLines, linesByPo, receiptLinesByReceipt, acceptedByLine, recomputePoStatus,
+    load, setError, setNotice, setSaving, setTab,
+  });
 
   function choosePoForInvoice(poId) {
     setEditingInvoiceId(null);
