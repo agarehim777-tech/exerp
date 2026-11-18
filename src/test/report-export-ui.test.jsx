@@ -24,7 +24,7 @@ it('does not audit or surface a stale PDF export after A -> B -> A and exports t
   mocks.pdf.mockImplementation(() => new Promise(resolve => { resolvePdf = resolve; }));
   const save = vi.fn().mockResolvedValue({ id: 'export' });
   const { rerender } = render(<ReportsPage {...props} onExport={save} />);
-  fireEvent.click(screen.getByRole('button', { name: 'PDF', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
   await waitFor(() => expect(mocks.pdf).toHaveBeenCalled());
   const guard = mocks.pdf.mock.calls[0][1].isCurrent;
   expect(guard()).toBe(true);
@@ -34,7 +34,7 @@ it('does not audit or surface a stale PDF export after A -> B -> A and exports t
   await act(async () => { resolvePdf(false); });
   expect(save).not.toHaveBeenCalled();
   expect(screen.getByTestId('report-template-export')).toBeEnabled();
-  fireEvent.click(screen.getAllByRole('button', { name: 'Excel', exact: true })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Excel' })[0]);
   await waitFor(() => expect(save).toHaveBeenCalled());
   expect(mocks.csv).toHaveBeenLastCalledWith(expect.objectContaining({
     columns: ['Modul', 'Göstərici', 'Say', 'Siqnal', 'Status'],
@@ -78,7 +78,7 @@ it('invalidates an in-flight PDF when its filter changes', async () => {
   mocks.pdf.mockImplementation(() => new Promise(resolve => { resolvePdf = resolve; }));
   const save = vi.fn();
   render(<ReportsPage {...props} onExport={save} />);
-  fireEvent.click(screen.getByRole('button', { name: 'PDF', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
   await waitFor(() => expect(mocks.pdf).toHaveBeenCalled());
   const guard = mocks.pdf.mock.calls[0][1].isCurrent;
   fireEvent.change(screen.getByLabelText('Dövr'), { target: { value: 'Hamısı' } });

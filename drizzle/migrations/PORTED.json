@@ -1,0 +1,113 @@
+{
+  "$comment": "Every drizzle/migrations/*.sql file needs an entry here (checked by src/test/drizzle-port-manifest.test.js). supabase/migrations is the schema source of truth: local Supabase E2E, the PGlite replay tests and migrate-production use only that folder. status: ported = the file's schema change is contained in the listed supabase/migrations versions; notPorted = deliberately left out (reason required); pending = known gap that still needs a decision or a port (reason required).",
+  "files": {
+    "0000_recoverable_vat_account.sql": {
+      "status": "pending",
+      "reason": "Not in supabase/migrations: ensure_inventory_accounts there (last 20261001134507) does not seed account 1400 'Əvəzləşdirilən ƏDV', and the backfill INSERT for existing tenants is missing. ProcurementPage.openInvoicePayment relies on that RPC to seed 1400 for taxed vendor invoices."
+    },
+    "0001_expense_status_canonical.sql": {
+      "status": "pending",
+      "supabase": ["20261002052217"],
+      "reason": "Functions superseded: 20261002052217 (restore_expense_lifecycle_commands) redefines accept_expense/cancel_expense with module permissions, row locks and canonical statuses only. Not in supabase/migrations: the UPDATE that rewrites Azerbaijani expense status labels ('Təsdiq gözləyir', 'Qəbul edildi', ...) to canonical values; rows with such labels are rejected by the repo functions."
+    },
+    "0002_reverse_sales_order_reservation_status_fix.sql": {
+      "status": "notPorted",
+      "reason": "Superseded by 20261001134507 (unify_sales_delivery_reversal_commands): the repo reverse_sales_order is newer (also reverses cost allocations and checks the accounting period) and releases reservations with status 'released', which the repo schema accepts. The drizzle file patches Lovable's older copy (= 20260915063656) to 'cancelled'."
+    },
+    "0003_reverse_vendor_invoice_payment.sql": {
+      "status": "notPorted",
+      "reason": "Nothing in the app calls reverse_vendor_invoice_payment (see drizzle-migration-parity.test.js and 20261110120000)."
+    },
+    "0004_vendor_invoice_unpaid_guard_allows_reversal.sql": {
+      "status": "notPorted",
+      "reason": "Relaxes private.guard_vendor_invoice_payment only so reverse_vendor_invoice_payment (0003, not ported) can move a paid invoice back to unpaid; the repo guard (last 20261114090000) keeps paid invoices immutable."
+    },
+    "0005_reverse_procurement_receipt.sql": {
+      "status": "notPorted",
+      "reason": "Nothing in the app calls reverse_procurement_receipt (see drizzle-migration-parity.test.js and 20261110120000); its procurement_receipts.reversed_at/reversal_reason columns are only used by that function."
+    },
+    "0006_atomic_cash_expense_commands.sql": {
+      "status": "ported",
+      "supabase": ["20260922070837", "20261002122938"],
+      "reason": "transfer_cash_atomic identical in 20260922070837, edit_cash_expense_atomic and the expenses.cash_account_id/cash_transaction_id columns in 20261002122938. Small differences not ported: the drizzle create_cash_expense_atomic also fills cash_account_id/cash_transaction_id/reference_type at creation (repo edit fills them later and matches postings by reference), and its refund accepts status 'accepted', which no repo function sets."
+    },
+    "0007_credit_restructure_and_adjustment_decisions.sql": {
+      "status": "ported",
+      "supabase": ["20260822190000", "20261113120000"],
+      "reason": "credit_collection_events, credit_adjustments decision columns and decide_credit_adjustment in 20260822190000; restructure_credit_contract redefined stricter in 20261113120000 (auth check, waives replaced installments)."
+    },
+    "0008_problem_stock_returns_and_repairs.sql": {
+      "status": "ported",
+      "supabase": ["20260822170000", "20260823170000", "20260823173000"],
+      "reason": "inventory_returns/inventory_return_lines and problem_qty in 20260822170000/20260823170000; repair and problem-stock functions there use the stricter warehouse edit permission instead of the drizzle tenant-member check."
+    },
+    "0009_material_production_and_stock_import.sql": {
+      "status": "ported",
+      "supabase": ["20261003140739", "20261005120626", "20261014075609"],
+      "reason": "production_batches tables and post_material_production in 20261003140739, import_warehouse_stock_atomic and products.cost_price/serial_tracked in 20261005120626, final versions in 20261014075609. The drizzle post_material_production writes stock_movements.move_type/qty, columns the repo schema removed (see stock-cash-function-calls-sql.test.js)."
+    },
+    "0010_atomic_sales_invoice_commands.sql": {
+      "status": "ported",
+      "supabase": ["20261006062828", "20261006131851"],
+      "reason": "All functions, triggers, columns and indexes identical in 20261006062828; create_sales_invoice_atomic identical in 20261006131851."
+    },
+    "0011_fix_reverse_cash_transaction_direction_cast.sql": {
+      "status": "ported",
+      "supabase": ["20261114090000"],
+      "reason": "The direction cast fix is in 20261114090000 (fix_drifted_functions); the repo keeps the ::public.cash_direction cast because cash_transactions.direction is that enum in the repo schema."
+    },
+    "0012_restrict_finance_reversals_and_internal_triggers.sql": {
+      "status": "ported",
+      "supabase": ["20260906143000"],
+      "reason": "Trigger-function REVOKE loop and a stricter backfill_sales_bonus_for_order in 20260906143000. Grants for reverse_vendor_invoice_payment/reverse_procurement_receipt are not needed (0003/0005 not ported)."
+    },
+    "0013_server_receivable_kpi_settlement.sql": {
+      "status": "ported",
+      "supabase": ["20261010062858"],
+      "reason": "All functions, tables, policies and triggers identical in 20261010062858."
+    },
+    "0014_dedicated_hr_finance_records.sql": {
+      "status": "ported",
+      "supabase": ["20261110120000"],
+      "reason": "Dedicated HR/finance tables ported in PR #44."
+    },
+    "0015_dedicated_kpi_employee_scope_and_reversal_auth.sql": {
+      "status": "ported",
+      "supabase": ["20261110120000"],
+      "reason": "run_kpi_period_atomic employees rewrite, indexes, tenant_collection_records REVOKE and table comments in 20261110120000; the reversal-auth rewrite targets 0003/0005, which are not ported."
+    },
+    "0016_migration.sql": {
+      "status": "notPorted",
+      "reason": "The drizzle check_project_access returns a project's name, status and tenant to any signed-in user; the repo version (20260721065719) returns found=false unless the caller owns the project or belongs to its tenant."
+    },
+    "0017_problem_stock_excluded_from_reservation_delivery.sql": {
+      "status": "notPorted",
+      "reason": "Drops the order_not_reservable guard; the repo reserve_stock/process_sales_order_status already exclude problem_qty with stronger guards (PR #55, problem-stock-reservation-sql.test.js)."
+    },
+    "0018_report_totals_rpc.sql": {
+      "status": "ported",
+      "supabase": ["20261112100000"],
+      "reason": "Report RPCs ported in PR #53."
+    },
+    "0019_report_trend_and_risks.sql": {
+      "status": "ported",
+      "supabase": ["20261112100000"],
+      "reason": "Report RPCs ported in PR #53."
+    },
+    "0020_report_module_summary.sql": {
+      "status": "ported",
+      "supabase": ["20261112100000"],
+      "reason": "Report RPCs ported in PR #53."
+    },
+    "0021_report_module_summary_cash_fix.sql": {
+      "status": "ported",
+      "supabase": ["20261112100000"],
+      "reason": "Report RPCs ported in PR #53 (final report_module_summary)."
+    },
+    "0022_report_module_summary_credit_fix.sql": {
+      "status": "ported",
+      "supabase": ["20261112100000"],
+      "reason": "Report RPCs ported in PR #53 (final report_module_summary)."
+    }
+  }
+}
