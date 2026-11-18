@@ -83,7 +83,7 @@
   "src/shared/hooks/useStock.js": 5,
   "src/shared/hooks/useTasks.js": 2,
   "src/shared/hooks/useTenantUiPersistence.js": 1,
-  "src/shared/lib/appDomainFinance.jsx": 6,
+  "src/shared/lib/appDomainFinance.jsx": 1,
   "src/shared/lib/appDomainPlatform.jsx": 2,
   "src/shared/lib/appDomainSales.jsx": 1,
   "src/shared/lib/blobReconciliation.test.js": 1,
