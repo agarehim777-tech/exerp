@@ -4,11 +4,10 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, BarChart3, Building2, PackageCheck, Receipt, RefreshCw, Search, ShoppingCart, Ship, Truck, WalletCards, X } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { appConfirm } from "../../shared/ui/dialogService.js";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { INVOICE_STATUS, IconButton, PO_STATUS, emptyInvoice, emptyPo, emptyPoLine, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { IconButton, PO_STATUS, emptyPo, emptyPoLine, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -26,6 +25,7 @@ import { useRfqActions } from "./useRfqActions.ts";
 import { usePoActions } from "./usePoActions.ts";
 import { usePoPaymentActions } from "./usePoPaymentActions.ts";
 import { useReceiptActions } from "./useReceiptActions.ts";
+import { useInvoiceActions } from "./useInvoiceActions.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -50,7 +50,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     loading, registryLoaded, vendors, products, purchaseOrders, poLines, goodsReceipts, receiptLines,
     invoices, invoiceLines, poPayments, poPaymentsAvailable, load,
   } = useProcurementRegistry({ tenantId, begin, setError });
-  const [matchRows, setMatchRows] = useState({});
   const [expandedPo, setExpandedPo] = useState(null);
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
@@ -67,9 +66,6 @@ function ProcurementWorkspace({ tenantId, user }) {
   const [poForm, setPoForm] = useState({ ...emptyPo, po_number: nextNumber("PO") });
   const [poDraftLines, setPoDraftLines] = useState([{ ...emptyPoLine }]);
   const [editingPoId, setEditingPoId] = useState(null);
-  const [invoiceForm, setInvoiceForm] = useState({ ...emptyInvoice, invoice_number: nextNumber("INV") });
-  const [invoiceDraftLines, setInvoiceDraftLines] = useState([]);
-  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
   useEffect(() => {
     setPayingInvoice(null); setPaymentAccounts([]); setInvoiceAccountId("");
@@ -116,31 +112,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     load, setError, setNotice, setSaving, setTab,
   });
 
-  function resetInvoiceForm() {
-    setEditingInvoiceId(null);
-    setInvoiceForm({ ...emptyInvoice, invoice_number: nextNumber("INV") });
-    setInvoiceDraftLines([]);
-  }
-
-  function buildInvoiceLines(poId, invoiceId = null) {
-    const sourceLines = linesByPo.get(poId) || [];
-    const existing = invoiceId ? invoiceLinesByInvoice.get(invoiceId) || [] : [];
-    return sourceLines.map((line) => {
-      const existingLine = existing.find((item) => item.po_line_id === line.id);
-      const accepted = acceptedByLine.get(line.id) || 0;
-      const ordered = toNumber(line.qty_ordered);
-      return {
-        po_line_id: line.id,
-        label: `${line.product_sku}${line.description ? ` · ${line.description}` : ""}`,
-        ordered,
-        accepted,
-        qty_invoiced: existingLine ? String(existingLine.qty_invoiced) : String(accepted || ordered || ""),
-        unit_price: existingLine ? String(existingLine.unit_price) : String(line.unit_price || 0),
-        tax_rate: existingLine ? String(existingLine.tax_rate || line.tax_rate || 0) : String(line.tax_rate || 0),
-      };
-    });
-  }
-
   const {
     vendorForm, setVendorForm, editingVendorId, setEditingVendorId, saveVendor, editVendor, toggleVendor, deleteVendor,
   } = useVendorActions({ tenantId, purchaseOrders, load, setError, setNotice, setSaving, setTab });
@@ -153,140 +124,13 @@ function ProcurementWorkspace({ tenantId, user }) {
     load, setError, setNotice, setSaving, setTab,
   });
 
-  function choosePoForInvoice(poId) {
-    setEditingInvoiceId(null);
-    const po = purchaseOrders.find((item) => item.id === poId);
-    setInvoiceForm({
-      ...emptyInvoice,
-      po_id: poId,
-      invoice_number: nextNumber("INV"),
-      currency: po?.currency || "AZN",
-    });
-    setInvoiceDraftLines(buildInvoiceLines(poId));
-    setTab("invoices");
-  }
-
-  function editInvoice(invoice) {
-    setEditingInvoiceId(invoice.id);
-    setInvoiceForm({
-      po_id: invoice.po_id || "",
-      invoice_number: invoice.invoice_number || "",
-      invoice_date: invoice.invoice_date || today(),
-      due_date: invoice.due_date || "",
-      currency: invoice.currency || "AZN",
-      match_notes: invoice.match_notes || "",
-    });
-    setInvoiceDraftLines(invoice.po_id ? buildInvoiceLines(invoice.po_id, invoice.id) : []);
-    setTab("invoices");
-  }
-
-  async function saveInvoice(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-    if (!invoiceForm.po_id || !invoiceForm.invoice_number.trim()) {
-      setError("PO və faktura nömrəsi tələb olunur.");
-      return;
-    }
-    const po = purchaseOrders.find((item) => item.id === invoiceForm.po_id);
-    if (!po) {
-      setError("PO tapılmadı.");
-      return;
-    }
-    const items = invoiceDraftLines
-      .filter((line) => toNumber(line.qty_invoiced) > 0 && toNumber(line.unit_price) >= 0)
-      .map((line) => ({
-        po_line_id: line.po_line_id,
-        qty_invoiced: toNumber(line.qty_invoiced),
-        unit_price: toNumber(line.unit_price),
-        tax_rate: toNumber(line.tax_rate),
-      }));
-    if (!items.length) {
-      setError("Faktura üçün ən azı bir sətir tələb olunur.");
-      return;
-    }
-    setSaving(true);
-    let invoiceId = editingInvoiceId;
-    const payload = {
-      vendor_id: po.vendor_id,
-      po_id: po.id,
-      invoice_number: invoiceForm.invoice_number.trim(),
-      invoice_date: invoiceForm.invoice_date || today(),
-      due_date: invoiceForm.due_date || null,
-      currency: invoiceForm.currency || po.currency || "AZN",
-      match_notes: invoiceForm.match_notes.trim() || null,
-      created_by: user?.id || null,
-    };
-
-    if (editingInvoiceId) {
-      const { error: invoiceError } = await supabase.from("vendor_invoices").update(payload).eq("id", editingInvoiceId);
-      if (invoiceError) {
-        setError(getError(invoiceError));
-        setSaving(false);
-        return;
-      }
-      const { error: deleteError } = await supabase.from("vendor_invoice_lines").delete().eq("invoice_id", editingInvoiceId);
-      if (deleteError) {
-        setError(getError(deleteError));
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { data: invoice, error: invoiceError } = await supabase
-        .from("vendor_invoices")
-        .insert({ ...payload, tenant_id: tenantId, status: "draft" })
-        .select()
-        .single();
-      if (invoiceError) {
-        setError(getError(invoiceError));
-        setSaving(false);
-        return;
-      }
-      invoiceId = invoice.id;
-    }
-
-    const { error: lineError } = await supabase.from("vendor_invoice_lines").insert(items.map((line) => ({ ...line, invoice_id: invoiceId })));
-    if (lineError) {
-      setError(getError(lineError));
-      setSaving(false);
-      return;
-    }
-    if (!await runMatch(invoiceId, false)) {
-      setEditingInvoiceId(invoiceId);
-      setSaving(false);
-      return;
-    }
-    setNotice(editingInvoiceId ? "Faktura yeniləndi və 3-way match hesablandı." : "Faktura yaradıldı və 3-way match hesablandı.");
-    resetInvoiceForm();
-    setSaving(false);
-  }
-
-  async function runMatch(invoiceId, withNotice = true) {
-    const [{ data: rows, error: evalError }, { error: applyError }] = await Promise.all([
-      supabase.rpc("evaluate_invoice_match", { _invoice_id: invoiceId }),
-      supabase.rpc("apply_invoice_match", { _invoice_id: invoiceId }),
-    ]);
-    if (evalError || applyError) {
-      setError(getError(evalError || applyError));
-      return false;
-    }
-    setMatchRows((current) => ({ ...current, [invoiceId]: rows || [] }));
-    if (withNotice) setNotice("3-way match yeniləndi.");
-    await load();
-    return true;
-  }
-
-  async function updateInvoiceStatus(invoiceId, status) {
-    if (status === "paid") throw new Error("Invoice payment requires the server command");
-    setSaving(true);
-    const { error: invoiceError } = await supabase.from("vendor_invoices").update({ status }).eq("id", invoiceId);
-    if (invoiceError) setError(getError(invoiceError));
-    else {
-      setNotice(`Faktura statusu dəyişdi: ${INVOICE_STATUS[status]?.label || status}.`);
-      await load();
-    }
-    setSaving(false);
-  }
+  const {
+    invoiceForm, setInvoiceForm, invoiceDraftLines, setInvoiceDraftLines, editingInvoiceId, matchRows,
+    resetInvoiceForm, buildInvoiceLines, choosePoForInvoice, editInvoice, saveInvoice, runMatch, updateInvoiceStatus, deleteInvoice,
+  } = useInvoiceActions({
+    tenantId, user, purchaseOrders, linesByPo, invoiceLinesByInvoice, acceptedByLine,
+    load, setError, setNotice, setSaving, setTab,
+  });
 
   async function openInvoicePayment(invoice) {
     const isCurrent = begin('invoice-payment-dialog');
@@ -333,22 +177,6 @@ function ProcurementWorkspace({ tenantId, user }) {
       setPayingInvoice(null); await load();
       } catch (paymentError) { if (isCurrent()) setError(getError(paymentError)); }
     finally { if (isCurrent()) setSaving(false); }
-  }
-
-  async function deleteInvoice(invoice) {
-    if (invoice.status === "paid") {
-      setError("Ödənilmiş fakturanı silmək olmaz. Lazımdırsa əvvəl ödəniş düzəlişi aparılmalıdır.");
-      return;
-    }
-    if (!(await appConfirm(`${invoice.invoice_number} fakturasını silmək istəyirsiniz?`, { danger: true }))) return;
-    setSaving(true);
-    const { error: invoiceError } = await supabase.from("vendor_invoices").delete().eq("id", invoice.id);
-    if (invoiceError) setError(getError(invoiceError));
-    else {
-      setNotice("Faktura silindi.");
-      await load();
-    }
-    setSaving(false);
   }
 
   if (!tenantId) {
