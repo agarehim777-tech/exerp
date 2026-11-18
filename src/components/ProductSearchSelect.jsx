@@ -4,6 +4,7 @@ import { foldSearchText } from "../shared/lib/searchText.ts";
 
 const norm = (value) => foldSearchText(value || "").trim();
 
+/** @param {{ products?: any[], value?: string, onChange: (productId: any, product: any) => void, placeholder?: string, disabled?: boolean, renderMeta?: (product: any) => any }} props */
 export default function ProductSearchSelect({ products = [], value = "", onChange, placeholder = "Məhsul adı və ya SKU yazın", disabled = false, renderMeta }) {
   const selected = products.find((item) => String(item.id) === String(value));
   const [query, setQuery] = useState(selected?.name || "");
