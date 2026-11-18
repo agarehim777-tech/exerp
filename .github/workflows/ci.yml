@@ -31,7 +31,8 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Dependency security audit
-        run: npm audit --audit-level=high
+        # High and critical advisories fail CI; an unpatched one can be allowlisted, with a review date, in the script.
+        run: node scripts/npm-audit-gate.mjs
 
       - name: Release gates
         id: release_gates
