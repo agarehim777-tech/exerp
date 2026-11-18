@@ -6,7 +6,7 @@ import { formatDateInput, formatPaymentDate, parsePaymentDate } from "../../serv
 import { total } from "../utils/aggregate.js";
 import { getOrderBalance, getOrderPaymentMethod, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import { currentBusinessDate } from "./businessDate.ts";
-import { currentBusinessYear, hasExpenseCashImpact } from "./appDomainFinance.jsx";
+import { currentBusinessYear, hasExpenseCashImpact } from "./financeDomain.ts";
 import { calculatePayrollTax2026 } from "./appDomainHr.jsx";
 import { currentBusinessQuarter } from "./appDomainProcurement.jsx";
 import { getAvailableQuantity } from "./appDomainWarehouse.jsx";

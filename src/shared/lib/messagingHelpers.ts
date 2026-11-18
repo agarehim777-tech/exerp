@@ -1,7 +1,7 @@
 // Daxili mesajlaşma: söhbət normallaşdırması, iştirakçı və bağlantı seçimləri, support tiketi söhbətləri.
 // appHelpers.jsx bu modulu köhnə idxallar üçün yenidən ixrac edir; yeni kod birbaşa buradan idxal etsin.
 import { money, normalize } from "../../services/format.js";
-import { getSupportThreadId } from "./appDomainFinance.jsx";
+import { getSupportThreadId } from "./financeDomain.ts";
 
 type Row = Record<string, any>;
 

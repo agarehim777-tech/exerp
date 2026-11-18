@@ -4,7 +4,7 @@ import { money, normalize } from "../../services/format.js";
 import { total } from "../utils/aggregate.js";
 import { getOrderBalance, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import { currentBusinessDate } from "./businessDate.ts";
-import { buildInvoiceControlSummary, getInvoiceAgingBucket } from "./appDomainFinance.jsx";
+import { buildInvoiceControlSummary, getInvoiceAgingBucket } from "./financeDomain.ts";
 import { buildHrEmployeeRecords, getEmployeeKey } from "./appDomainHr.jsx";
 import { buildProductLookup, getReorderPoint, isPurchaseOrderOpen } from "./appDomainProcurement.jsx";
 import { getAvailableQuantity, isLowStockItem } from "./appDomainWarehouse.jsx";

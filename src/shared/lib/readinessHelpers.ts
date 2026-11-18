@@ -3,7 +3,7 @@
 import { money, normalize } from "../../services/format.js";
 import { defaultDbProvider } from "../../services/persistence.js";
 import { getDeliveryStockCheck, getOrderPaymentMethod, isDeliveryQueueOrder } from "../../modules/warehouse/deliveryDomain.jsx";
-import { hasExpenseCashImpact } from "./appDomainFinance.jsx";
+import { hasExpenseCashImpact } from "./financeDomain.ts";
 import { getEmployeeKey } from "./appDomainHr.jsx";
 import { ensureSettings, targetDbProvider } from "./appDomainPlatform.jsx";
 import { buildSalesBonusRows, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits } from "./appDomainSales.jsx";
