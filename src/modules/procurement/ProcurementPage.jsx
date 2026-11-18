@@ -1,13 +1,12 @@
 import LandedCostPanel from "./LandedCostPanel.jsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, BarChart3, Building2, PackageCheck, Receipt, RefreshCw, Search, ShoppingCart, Ship, Truck, WalletCards, X } from "lucide-react";
-import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { useRealtimeResync } from "../../shared/hooks/useRealtimeResync.js";
 import "./procurement.css";
-import { IconButton, PO_STATUS, emptyPo, emptyPoLine, emptyVendor, getError, groupBy, matchesQuery, money, nextNumber, toNumber, today } from "./procurementShared.jsx";
+import { IconButton, PO_STATUS, emptyPo, emptyPoLine, emptyVendor, groupBy, matchesQuery, money, nextNumber } from "./procurementShared.jsx";
 import {
   buildAcceptedByLine,
   buildInvoicedByLine,
@@ -26,6 +25,7 @@ import { usePoActions } from "./usePoActions.ts";
 import { usePoPaymentActions } from "./usePoPaymentActions.ts";
 import { useReceiptActions } from "./useReceiptActions.ts";
 import { useInvoiceActions } from "./useInvoiceActions.ts";
+import { useInvoicePayment } from "./useInvoicePayment.ts";
 import { DashboardTab, InvoicesTab, Metric, PurchaseOrdersTab, ReceiptsTab, RfqTab, VendorsTab } from "./ProcurementTabs.jsx";
 
 export default function ProcurementPage() {
@@ -36,7 +36,6 @@ export default function ProcurementPage() {
 
 function ProcurementWorkspace({ tenantId, user }) {
   const { begin } = useTenantRequestScope(tenantId);
-  const invoiceAttempt = useRef(null);
 
   const [tab, setTab] = useState("dashboard");
   const [query, setQuery] = useState("");
@@ -56,23 +55,21 @@ function ProcurementWorkspace({ tenantId, user }) {
   const { paymentPoId, paymentForm, setPaymentForm, editingPaymentId, openPaymentForm, editPayment, savePoPayment, deletePayment } = usePoPaymentActions({
     tenantId, user, poPaymentsAvailable, setExpandedPo, load, setError, setNotice, setSaving,
   });
-  const [payingInvoice, setPayingInvoice] = useState(null);
-  const [paymentAccounts, setPaymentAccounts] = useState([]);
-  const [invoiceAccountId, setInvoiceAccountId] = useState("");
-  const [taxAccounts, setTaxAccounts] = useState([]);
-  const [invoiceTaxAccountId, setInvoiceTaxAccountId] = useState('');
-  const [recoverableTax, setRecoverableTax] = useState(false);
+  const invoiceLinesByInvoice = useMemo(() => groupBy(invoiceLines, "invoice_id"), [invoiceLines]);
+  const {
+    payingInvoice, setPayingInvoice, paymentAccounts, invoiceAccountId, setInvoiceAccountId, taxAccounts,
+    invoiceTaxAccountId, setInvoiceTaxAccountId, recoverableTax, setRecoverableTax,
+    resetInvoicePayment, openInvoicePayment, payInvoice,
+  } = useInvoicePayment({ tenantId, begin, saving, invoiceLinesByInvoice, load, setError, setNotice, setSaving });
 
   const [poForm, setPoForm] = useState({ ...emptyPo, po_number: nextNumber("PO") });
   const [poDraftLines, setPoDraftLines] = useState([{ ...emptyPoLine }]);
   const [editingPoId, setEditingPoId] = useState(null);
 
   useEffect(() => {
-    setPayingInvoice(null); setPaymentAccounts([]); setInvoiceAccountId("");
-    setTaxAccounts([]); setInvoiceTaxAccountId(''); setRecoverableTax(false);
-    invoiceAttempt.current = null;
+    resetInvoicePayment();
     load();
-  }, [load]);
+  }, [load, resetInvoicePayment]);
 
   const { rfqs, rfqForm, setRfqForm, saveRfq, updateRfq, convertRfqToPo } = useRfqActions({
     tenantId, begin, setError, setNotice, setSaving, setPoForm, setPoDraftLines, setTab,
@@ -83,7 +80,6 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   const linesByPo = useMemo(() => groupBy(poLines, "po_id"), [poLines]);
   const receiptLinesByReceipt = useMemo(() => groupBy(receiptLines, "grn_id"), [receiptLines]);
-  const invoiceLinesByInvoice = useMemo(() => groupBy(invoiceLines, "invoice_id"), [invoiceLines]);
 
   const acceptedByLine = useMemo(() => buildAcceptedByLine(receiptLines), [receiptLines]);
 
@@ -131,53 +127,6 @@ function ProcurementWorkspace({ tenantId, user }) {
     tenantId, user, purchaseOrders, linesByPo, invoiceLinesByInvoice, acceptedByLine,
     load, setError, setNotice, setSaving, setTab,
   });
-
-  async function openInvoicePayment(invoice) {
-    const isCurrent = begin('invoice-payment-dialog');
-    const hasTax = (invoiceLinesByInvoice.get(invoice.id) || []).some(line => toNumber(line.tax_rate) > 0);
-    // Seeds the standard "1400 Əvəzləşdirilən ƏDV" account if missing (idempotent).
-    if (hasTax) await supabase.rpc('ensure_inventory_accounts', { _tenant: tenantId }).then(() => null, () => null);
-    const [accounts, tax] = await Promise.all([
-      supabase.from("cash_accounts").select("id,name,currency,gl_account_id")
-        .eq("tenant_id", tenantId).eq("is_active", true).eq("currency", invoice.currency),
-      hasTax ? supabase.from('chart_of_accounts').select('id,code,name').eq('tenant_id', tenantId)
-        .eq('type', 'asset').eq('is_active', true).eq('currency', invoice.currency).order('code') : Promise.resolve({ data: [], error: null }),
-    ]);
-    if (!isCurrent()) return;
-    if (accounts.error || tax.error) { setError(getError(accounts.error || tax.error)); return; }
-    setPaymentAccounts(accounts.data || []);
-    setInvoiceAccountId(accounts.data?.[0]?.id || "");
-    setTaxAccounts((tax.data || []).filter(row => !['1000', '1010', '1200', '2050'].includes(row.code)
-      && !accounts.data?.some(account => account.gl_account_id === row.id)));
-    const taxCandidates = (tax.data || []).filter(row => !['1000', '1010', '1200', '2050'].includes(row.code)
-      && !accounts.data?.some(account => account.gl_account_id === row.id));
-    setInvoiceTaxAccountId(taxCandidates.find(row => row.code === '1400')?.id || ''); setRecoverableTax(false);
-    setPayingInvoice({ ...invoice, hasTax });
-  }
-
-  async function payInvoice(event) {
-    event.preventDefault();
-    if (saving || !invoiceAccountId || (payingInvoice.hasTax && (!invoiceTaxAccountId || !recoverableTax))) return;
-    setSaving(true); setError("");
-    const isCurrent = begin('invoice-payment');
-    try {
-        if (invoiceAttempt.current?.invoice_id !== payingInvoice.id || invoiceAttempt.current?.account_id !== invoiceAccountId
-          || invoiceAttempt.current?.tax_account_id !== (payingInvoice.hasTax ? invoiceTaxAccountId : undefined)) {
-          invoiceAttempt.current = { invoice_id: payingInvoice.id, account_id: invoiceAccountId, payment_date: today(),
-            ...(payingInvoice.hasTax ? { tax_account_id: invoiceTaxAccountId, tax_treatment: 'recoverable' } : {}) };
-        }
-      const { error: paymentError } = await supabase.rpc(payingInvoice.hasTax ? 'pay_vendor_invoice_with_tax_atomic' : "pay_vendor_invoice_atomic", {
-        _tenant_id: tenantId, _request_key: `invoice-payment:${payingInvoice.id}`,
-        _payload: invoiceAttempt.current,
-      });
-      if (paymentError) throw paymentError;
-        if (!isCurrent()) return;
-        invoiceAttempt.current = null;
-      setNotice("Faktura ödənişi kassaya və mühasibat jurnalına yazıldı.");
-      setPayingInvoice(null); await load();
-      } catch (paymentError) { if (isCurrent()) setError(getError(paymentError)); }
-    finally { if (isCurrent()) setSaving(false); }
-  }
 
   if (!tenantId) {
     return (
