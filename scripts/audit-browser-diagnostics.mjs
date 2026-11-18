@@ -12,7 +12,16 @@ export function collectAuditRequests(page) {
     completed.push({ method: entry.method, path: entry.path, status, milliseconds: Date.now() - entry.started });
     if (completed.length > 100) completed.shift();
   };
-  page.on('requestfinished', async request => finish(request, (await request.response())?.status()));
+  page.on('requestfinished', async request => {
+    if (!pending.has(request)) return;
+    try {
+      finish(request, (await request.response())?.status() ?? 'response-unavailable');
+    } catch {
+      // The browser may close between requestfinished and response retrieval.
+      // Diagnostics must record that race, not crash the business-flow runner.
+      finish(request, 'response-unavailable');
+    }
+  });
   page.on('requestfailed', request => finish(request, 'network-failure'));
   return () => ({
     completed: [...completed],
