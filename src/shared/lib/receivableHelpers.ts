@@ -5,7 +5,7 @@ import { normalize } from "../../services/format.js";
 import { parsePaymentDate } from "../../services/date.js";
 import { getOrderBalance, getOrderPaymentMethod, summarizeOrderProducts } from "../../modules/warehouse/deliveryDomain.jsx";
 import { currentBusinessDate } from "./businessDate.ts";
-import { getCreditOrder, getCustomerOrders, getCustomerRelatedCredits } from "./appDomainSales.jsx";
+import { getCreditOrder, getCustomerOrders, getCustomerRelatedCredits } from "./salesDomain.ts";
 import { addDays, daysBetween, getCreditDisplayPlan, getCreditPaymentState, isCreditClosed } from "./credit.js";
 
 type Row = Record<string, any>;
