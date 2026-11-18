@@ -133,6 +133,7 @@ export function draftWarnings(draft) {
 const today = () => toLocalIsoDate();
 const addDays = (days) => toLocalIsoDate(new Date(Date.now() + days * 86400000));
 
+/** @param {any} order @param {{ invoice_no?: string | null, payment_terms_days?: number }} [options] */
 export function buildOrderInvoiceDraft(order, { invoice_no, payment_terms_days = 14 } = {}) {
   const lines = (order.items || []).map((item) => ({
     product_id: item.product_id || null,
@@ -157,6 +158,7 @@ export function buildOrderInvoiceDraft(order, { invoice_no, payment_terms_days =
   };
 }
 
+/** @param {any} project @param {{ invoice_no?: string | null, customer_id?: string | null, customer_name?: string | null, percent?: number, vat_rate?: number, payment_terms_days?: number }} [options] */
 export function buildProjectInvoiceDraft(project, { invoice_no, customer_id, customer_name, percent = 100, vat_rate = 18, payment_terms_days = 14 } = {}) {
   const amount = Number(((Number(project.budget) || 0) * (Number(percent) || 0)) / 100);
   return {
