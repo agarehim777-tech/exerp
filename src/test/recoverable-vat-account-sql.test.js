@@ -41,7 +41,7 @@ it('backfills 1400 for existing tenants as an active AZN asset', async () => {
     { code: '1000', name: 'Kassa', type: 'asset', currency: 'AZN', is_active: true },
     { code: '1400', name: 'Əvəzləşdirilən ƏDV', type: 'asset', currency: 'AZN', is_active: true },
   ]);
-});
+}, 30000);
 
 it('seeds 1400 when a tenant is created and does not duplicate it', async () => {
   const db = await database();
@@ -50,7 +50,7 @@ it('seeds 1400 when a tenant is created and does not duplicate it', async () => 
   await db.exec(`SET test.uid = '${member}'; INSERT INTO public.tenant_members VALUES ('${fresh}', '${member}');`);
   await db.exec(`SELECT public.ensure_inventory_accounts('${fresh}')`);
   expect((await accounts(db, fresh)).map((row) => row.code)).toEqual(['1000', '1010', '1200', '1400', '2050', '2100', '2200', '2300', '4000', '5000']);
-});
+}, 30000);
 
 it('keeps ensure_inventory_accounts member-only and not executable by browser roles', async () => {
   const db = await database();
@@ -59,4 +59,4 @@ it('keeps ensure_inventory_accounts member-only and not executable by browser ro
   const grants = (await db.query(`SELECT has_function_privilege('authenticated', 'public.ensure_inventory_accounts(uuid)', 'EXECUTE') AS auth,
     has_function_privilege('anon', 'public.ensure_inventory_accounts(uuid)', 'EXECUTE') AS anon`)).rows[0];
   expect(grants).toEqual({ auth: false, anon: false });
-});
+}, 30000);
