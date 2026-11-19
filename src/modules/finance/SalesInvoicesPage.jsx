@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import {
   DEFAULT_INVOICE_EXPORT_COLUMNS, INVOICE_EXPORT_COLUMNS,
@@ -53,11 +54,11 @@ export default function SalesInvoicesPage({ onOpenSalesOrder }) {
     });
 
   const filteredInvoices = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = foldSearchText(search.trim());
     return ar.invoices.filter((invoice) => {
       if (statusFilter !== "all" && invoice.status !== statusFilter) return false;
       if (!q) return true;
-      return `${invoice.invoice_no || ""} ${invoice.customer?.name || ""}`.toLowerCase().includes(q);
+      return foldSearchText(`${invoice.invoice_no || ""} ${invoice.customer?.name || ""}`).includes(q);
     });
   }, [ar.invoices, statusFilter, search]);
 
