@@ -5,6 +5,9 @@ function normalizeText(value) {
   return String(value ?? "").toLocaleLowerCase("az-AZ");
 }
 
+/**
+ * @param {{ label: any, value: any, trend?: any, icon: any, tone?: string, onClick?: any, title?: string }} props
+ */
 export function MetricCard({ label, value, trend, icon: Icon, tone = "primary", onClick, title }) {
   return (
     <article
@@ -52,6 +55,9 @@ export function PanelHeader({ title, subtitle, icon: Icon }) {
   );
 }
 
+/**
+ * @param {{ columns: any[], rows: any[], onRowClick?: any, [key: string]: any }} props
+ */
 export function DataTable({ columns, rows, onRowClick, ...props }) {
   const numericLabels = /məbləğ|qiymət|maaş|borc|qalıq|ödəni|gəlir|xərc|cəmi|ümumi|say|ədəd|faiz|kpi|aylıq|netto|brutto|vergi|dsmf|işsizlik|tibbi|stok|rezerv|norma|saat|gün/i;
   const normalized = columns.map((column, index) => typeof column === 'object'
