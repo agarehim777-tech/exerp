@@ -75,10 +75,10 @@ describe("useInvoicePayment", () => {
     expect(view.result.current.taxAccounts).toEqual([]);
   });
 
-  it("seeds and preselects the 1400 VAT account for a taxed invoice, excluding cash and system accounts", async () => {
+  it("preselects the 1400 VAT account for a taxed invoice, excluding cash and system accounts", async () => {
     const { view } = setup({ taxed: true });
     await act(() => view.result.current.openInvoicePayment(invoice));
-    expect(mocks.rpcCalls).toEqual([{ name: "ensure_inventory_accounts", args: { _tenant: "tenant-a" } }]);
+    expect(mocks.rpcCalls).toEqual([]);
     expect(view.result.current.taxAccounts.map((row) => row.code)).toEqual(["1400", "1300"]);
     expect(view.result.current.invoiceTaxAccountId).toBe("GL-1400");
     expect(view.result.current.recoverableTax).toBe(false);
@@ -100,10 +100,10 @@ describe("useInvoicePayment", () => {
     const { view, setNotice, load } = setup({ taxed: true });
     await act(() => view.result.current.openInvoicePayment(invoice));
     await act(() => view.result.current.payInvoice(submitEvent()));
-    expect(mocks.rpcCalls.map((call) => call.name)).toEqual(["ensure_inventory_accounts"]);
+    expect(mocks.rpcCalls).toEqual([]);
     act(() => view.result.current.setRecoverableTax(true));
     await act(() => view.result.current.payInvoice(submitEvent()));
-    expect(mocks.rpcCalls[1]).toEqual({
+    expect(mocks.rpcCalls[0]).toEqual({
       name: "pay_vendor_invoice_with_tax_atomic",
       args: {
         _tenant_id: "tenant-a", _request_key: "invoice-payment:I1",

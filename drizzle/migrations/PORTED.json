@@ -2,8 +2,9 @@
   "$comment": "Every drizzle/migrations/*.sql file needs an entry here (checked by src/test/drizzle-port-manifest.test.js). supabase/migrations is the schema source of truth: local Supabase E2E, the PGlite replay tests and migrate-production use only that folder. status: ported = the file's schema change is contained in the listed supabase/migrations versions; notPorted = deliberately left out (reason required); pending = known gap that still needs a decision or a port (reason required).",
   "files": {
     "0000_recoverable_vat_account.sql": {
-      "status": "pending",
-      "reason": "Not in supabase/migrations: ensure_inventory_accounts there (last 20261001134507) does not seed account 1400 'Əvəzləşdirilən ƏDV', and the backfill INSERT for existing tenants is missing. ProcurementPage.openInvoicePayment relies on that RPC to seed 1400 for taxed vendor invoices."
+      "status": "ported",
+      "supabase": ["20261119120000"],
+      "reason": "20261119120000 redefines ensure_inventory_accounts with account 1400 'Əvəzləşdirilən ƏDV' and backfills it for every tenant, as this file does. It also seeds 1400 for new tenants (tenants AFTER INSERT trigger), because create_tenant seeds no chart and the browser cannot call ensure_inventory_accounts (EXECUTE revoked from authenticated)."
     },
     "0001_expense_status_canonical.sql": {
       "status": "pending",
