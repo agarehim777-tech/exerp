@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { findCustomerDuplicates, useCustomers } from '../../shared/hooks/useCustomers.js';
 import Avatar from './Avatar.jsx';
@@ -45,11 +46,11 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
   const [showLevels, setShowLevels] = useState(false);
 
   const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
+    const term = foldSearchText(q.trim());
     return customers.filter(c => {
       if (seg !== 'all' && c.segment !== seg) return false;
       if (!term) return true;
-      return [c.name, c.email, c.phone, c.tax_id, c.fin_code, c.identity_card_no, c.address].some(v => (v || '').toLowerCase().includes(term));
+      return [c.name, c.email, c.phone, c.tax_id, c.fin_code, c.identity_card_no, c.address].some(v => foldSearchText(v).includes(term));
     });
   }, [customers, q, seg]);
 

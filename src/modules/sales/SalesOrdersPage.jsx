@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { AlertTriangle, ChevronLeft, ChevronRight, CreditCard, Download, PackageCheck, ReceiptText, X } from 'lucide-react';
 import { downloadReportCsv } from '../../shared/lib/reportDownload.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -45,7 +46,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
     o.status !== 'cancelled'
     && (!fromDate || String(o.order_date || '').slice(0, 10) >= fromDate)
     && (!toDate || String(o.order_date || '').slice(0, 10) <= toDate)
-    && (!q || o.order_no?.toLowerCase().includes(q.toLowerCase()) || o.customer?.name?.toLowerCase().includes(q.toLowerCase()))
+    && (!q || foldSearchText(o.order_no).includes(foldSearchText(q)) || foldSearchText(o.customer?.name).includes(foldSearchText(q)))
   ), [orders, q, fromDate, toDate]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pageCount - 1);

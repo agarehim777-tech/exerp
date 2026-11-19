@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { foldSearchText } from "../shared/lib/searchText.ts";
 import { matchesQuery } from "../modules/procurement/procurementShared.jsx";
 import { filterRows } from "../shared/lib/warehouseDomain.ts";
@@ -44,5 +46,18 @@ describe("search call sites", () => {
   it("filterRows and matchesCreditSearch fold I-letters too", () => {
     expect(filterRows([{ sku: "SKU-IPHONE" }, { sku: "SKU-X" }], "iphone")).toEqual([{ sku: "SKU-IPHONE" }]);
     expect(matchesCreditSearch({ credit: { id: "CR-1", customer: "Ismayıl", fin: "FIN1" } }, "ismayil")).toBe(true);
+  });
+});
+
+describe("free-text search guard", () => {
+  it("never matches search text through toLowerCase(), which splits the az-AZ I letters", () => {
+    const root = join(process.cwd(), "src");
+    const sources = readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((file) => /\.(jsx?|tsx?)$/.test(file) && !/(^|[\\/])test[\\/]/.test(file));
+    const offenders = sources.flatMap((file) => readFileSync(join(root, file), "utf8").split(/\r?\n/)
+      .map((line, index) => ({ line, at: `${file}:${index + 1}` }))
+      .filter(({ line }) => /toLowerCase\(\)\??\.includes\(|includes\([\w.?]*\.toLowerCase\(\)\)/.test(line))
+      .map(({ at }) => at));
+    expect(offenders, "Use foldSearchText from shared/lib/searchText.ts for free-text search").toEqual([]);
   });
 });

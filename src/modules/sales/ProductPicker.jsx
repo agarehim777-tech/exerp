@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { Input } from "../../shared/ui/primitives.tsx";
 
 export default function ProductPicker({ products = [], value, onPick }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const filtered = useMemo(() => {
-    const s = q.toLowerCase();
+    const s = foldSearchText(q);
     return products.filter(p =>
-      !s || p.name?.toLowerCase().includes(s) || p.sku?.toLowerCase().includes(s)
+      !s || foldSearchText(p.name).includes(s) || foldSearchText(p.sku).includes(s)
     ).slice(0, 8);
   }, [products, q]);
   const selected = products.find(p => p.id === value);

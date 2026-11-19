@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAuditLogs } from "../../shared/hooks/useAuditLogs.js";
 import { badgeClass } from "../../shared/ui/tokens.js";
@@ -33,10 +34,10 @@ export default function AuditLogPage() {
   });
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = foldSearchText(search.trim());
     if (!q) return logs;
     return logs.filter((log) =>
-      JSON.stringify({ n: log.new_data, o: log.old_data, t: log.table_name }).toLowerCase().includes(q));
+      foldSearchText(JSON.stringify({ n: log.new_data, o: log.old_data, t: log.table_name })).includes(q));
   }, [logs, search]);
 
   const stats = useMemo(() => ({
