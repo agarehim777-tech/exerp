@@ -87,7 +87,7 @@
   "src/shared/lib/blobReconciliation.test.js": 1,
   "src/shared/lib/hrDomain.ts": 1,
   "src/shared/lib/orderCustomer.js": 3,
-  "src/shared/state/moduleActions.js": 4,
+  "src/shared/state/moduleActions.js": 2,
   "src/test/audit-flow-runner.test.js": 1,
   "src/test/audit-tenant-rotation.test.js": 2,
   "src/test/auth-refresh-race.test.jsx": 1,
