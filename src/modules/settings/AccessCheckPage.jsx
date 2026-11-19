@@ -42,11 +42,12 @@ export default function AccessCheckPage() {
   }, []);
 
   const loadProjects = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error: projectsError } = await supabase
       .from("projects")
       .select("id, name, user_id, status")
       .order("created_at", { ascending: false })
       .limit(10);
+    if (projectsError) setError(projectsError.message);
     setMyProjects(data || []);
   }, []);
 

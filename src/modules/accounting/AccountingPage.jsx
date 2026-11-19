@@ -30,7 +30,7 @@ export default function AccountingPage() {
 }
 
 function ChartOfAccountsPanel({ isAdmin }) {
-  const { accounts, loading, seedDefaults, create, remove } = useChartOfAccounts();
+  const { accounts, loading, error: accountsError, seedDefaults, create, remove } = useChartOfAccounts();
   const [form, setForm] = useState({ code: "", name: "", type: "asset" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -52,6 +52,7 @@ function ChartOfAccountsPanel({ isAdmin }) {
 
   return (
     <Card title={`Hesablar planı (${accounts.length})`} actions={isAdmin && accounts.length === 0 && <Button onClick={doSeed} disabled={busy}>Standart hesabları yüklə</Button>}>
+      {accountsError && <div role="alert" className="ui-notice ui-notice-warning">Hesablar planı yüklənmədi: {accountsError.message}</div>}
       {msg && <Notice tone={msg.startsWith("Xəta") ? "danger" : "info"}>{msg}</Notice>}
       {isAdmin && (
         <FormGrid as="form" onSubmit={doCreate} className="ui-form-surface ui-spacer-top">
@@ -70,7 +71,7 @@ function ChartOfAccountsPanel({ isAdmin }) {
 }
 
 function JournalPanel({ isAdmin }) {
-  const { entries, loading, createEntry, post, remove, reverse } = useJournalEntries();
+  const { entries, loading, error: entriesError, createEntry, post, remove, reverse } = useJournalEntries();
   const { accounts } = useChartOfAccounts();
   const [showForm, setShowForm] = useState(false);
   const [entryDate, setEntryDate] = useState(toLocalIsoDate());
@@ -106,6 +107,7 @@ function JournalPanel({ isAdmin }) {
 
   return (
     <Card title={`Jurnal yazılışları (${entries.length})`} actions={isAdmin && <Button onClick={() => setShowForm(!showForm)}>{showForm ? "Bağla" : "+ Yeni yazılış"}</Button>}>
+      {entriesError && <div role="alert" className="ui-notice ui-notice-warning">Jurnal yazılışları yüklənmədi: {entriesError.message}</div>}
       {msg && <Notice tone={msg.startsWith("Xəta") || msg.includes("bərabər") ? "danger" : "info"}>{msg}</Notice>}
       {showForm && (
         <form onSubmit={submit} className="ui-form-surface ui-spacer-top">

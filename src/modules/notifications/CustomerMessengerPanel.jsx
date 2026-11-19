@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ExternalLink, MessageCircle, Send } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { readAllRows } from "../../services/readAllRows.js";
 import { NOTIFICATION_TEMPLATES, sendNotification, waMeLink } from "../../lib/notify.js";
 
 export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
@@ -19,17 +20,37 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
 
   useEffect(() => {
     if (!activeTenantId) return;
+    let current = true;
     (async () => {
-      const [customerRes, orderRes, deliveryRes] = await Promise.all([
-        supabase.from("customers").select("id,name,phone,telegram_chat_id").eq("tenant_id", activeTenantId).order("name").limit(300),
-        supabase.from("orders").select("id,order_no,status,total,customer_id").eq("tenant_id", activeTenantId).order("order_date", { ascending: false }).limit(200),
+      // Every customer (paged past PostgREST's 1000-row cap), so none is missing from the picker.
+      const [customerRes, deliveryRes] = await Promise.all([
+        readAllRows(() => supabase.from("customers").select("id,name,phone,telegram_chat_id").eq("tenant_id", activeTenantId).order("name").order("id")),
         supabase.from("notification_deliveries").select("id,channel,recipient,status,body,created_at").eq("tenant_id", activeTenantId).order("created_at", { ascending: false }).limit(20),
       ]);
+      if (!current) return;
       setCustomers(customerRes.data || []);
-      setOrders(orderRes.data || []);
       setDeliveries(deliveryRes.data || []);
+      const readError = customerRes.error || deliveryRes.error;
+      if (readError) setMessage({ tone: "err", text: `Məlumat yüklənmədi: ${readError.message}` });
     })();
+    return () => { current = false; };
   }, [activeTenantId]);
+
+  // The 200 newest orders overall, or the 200 newest of the chosen customer, so a customer's orders are
+  // never cut off by other customers' newer orders.
+  useEffect(() => {
+    if (!activeTenantId) return;
+    let current = true;
+    (async () => {
+      let query = supabase.from("orders").select("id,order_no,status,total,customer_id").eq("tenant_id", activeTenantId);
+      if (customerId) query = query.eq("customer_id", customerId);
+      const { data, error } = await query.order("order_date", { ascending: false }).limit(200);
+      if (!current) return;
+      setOrders(data || []);
+      if (error) setMessage({ tone: "err", text: `Sifarişlər yüklənmədi: ${error.message}` });
+    })();
+    return () => { current = false; };
+  }, [activeTenantId, customerId]);
 
   const customer = customers.find((row) => row.id === customerId) || null;
   const customerOrders = useMemo(
@@ -48,9 +69,10 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
   const whatsappLink = channel === "whatsapp" ? waMeLink(customer?.phone, text) : null;
 
   const refreshLog = async () => {
-    const { data } = await supabase.from("notification_deliveries")
+    const { data, error } = await supabase.from("notification_deliveries")
       .select("id,channel,recipient,status,body,created_at")
       .eq("tenant_id", activeTenantId).order("created_at", { ascending: false }).limit(20);
+    if (error) { setMessage({ tone: "err", text: `Göndəriş jurnalı yenilənmədi: ${error.message}` }); return; }
     setDeliveries(data || []);
   };
 

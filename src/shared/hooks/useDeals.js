@@ -4,16 +4,18 @@ import { supabase } from '../../integrations/supabase/client';
 export function useDeals(tenantId, pipelineId) {
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async () => {
-    if (!tenantId || !pipelineId) { setDeals([]); return; }
+    if (!tenantId || !pipelineId) { setDeals([]); setError(null); return; }
     setLoading(true);
-    const { data } = await supabase
+    const { data, error: readError } = await supabase
       .from('crm_deals')
       .select('*, customer:customers(id,name,email,phone)')
       .eq('tenant_id', tenantId)
       .eq('pipeline_id', pipelineId)
       .order('sort_order');
+    setError(readError || null);
     setDeals(data || []);
     setLoading(false);
   }, [tenantId, pipelineId]);
@@ -52,5 +54,5 @@ export function useDeals(tenantId, pipelineId) {
     if (error) throw error;
   };
 
-  return { deals, loading, refresh: fetchAll, create, update, move, remove };
+  return { deals, loading, error, refresh: fetchAll, create, update, move, remove };
 }
