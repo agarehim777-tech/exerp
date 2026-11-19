@@ -8,6 +8,7 @@ import { Button, DataTable, Input, Select, Tabs } from '../../shared/ui/primitiv
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import { toLocalIsoDate } from "../../services/date.js";
 import { foldSearchText } from "../../shared/lib/searchText.ts";
+import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
@@ -280,6 +281,7 @@ function TransactionsPanel({ book, tenantId }) {
               default: return null;
             }
         }} />
+      <LoadMoreBar hasMore={book.transactionsHasMore} onLoadMore={book.loadMoreTransactions} loading={book.loading} label="Köhnə əməliyyatları yüklə" />
     </div>
   );
 }
@@ -405,6 +407,7 @@ function ExpensesPanel({ book, canApprove }) {
               default: return null;
             }
         }} />
+      <LoadMoreBar hasMore={book.expensesHasMore} onLoadMore={book.loadMoreExpenses} loading={book.loading} label="Köhnə xərcləri yüklə" />
     </div>
   );
 }

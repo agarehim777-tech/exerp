@@ -10,6 +10,10 @@ import { createExpenseCommand, createExpenseEditCommand, createTransferCommand, 
 const newAccountCode = type => `${type === 'bank' ? 'BNK' : type === 'card' ? 'KRT' : 'KAS'}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 const newTransactionNo = (prefix = 'KAS') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
+// Transactions and expenses load newest first, CASH_PAGE rows at a time; "load more" raises the limit and the
+// next read (including realtime resyncs) fetches up to it, so older rows already shown are kept.
+export const CASH_PAGE = 300;
+
 export function useCashbook(tenantId) {
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [summary, setSummary] = useState(null);
@@ -28,6 +32,9 @@ export function useCashbook(tenantId) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pageLimits, setPageLimits] = useState({ scope, transactions: CASH_PAGE, expenses: CASH_PAGE });
+  const limits = pageLimits.scope === scope ? pageLimits : { scope, transactions: CASH_PAGE, expenses: CASH_PAGE };
+  const [hasMore, setHasMore] = useState({ transactions: false, expenses: false });
 
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
@@ -40,13 +47,15 @@ export function useCashbook(tenantId) {
         .select('*, account:cash_accounts(id,name,currency), customer:customers(id,name,fin,phone), vendor:vendors(id,name)')
         .eq('tenant_id', tenantId)
         .order('occurred_at', { ascending: false })
-        .limit(300),
+        .order('id', { ascending: false })
+        .limit(limits.transactions),
       supabase
         .from('expenses')
         .select('*, account:cash_accounts!expenses_account_id_fkey(id,name)')
         .eq('tenant_id', tenantId)
         .order('expense_date', { ascending: false })
-        .limit(300),
+        .order('id', { ascending: false })
+        .limit(limits.expenses),
       supabase.from('expense_categories').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
       readAllRows(() => supabase.from('customers').select('id,name,fin,phone').eq('tenant_id', tenantId).order('name').order('id')),
       readAllRows(() => supabase.from('employees').select('id,user_id,full_name,position').eq('tenant_id', tenantId).order('id')),
@@ -59,15 +68,23 @@ export function useCashbook(tenantId) {
     setError(firstError || null);
     setAccounts(acc.data || []);
     setTransactions(tx.data || []);
+    setHasMore({ transactions: (tx.data || []).length >= limits.transactions, expenses: (exp.data || []).length >= limits.expenses });
     setExpenses((exp.data || []).map(row => ({ ...row, status: expenseStatusToCode(row.status) })));
     setCustomers(customerResult.data || []);
     setEmployees(employeeResult.data || []);
     if (categoryResult.error) setError(current => current || categoryResult.error);
     setExpenseCategories(categoryResult.data || []);
     setLoading(false);
-  }, [tenantId, scope, begin]);
+  }, [tenantId, scope, begin, limits.transactions, limits.expenses]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const loadMore = useCallback((list) => setPageLimits(current => {
+    const base = current.scope === scope ? current : { scope, transactions: CASH_PAGE, expenses: CASH_PAGE };
+    return { ...base, [list]: base[list] + CASH_PAGE };
+  }), [scope]);
+  const loadMoreTransactions = useCallback(() => loadMore('transactions'), [loadMore]);
+  const loadMoreExpenses = useCallback(() => loadMore('expenses'), [loadMore]);
 
   const degraded = useRealtimeResync(
     tenantId,
@@ -235,6 +252,8 @@ export function useCashbook(tenantId) {
     customers: loadedScope === scope ? customers : [],
     employees: loadedScope === scope ? employees : [],
     ledgerReady, summary: ledgerReady ? summary : null, loading, error, degraded, refresh: fetchAll,
+    transactionsHasMore: loadedScope === scope && hasMore.transactions, expensesHasMore: loadedScope === scope && hasMore.expenses,
+    loadMoreTransactions, loadMoreExpenses,
     createAccount, addTransaction, addExpense, createExpenseCategory, updateExpenseCategory, removeExpenseCategory, updateExpense, removeExpense, setExpenseStatus, approveExpense, rejectExpense, cancelExpense, acceptExpense, approveExpenseRefund, removeTransaction, removeAccount, transfer, balanceOf,
   };
 }
