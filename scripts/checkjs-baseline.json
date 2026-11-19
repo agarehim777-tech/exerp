@@ -106,7 +106,6 @@
   "src/test/procurement-invoice-ui.test.jsx": 18,
   "src/test/product-search-interaction.test.jsx": 1,
   "src/test/readonly-provisioning.test.js": 3,
-  "src/test/report-export-ui.test.jsx": 2,
   "src/test/roles-page-load-errors.test.jsx": 6,
   "src/test/roles-page-local-users.test.jsx": 5,
   "src/test/sales-edit-sql.test.js": 1,
