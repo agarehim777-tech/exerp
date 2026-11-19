@@ -7,9 +7,9 @@
       "reason": "20261119120000 redefines ensure_inventory_accounts with account 1400 'Əvəzləşdirilən ƏDV' and backfills it for every tenant, as this file does. It also seeds 1400 for new tenants (tenants AFTER INSERT trigger), because create_tenant seeds no chart and the browser cannot call ensure_inventory_accounts (EXECUTE revoked from authenticated)."
     },
     "0001_expense_status_canonical.sql": {
-      "status": "pending",
-      "supabase": ["20261002052217"],
-      "reason": "Functions superseded: 20261002052217 (restore_expense_lifecycle_commands) redefines accept_expense/cancel_expense with module permissions, row locks and canonical statuses only. Not in supabase/migrations: the UPDATE that rewrites Azerbaijani expense status labels ('Təsdiq gözləyir', 'Qəbul edildi', ...) to canonical values; rows with such labels are rejected by the repo functions."
+      "status": "ported",
+      "supabase": ["20261002052217", "20261119130000"],
+      "reason": "Functions superseded: 20261002052217 (restore_expense_lifecycle_commands) redefines accept_expense/cancel_expense with module permissions, row locks and canonical statuses only. 20261119130000 ports the UPDATE that rewrites Azerbaijani expense status labels to canonical codes (same mapping, only labelled rows, paid-KPI expenses skipped). Repo-built databases already enforce a canonical CHECK on expenses.status since 20260729130000, so there it is a safety net for drift."
     },
     "0002_reverse_sales_order_reservation_status_fix.sql": {
       "status": "notPorted",
