@@ -55,3 +55,23 @@ it('does not mark the initial failed load as successful', async () => {
   expect(result.current.loaded).toBe(false);
   expect(result.current.loading).toBe(false);
 });
+
+it('allows manual recovery after an export failure disables automatic loading', async () => {
+  const retry = pending();
+  mocks.load.mockRejectedValueOnce(new Error('offline')).mockReturnValueOnce(retry.promise);
+  const { result, rerender } = renderHook(({ enabled }) => useLiveReportData('a', { enabled }),
+    { initialProps: { enabled: false } });
+  expect(mocks.load).not.toHaveBeenCalled();
+  rerender({ enabled: true });
+  await waitFor(() => expect(result.current.error?.message).toBe('offline'));
+  rerender({ enabled: false });
+  let request;
+  act(() => { request = result.current.refresh(); });
+  expect(result.current.loading).toBe(true);
+  expect(result.current.error).toBeNull();
+  await act(async () => { retry.resolve(rows('recovered')); await request; });
+  expect(result.current.loaded).toBe(true);
+  expect(result.current.loading).toBe(false);
+  expect(result.current.expenses).toEqual([{ id: 'recovered' }]);
+  expect(mocks.load).toHaveBeenCalledTimes(2);
+});

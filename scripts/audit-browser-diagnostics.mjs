@@ -12,13 +12,15 @@ export function collectAuditRequests(page) {
     completed.push({ method: entry.method, path: entry.path, status, milliseconds: Date.now() - entry.started });
     if (completed.length > 100) completed.shift();
   };
-  // response() rejects once the page or context is closed (end of a flow). Diagnostics must never
-  // turn that into an unhandled rejection: it killed the whole flow run in CI after a passing flow.
-  page.on('requestfinished', request => {
-    request.response().then(
-      response => finish(request, response?.status()),
-      () => finish(request, 'closed'),
-    );
+  page.on('requestfinished', async request => {
+    if (!pending.has(request)) return;
+    try {
+      finish(request, (await request.response())?.status() ?? 'response-unavailable');
+    } catch {
+      // The browser may close between requestfinished and response retrieval.
+      // Diagnostics must record that race, not crash the business-flow runner.
+      finish(request, 'response-unavailable');
+    }
   });
   page.on('requestfailed', request => finish(request, 'network-failure'));
   return () => ({

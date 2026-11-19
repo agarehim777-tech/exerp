@@ -1,6 +1,7 @@
 // Provisions an admin user for a tenant with a temporary password.
 // Caller must be a platform admin.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { findAuthUserByEmail } from "../_shared/findAuthUser.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,7 @@ function tempPassword(len = 14) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -49,8 +51,7 @@ Deno.serve(async (req) => {
     let password: string | null = null;
     let created = false;
 
-    const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const existing = list?.users?.find((u) => (u.email || "").toLowerCase() === normalizedEmail);
+    const existing = await findAuthUserByEmail(options => admin.auth.admin.listUsers(options), normalizedEmail);
     if (existing) {
       // Never reset an existing account's password: only grant tenant membership.
       userId = existing.id;
@@ -68,12 +69,14 @@ Deno.serve(async (req) => {
     }
 
     // Ensure profile row exists (id references auth.users) and set active tenant
-    await admin.from("profiles").upsert(
+    const { error: profileError } = await admin.from("profiles").upsert(
       { id: userId, email: normalizedEmail, active_tenant_id: tenant_id },
-      { onConflict: "id" },
+      { onConflict: "id", ignoreDuplicates: true },
     );
+    if (profileError) throw new Error('Profile could not be saved');
     // If profile already existed without an active tenant, make sure it's set now
-    await admin.from("profiles").update({ active_tenant_id: tenant_id }).eq("id", userId).is("active_tenant_id", null);
+    const { error: activeTenantError } = await admin.from("profiles").update({ active_tenant_id: tenant_id }).eq("id", userId).is("active_tenant_id", null);
+    if (activeTenantError) throw new Error('Active tenant could not be saved');
 
     // Add tenant membership
     const { error: mErr } = await admin

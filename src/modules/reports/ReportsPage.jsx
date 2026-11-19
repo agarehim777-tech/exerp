@@ -29,6 +29,7 @@ import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
 import { mapModuleSummary, useReportModules, useReportSeries, useReportTotals } from "../../shared/hooks/useReportTotals.ts";
 import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope.js";
 import { downloadReportCsv, downloadReportPdf } from "../../shared/lib/reportDownload.js";
+import { creditReportBalance } from "../../shared/lib/creditReportBalance.ts";
 
 function sumRows(rows, key) {
   return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0);
@@ -91,16 +92,16 @@ export function ReportsPage({
   buildReportPackage,
 }) {
   const { activeTenantId } = useAuth();
-  const { scope, begin } = useTenantRequestScope(activeTenantId);
   const [period, setPeriod] = useState("Bu ay");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("Hamısı");
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([activeTenantId, period, warehouseFilter, moduleFilter, snapshotDate]));
   const [pendingExport, setPendingExport] = useState(null);
   // Full rows load only for a warehouse filter (server functions are company-wide) or an export.
   const live = useLiveReportData(activeTenantId, { enabled: warehouseFilter !== "all" || Boolean(pendingExport) });
   const serverModulesRaw = useReportModules(activeTenantId, period, snapshotDate);
   const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate);
   const serverSeries = useReportSeries(activeTenantId, snapshotDate);
-  const [moduleFilter, setModuleFilter] = useState("Hamısı");
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [exportState, setExportState] = useState(null);
   const exporting = pendingExport?.scope === scope ? `${pendingExport.report.title}:${pendingExport.format}` : exportState?.scope === scope ? exportState.key : '';
@@ -305,7 +306,7 @@ export function ReportsPage({
     if (title === "Aylıq satış hesabatı") return { ...common, columns: ["Sifaris", "Musteri", "Tarix", "Mehsul", "Mebleg"], rows: filteredOrders.map((row) => [row.orderNo || row.id, row.customer, row.date, row.products, money(row.amount)]) };
     if (title === "Maliyyə mənfəət/zərər") return { ...common, columns: ["Tarix", "Kateqoriya", "Tesvir", "Status", "Mebleg"], rows: filteredExpenses.map((row) => [row.date, row.category, row.description, row.status, money(row.amount)]) };
     if (title === "Anbar hərəkəti") return { ...common, columns: ["Mehsul", "SKU", "Qaliq", "Rezerv", "Maya", "Deyer"], rows: stockRows.map((row) => [row.product, row.sku, row.total, row.reserved, money(row.costPrice || row.price), money(Number(row.total || 0) * Number(row.costPrice || row.price || 0))]) };
-    return { ...common, columns: ["Muqavile", "Musteri", "Status", "Muddet", "Qaliq"], rows: credits.map((row) => [row.contractId || row.id, row.customer, row.status, `${row.months || row.termMonths || "—"} ay`, money(row.balance || row.remaining || row.principal)]) };
+    return { ...common, columns: ["Muqavile", "Musteri", "Status", "Muddet", "Qaliq"], rows: credits.map((row) => [row.contractId || row.id, row.customer, row.status, `${row.months || row.termMonths || "—"} ay`, money(creditReportBalance(row))]) };
   };
 
   const runDownload = async (report, format) => {
@@ -329,12 +330,17 @@ export function ReportsPage({
   };
 
   useEffect(() => {
-    if (!pendingExport || !dataReady) return;
+    if (!pendingExport) return;
+    if (pendingExport.scope !== scope || live.error || !canExport) {
+      setPendingExport(null);
+      return;
+    }
+    if (!dataReady) return;
     setPendingExport(null);
     if (pendingExport.scope === scope) runDownload(pendingExport.report, pendingExport.format);
     // runDownload reads the freshly loaded rows of this render; rerunning only on these inputs is intended.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingExport, dataReady, scope]);
+  }, [pendingExport, dataReady, scope, live.error, canExport]);
 
   return (
     <div className="stack reports-module">
