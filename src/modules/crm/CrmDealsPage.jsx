@@ -10,7 +10,7 @@ import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 export default function CrmDealsPage() {
   const { activeTenantId } = useAuth();
   const { activePipeline, stagesFor, seedDefault, pipelines } = usePipelines(activeTenantId);
-  const { deals, move, create } = useDeals(activeTenantId, activePipeline?.id);
+  const { deals, error: dealsError, move, create } = useDeals(activeTenantId, activePipeline?.id);
   const { customers } = useCustomers(activeTenantId);
   const [showNew, setShowNew] = useState(false);
   const [defaultStage, setDefaultStage] = useState(null);
@@ -47,6 +47,7 @@ export default function CrmDealsPage() {
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px u-height-100">
+      {dealsError && <div role="alert" className="ui-notice ui-notice-warning">Sövdələşmələr yüklənmədi: {dealsError.message}</div>}
       <header className="u-display-flex u-justify-content-space_between u-align-items-center u-flex-wrap-wrap u-gap-12px">
         <div>
           <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">{activePipeline.name}</h1>

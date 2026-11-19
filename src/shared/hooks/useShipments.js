@@ -5,17 +5,19 @@ import { readAllRows } from '../../services/readAllRows.js';
 export function useShipments(tenantId) {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async () => {
-    if (!tenantId) { setShipments([]); return; }
+    if (!tenantId) { setShipments([]); setError(null); return; }
     setLoading(true);
     // Paged: one shipment per order, past the 1000 rows PostgREST returns per request.
-    const { data } = await readAllRows(() => supabase
+    const { data, error: readError } = await readAllRows(() => supabase
       .from('sales_shipments')
       .select('*, order:orders(id,order_no,customer:customers(name))')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .order('id'));
+    setError(readError || null);
     setShipments(data || []);
     setLoading(false);
   }, [tenantId]);
@@ -33,9 +35,11 @@ export function useShipments(tenantId) {
   const nextNumber = async () => {
     const yr = new Date().getFullYear();
     const prefix = `SH-${yr}-`;
-    const { data } = await supabase
+    // A failed read must not restart numbering at 0001 (duplicate shipment numbers).
+    const { data, error: readError } = await supabase
       .from('sales_shipments').select('shipment_no').eq('tenant_id', tenantId).like('shipment_no', `${prefix}%`)
       .order('shipment_no', { ascending: false }).limit(1);
+    if (readError) throw readError;
     const last = data?.[0]?.shipment_no;
     const n = last ? parseInt(last.split('-')[2], 10) + 1 : 1;
     return `${prefix}${String(n).padStart(4, '0')}`;
@@ -64,5 +68,5 @@ export function useShipments(tenantId) {
     if (error) throw error;
   };
 
-  return { shipments, loading, refresh: fetchAll, create, setStatus, remove };
+  return { shipments, loading, error, refresh: fetchAll, create, setStatus, remove };
 }

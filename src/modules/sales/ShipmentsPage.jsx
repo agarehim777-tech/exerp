@@ -9,10 +9,11 @@ const NEXT = { pending: 'packed', packed: 'shipped', shipped: 'delivered' };
 
 export default function ShipmentsPage() {
   const { activeTenantId } = useAuth();
-  const { shipments, setStatus, remove } = useShipments(activeTenantId);
+  const { shipments, error: shipmentsError, setStatus, remove } = useShipments(activeTenantId);
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
+      {shipmentsError && <div role="alert" className="ui-notice ui-notice-warning">Göndərişlər yüklənmədi: {shipmentsError.message}</div>}
       <div className="u-background-surface u-border-radius-14px u-border-1px_solid_border u-overflow-hidden">
         <Table className="u-width-100 u-border-collapse-collapse u-font-size-13px">
           <thead className="u-background-surface_subtle">

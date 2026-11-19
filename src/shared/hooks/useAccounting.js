@@ -7,12 +7,14 @@ export function useChartOfAccounts() {
   const tenantId = activeMembership?.tenant_id;
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const reload = useCallback(async () => {
-    if (!tenantId) { setAccounts([]); setLoading(false); return; }
+    if (!tenantId) { setAccounts([]); setError(null); setLoading(false); return; }
     setLoading(true);
-    const { data } = await supabase.from("chart_of_accounts")
+    const { data, error: readError } = await supabase.from("chart_of_accounts")
       .select("*").eq("tenant_id", tenantId).order("code");
+    setError(readError || null);
     setAccounts(data || []);
     setLoading(false);
   }, [tenantId]);
@@ -45,7 +47,7 @@ export function useChartOfAccounts() {
     await reload();
   };
 
-  return { accounts, loading, reload, seedDefaults, create, update, remove };
+  return { accounts, loading, error, reload, seedDefaults, create, update, remove };
 }
 
 export function useJournalEntries() {
@@ -53,14 +55,16 @@ export function useJournalEntries() {
   const tenantId = activeMembership?.tenant_id;
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const reload = useCallback(async () => {
-    if (!tenantId) { setEntries([]); setLoading(false); return; }
+    if (!tenantId) { setEntries([]); setError(null); setLoading(false); return; }
     setLoading(true);
-    const { data } = await supabase.from("journal_entries")
+    const { data, error: readError } = await supabase.from("journal_entries")
       .select("*, journal_lines(*, chart_of_accounts(code, name, type))")
       .eq("tenant_id", tenantId)
       .order("entry_date", { ascending: false }).limit(200);
+    setError(readError || null);
     setEntries(data || []);
     setLoading(false);
   }, [tenantId]);
@@ -95,7 +99,7 @@ export function useJournalEntries() {
     await reload();
   };
 
-  return { entries, loading, reload, createEntry, post, remove, reverse };
+  return { entries, loading, error, reload, createEntry, post, remove, reverse };
 }
 
 export async function fetchTrialBalance(tenantId, from, to) {
