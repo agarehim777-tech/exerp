@@ -91,6 +91,9 @@ export function StatusPill({ status, type = "po" }) {
   return <span className={`procurement-page-styles-badge procurement-page-styles-badge-${meta?.tone || "neutral"}`}>{label}</span>;
 }
 
+/**
+ * @param {{ icon: any, label: string, onClick?: any, tone?: string, disabled?: boolean, submit?: boolean }} props
+ */
 export function IconButton({ icon: Icon, label, onClick, tone = "ghost", disabled = false, submit = false }) {
   return (
     <button
@@ -239,6 +242,9 @@ export function InvoiceDetailTable({ lines, poLines, matchRows, currency }) {
   );
 }
 
+/**
+ * @param {{ title: any, icon: any, action?: any, children?: any }} props
+ */
 export function Panel({ title, icon: Icon, action, children }) {
   return (
     <section className="procurement-page-styles-panel">
@@ -292,6 +298,9 @@ export function Empty({ title }) {
   );
 }
 
+/**
+ * @param {{ columns: any[], rows: any[], empty: any, detail?: any, sourceRows?: any[] }} props
+ */
 export function DataTable({ columns, rows, empty, detail, sourceRows }) {
   const detailSource = sourceRows || rows;
   if (!rows.length) return <Empty title={empty} />;
