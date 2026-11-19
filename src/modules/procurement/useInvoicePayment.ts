@@ -35,8 +35,8 @@ export function useInvoicePayment({ tenantId, begin, saving, invoiceLinesByInvoi
   async function openInvoicePayment(invoice: Row) {
     const isCurrent = begin('invoice-payment-dialog');
     const hasTax = (invoiceLinesByInvoice.get(invoice.id) || []).some(line => toNumber(line.tax_rate) > 0);
-    // Seeds the standard "1400 Əvəzləşdirilən ƏDV" account if missing (idempotent).
-    if (hasTax) await supabase.rpc('ensure_inventory_accounts', { _tenant: tenantId! }).then(() => null, () => null);
+    // The server seeds "1400 Əvəzləşdirilən ƏDV" for every tenant (migration 20261119120000); the browser cannot call
+    // ensure_inventory_accounts (EXECUTE is revoked from authenticated), so the old call here always failed silently.
     const [accounts, tax] = await Promise.all([
       supabase.from("cash_accounts").select("id,name,currency,gl_account_id")
         .eq("tenant_id", tenantId!).eq("is_active", true).eq("currency", invoice.currency),
