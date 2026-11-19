@@ -6,7 +6,7 @@ import { getDeliveryStockCheck, getOrderPaymentMethod, isDeliveryQueueOrder } fr
 import { hasExpenseCashImpact } from "./financeDomain.ts";
 import { getEmployeeKey } from "./appDomainHr.jsx";
 import { ensureSettings, targetDbProvider } from "./appDomainPlatform.jsx";
-import { buildSalesBonusRows, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits } from "./appDomainSales.jsx";
+import { buildSalesBonusRows, getCustomerContracts, getCustomerOrders, getCustomerRelatedCredits } from "./salesDomain.ts";
 import { getAvailableQuantity } from "./appDomainWarehouse.jsx";
 import { getCreditDisplayPlan, getCreditPaymentState, isCreditClosed } from "./credit.js";
 import { buildAllCreditRecords } from "./creditRecordHelpers.ts";
