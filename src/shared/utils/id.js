@@ -13,3 +13,16 @@ export function createClientId() {
 
   return `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/**
+ * Readable record id such as `SUP-MI6XK2Q1-3FA9C0`: a time part plus a random part, so two records created in the
+ * same millisecond, or months apart, never share an id. Replaces `${prefix}-${Date.now()}` (same-ms clashes) and
+ * `Date.now().toString().slice(-5)` (repeats every 100 seconds), which let a new record overwrite an older one.
+ * @param {string} prefix
+ * @returns {string}
+ */
+export function createPrefixedId(prefix) {
+  const time = Date.now().toString(36).toUpperCase();
+  const random = createClientId().replace(/[^0-9a-z]/gi, "").slice(-6).toUpperCase();
+  return `${prefix}-${time}-${random}`;
+}

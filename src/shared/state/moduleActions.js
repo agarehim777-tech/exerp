@@ -7,6 +7,7 @@ import { buildHelpArticles, ensureApiSecrets, ensureApiWebhooks, upsertSupportCo
 import { getActionStamp } from "./actionStamp.ts";
 import { createFinanceModuleActions } from "./financeModuleActions.ts";
 import { createReportModuleActions } from "./reportModuleActions.ts";
+import { createPrefixedId } from "../utils/id.js";
 
 // Module page commands (invoices, accounting, tax, receivables, reports, projects, production,
 // HR/communication sync, support, help, onboarding, API, notifications, KPI periods),
@@ -54,7 +55,7 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
         return sum + Number(item.unitCost || 0) * Number(item.qty || 0);
       }, 0);
       const plan = {
-        id: `BOM-${Date.now().toString().slice(-5)}`,
+        id: createPrefixedId("BOM"),
         product: "Yeni satış komplekti",
         plannedQty: maxPlannedQty,
         warehouseId,
@@ -176,7 +177,7 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
     const stamp = getActionStamp();
     const linked = resolveSupportLink(signal);
     const ticket = {
-      id: `SUP-${Date.now().toString().slice(-5)}`,
+      id: createPrefixedId("SUP"),
       title: signal ? `${signal.title}: ${signal.detail}` : "Modul daxili yoxlama sorğusu",
       requester: activeRoleInfo?.name || "Sistem",
       module: signal ? pageMeta[signal.module]?.title || signal.module : "Platform",
@@ -185,11 +186,11 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
       owner: signal?.module === "credits" ? "Maliyyəçi" : "Admin",
       slaHours: signal?.priority === "Yüksək" ? 4 : 12,
       createdAt: stamp,
-      threadId: `MSG-SUP-${Date.now().toString().slice(-5)}`,
+      threadId: createPrefixedId("MSG-SUP"),
       ...linked,
       tasks: [
         {
-          id: `TASK-${Date.now().toString().slice(-5)}`,
+          id: createPrefixedId("TASK"),
           title: signal?.title || "Platform yoxlaması",
           owner: signal?.module === "credits" ? "Maliyyəçi" : "Admin",
           dueAt: stamp,
@@ -198,7 +199,7 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
       ],
       comments: [
         {
-          id: `COM-${Date.now().toString().slice(-5)}`,
+          id: createPrefixedId("COM"),
           author: activeRoleInfo?.name || "Admin",
           text: `Task yaradıldı: ${signal?.detail || "Ümumi platform yoxlaması"}`,
           at: stamp,
@@ -230,7 +231,7 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
   function runHelpAction() {
     const stamp = getActionStamp();
     const article = {
-      id: `KB-${Date.now().toString().slice(-5)}`,
+      id: createPrefixedId("KB"),
       title: "İstifadəçi təlim paketi yeniləndi",
       category: "Təlim",
       answer: "Modul izahları, permission qaydaları, onboarding addımları və hesabat/audit izi yenidən formalaşdırıldı.",
@@ -333,7 +334,7 @@ export function createModuleActions({ accountingData, activeKpiPeriod, activeRol
       const sourceWebhook = webhooks.find((webhook) => webhook.id === targetWebhook.id) || targetWebhook;
       check = checkWebhookConfiguration(sourceWebhook, secrets);
       const log = {
-        id: `API-LOG-${Date.now().toString().slice(-6)}`,
+        id: createPrefixedId("API-LOG"),
         webhookId: sourceWebhook.id,
         webhookName: sourceWebhook.name,
         event: sourceWebhook.event,

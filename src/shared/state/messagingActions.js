@@ -1,5 +1,6 @@
 import { currentBusinessDate, getSupportThreadId } from "../lib/appDomain.jsx";
 import { getInitials, getMessageContextPayload, normalizeMessageThread, upsertSupportConversation } from "../lib/appHelpers.jsx";
+import { createPrefixedId } from "../utils/id.js";
 
 // Support ticket and message thread commands for the browser state (comments, status,
 // conversations, sending), moved out of App.jsx unchanged. App passes in the state, its
@@ -11,7 +12,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
     if (!body) return;
     const stamp = getActionStamp();
     const comment = {
-      id: `COM-${Date.now().toString().slice(-6)}`,
+      id: createPrefixedId("COM"),
       author: activeRoleInfo?.name || "Admin",
       text: body,
       at: stamp,
@@ -46,7 +47,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
     if (!requirePermission("support.manage", "support task statusunu dəyişmək")) return;
     const stamp = getActionStamp();
     const comment = {
-      id: `COM-${Date.now().toString().slice(-6)}`,
+      id: createPrefixedId("COM"),
       author: activeRoleInfo?.name || "Admin",
       text: `Status dəyişdi: ${status}`,
       at: stamp,
@@ -184,7 +185,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
     const initialMessages = body
       ? [
           {
-            id: `MSG-TEXT-${Date.now().toString().slice(-6)}`,
+            id: createPrefixedId("MSG-TEXT"),
             from: currentName,
             text: body,
             time: stamp,
@@ -195,7 +196,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
         ]
       : [];
     const conversation = normalizeMessageThread({
-      id: `MSG-${Date.now().toString().slice(-6)}`,
+      id: createPrefixedId("MSG"),
       type,
       title,
       person: title,
@@ -302,7 +303,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
     const sender = currentUser?.name || activeRoleInfo?.name || "Admin";
     const selectedThreadForSync = (state.conversations || []).find((conversation) => conversation.id === conversationId);
     const comment = {
-      id: `COM-${Date.now().toString().slice(-6)}`,
+      id: createPrefixedId("COM"),
       author: sender,
       text: body,
       at: stamp,
@@ -324,7 +325,7 @@ export function createMessagingActions({ activeRoleInfo, auditCurrentState, audi
               messages: [
                 ...(conversation.messages || []),
                 {
-                  id: `MSG-TEXT-${Date.now().toString().slice(-6)}`,
+                  id: createPrefixedId("MSG-TEXT"),
                   from: sender,
                   text: body,
                   time: stamp,

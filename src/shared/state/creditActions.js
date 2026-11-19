@@ -7,6 +7,7 @@ import { baseCreditDate } from "../lib/appDomain.jsx";
 import { buildAllCreditRecords, getCreditIdForOrder } from "../lib/appHelpers.jsx";
 import { applyCreditPrincipalPayment, buildCreditPlan, getCreditDisplayPlan, isCreditStarted } from "../lib/credit.js";
 import { round2 } from "../utils/invoiceMath.js";
+import { createPrefixedId } from "../utils/id.js";
 
 // Credit commands (payment schedule dates, payments, initial payments, activation, SMS),
 // moved out of App.jsx unchanged. Payments and activation go through the server commands
@@ -114,7 +115,7 @@ export function createCreditActions({ activeTenantId, auditOperation, creditReco
     }
 
     const cashEntry = {
-      id: `KS-${Date.now()}`,
+      id: createPrefixedId("KS"),
       source: "Kredit ödənişi",
       creditId,
       orderId: targetCredit.orderId,
@@ -240,7 +241,7 @@ export function createCreditActions({ activeTenantId, auditOperation, creditReco
       ...current,
       cashEntries: [
         {
-          id: `KS-${Date.now()}`,
+          id: createPrefixedId("KS"),
           source: "Kredit ilkin ödənişi",
           creditId,
           orderId: targetCredit.orderId,
