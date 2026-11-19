@@ -9,7 +9,7 @@ export function useLiveReportData(tenantId, { enabled = true } = {}) {
   const current = snapshot?.scope === scope ? snapshot : null;
 
   const load = useCallback(async () => {
-    if (!tenantId || !enabled) return;
+    if (!tenantId) return;
     const isCurrent = begin();
     if (!isCurrent()) return;
     setSnapshot(previous => ({ scope, data: previous?.scope === scope ? previous.data : emptyReportData,
@@ -20,10 +20,10 @@ export function useLiveReportData(tenantId, { enabled = true } = {}) {
     } catch (error) {
       if (isCurrent()) setSnapshot(previous => ({ ...previous, loading: false, error }));
     }
-  }, [tenantId, scope, begin, enabled]);
+  }, [tenantId, scope, begin]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (enabled) load(); }, [load, enabled]);
   const degraded = useRealtimeResync(enabled ? tenantId : null, reportTables, load, { channelPrefix: "reports-live", debounceMs: 700 });
-  return { ...(current?.data || emptyReportData), loading: Boolean(tenantId && enabled && (!current || current.loading)),
+  return { ...(current?.data || emptyReportData), loading: Boolean(tenantId && (current?.loading || (enabled && !current))),
     loaded: Boolean(tenantId && current?.loaded), error: current?.error || null, degraded, refresh: load };
 }
