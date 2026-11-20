@@ -4,7 +4,6 @@ import { createProductCatalogActions } from "./shared/state/productCatalogAction
 import { createRecordCreationActions } from "./shared/state/recordCreationActions.js";
 import { createFinanceAccountActions } from "./shared/state/financeAccountActions.js";
 import { useEffect, useMemo, useState, useCallback, Suspense } from "react";
-import { pathForModule } from "./config/routes.js";
 import { useModuleNavigation } from "./shared/hooks/useModuleNavigation";
 import { useToasts } from "./shared/hooks/useToasts";
 import { useAuth } from "./auth/AuthProvider.jsx";
@@ -45,7 +44,7 @@ import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
-import { dbCustomerToLegacy, dbOrderToLegacy } from "./shared/adapters/erpShape.js";
+import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
 import {
   BarChart3,
@@ -97,7 +96,7 @@ import { pageMeta } from "./config/page-meta.js";
 import { ProjectsPage } from "./config/lazyPages.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-import { AccountingPageV2, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, DashboardPage, DeliveriesPage, FloatingAssistant, HrPage, InvoicesPage, KpiPage, MessagesPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, StockPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
+import { AccountingPageV2, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmPage, FloatingAssistant, HrPage, InvoicesPage, KpiPage, MessagesPage, ProcurementPage, ReceivablesPage, ReportsPage, SalesInvoicesPage, SalesPage, VendorManagementPage, VendorsPage } from "./config/lazyPages.js";
 import {
   logoutRemote,
   remoteApiEnabled,
@@ -204,6 +203,7 @@ import {
 } from "./shared/lib/appHelpers.jsx";
 
 import { SystemPages } from "./pages/groups/SystemPages.jsx";
+import { SalesPages } from "./pages/groups/SalesPages.jsx";
 import { ENABLE_LEGACY_WRITES } from "./config/legacyWrites.js";
 
 function App() {
@@ -620,86 +620,15 @@ function App() {
 
 
 
-          {active === "dashboard" && (
-            <DashboardPage
-              orders={dbOrders.map(dbOrderToLegacy)}
-              customers={dbCustomers.map(dbCustomerToLegacy)}
-              onOpenPendingExpenses={() => {
-                if (choosePage("cashbook")) {
-                  navigate(`${pathForModule("cashbook")}?tab=expenses&status=pending`);
-                }
-              }}
-            />
-          )}
-          {active === "crm" && <CrmCustomersPageV2 onOpenSalesOrder={openLinkedSalesOrder} onOpenCredit={openLinkedCredit} />}
-          {active === "crm-deals" && <CrmDealsPage />}
-          {active === "crm-activities" && <CrmActivitiesPage />}
-          {active === "crm-tasks" && <CrmTasksPage />}
+          <SalesPages {...{
+            active, auditOperation, choosePage, completeWarehouseDelivery, dbCustomers, dbInventory, dbOrders, dbProducts,
+            dbSales, deleteWarehouse, filtered, navigate, openLinkedCredit, openLinkedSalesOrder, query, selectedWarehouseId,
+            setModal, setQuery, setSelectedWarehouseId, state, transferWarehouseStock,
+          }} />
 
 
-          {active === "sales-dashboard" && <SalesDashboardPage />}
-          {active === "sales" && <SalesOrdersPage repository={dbSales} customers={dbCustomers} products={dbProducts} />}
-          {active === "stock" && <StockPage inventory={dbInventory} products={dbProducts} />}
-          {active === "products" && (
-            <ProductsPage
-              warehouses={state.warehouses}
-              warehouseStock={state.warehouseStock}
-              inventoryBalances={dbInventory.balances || []}
-              products={state.products || []}
-              purchaseOrders={state.purchaseOrders || []}
-              orders={state.orders || []}
-              stockMovements={dbInventory.movements || []}
-              fetchAllMovements={dbInventory.fetchAllMovements}
-              onReceiveStock={() => setModal({ type: "stockIntake" })}
-              onOpenImport={() => setModal({ type: "warehouseImport" })}
-              onCreateProduct={() => setModal({ type: "product", mode: "create" })}
-              onEditProduct={(productId) => setModal({ type: "product", mode: "edit", productId })}
-              onOpenWarehouse={(warehouseId) => {
-                setSelectedWarehouseId(warehouseId || "all");
-                choosePage("warehouse");
-              }}
-              onOpenSalesOrder={openLinkedSalesOrder}
-              onOpenProcurementDocument={(document) => {
-                setModal(null);
-                setQuery(document?.receipt_no || document?.shipment_no || "");
-                choosePage("procurement");
-              }}
-              onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
-            />
-          )}
           {active === "cashbook" && <CashbookPage legacyCashEntries={state.cashEntries || []} />}
           {active === "ar-invoices" && <SalesInvoicesPage onOpenSalesOrder={openLinkedSalesOrder} />}
-          {active === "warehouse" && (
-            <WarehousePage
-              warehouses={state.warehouses}
-              warehouseStock={state.warehouseStock}
-              products={state.products || []}
-              orders={state.orders}
-              purchaseOrders={state.purchaseOrders || []}
-              selectedWarehouseId={selectedWarehouseId}
-              query={query}
-              onSelect={setSelectedWarehouseId}
-              onEdit={(warehouseId) =>
-                setModal({ type: "warehouse", mode: "edit", warehouseId })
-              }
-              onDelete={deleteWarehouse}
-              onCompleteDelivery={completeWarehouseDelivery}
-              onTransferStock={transferWarehouseStock}
-              onReceiveStock={() => setModal({ type: "stockIntake" })}
-              onOpenImport={() => setModal({ type: "warehouseImport" })}
-              onCreateProduct={() => setModal({ type: "product", mode: "create" })}
-              onEditProduct={(productId) => setModal({ type: "product", mode: "edit", productId })}
-              onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
-            />
-          )}
-          {active === "deliveries" && (
-            <DeliveriesPage
-              orders={filtered.orders}
-              warehouses={state.warehouses}
-              warehouseStock={state.warehouseStock}
-              onCompleteDelivery={completeWarehouseDelivery}
-            />
-          )}
           {active === "invoices" && (
             <InvoicesPage
               invoices={filtered.invoices}
