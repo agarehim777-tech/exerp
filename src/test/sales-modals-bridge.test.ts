@@ -5,7 +5,7 @@ import { buildSalesProductOptions } from "../modules/sales/services/salesOrderFo
 
 describe("SalesOrderModals.jsx bridge", () => {
   it("re-exports both modals and the product option builder for existing importers", async () => {
-    // Same dynamic import AppWidgets.jsx uses for its lazy() modals.
+    // Same dynamic import components/modals/CreateModal.jsx uses for its lazy() modals.
     const bridge = await import("../modules/sales/components/SalesOrderModals.jsx");
     expect(bridge.SalesOperationModal).toBe(SalesOperationModal);
     expect(bridge.SalesOrderModal).toBe(SalesOrderModal);
