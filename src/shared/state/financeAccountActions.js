@@ -1,3 +1,4 @@
+import { createPrefixedId } from "../utils/id.js";
 // Focused domain commands; dependencies are explicit and supplied by App.
 export function createFinanceAccountActions({ auditCurrentState, money, normalize, notify, requirePermission, setModal, setState, state }) {
 function saveFinanceAccount(accountId, values) {
@@ -16,7 +17,7 @@ function saveFinanceAccount(accountId, values) {
     }
 
     const account = {
-      id: accountId || `ACC-${Date.now()}`,
+      id: accountId || createPrefixedId("ACC"),
       name,
       code,
       type: values.type || "Kassa",

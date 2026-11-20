@@ -4,6 +4,7 @@ import { money } from "../../services/format.js";
 import { baseFinanceDate } from "../lib/hrDomain.ts";
 import { buildReceivableAgingSummary } from "../lib/financeDomain.ts";
 import { getActionStamp } from "./actionStamp.ts";
+import { createPrefixedId } from "../utils/id.js";
 
 type Row = Record<string, any>;
 type AuditEntry = { module: string; action: string; detail: string };
@@ -28,7 +29,7 @@ export function createFinanceModuleActions({ accountingData, auditCurrentState, 
     }
 
     const stamp = getActionStamp();
-    const batchId = `ETX-${Date.now().toString().slice(-6)}`;
+    const batchId = createPrefixedId("ETX");
 
     setState((current) =>
       auditCurrentState(

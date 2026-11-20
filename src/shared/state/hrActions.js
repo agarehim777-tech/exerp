@@ -1,6 +1,7 @@
 import { parsePaymentDate } from "../../services/date.js";
 import { normalize } from "../../services/format.js";
 import { baseFinanceDate, dayInMs, getDepartmentParentName, getEmployeeKey, getEmployeeManagerName, getHrDocumentHealth } from "../lib/appDomain.jsx";
+import { createPrefixedId } from "../utils/id.js";
 
 // HR commands for the browser state (employees, departments, leave, payroll, documents,
 // vacancies), moved out of App.jsx unchanged. App passes in the state, the modal setter and
@@ -96,7 +97,7 @@ export function createHrActions({ state, setState, setModal, notify, requirePerm
       const preservedDepartments = shouldPreservePreviousDepartment
         ? [
             {
-              id: `DEP-${Date.now()}`,
+              id: createPrefixedId("DEP"),
               name: previousDepartment,
               parentDepartment: getDepartmentParentName(existing),
               description: "",
@@ -157,7 +158,7 @@ export function createHrActions({ state, setState, setModal, notify, requirePerm
     }
 
     const department = {
-      id: `DEP-${Date.now()}`,
+      id: createPrefixedId("DEP"),
       name,
       parentDepartment,
       description: String(values.description || "").trim(),
@@ -198,7 +199,7 @@ export function createHrActions({ state, setState, setModal, notify, requirePerm
     }
     const days = Math.floor((to.getTime() - from.getTime()) / dayInMs) + 1;
     const request = {
-      id: `LEAVE-${Date.now()}`,
+      id: createPrefixedId("LEAVE"),
       employeeId: getEmployeeKey(employee),
       employeeName: employee.name,
       department: employee.department,
@@ -371,7 +372,7 @@ export function createHrActions({ state, setState, setModal, notify, requirePerm
       return;
     }
     const vacancy = {
-      id: `VAC-${Date.now()}`,
+      id: createPrefixedId("VAC"),
       role,
       department,
       candidates: 0,
@@ -422,7 +423,7 @@ export function createHrActions({ state, setState, setModal, notify, requirePerm
       const preservedDepartments = shouldPreserveDepartment
         ? [
             {
-              id: `DEP-${Date.now()}`,
+              id: createPrefixedId("DEP"),
               name: employeeDepartment,
               parentDepartment: getDepartmentParentName(employee),
               description: "",

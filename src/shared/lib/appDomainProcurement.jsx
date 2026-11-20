@@ -1,6 +1,7 @@
 import { normalize } from "../../services/format.js";
 import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { getAvailableQuantity } from "./appDomainWarehouse.jsx";
+import { createPrefixedId } from "../utils/id.js";
 
 export function buildProcurementRows(vendors, warehouseStock, orders, products = [], purchaseOrders = []) {
   const productsByName = buildProductLookup(products);
@@ -240,7 +241,7 @@ export function getVendorKey(vendor = {}) {
 export function normalizeVendor(values = {}, fallback = {}) {
   const name = String(values.name ?? fallback.name ?? "").trim();
   return {
-    id: fallback.id || values.id || `VND-${Date.now()}`,
+    id: fallback.id || values.id || createPrefixedId("VND"),
     name,
     country: String(values.country ?? fallback.country ?? "").trim(),
     sku: Math.max(0, Math.round(Number(values.sku ?? fallback.sku ?? 0))),

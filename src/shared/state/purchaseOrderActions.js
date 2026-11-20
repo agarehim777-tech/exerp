@@ -1,6 +1,7 @@
 import { normalize } from "../../services/format.js";
 import { baseFinanceDate } from "../lib/appDomain.jsx";
 import { addStockToRows } from "../lib/appHelpers.jsx";
+import { createPrefixedId } from "../utils/id.js";
 
 // Purchase order commands: create and approve. Moved unchanged from App.jsx.
 export function createPurchaseOrderActions({ auditCurrentState, notify, requirePermission, setState, state }) {
@@ -26,7 +27,7 @@ export function createPurchaseOrderActions({ auditCurrentState, notify, requireP
     const availableAtOrder = Number(row.available ?? 0);
 
     const po = {
-      id: `PO-${Date.now()}`,
+      id: createPrefixedId("PO"),
       product: row.product,
       vendor: row.vendor,
       supplierSource: row.supplierSource || row.factory || row.vendor,

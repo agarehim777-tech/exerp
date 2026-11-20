@@ -2,6 +2,7 @@ import { createRemoteUser, remoteApiEnabled } from "../../remote-api.js";
 import { defaultRoles } from "../../services/permissions.js";
 import { appendAudit } from "../../services/persistence.js";
 import { getActiveRole, getDefaultModuleAccessForRole, modulePermissionCatalog, normalizeUserModuleAccess } from "../lib/appDomain.jsx";
+import { createPrefixedId } from "../utils/id.js";
 
 // User administration commands for the browser settings state (users, roles, module access),
 // moved out of App.jsx unchanged. App passes in the state and its permission/audit helpers.
@@ -32,7 +33,7 @@ export function createUserAdminActions({ state, setState, notify, requirePermiss
     }
 
     let user = {
-      id: `USR-${Date.now()}`,
+      id: createPrefixedId("USR"),
       name: userName,
       email,
       role,
@@ -130,7 +131,7 @@ export function createUserAdminActions({ state, setState, notify, requirePermiss
       },
       auditLog: [
         {
-          id: `AUD-${Date.now()}`,
+          id: createPrefixedId("AUD"),
           date: new Date().toISOString(),
           module: "Ayarlar/Auth",
           action: "İstifadəçi redaktə edildi",
@@ -157,7 +158,7 @@ export function createUserAdminActions({ state, setState, notify, requirePermiss
         settings: { ...current.settings, roles, users },
         auditLog: [
           {
-            id: `AUD-${Date.now()}`,
+            id: createPrefixedId("AUD"),
             date: new Date().toISOString(),
             module: "Ayarlar/Auth",
             action: "Başlanğıc rol icazələri quruldu",

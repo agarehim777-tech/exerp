@@ -1,3 +1,4 @@
+import { createPrefixedId } from "../utils/id.js";
 // Focused domain commands; dependencies are explicit and supplied by App.
 export function createWarehouseActions({ activeRoleInfo, activeTenantId, addStockToRows, adjustStockRows, appendAudit, auditCurrentState, auditOperation, baseDeliveryDate, beginTenantRequest, buildQuantityMap, currentUser, dbInventory, dbOrders, describeStockError, formatPaymentDate, getActiveRole, getAvailableQuantity, getDeliveryPlan, getDeliveryStockCheck, importWarehouseStockAtomic, isDeliveryQueueOrder, normalize, notify, parsePaymentDate, refreshDbOrders, refreshDbProducts, requirePermission, selectedWarehouseId, setModal, setSelectedWarehouseId, setState, state, summarizeOrderProducts, supabase, updateSerialStatuses }) {
 function updateWarehouse(id, values) {
@@ -52,9 +53,9 @@ function recordStockIntake(values) {
             salePrice: price || Number(knownProduct.salePrice || 0),
           }
         : {
-            id: `PRD-${Date.now()}`,
+            id: createPrefixedId("PRD"),
             name: product,
-            sku: `SKU-${Date.now().toString().slice(-6)}`,
+            sku: createPrefixedId("SKU"),
             category: "Digər",
             unit: "ədəd",
             salePrice: price,

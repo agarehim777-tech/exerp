@@ -1,3 +1,4 @@
+import { createPrefixedId } from "../utils/id.js";
 // Focused domain commands; dependencies are explicit and supplied by App.
 export function createRecordCreationActions({ ENABLE_LEGACY_WRITES, activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage }) {
 async function createRecord(type, values) {
@@ -162,7 +163,7 @@ async function createRecord(type, values) {
     }
 
     if (type === "warehouse") {
-      const id = `WH-${Date.now()}`;
+      const id = createPrefixedId("WH");
       const warehouse = {
         id,
         code: values.code || `ANB-${state.warehouses.length + 1}`,
@@ -229,7 +230,7 @@ async function createRecord(type, values) {
         }
       }
       const product = {
-        id: persistedProduct?.id || `PRD-${Date.now()}`,
+        id: persistedProduct?.id || createPrefixedId("PRD"),
         name,
         sku,
         category: values.category || "Digər",
@@ -286,7 +287,7 @@ async function createRecord(type, values) {
       }
 
       if (type === "sales" || type === "dashboard") {
-        const nextId = `SF-${Date.now()}`;
+        const nextId = createPrefixedId("SF");
         const orderProducts = Array.isArray(values.products) ? values.products : [];
         const orderSellers = Array.isArray(values.sellers) ? values.sellers : [];
         const amount = Number(values.orderTotal ?? values.amount ?? 0);
@@ -438,7 +439,7 @@ async function createRecord(type, values) {
           ...current,
           expenses: [
             {
-              id: `MX-${Date.now()}`,
+              id: createPrefixedId("MX"),
               description: values.description,
               category: values.category,
               date: values.date || currentBusinessDate,
@@ -461,7 +462,7 @@ async function createRecord(type, values) {
           ...current,
           credits: [
             {
-              id: `KR-${Date.now()}`,
+              id: createPrefixedId("KR"),
               customer: values.customer,
               contractId: nextContractNumber(current),
               product: values.product,
@@ -502,7 +503,7 @@ async function createRecord(type, values) {
           ...current,
           employees: [
             {
-              id: `EMP-${Date.now()}`,
+              id: createPrefixedId("EMP"),
               initials: values.name
                 .split(" ")
                 .map((part) => part[0])
