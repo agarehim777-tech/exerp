@@ -62,7 +62,8 @@ export const FinancialStatementsPage = lazy(() => import("../modules/reports/Fin
 /* --------------------------------------------------------- AI & comms */
 export const AssistantPage = lazy(() => import("../modules/assistant/AssistantPage.jsx"));
 export const InsightsPage = lazy(() => import("../modules/assistant/InsightsPage.jsx"));
-export const FloatingAssistant = lazy(() => import("../modules/assistant/FloatingAssistant.jsx"));
+// Launcher only: the AI chat panel (and its AI SDK chunk) loads on first open.
+export const FloatingAssistant = lazy(() => import("../modules/assistant/AssistantLauncher.jsx"));
 export const MessagesPage = lazy(() => import("../pages/MessagesPage.jsx"));
 export const NotificationsPage = lazy(() => import("../pages/NotificationsPage.jsx"));
 export const CustomerMessengerPanel = lazy(() => import("../modules/notifications/CustomerMessengerPanel.jsx"));

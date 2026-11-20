@@ -26,10 +26,11 @@ function assistantErrorMessage(error) {
   return message || "AI sorğusu tamamlanmadı.";
 }
 
-export default function FloatingAssistant() {
+/** @param {{ defaultOpen?: boolean }} [props] */
+export default function FloatingAssistant({ defaultOpen = false } = {}) {
   const { session, activeTenantId } = useAuth();
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const scrollRef = useRef(null);
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/erp-chat`;
