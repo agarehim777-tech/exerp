@@ -9,7 +9,7 @@ it("keeps the prefix and stays unique for records created in the same millisecon
   try {
     const ids = Array.from({ length: 2000 }, () => createPrefixedId("SUP"));
     expect(new Set(ids).size).toBe(ids.length);
-    for (const id of ids.slice(0, 20)) expect(id).toMatch(/^SUP-[0-9A-Z]+-[0-9A-Z]{6}$/);
+    for (const id of ids.slice(0, 20)) expect(id).toMatch(/^SUP-[0-9A-Z]+-[0-9A-Z]{12}$/);
   } finally {
     now.mockRestore();
   }
