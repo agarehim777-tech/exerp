@@ -33,6 +33,7 @@ import { useRemoteApiSession } from "./shared/hooks/useRemoteApiSession.ts";
 import { getCreateAudit } from "./shared/lib/createAudit.ts";
 import { useFilteredRows } from "./shared/selectors/filteredRows.ts";
 import { createAppGuards } from "./shared/state/appGuards.ts";
+import { createPageHeaderAction } from "./shared/state/pageHeaderAction.ts";
 import { createUserAdminActions } from "./shared/state/userAdminActions.js";
 import { createHrActions } from "./shared/state/hrActions.js";
 import { createSalesOrderActions } from "./shared/state/salesOrderActions.js";
@@ -457,83 +458,6 @@ function App() {
     selectedKpiPeriod, setSelectedSupportTicketId, setState, state, taxCalendarRows, todayActionRows,
   });
 
-  function openAction() {
-    if (!hasPageAction(active)) return;
-
-    const permission = getPageActionPermission(active);
-    if (permission && !requirePermission(permission, pageMeta[active]?.action || "əməliyyat")) return;
-
-    if (active === "reports") {
-      exportReport("PDF export");
-      return;
-    }
-    if (active === "notifications") {
-      runNotificationDispatchAction();
-      return;
-    }
-    if (active === "kpi") {
-      runKpiPeriodAction();
-      return;
-    }
-    if (active === "settings") {
-      saveSettings();
-      return;
-    }
-    if (active === "warehouse") {
-      setModal({ type: "warehouse", mode: "create" });
-      return;
-    }
-    if (active === "dashboard" || active === "sales") {
-      setModal({ type: "sales" });
-      return;
-    }
-    if (active === "credits") {
-      setModal({ type: "sales", presetPaymentMethod: "Kredit" });
-      return;
-    }
-    if (active === "invoices") {
-      runInvoiceAction();
-      return;
-    }
-    if (active === "accounting") {
-      runAccountingAction();
-      return;
-    }
-    if (active === "tax") {
-      runTaxAction();
-      return;
-    }
-    if (active === "receivables") {
-      runReceivableSyncAction();
-      return;
-    }
-    if (active === "projects") {
-      runProjectsExportAction();
-      return;
-    }
-    if (active === "production") {
-      runProductionAction();
-      return;
-    }
-    if (active === "support") {
-      runSupportAction();
-      return;
-    }
-    if (active === "help") {
-      runHelpAction();
-      return;
-    }
-    if (active === "onboarding") {
-      runOnboardingAction();
-      return;
-    }
-    if (active === "api") {
-      runApiAction();
-      return;
-    }
-    if (createConfig[active]) setModal({ type: active });
-  }
-
   const { createRecord } = createRecordCreationActions({ ENABLE_LEGACY_WRITES, activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage });
 
 
@@ -591,6 +515,10 @@ function App() {
 
   const { addSupportTicketComment, updateSupportTicketStatus, openSupportConversation, openSupportTicket, openLinkedCustomer, selectMessageThread, createMessageConversation, archiveMessageConversation, deleteMessageConversation, sendMessage } = createMessagingActions({
     activeRoleInfo, auditCurrentState, auditOperation, conversationId, creditRecords, currentUser, draftMessage, getActionStamp, messageContextOptions, messageParticipantOptions, notify, requirePermission, setActive, setConversationId, setDraftMessage, setMobileNav, setQuery, setSelectedSupportTicketId, setState, state, syncCommunicationWorkflow,
+  });
+
+  const { openAction } = createPageHeaderAction({
+    active, exportReport, requirePermission, runAccountingAction, runApiAction, runHelpAction, runInvoiceAction, runKpiPeriodAction, runNotificationDispatchAction, runOnboardingAction, runProductionAction, runProjectsExportAction, runReceivableSyncAction, runSupportAction, runTaxAction, saveSettings, setModal,
   });
 
   if (remoteUser?.mustChangePassword && remoteAuthStatus === "signedIn") {
