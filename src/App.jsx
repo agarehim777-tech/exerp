@@ -31,6 +31,8 @@ import { useSystemReports } from "./shared/selectors/systemReports.js";
 import { useAuditServerSync } from "./shared/hooks/useAuditServerSync.ts";
 import { useRemoteApiSession } from "./shared/hooks/useRemoteApiSession.ts";
 import { getCreateAudit } from "./shared/lib/createAudit.ts";
+import { useFilteredRows } from "./shared/selectors/filteredRows.ts";
+import { createAppGuards } from "./shared/state/appGuards.ts";
 import { createUserAdminActions } from "./shared/state/userAdminActions.js";
 import { createHrActions } from "./shared/state/hrActions.js";
 import { createSalesOrderActions } from "./shared/state/salesOrderActions.js";
@@ -121,7 +123,6 @@ import {
   toLocalIsoDate,
 } from "./services/date.js";
 import {
-  createPermissionByType,
   defaultRoles,
   permissionCatalog,
 } from "./services/permissions.js";
@@ -141,7 +142,7 @@ import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 import { currentBusinessDate, getEmployeeKey, getKpiPeriodKey } from "./shared/lib/appDomain.jsx";
 import { OrderProductLines, baseDeliveryDate, getDeliveryPlan, getDeliveryStockCheck, isDeliveryQueueOrder, summarizeOrderProducts } from "./modules/warehouse/deliveryDomain.jsx";
 import { isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
-import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getFreeQuantity, getModuleForPermission, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
+import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getFreeQuantity, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
 
 import {
   applyCreditPrincipalPayment,
@@ -197,7 +198,6 @@ import {
   hydrateState,
   getCurrentUser,
   addStockToRows,
-  hasEffectivePermission,
   canAccessNavItem,
   getPageActionPermission,
   hasPageAction,
@@ -366,47 +366,9 @@ function App() {
     setActive(visibleNavItems[0]?.id || "dashboard");
   }, [active, currentUser, dbPermissionsLoading, tenantStateReady, visibleNavItems, setActive]);
 
-  const filtered = useMemo(
-    () => ({
-      customers: filterRows(state.customers, query),
-      orders: filterRows(state.orders, query),
-      stock: filterRows(state.stock, query),
-      warehouses: filterRows(state.warehouses, query),
-      expenses: filterRows(state.expenses, query),
-      cashEntries: filterRows(state.cashEntries || [], query),
-      invoices: filterRows(invoiceRows, query),
-      accountingJournal: filterRows(accountingData.journalRows, query),
-      accountingChart: filterRows(accountingData.chartRows, query),
-      taxCalendar: filterRows(taxCalendarRows, query),
-      currency: filterRows(currencyExposureRows, query),
-      apiWebhooks: filterRows(apiWebhookRows, query),
-      credits: filterRows(creditRecords, query),
-      vendors: filterRows(state.vendors, query),
-      employees: filterRows(state.employees, query),
-      contracts: filterRows(state.contracts, query),
-      receivables: filterRows(receivableRows, query),
-      projects: filterRows(projectRoiRows, query),
-      productionPlans: filterRows(productionRows, query),
-      supportTickets: filterRows(state.supportTickets || [], query),
-      knowledgeBase: filterRows(state.knowledgeBase || [], query),
-      notifications: filterRows(state.notifications, query),
-      conversations: filterRows(messageConversations, query),
-    }),
-    [
-      query,
-      state,
-      creditRecords,
-      receivableRows,
-      projectRoiRows,
-      productionRows,
-      invoiceRows,
-      accountingData,
-      taxCalendarRows,
-      currencyExposureRows,
-      apiWebhookRows,
-      messageConversations,
-    ],
-  );
+  const filtered = useFilteredRows({
+    accountingData, apiWebhookRows, creditRecords, currencyExposureRows, invoiceRows, messageConversations, productionRows, projectRoiRows, query, receivableRows, state, taxCalendarRows,
+  });
 
   const handleGitHubPush = useCallback(
     (commit) => {
@@ -417,81 +379,9 @@ function App() {
 
   useGitHubSync({ enabled: true, onPush: handleGitHubPush });
 
-  function can(permission) {
-    if (!permission || isPlatformAdmin) return true;
-
-    const legacyOk = hasEffectivePermission(state.settings, permission);
-    if (!dbRole) return legacyOk;
-
-    const dbModule = getModuleForPermission(permission);
-    const dbOk = dbCan(dbModule, "edit");
-    if (dbRole === "owner" || dbRole === "admin") return dbOk;
-    return legacyOk && dbOk;
-  }
-
-  function requirePermission(permission, action) {
-    if (permission?.startsWith("hr.") && !collectionSync.ready) {
-      notify("HR məlumatları serverdən yüklənir. Bir qədər sonra yenidən cəhd edin.", "warning");
-      return false;
-    }
-    if (can(permission)) return true;
-
-    const roleName = activeRoleInfo?.name || "Rol seçilməyib";
-    notify(`${roleName}: ${action} üçün icazə yoxdur.`, "warning");
-    setState((current) =>
-      appendAudit(current, {
-        module: "Permission",
-        action: "Əməliyyat bloklandı",
-        detail: `${roleName}: ${action}`,
-        status: "İcazə yoxdur",
-        role: roleName,
-      }),
-    );
-    return false;
-  }
-
-  function requireSystemBackup(action) {
-    return requirePermission("system.backup", action);
-  }
-
-  function auditCurrentState(nextState, audit) {
-    return appendAudit(nextState, {
-      ...audit,
-      role: getActiveRole(nextState.settings)?.name || activeRoleInfo?.name || "System",
-    });
-  }
-
-  function auditOperation(audit) {
-    setState((current) =>
-      appendAudit(current, {
-        ...audit,
-        role: getActiveRole(current.settings)?.name || activeRoleInfo?.name || "System",
-      }),
-    );
-  }
-
-  function hasCreatePermission(type, values) {
-    if (type === "hr" && !collectionSync.ready) return requirePermission("hr.manage", "əməkdaş yaratmaq");
-    const permission = createPermissionByType[type];
-    if (!permission) return true;
-
-    const isCreditSale = (type === "sales" || type === "dashboard") && values.paymentMethod === "Kredit";
-    if (can(permission) || (isCreditSale && can("credits.manage"))) return true;
-
-    const action = isCreditSale ? "kredit satış yaratmaq" : createConfig[type]?.title || "qeyd yaratmaq";
-    return requirePermission(permission, action);
-  }
-
-  function choosePage(id) {
-    const isVisible = visibleNavItems.some((item) => item.id === id);
-    if (!isVisible) {
-      notify("Bu modul aktiv istifadəçi üçün gizlədilib.", "warning");
-      return false;
-    }
-    setActive(id);
-    setMobileNav(false);
-    return true;
-  }
+  const { can, requirePermission, requireSystemBackup, auditCurrentState, auditOperation, hasCreatePermission, choosePage } = createAppGuards({
+    activeRoleInfo, collectionSync, dbCan, dbRole, isPlatformAdmin, notify, setActive, setMobileNav, setState, state, visibleNavItems,
+  });
 
   function loginUser(userId) {
     const user = state.settings.users.find((item) => item.id === userId && item.status === "Aktiv");
