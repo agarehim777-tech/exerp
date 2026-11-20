@@ -30,8 +30,10 @@ it('exposes credit read failures and retries instead of presenting a successful 
 it('allows browser order fallback only under the explicit legacy-write flag', () => {
   const app = readFileSync('src/App.jsx', 'utf8');
   expect(app).toContain('!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders');
-  expect(app).toContain('error={dbOrdersError}');
-  expect(app).toContain('onRefresh={refreshDbOrders}');
+  // The credits page block is rendered from the finance page group.
+  const pages = readFileSync('src/pages/groups/FinancePages.jsx', 'utf8');
+  expect(pages).toContain('error={dbOrdersError}');
+  expect(pages).toContain('onRefresh={refreshDbOrders}');
 });
 
 it('submits activation once and closes only after the server command succeeds', async () => {
