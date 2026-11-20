@@ -27,8 +27,6 @@
   "src/modules/procurement/components/ProcurementModals.jsx": 1,
   "src/modules/procurement/LandedCostPanel.jsx": 10,
   "src/modules/procurement/ProcurementPage.jsx": 4,
-  "src/modules/procurement/procurementShared.jsx": 4,
-  "src/modules/procurement/ProcurementTabs.jsx": 20,
   "src/modules/production/ProductionLedgerPage.jsx": 2,
   "src/modules/production/ProductionPage.jsx": 6,
   "src/modules/projects/ProjectsPage.jsx": 8,
