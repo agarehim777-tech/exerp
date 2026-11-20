@@ -254,7 +254,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
       internalNotes,
     });
     } catch (error) {
-      setSubmitError(error?.message || "Sifaris yadda saxlanilmadi.");
+      setSubmitError(error?.message || "Sifariş yadda saxlanılmadı.");
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

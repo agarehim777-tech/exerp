@@ -1,0 +1,131 @@
+/* Google's Sora has no ə or Ə, and Manrope has no Ə or ₼, so those letters fell back to a system font and
+   headings mixed two typefaces. These faces add the missing glyphs to each family from the bundled Noto Sans
+   subset (src/assets/fonts, SIL OFL 1.1). unicode-range limits them to ə, Ə and ₼, and a browser downloads a
+   file only when a page shows one of those characters. One face per weight the pages use, because a browser
+   picks the weight first and only then looks for the character. Inter (login page) is listed too, in case the
+   loaded Inter subset misses one of them. */
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Regular-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Regular-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Regular-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Regular-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Regular-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/NotoSans-Bold-az-subset.ttf") format("truetype");
+  unicode-range: U+018F, U+0259, U+20BC;
+}

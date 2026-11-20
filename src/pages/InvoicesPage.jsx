@@ -15,7 +15,7 @@ export default function InvoicesPage({ invoices, summary, invoiceSettings = {}, 
   const exportInvoices = () => {
     const escapeCsv = (value) => csvCell(value);
     const rows = [
-      ["Faktura", "Sifaris", "Musteri", "FIN", "Mehsullar", "Net", "EDV", "Cemi", "Qaliq", "E-qaimə"],
+      ["Faktura", "Sifariş", "Müştəri", "FİN", "Məhsullar", "Net", "ƏDV", "Cəmi", "Qalıq", "E-qaimə"],
       ...visibleInvoices.map((invoice) => [
         invoice.id,
         invoice.orderId,
