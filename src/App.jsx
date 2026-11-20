@@ -3,7 +3,7 @@ import { createWarehouseActions } from "./shared/state/warehouseActions.js";
 import { createProductCatalogActions } from "./shared/state/productCatalogActions.js";
 import { createRecordCreationActions } from "./shared/state/recordCreationActions.js";
 import { createFinanceAccountActions } from "./shared/state/financeAccountActions.js";
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from "react";
+import { useEffect, useMemo, useState, useCallback, Suspense } from "react";
 import { pathForModule } from "./config/routes.js";
 import { useModuleNavigation } from "./shared/hooks/useModuleNavigation";
 import { useToasts } from "./shared/hooks/useToasts";
@@ -28,7 +28,9 @@ import { useOperationsViews } from "./shared/selectors/operationsViews.js";
 import { useIntegrationViews } from "./shared/selectors/integrationViews.js";
 import { useMessagingViews } from "./shared/selectors/messagingViews.js";
 import { useSystemReports } from "./shared/selectors/systemReports.js";
-import { AUDIT_SYNC_RETRY_MS, pendingAuditEventRows } from "./services/auditSync.js";
+import { useAuditServerSync } from "./shared/hooks/useAuditServerSync.ts";
+import { useRemoteApiSession } from "./shared/hooks/useRemoteApiSession.ts";
+import { getCreateAudit } from "./shared/lib/createAudit.ts";
 import { createUserAdminActions } from "./shared/state/userAdminActions.js";
 import { createHrActions } from "./shared/state/hrActions.js";
 import { createSalesOrderActions } from "./shared/state/salesOrderActions.js";
@@ -94,13 +96,8 @@ import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
 import { AccessCheckPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
-  getRemoteSession,
-  getRemoteToken,
-  loadRemoteState,
-  loginRemote,
   logoutRemote,
   remoteApiEnabled,
-  saveRemoteState,
   setRemoteToken,
 } from "./remote-api.js";
 import {
@@ -276,14 +273,6 @@ function App() {
   const [conversationId, setConversationId] = useState("c1");
   const [draftMessage, setDraftMessage] = useState("");
   const [selectedSupportTicketId, setSelectedSupportTicketId] = useState("");
-  const [remoteAuthStatus, setRemoteAuthStatus] = useState(remoteApiEnabled ? "checking" : "local");
-  const [remoteUser, setRemoteUser] = useState(null);
-  const remoteSaveTimer = useRef(null);
-  const syncedAuditIds = useRef(new Set());
-  const auditRetryTimer = useRef(null);
-  const auditSessionStart = useRef(new Date().toISOString());
-  const [auditRetryTick, setAuditRetryTick] = useState(0);
-  const [auditServerSyncedAt, setAuditServerSyncedAt] = useState("");
 
   const creditSourceOrders = useMemo(
     () => (!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
@@ -352,6 +341,7 @@ function App() {
   const { projectRoiRows, productionRows } = useOperationsViews({ state });
   const { notificationProviderRows, notificationAutomationRows, apiWebhookRows, apiSecretRows } = useIntegrationViews({ state, creditRecords, invoiceRows });
   const { messageConversations, messageParticipantOptions, messageContextOptions } = useMessagingViews({ state, creditRecords });
+  const auditServerSyncedAt = useAuditServerSync({ activeRoleInfo, activeTenantId, authUser, state });
   const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
 
   useEffect(() => {
@@ -359,116 +349,9 @@ function App() {
     setState(hydrateState(initialState));
   }, [state.dbMeta?.baselineVersion]);
 
-  useEffect(() => {
-    if (!remoteApiEnabled) return undefined;
-    let active = true;
-    const token = getRemoteToken();
-
-    if (!token) {
-      setState((current) =>
-        hydrateState({
-          ...current,
-          settings: { ...current.settings, sessionUserId: null },
-        }),
-      );
-      setRemoteAuthStatus("signedOut");
-      return undefined;
-    }
-
-    getRemoteSession()
-      .then(async (session) => {
-        if (!active) return;
-        setRemoteUser(session.user);
-        if (session.user.mustChangePassword) {
-          setRemoteAuthStatus("signedIn");
-          setAuthError("");
-          return;
-        }
-        const payload = await loadRemoteState();
-        if (!active) return;
-        const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
-        const sessionUser = { ...session.user, moduleAccess: session.user.companyModules || navItems.map((item) => item.id) };
-        const users = tenantUsers.some((user) => user.id === session.user.id)
-          ? tenantUsers.map((user) => (user.id === session.user.id ? { ...user, ...sessionUser } : user))
-          : [sessionUser, ...tenantUsers];
-        setState(
-          hydrateState({
-            ...(payload.state || initialState),
-            settings: {
-              ...(payload.state?.settings || initialState.settings),
-              users,
-              sessionUserId: session.user.id,
-              currentRole: session.user.role,
-            },
-          }),
-        );
-        setRemoteAuthStatus("signedIn");
-        setAuthError("");
-      })
-      .catch((error) => {
-        if (!active) return;
-        setRemoteUser(null);
-        setRemoteToken("");
-        setState((current) =>
-          hydrateState({
-            ...current,
-            settings: { ...current.settings, sessionUserId: null },
-          }),
-        );
-        setRemoteAuthStatus("signedOut");
-        setAuthError(error instanceof Error ? error.message : "Server sessiyası açılmadı.");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!remoteApiEnabled || !getRemoteToken()) {
-      return undefined;
-    }
-    window.clearTimeout(remoteSaveTimer.current);
-    remoteSaveTimer.current = window.setTimeout(() => {
-      saveRemoteState(state).catch((error) => {
-        setAuthError(error instanceof Error ? error.message : "Serverə yazılış alınmadı.");
-      });
-    }, 500);
-    return () => {
-      window.clearTimeout(remoteSaveTimer.current);
-    };
-  }, [state, remoteUser?.role, activeTenantId, authUser?.id, tenantStateReady]);
-
-  useEffect(() => {
-    const rows = pendingAuditEventRows(state.auditLog, syncedAuditIds.current, {
-      tenantId: activeTenantId,
-      actorId: authUser?.id,
-      fallbackRole: activeRoleInfo?.name,
-      since: auditSessionStart.current,
-    });
-    if (!rows.length) return;
-
-    rows.forEach((row) => syncedAuditIds.current.add(row.id));
-    supabase
-      .from("audit_events")
-      .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
-      .then(({ error }) => {
-        if (!error) {
-          setAuditServerSyncedAt(new Date().toISOString());
-          return;
-        }
-        rows.forEach((row) => syncedAuditIds.current.delete(row.id));
-        console.warn("[audit] immutable server log unavailable", {
-          code: error.code,
-          message: error.message,
-        });
-        // Retry on a timer as well, so a failed batch does not wait for the next audited action.
-        window.clearTimeout(auditRetryTimer.current);
-        auditRetryTimer.current = window.setTimeout(() => setAuditRetryTick((tick) => tick + 1), AUDIT_SYNC_RETRY_MS);
-      });
-  }, [state.auditLog, activeTenantId, authUser?.id, activeRoleInfo?.name, auditRetryTick]);
-
-  useEffect(() => () => window.clearTimeout(auditRetryTimer.current), []);
+  const { remoteAuthStatus, setRemoteAuthStatus, remoteUser, setRemoteUser, loginWithPassword } = useRemoteApiSession({
+    activeTenantId, authUser, notify, setAuthError, setState, state, tenantStateReady,
+  });
 
   useLegacyPayrollExpense({ state, setState });
 
@@ -587,38 +470,6 @@ function App() {
     );
   }
 
-  function getCreateAudit(type, values) {
-    const auditByType = {
-      crm: { module: "CRM", action: "Müştəri yaradıldı", detail: values.name },
-      sales: {
-        module: "Satış",
-        action: values.paymentMethod === "Kredit" ? "Kredit satış yaradıldı" : "Satış yaradıldı",
-        detail: `${values.customer || "Müştəri"} · ${money(Number(values.orderTotal ?? values.amount ?? 0))}`,
-      },
-      dashboard: {
-        module: "Satış",
-        action: values.paymentMethod === "Kredit" ? "Kredit satış yaradıldı" : "Satış yaradıldı",
-        detail: `${values.customer || "Müştəri"} · ${money(Number(values.orderTotal ?? values.amount ?? 0))}`,
-      },
-      finance: {
-        module: "Maliyyə",
-        action: "Xərc yaradıldı",
-        detail: `${values.description || "Xərc"} · ${money(Number(values.amount || 0))}`,
-      },
-      credits: {
-        module: "Kredit",
-        action: "Manual kredit yaradıldı",
-        detail: `${values.customer || "Müştəri"} · ${money(Number(values.total || 0))}`,
-      },
-      vendors: { module: "Vendor", action: "Vendor yaradıldı", detail: values.name },
-      product: { module: "Məhsul", action: "Məhsul yaradıldı", detail: values.name },
-      hr: { module: "HR", action: "Əməkdaş yaradıldı", detail: values.name },
-      contracts: { module: "Müqavilə", action: "Müqavilə yaradıldı", detail: values.customer },
-    };
-
-    return auditByType[type] || { module: "Sistem", action: "Qeyd yaradıldı", detail: type };
-  }
-
   function hasCreatePermission(type, values) {
     if (type === "hr" && !collectionSync.ready) return requirePermission("hr.manage", "əməkdaş yaratmaq");
     const permission = createPermissionByType[type];
@@ -668,46 +519,6 @@ function App() {
       ),
     );
     notify(`${user.name} kimi giriş edildi.`);
-  }
-
-  async function loginWithPassword({ email, password }) {
-    if (!remoteApiEnabled) return;
-    setRemoteAuthStatus("checking");
-    setAuthError("");
-    try {
-      const login = await loginRemote(email, password);
-      setRemoteToken(login.token);
-      setRemoteUser(login.user);
-      if (login.user.mustChangePassword) {
-        setRemoteAuthStatus("signedIn");
-        notify("İlk giriş üçün yeni parol təyin edin.");
-        return;
-      }
-      const payload = await loadRemoteState();
-      const tenantUsers = payload.state?.settings?.users || initialState.settings.users || [];
-      const sessionUser = { ...login.user, moduleAccess: login.user.companyModules || navItems.map((item) => item.id) };
-      const users = tenantUsers.some((user) => user.id === login.user.id)
-        ? tenantUsers.map((user) => (user.id === login.user.id ? { ...user, ...sessionUser } : user))
-        : [sessionUser, ...tenantUsers];
-      setState(
-        hydrateState({
-          ...(payload.state || initialState),
-          settings: {
-            ...(payload.state?.settings || initialState.settings),
-            users,
-            sessionUserId: login.user.id,
-            currentRole: login.user.role,
-          },
-        }),
-      );
-      setRemoteAuthStatus("signedIn");
-      notify(`${login.user.name} kimi giriş edildi.`);
-    } catch (error) {
-      setRemoteToken("");
-      setRemoteUser(null);
-      setRemoteAuthStatus("signedOut");
-      setAuthError(error instanceof Error ? error.message : "Giriş alınmadı.");
-    }
   }
 
   async function logoutUser() {
