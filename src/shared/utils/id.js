@@ -15,7 +15,7 @@ export function createClientId() {
 }
 
 /**
- * Readable record id such as `SUP-MI6XK2Q1-3FA9C0`: a time part plus a random part, so two records created in the
+ * Readable record id such as `SUP-MI6XK2Q1-3FA9C04B7E21`: a time part plus a random part, so two records created in the
  * same millisecond, or months apart, never share an id. Replaces `${prefix}-${Date.now()}` (same-ms clashes) and
  * `Date.now().toString().slice(-5)` (repeats every 100 seconds), which let a new record overwrite an older one.
  * @param {string} prefix
@@ -23,6 +23,7 @@ export function createClientId() {
  */
 export function createPrefixedId(prefix) {
   const time = Date.now().toString(36).toUpperCase();
-  const random = createClientId().replace(/[^0-9a-z]/gi, "").slice(-6).toUpperCase();
+  // 12 hex characters (48 random bits of a v4 UUID): 6 characters (24 bits) collided about once in 8 runs of 2000 ids.
+  const random = createClientId().replace(/[^0-9a-z]/gi, "").slice(-12).toUpperCase();
   return `${prefix}-${time}-${random}`;
 }
