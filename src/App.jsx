@@ -97,7 +97,7 @@ import { pageMeta } from "./config/page-meta.js";
 import { ProjectsPage } from "./config/lazyPages.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-import { AccessCheckPage, AccountingPageV2, ApiPage, AssistantPage, AuditLogPage, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, CustomerMessengerPanel, DashboardPage, DataReconciliationPage, DeliveriesPage, FinancialStatementsPage, FloatingAssistant, HelpCenterPage, HrPage, InsightsPage, InvoicesPage, KpiPage, MessagesPage, NotificationsPage, OnboardingPage, PlatformAdminPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, RolesPermissionsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, SettingsPage, StockPage, SupportPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
+import { AccountingPageV2, BonusesPage, CashbookPage, ContractsPage, CreditsPage, CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmPage, CrmTasksPage, DashboardPage, DeliveriesPage, FloatingAssistant, HrPage, InvoicesPage, KpiPage, MessagesPage, ProcurementPage, ProductsPage, ReceivablesPage, ReportsPage, SalesDashboardPage, SalesInvoicesPage, SalesOrdersPage, SalesPage, StockPage, VendorManagementPage, VendorsPage, WarehousePage } from "./config/lazyPages.js";
 import {
   logoutRemote,
   remoteApiEnabled,
@@ -125,7 +125,6 @@ import {
 } from "./services/date.js";
 import {
   defaultRoles,
-  permissionCatalog,
 } from "./services/permissions.js";
 import {
   appendAudit,
@@ -143,7 +142,7 @@ import { importWarehouseStockAtomic } from "./services/warehouseImport.js";
 import { currentBusinessDate, getEmployeeKey, getKpiPeriodKey } from "./shared/lib/appDomain.jsx";
 import { OrderProductLines, baseDeliveryDate, getDeliveryPlan, getDeliveryStockCheck, isDeliveryQueueOrder, summarizeOrderProducts } from "./modules/warehouse/deliveryDomain.jsx";
 import { isPurchaseOrderOpen } from "./shared/lib/appDomain.jsx";
-import { Toggle, filterRows, getActiveRole, getAvailableQuantity, getFreeQuantity, getVendorKey, modulePermissionCatalog, normalizeVendor } from "./shared/lib/appDomain.jsx";
+import { Toggle, getActiveRole, getAvailableQuantity, getFreeQuantity, getVendorKey, normalizeVendor } from "./shared/lib/appDomain.jsx";
 
 import {
   applyCreditPrincipalPayment,
@@ -204,6 +203,7 @@ import {
   hasPageAction,
 } from "./shared/lib/appHelpers.jsx";
 
+import { SystemPages } from "./pages/groups/SystemPages.jsx";
 import { ENABLE_LEGACY_WRITES } from "./config/legacyWrites.js";
 
 function App() {
@@ -604,29 +604,16 @@ function App() {
           />
 
           <Suspense fallback={<div className="page-suspense-loader u-padding-32px u-opacity-0_6" >Yüklənir…</div>}>
-          {active === "platform" && <PlatformAdminPage />}
-          {active === "assistant" && <AssistantPage />}
-          {active === "insights" && <InsightsPage />}
-          {active === "roles" && (
-            <RolesPermissionsPage
-              appUsers={state.settings.users || []}
-              appRoles={state.settings.roles || defaultRoles}
-              modulePermissionCatalog={modulePermissionCatalog}
-              onCreateAppUser={createUser}
-              onUpdateAppUser={updateUserProfile}
-              onUpdateAppUserStatus={updateUserStatus}
-              onApplyDefaultPermissions={applyDefaultUserPermissions}
-              onChangeAppUserRole={updateUserRole}
-              onToggleAppUserModule={toggleUserModuleAccess}
-              canOverrideUserPermissions={["Super Admin", "Platform Super Admin"].includes(currentUser?.role)}
-              requiresPassword={remoteApiEnabled}
-              canManageUsers={can("settings.manage")}
-            />
-          )}
-          {active === "access-check" && <AccessCheckPage />}
-          {active === "audit" && <AuditLogPage />}
-          {active === "financial-statements" && <FinancialStatementsPage />}
-          {active === "data-reconciliation" && <DataReconciliationPage />}
+          <SystemPages {...{
+            active, activeRoleInfo, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole,
+            choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage,
+            exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead,
+            messageContextOptions, messageParticipantOptions, notificationAutomationRows, notificationFilter, notificationProviderRows, notify, onboardingRows, openLinkedCredit,
+            openLinkedCustomer, openLinkedSalesOrder, openSupportConversation, openSupportTicket, productionHardeningReport, query, rotateApiSecret, runApiAction,
+            runGoLiveCheck, runIntegrityCheck, runNotificationDispatchAction, runProductionHardeningCheck, saveSettings, selectMessageThread, selectedSupportTicketId, sendMessage,
+            setDraftMessage, setNotificationFilter, setSelectedSupportTicketId, state, toggleSetting, toggleUserModuleAccess, updateCompany, updateSupportTicketStatus,
+            updateUserProfile, updateUserRole, updateUserStatus,
+          }} />
 
           
           
@@ -831,127 +818,6 @@ function App() {
               buildReportPackage={buildReportPackage}
             />
           )}
-          {active === "support" && (
-            <SupportPage
-              tickets={filtered.supportTickets}
-              orders={state.orders}
-              credits={creditRecords}
-              customers={state.customers}
-              conversations={state.conversations || []}
-              selectedTicketId={selectedSupportTicketId}
-              onSelectTicket={setSelectedSupportTicketId}
-              onAddComment={addSupportTicketComment}
-              onUpdateStatus={updateSupportTicketStatus}
-              onOpenConversation={openSupportConversation}
-              onOpenSalesOrder={openLinkedSalesOrder}
-              onOpenCredit={openLinkedCredit}
-              onOpenCustomer={openLinkedCustomer}
-            />
-          )}
-          {active === "help" && (
-            <HelpCenterPage
-              articles={filterRows(helpArticles, query)}
-              guides={filterRows(helpModuleGuides, query)}
-              onboardingRows={onboardingRows}
-              snapshot={state.helpGuideSnapshot}
-              onOpenModule={choosePage}
-            />
-          )}
-          {active === "onboarding" && (
-            <OnboardingPage
-              onboarding={state.onboarding}
-              rows={onboardingRows}
-              onOpenModule={choosePage}
-            />
-          )}
-          {active === "messages" && (
-            <MessagesPageV2
-              conversations={filtered.conversations}
-              conversationId={conversationId}
-              setConversationId={selectMessageThread}
-              draftMessage={draftMessage}
-              setDraftMessage={setDraftMessage}
-              sendMessage={sendMessage}
-              canSend={can("messages.send")}
-              canManage={can("messages.manage")}
-              currentUser={currentUser}
-              participants={messageParticipantOptions}
-              contextOptions={messageContextOptions}
-              onCreateConversation={createMessageConversation}
-              onArchiveConversation={archiveMessageConversation}
-              onDeleteConversation={deleteMessageConversation}
-              onOpenSalesOrder={openLinkedSalesOrder}
-              onOpenCredit={openLinkedCredit}
-              onOpenSupportTicket={openSupportTicket}
-              onOpenCustomer={openLinkedCustomer}
-            />
-          )}
-          {active === "notifications" && (
-            <div className="stack u-margin-bottom-16px" ><CustomerMessengerPanel /></div>
-          )}
-          {active === "notifications" && (
-            <NotificationsPage
-              notifications={filtered.notifications}
-              automationRows={notificationAutomationRows}
-              providerRows={notificationProviderRows}
-              sendLog={state.notificationSendLog || []}
-              dispatchSnapshot={state.notificationDispatchSnapshot}
-              filter={notificationFilter}
-              setFilter={setNotificationFilter}
-              markAll={markAllNotificationsRead}
-              runDispatch={runNotificationDispatchAction}
-              lastSweepAt={state.notificationSweepAt}
-              canManage={can("notifications.manage")}
-            />
-          )}
-          {active === "api" && (
-            <ApiPage
-              webhooks={filtered.apiWebhooks}
-              secrets={apiSecretRows}
-              logs={state.apiWebhookLogs || []}
-              snapshot={state.apiIntegrationSnapshot}
-              dbMeta={state.dbMeta}
-              auditLog={state.auditLog || []}
-              onRunTest={runApiAction}
-              onRotateSecret={rotateApiSecret}
-              canManage={can("api.manage")}
-            />
-          )}
-          {active === "settings" && (
-            <SettingsPage
-              settings={state.settings}
-              activeRole={activeRoleInfo}
-              auditLog={state.auditLog || []}
-              dbMeta={state.dbMeta}
-              integrityReport={integrityReport}
-              integritySnapshot={state.integritySnapshot}
-              goLiveReport={goLiveReport}
-              goLiveSnapshot={state.goLiveSnapshot}
-              productionHardeningReport={productionHardeningReport}
-              productionHardeningSnapshot={state.productionHardeningSnapshot}
-              permissionCatalog={permissionCatalog}
-              modulePermissionCatalog={modulePermissionCatalog}
-              toggleSetting={toggleSetting}
-              updateCompany={updateCompany}
-              onSaveSettings={saveSettings}
-              onChangeRole={changeCurrentRole}
-              users={state.settings.users || []}
-              onCreateUser={createUser}
-              onUpdateUserStatus={updateUserStatus}
-              onToggleUserModule={toggleUserModuleAccess}
-              onRunIntegrityCheck={runIntegrityCheck}
-              onRunGoLiveCheck={runGoLiveCheck}
-              onRunProductionHardeningCheck={runProductionHardeningCheck}
-              onExportBackup={exportBackup}
-              onImportBackup={importBackup}
-              notify={notify}
-              requiresPassword={remoteApiEnabled}
-              canManageSettings={can("settings.manage")}
-              canOverrideUserPermissions={["Super Admin", "Platform Super Admin"].includes(currentUser?.role)}
-              canRunSystemBackup={can("system.backup")}
-              onOpenAccessCenter={() => choosePage("roles")}
-            />
-          )}
           </Suspense>
         </main>
       </div>
@@ -1053,7 +919,6 @@ function App() {
 
 
 import {
-  MessagesPageV2,
   WarehouseImportModal,
   CreateModal,
   ToastStack,
