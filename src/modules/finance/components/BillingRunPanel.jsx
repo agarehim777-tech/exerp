@@ -7,6 +7,7 @@ import { buildOrderInvoiceDraft, buildProjectInvoiceDraft, computeDraftTotals, v
 import ProductSearchSelect from "../../../components/ProductSearchSelect.jsx";
 import { azn } from "../../../shared/ui/tokens.js";
 import { Button, Input, Select, Table } from "../../../shared/ui/primitives.tsx";
+import { formatAmount } from "../../../services/format.js";
 
 export default function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreateDraft, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
@@ -354,7 +355,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             <div>Ara cəm: <b>{azn(totals.subtotal)}</b></div>
             <div>ƏDV cəmi: <b>{azn(totals.vat_total)}</b></div>
             <div className={Math.abs(validation.roundingDiff) > 0.005 ? "ui-validation-error" : "ui-help-text"}>
-              Yuvarlaqlaşdırma fərqi: <b>{validation.roundingDiff.toFixed(2)} ₼</b>
+              Yuvarlaqlaşdırma fərqi: <b>{formatAmount(validation.roundingDiff)}</b>
             </div>
             <div className="ui-summary-line">Yekun: <b className="amount-positive">{azn(totals.total)}</b></div>
           </div>

@@ -39,8 +39,6 @@ export default function CrmTasksPage() {
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
-      <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">Tapşırıqlar</h1>
-
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border u-flex-wrap-wrap">
         <Input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Nə etmək lazımdır?"

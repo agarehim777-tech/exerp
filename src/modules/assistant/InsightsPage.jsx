@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useTenantRequestScope } from '../../shared/hooks/useTenantRequestScope';
 import { AlertTriangle, Brain, Check, Loader2, RefreshCw, ThumbsDown, Zap } from "lucide-react";
 import { formatDate } from "../../services/date.js";
+import { formatAmount } from "../../services/format.js";
 
 const CATEGORY_LABELS = {
   sales: "Satış",
@@ -120,8 +121,8 @@ export default function InsightsPage() {
       {signals && (
         <div className="insights-page--s-signal-grid">
           <Signal label="Az qalan məhsul" value={signals.lowStockCount} tone="#b45309" />
-          <Signal label="Vaxtı keçmiş kredit" value={`${Number(signals.overdueCreditTotal || 0).toFixed(2)} ₼`} tone="#b91c1c" />
-          <Signal label="Vaxtı keçmiş faktura" value={`${Number(signals.overdueInvoiceTotal || 0).toFixed(2)} ₼`} tone="#b91c1c" />
+          <Signal label="Vaxtı keçmiş kredit" value={`${formatAmount(Number(signals.overdueCreditTotal || 0))}`} tone="#b91c1c" />
+          <Signal label="Vaxtı keçmiş faktura" value={`${formatAmount(Number(signals.overdueInvoiceTotal || 0))}`} tone="#b91c1c" />
           <Signal label="Açıq sifariş" value={signals.openOrderCount} tone="#0f766e" />
           <Signal label="Açıq satınalma" value={signals.openPurchaseOrderCount} tone="#4338ca" />
         </div>

@@ -57,12 +57,6 @@ export default function StockPage({ inventory: stock, products = [] }) {
 
   return (
     <div className="u-display-grid u-gap-16px u-min-width-0">
-      <div>
-        <h1 className="u-margin-0 u-font-size-26px u-line-height-1_2 u-color-12372c">Anbar idarəetməsi</h1>
-        <p className="u-margin-6px_0_0 u-font-size-14px u-color-66756f">
-          Anbarları, qalıqları, daxili transferləri və stok hərəkətlərini bir yerdən idarə edin.
-        </p>
-      </div>
       <div className="u-display-flex u-gap-12px u-flex-wrap-wrap">
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Anbarlar</div>

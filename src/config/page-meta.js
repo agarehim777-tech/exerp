@@ -1,4 +1,12 @@
 export const pageMeta = {
+  procurement: {
+    title: "Satınalma",
+    subtitle: "Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.",
+  },
+  "access-check": {
+    title: "İcazə yoxlaması",
+    subtitle: "Cari istifadəçinin şirkət admini və layihə sahibi icazələrini yoxlayın.",
+  },
   assistant: {
     title: "AI Köməkçi",
     subtitle: "Şirkət datası ilə təbii dildə danışın — müştəri, məhsul, satış statistikası.",
@@ -13,11 +21,11 @@ export const pageMeta = {
     action: "Yeni sifariş",
   },
   crm: {
-    title: "CRM — Müştəri İdarəetməsi",
+    title: "Müştərilər",
     subtitle: "FİN kodu, borc limiti, kateqoriya və 360° müştəri görünüşü.",
   },
   "crm-deals": {
-    title: "Sövdələşmələr (Deals)",
+    title: "Sövdələşmələr",
     subtitle: "Kanban pipeline, mərhələ dəyişikliyi və satış proqnozu.",
     action: "Yeni sövdələşmə",
   },
@@ -41,7 +49,7 @@ export const pageMeta = {
     action: "Yeni satış yarat",
   },
   "sales-dashboard": {
-    title: "Satış Dashboard",
+    title: "Satış paneli",
     subtitle: "Dövriyyə, orta çek, top müştəri və məhsul göstəriciləri.",
   },
   stock: {

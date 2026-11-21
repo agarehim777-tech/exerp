@@ -6,6 +6,9 @@ import { toLocalIsoDate, formatDate } from '../../services/date.js';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
 import { appAlert } from '../../shared/ui/dialogService.js';
 import { createIdempotencyKey } from '../../services/coreOperations.js';
+import { formatAmount, formatNumber } from '../../services/format.js';
+// Ledger columns show plain 2-decimal amounts (debit/credit); Azerbaijani separators, no currency sign.
+const fixed2 = (value) => formatNumber(Number(value) || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const priceEditOnly = import.meta.env.VITE_ENABLE_LEGACY_WRITES !== 'true';
 
@@ -116,7 +119,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
           <Section title={`Sətrlər (${items.length})`}>
             {!editing && <DataTable label="Sifariş sətrləri" rows={items} emptyText="—"
               columns={[{ key: 'description', label: 'Təsvir' }, { key: 'qty', label: 'Miq', align: 'right' }, { key: 'unit_price', label: 'Qiymət', align: 'right' }, { key: 'line_total', label: 'Cəm', align: 'right' }]}
-              renderCell={(item, column) => column.key === 'description' ? (item.description || '—') : column.key === 'line_total' ? <strong>{Number(item.line_total).toFixed(2)}</strong> : Number(item[column.key]).toFixed(2)} />}
+              renderCell={(item, column) => column.key === 'description' ? (item.description || '—') : column.key === 'line_total' ? <strong>{fixed2(item.line_total)}</strong> : fixed2(item[column.key])} />}
 
             {editing ? <div className="u-display-flex u-flex-direction-column u-gap-10px">
               {draft.items.map((it, index) => {
@@ -127,7 +130,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
                   <EditField label="Miqdar"><Input type="number" min="0.01" step="0.01" value={it.qty} readOnly={priceEditOnly} onChange={e => changeItem(index, 'qty', e.target.value)}  /></EditField>
                   <EditField label="Qiymət"><Input type="number" min="0" step="0.01" value={it.unit_price} onChange={e => changeItem(index, 'unit_price', e.target.value)}  /></EditField>
                   <EditField label="ƏDV"><Select value={Number(it.vat_rate || 0)} onChange={e => changeItem(index, 'vat_rate', Number(e.target.value))} ><option value="0">ƏDV yoxdur</option><option value="18">18% ƏDV</option></Select></EditField>
-                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{lineTotal.toFixed(2)} ₼</small>{!priceEditOnly && <Button variant="danger" onClick={() => removeItem(index)}>Sil</Button>}</div>
+                  <div className="u-min-width-78px u-text-align-right"><small className="u-display-block u-color-text_secondary u-margin-bottom-8px">{formatAmount(lineTotal)}</small>{!priceEditOnly && <Button variant="danger" onClick={() => removeItem(index)}>Sil</Button>}</div>
                 </Card>;
               })}
               {!priceEditOnly && <Button variant="secondary" type="button" onClick={addItem}>+ Məhsul əlavə et</Button>}
@@ -157,8 +160,8 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
 
           {canManageOrder && <Section title="Ödəniş qeydiyyatı">
             <div className="u-display-flex u-justify-content-space_between u-margin-bottom-8px u-font-size-13px">
-              <span>Ödənilib: <b>{Number(order.paid_amount || 0).toFixed(2)} ₼</b></span>
-              <span>Qalıq: <b className="u-color-danger">{(Number(order.total) - Number(order.paid_amount || 0)).toFixed(2)} ₼</b></span>
+              <span>Ödənilib: <b>{formatAmount(Number(order.paid_amount || 0))}</b></span>
+              <span>Qalıq: <b className="u-color-danger">{formatAmount((Number(order.total) - Number(order.paid_amount || 0)))}</b></span>
             </div>
             <div className="ui-form-grid">
               <Select aria-label="Kassa hesabı" value={cashAccountId} onChange={e => setCashAccountId(e.target.value)} >
@@ -206,7 +209,7 @@ function Totals({ order }) {
 function Row({ label, v, bold }) {
   return (
     <div className={`ui-total-row${bold ? ' ui-total-row-emphasis' : ''}`}>
-      <span>{label}</span><span>{Number(v || 0).toFixed(2)} ₼</span>
+      <span>{label}</span><span>{formatAmount(Number(v || 0))}</span>
     </div>
   );
 }

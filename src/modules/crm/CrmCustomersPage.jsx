@@ -77,11 +77,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-20px">
-      <header className="u-display-flex u-justify-content-space_between u-align-items-flex_end u-gap-16px u-flex-wrap-wrap">
-        <div>
-          <h1 className="u-margin-0 u-font-size-28px u-font-weight-800">Müştərilər</h1>
-          <p className="u-margin-4px_0_0 u-color-var_muted_fg_text_secondary">360° görünüş, sövdələşmə tarixi və aktivlik</p>
-        </div>
+      <header className="u-display-flex u-justify-content-flex_end u-align-items-flex_end u-gap-16px u-flex-wrap-wrap">
         <div className="u-display-flex u-gap-8px">
         <Button variant="secondary" onClick={() => setShowLevels(true)}>Müştəri səviyyələri</Button>
         <Button onClick={() => setShowNew(true)}

@@ -23,8 +23,6 @@ export default function CrmActivitiesPage() {
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
-      <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">Aktivliklər</h1>
-
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border">
         <Select value={type} onChange={e => setType(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
           <option value="note">📝 Qeyd</option><option value="call">📞 Zəng</option><option value="meeting">🤝 Görüş</option>

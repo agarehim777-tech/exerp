@@ -107,7 +107,6 @@ export default function ProductsPage({ legacyProducts = [], inventoryRows = [] }
   };
 
   return <div className="u-display-grid u-gap-16px">
-    <div><h1 className="u-margin-0 u-font-size-26px u-color-12372c">Məhsullar</h1><p className="u-margin-6px_0_0 u-font-size-14px u-color-66756f">Məhsul kataloqu, SKU, satış qiyməti və ƏDV məlumatları.</p></div>
     <div className="u-display-grid u-grid-template-columns-repeat_3_minmax_160px_1fr u-gap-12px">
       <div className="products-page-summary-card"><span className="products-page-summary-label">Ümumi qalıq</span><strong className="products-page-summary-value">{formatNumber(stockSummary.total)}</strong></div>
       <div className="products-page-summary-card"><span className="products-page-summary-label">Rezerv olunmuş</span><strong className="products-page-summary-value sx-80b150b">{formatNumber(stockSummary.reserved)}</strong></div>

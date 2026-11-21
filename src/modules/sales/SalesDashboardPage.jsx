@@ -38,12 +38,7 @@ export default function SalesDashboardPage() {
   return (
     <main className="sales-analytics-page">
       <header className="sales-analytics-head">
-        <div>
-          <span className="sales-analytics-eyebrow"><BarChart3 size={15} /> Satış hesabatı</span>
-          <h1>Satış analitikası</h1>
-          <p>Satış məbləği, sifariş statusları və lider nəticələr vahid görünüşdə.</p>
-        </div>
-        <span className="sales-analytics-period">Son 30 gün</span>
+        <span className="sales-analytics-eyebrow"><BarChart3 size={15} /> Son 30 gün</span>
       </header>
 
       <section className="sales-analytics-kpis" aria-label="Əsas satış göstəriciləri">

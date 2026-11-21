@@ -69,13 +69,6 @@ export default function AccessCheckPage() {
 
   return (
     <div className="u-padding-24px u-max-width-960px u-margin-0_auto">
-      <div className="u-margin-bottom-20px">
-        <h1 className="u-font-size-22px u-font-weight-700 u-margin-0">İcazə diaqnostikası</h1>
-        <p className="u-color-6b7280 u-font-size-14px u-margin-top-4px">
-          Cari istifadəçinin tenant admin və layihə sahibi icazələrini real-time yoxlayın.
-        </p>
-      </div>
-
       {/* ---------- My access ---------- */}
       <section className="u-background-surface u-border-1px_solid_e5e7eb u-border-radius-12px u-padding-20px u-margin-bottom-20px">
         <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-12px">
