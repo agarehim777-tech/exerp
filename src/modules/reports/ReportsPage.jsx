@@ -366,9 +366,6 @@ export function ReportsPage({
             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
           </Select>
         </label>
-        <Button variant="primary"  disabled={!exportReady || Boolean(exporting)} onClick={() => runDownload({ title: `İdarəetmə paketi · ${period}` }, "Excel")}>
-          <Download size={16} /> Excel
-        </Button>
         <Button variant="secondary"  type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
           <RefreshCw size={16} /> {live.loading ? "Yenilənir" : "Yenilə"}
         </Button>
@@ -379,17 +376,17 @@ export function ReportsPage({
       {exportError && <div className="inline-alert danger">{exportError}</div>}
 
       <section className="metric-grid four">
-        <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${orderCount} sifariş`} icon={Wallet} tone="success" />
+        <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${orderCount} sifariş · orta ${money(averageOrder)}`} icon={Wallet} tone="success" />
         <MetricCard label="Ümumi mənfəət" value={money(grossProfit)} trend={`Marja ${percent(revenue ? (grossProfit / revenue) * 100 : 0)}`} icon={TrendingUp} tone={grossProfit >= 0 ? "success" : "danger"} />
         <MetricCard label="Xalis nəticə" value={money(netResult)} trend={`${money(operatingExpense)} xərc`} icon={BarChart3} tone={netResult >= 0 ? "primary" : "danger"} />
         <MetricCard label="Açıq borc" value={money(reportPackage.creditBalance + reportPackage.invoiceBalance)} trend={`${activeCustomers} müştəri`} icon={CreditCard} tone="warning" />
       </section>
 
-      <section className="report-control-grid" data-testid="reports-control-panel">
-        <div className="report-control-card"><span>Hesabat score</span><strong>{reportPackage.score}/100</strong><small>{allRiskRows.length} risk siqnalı</small></div>
-        <div className="report-control-card success"><span>Anbar dəyəri</span><strong>{money(stockValue)}</strong><small>{stockRows.length} stok sətri</small></div>
-        <div className="report-control-card warning"><span>İstehsal mayası</span><strong>{money(productionCost)}</strong><small>{filteredProduction.length} istehsal planı</small></div>
-        <div className="report-control-card info"><span>Orta sifariş</span><strong>{money(averageOrder)}</strong><small>{formatPaymentDate(parsePaymentDate(snapshotDate))} snapshot</small></div>
+      {/* Production cost is in the module table (İstehsalat row); the readiness score stays in each export. */}
+      <section className="reports-summary-strip" data-testid="reports-control-panel">
+        <span>Anbar dəyəri <strong>{money(stockValue)}</strong> · {stockRows.length} stok sətri</span>
+        <span>Risk siqnalı <strong>{allRiskRows.length}</strong></span>
+        <span>Məlumat vəziyyəti <strong>{formatPaymentDate(parsePaymentDate(snapshotDate))}</strong></span>
       </section>
 
       <section className="reports-analytics-grid">
@@ -463,15 +460,15 @@ export function ReportsPage({
 
       <section className="dashboard-grid">
         <Panel className="span-2">
-          <PanelHeader title="Hesabat şablonları" subtitle="PDF və Excel idarəetmə paketi yarat" />
+          <PanelHeader title="Hesabatlar" subtitle="Hesabatı PDF və ya Excel kimi yükləyin" />
           <div className="report-list">
-            {reportTemplates.map((report) => (
+            {[...reportTemplates, { title: `İdarəetmə paketi · ${period}`, desc: "Bütün modullar üzrə əsas göstərici, həcm və siqnallar", cadence: period, isPackage: true }].map((report) => (
               <article key={report.title} className="report-row report-template-row">
                 <div><strong>{report.title}</strong><span>{report.desc}</span><small>{report.cadence} · {reportPackage.rows} data sətri</small></div>
                 <StatusBadge status={report.cadence} />
                 <div className="report-actions">
                   <Button variant="secondary" size="compact"  onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</Button>
-                  <Button variant="primary" size="compact"  data-testid="report-template-export" onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</Button>
+                  <Button variant="primary" size="compact"  data-testid={report.isPackage ? "report-package-export" : "report-template-export"} onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</Button>
                 </div>
               </article>
             ))}
@@ -489,16 +486,15 @@ export function ReportsPage({
       </section>
 
       <Panel>
-        <PanelHeader title="Son exportlar" subtitle="PDF/Excel əməliyyatları və audit izi" icon={Download} />
+        <PanelHeader title="Son yükləmələr" subtitle="Kim, nə vaxt, hansı hesabatı yüklədi" icon={Download} />
         <DataTable
-          columns={["ID", "Hesabat", "Format", "Dövr", "Vaxt", "Sətir", "Score", "Risk", "İcraçı", "Status"]}
+          columns={["Hesabat", "Format", "Dövr", "Vaxt", "İcraçı", "Status"]}
           rows={exports.map((row) => [
-            <strong>{row.id}</strong>, row.title, row.format || "PDF", row.period || row.snapshot?.period || "—",
-            row.at, row.rows, row.score !== undefined ? `${row.score}/100` : "—",
-            row.riskCount ?? row.snapshot?.riskCount ?? "—", row.owner, <StatusBadge status={row.status} />,
+            <strong>{row.title}</strong>, row.format || "PDF", row.period || row.snapshot?.period || "—",
+            row.at, row.owner, <StatusBadge status={row.status} />,
           ])}
  />
-        {!exports.length && <EmptyState title="Hələ export yaradılmayıb" />}
+        {!exports.length && <EmptyState title="Hələ hesabat yüklənməyib" />}
       </Panel>
     </div>
   );

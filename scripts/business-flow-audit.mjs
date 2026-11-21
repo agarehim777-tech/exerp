@@ -1771,7 +1771,7 @@ async function auditReportsAnalytics(browser) {
 
     await page.locator('.reports-filter-bar').getByLabel('Dövr', { exact: true }).selectOption('Hamısı');
     const controlText = await page.locator('[data-testid="reports-control-panel"]').innerText();
-    assert(controlText.includes("snapshot"), "Reports control panel does not show its snapshot date");
+    assert(controlText.includes("Məlumat vəziyyəti"), "Reports summary does not show its data date");
     assert(await page.locator('[data-testid="report-module-panel"] tbody tr').count() >= 6,
       "Reports module panel does not show the underlying module data volumes");
 
