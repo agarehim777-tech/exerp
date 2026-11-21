@@ -53,3 +53,16 @@ it.each(hooks)('$name handles rejected RPC promises without publishing stale dat
   await act(async () => {});
   expect(result.current).toBeNull();
 });
+
+it.each([
+  { name: 'totals', use: (revision: number) => useReportTotals('a', 'Bu ay', '2026-11-14', revision) },
+  { name: 'modules', use: (revision: number) => useReportModules('a', 'Bu ay', '2026-11-14', revision) },
+  { name: 'series', use: (revision: number) => useReportSeries('a', '2026-11-14', revision) },
+])('$name reads the server again when the page refreshes', async ({ use }) => {
+  rpc.mockResolvedValue({ data: { revenue: 75 }, error: null });
+  const { rerender } = renderHook(({ revision }) => use(revision), { initialProps: { revision: 0 } });
+  await waitFor(() => expect(rpc).toHaveBeenCalled());
+  const calls = rpc.mock.calls.length;
+  rerender({ revision: 1 });
+  await waitFor(() => expect(rpc.mock.calls.length).toBeGreaterThan(calls));
+});

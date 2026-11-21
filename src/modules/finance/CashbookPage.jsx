@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { useCashbook } from "../../shared/hooks/useCashbook.js";
+import { newTransactionNo, useCashbook } from "../../shared/hooks/useCashbook.js";
 import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import { cashAmount } from "../../services/format.js";
 import { Button, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
@@ -151,13 +151,27 @@ function TransactionsPanel({ book, tenantId }) {
     } catch { setHiddenIds(new Set()); }
   }, [hiddenStorageKey]);
 
+  // A double click or a retry after a lost response must not write the transaction twice: the button is locked
+  // while saving and the draft keeps one transaction number until it is saved or edited.
+  const [savingTransaction, setSavingTransaction] = useState(false);
+  const savingRef = useRef(false);
+  const draftNo = useRef({ form: null, no: "" });
   const submit = async (event) => {
     event.preventDefault();
+    if (savingRef.current) return;
+    if (draftNo.current.form !== form) draftNo.current = { form, no: newTransactionNo() };
+    savingRef.current = true;
+    setSavingTransaction(true);
     setMsg("");
     try {
-      await book.addTransaction(form);
+      await book.addTransaction({ ...form, transaction_no: draftNo.current.no });
+      draftNo.current = { form: null, no: "" };
       setForm({ ...form, amount: "", customer_id: "", counterparty: "", description: "" });
     } catch (error) { setMsg(`Xəta: ${error.message}`); }
+    finally {
+      savingRef.current = false;
+      setSavingTransaction(false);
+    }
   };
 
   const employeeByUser = useMemo(() => new Map(book.employees.map(item => [item.user_id, item])), [book.employees]);
@@ -237,7 +251,7 @@ function TransactionsPanel({ book, tenantId }) {
         <Input disabled={Boolean(form.customer_id)} placeholder={form.direction === "in" ? "Ödəyən şəxsin ad-soyadı" : "Ödənişi alanın ad-soyadı"} value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })}  />
         <Input placeholder="Qeyd / izah" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}  />
         <Input type="date" value={form.occurred_at} onChange={(e) => setForm({ ...form, occurred_at: e.target.value })}  />
-        <Button type="submit" disabled={!book.accounts.length} >+ Qeyd et</Button>
+        <Button type="submit" disabled={!book.accounts.length || savingTransaction} >{savingTransaction ? "Saxlanır…" : "+ Qeyd et"}</Button>
       </form>
       {!book.accounts.length && <div className="ui-notice ui-notice-warning">Əvvəlcə «Hesablar» bölməsindən kassa/bank hesabı yaradın.</div>}
       <div className="ui-toolbar ui-spacer-bottom">
