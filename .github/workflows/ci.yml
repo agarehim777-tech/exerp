@@ -113,6 +113,10 @@ jobs:
       - name: Database function lint (plpgsql_check)
         run: supabase db lint --local --level error --fail-on error
 
+      # Many tables enable RLS inside DO-loops, so only the built database can show a table without it.
+      - name: Row level security on every public table
+        run: node scripts/verify-rls-coverage.mjs
+
       - name: Install Playwright Chromium
         if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium
