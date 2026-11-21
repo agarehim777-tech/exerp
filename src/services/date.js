@@ -1,9 +1,36 @@
-const paymentDateFormatter = new Intl.DateTimeFormat("az-AZ", {
-  day: "2-digit", month: "2-digit", year: "numeric",
-});
+// Chromium has no Azerbaijani date data: Intl "az-AZ" prints "2026-11-21" and month names as "M11" there,
+// while Node and Firefox print "21.11.2026" and "noyabr". These helpers build the CLDR Azerbaijani text by hand
+// so every browser shows the same dates.
+const AZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
+const AZ_MONTHS_SHORT = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
+const pad2 = (value) => String(value).padStart(2, "0");
 
+function validDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw new RangeError("Invalid time value");
+  return date;
+}
+
+/** 21.11.2026 */
 export function formatPaymentDate(date) {
-  return paymentDateFormatter.format(date);
+  const value = validDate(date);
+  return `${pad2(value.getDate())}.${pad2(value.getMonth() + 1)}.${value.getFullYear()}`;
+}
+
+/** noy */
+export function formatMonthShort(date) {
+  return AZ_MONTHS_SHORT[validDate(date).getMonth()];
+}
+
+/** noyabr 2026 */
+export function formatMonthYear(date) {
+  const value = validDate(date);
+  return `${AZ_MONTHS[value.getMonth()]} ${value.getFullYear()}`;
+}
+
+/** 21 noyabr */
+export function formatDayMonth(date) {
+  const value = validDate(date);
+  return `${pad2(value.getDate())} ${AZ_MONTHS[value.getMonth()]}`;
 }
 
 export function formatDateInput(date) {

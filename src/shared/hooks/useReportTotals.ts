@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
-import { toLocalIsoDate } from "../../services/date.js";
+import { formatMonthShort, toLocalIsoDate } from "../../services/date.js";
 import { useTenantRequestScope } from './useTenantRequestScope.ts';
 
 export interface ReportTotals {
@@ -57,9 +57,8 @@ export interface ReportTrendRow { label: string; revenue: number; expense: numbe
 export interface ReportRiskRow { id: string; area: string; title: string; amount: number; owner: string; action: string; priority: string; status: string }
 
 export function mapTrendRows(raw: unknown): ReportTrendRow[] {
-  const fmt = new Intl.DateTimeFormat("az-AZ", { month: "short" });
   return (Array.isArray(raw) ? raw : []).map((row: Record<string, unknown>) => ({
-    label: fmt.format(new Date(`${String(row.month)}T00:00:00`)),
+    label: formatMonthShort(new Date(`${String(row.month)}T00:00:00`)),
     revenue: Number(row.revenue) || 0,
     expense: Number(row.expense) || 0,
   }));

@@ -1657,6 +1657,12 @@
   gap: 5px;
 }
 
+.reports-trend-empty {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .reports-trend-bars span {
   width: min(22px, 42%);
   min-height: 4px;

@@ -1,11 +1,17 @@
-const moneyFormatter = new Intl.NumberFormat("az-AZ");
-const percentFormatter = new Intl.NumberFormat("az-AZ", { maximumFractionDigits: 1 });
+// Chromium (Chrome, Edge, the desktop app) ships no Azerbaijani number data: Intl "az-AZ" falls back to English
+// patterns there ("20,087.18", "AZN 0.00") while Node and Firefox print "20.087,18" and "0,00 ₼". Format with the
+// en-US engine, which every runtime has, and swap in the Azerbaijani separators so all browsers show the CLDR
+// Azerbaijani text.
+const azSeparators = (text) => text.replace(/[,.]/g, (ch) => (ch === "," ? "." : ","));
+const AZ_CURRENCY_SYMBOLS = { AZN: "₼", USD: "US$", EUR: "€", GBP: "£", JPY: "JP¥", CNY: "CN¥" };
+const moneyFormatter = new Intl.NumberFormat("en-US");
+const percentFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const cashFormatters = new Map();
 const normalizedText = new Map();
 const NORMALIZED_TEXT_LIMIT = 2048;
 
 export function money(value) {
-  return `${moneyFormatter.format(value)} ₼`;
+  return `${azSeparators(moneyFormatter.format(value))} ₼`;
 }
 
 const fixedFormatters = new Map();
@@ -13,22 +19,25 @@ const fixedFormatters = new Map();
 // (e.g. "AZN") for documents. Keep per-page money helpers out of modules.
 export function formatAmount(value, { currency = "₼", decimals = 2 } = {}) {
   if (!fixedFormatters.has(decimals)) {
-    fixedFormatters.set(decimals, new Intl.NumberFormat("az-AZ", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
+    fixedFormatters.set(decimals, new Intl.NumberFormat("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
   }
-  return `${fixedFormatters.get(decimals).format(Number(value) || 0)} ${currency}`;
+  return `${azSeparators(fixedFormatters.get(decimals).format(Number(value) || 0))} ${currency}`;
 }
 
 export function percent(value) {
-  return `${percentFormatter.format(value)}%`;
+  return `${azSeparators(percentFormatter.format(value))}%`;
 }
 
 export function cashAmount(value, currency = "AZN") {
   if (value == null) return "—";
   if (!cashFormatters.has(currency)) {
     if (cashFormatters.size >= 32) cashFormatters.delete(cashFormatters.keys().next().value);
-    cashFormatters.set(currency, new Intl.NumberFormat("az-AZ", { style: "currency", currency }));
+    // The en-US currency formatter validates the code (RangeError) and knows its minor units (JPY has none).
+    const digits = new Intl.NumberFormat("en-US", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    cashFormatters.set(currency, new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }));
   }
-  return cashFormatters.get(currency).format(Number(value));
+  const code = String(currency).toUpperCase();
+  return `${azSeparators(cashFormatters.get(currency).format(Number(value)))}\u00a0${AZ_CURRENCY_SYMBOLS[code] || code}`;
 }
 
 export function normalize(value) {

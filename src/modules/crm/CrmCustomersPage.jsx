@@ -8,6 +8,7 @@ import BirthDateInput from './BirthDateInput.jsx';
 import LoadMoreBar from '../../components/LoadMoreBar.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
 import { Badge, Button, Card, DataTable, Input, Select, StatCard, StatGrid, Toolbar } from '../../shared/ui/primitives.tsx';
+import { formatDayMonth } from '../../services/date.js';
 
 function timeAgo(iso) {
   if (!iso) return '—';
@@ -120,7 +121,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
         </div>
         {!birthdays.length ? <div className="u-color-text_secondary u-font-size-13px">Yaxınlaşan ad günü yoxdur.</div> : <div className="u-display-grid u-gap-8px">
           {birthdaysToday.map(({ customer }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)}><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><strong className="u-color-15803d">Bu gün 🎉</strong></Button>)}
-          {birthdaysUpcoming.map(({ customer, next }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)}><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{next.date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></Button>)}
+          {birthdaysUpcoming.map(({ customer, next }) => <Button variant="secondary" className="ui-record-action" key={customer.id} type="button" onClick={() => setOpenId(customer.id)}><span><strong>{customer.name}</strong><small className="u-display-block u-color-text_secondary">{customer.phone || 'Telefon yoxdur'}</small></span><span className="u-text-align-right"><strong>{formatDayMonth(next.date)}</strong><small className="u-display-block u-color-text_secondary">{next.days} gün qalıb</small></span></Button>)}
         </div>}
       </section>
 

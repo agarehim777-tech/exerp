@@ -46,3 +46,26 @@ it('reuses exact locale-sensitive short text and evicts old entries without cach
     expect(spy).toHaveBeenCalledTimes(2);
   } finally { spy.mockRestore(); }
 });
+
+it('prints Azerbaijani separators without relying on the runtime having az number data', () => {
+  // Chromium resolves "az-AZ" but formats it with English patterns ("20,087.18", "AZN 0.00").
+  // These literals are what every browser must show.
+  expect(money(20087.18)).toBe('20.087,18 ₼');
+  expect(money(-1234567.891)).toBe('-1.234.567,891 ₼');
+  expect(percent(67.84)).toBe('67,8%');
+  expect(cashAmount(0)).toBe('0,00\u00a0₼');
+  expect(cashAmount(-1234.5, 'USD')).toBe('-1.234,50\u00a0US$');
+  expect(cashAmount(1234.5, 'JPY')).toBe('1.235\u00a0JP¥');
+  expect(cashAmount(10, 'TRY')).toBe('10,00\u00a0TRY');
+});
+
+it('prints Azerbaijani dates and month names without relying on runtime locale data', async () => {
+  // Chromium prints "2026-11-21" and "M11" for Intl "az-AZ"; these literals are what every browser must show.
+  const { formatDayMonth, formatMonthShort, formatMonthYear } = await import('../services/date.js');
+  const day = new Date(2026, 10, 21);
+  expect(formatPaymentDate(day)).toBe('21.11.2026');
+  expect(formatMonthShort(day)).toBe('noy');
+  expect(formatMonthYear(day)).toBe('noyabr 2026');
+  expect(formatDayMonth(new Date(2026, 0, 5))).toBe('05 yanvar');
+  expect(() => formatMonthShort(new Date(NaN))).toThrow(RangeError);
+});
