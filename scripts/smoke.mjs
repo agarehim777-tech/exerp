@@ -34,17 +34,17 @@ for (let index = 0; index < navCount; index += 1) {
 
 await page.locator(".nav-item").nth(24).click();
 await page.waitForTimeout(150);
-await page.getByRole("button", { name: /Integrity yoxla/i }).click();
+await page.getByRole("button", { name: /Bütövlüyü yoxla/i }).click();
 await page.waitForTimeout(150);
-await page.getByRole("button", { name: /Go-live yoxla/i }).click();
+await page.getByRole("button", { name: /Hazırlığı yoxla/i }).click();
 await page.waitForTimeout(150);
 
 const settingsText = await page.locator("main").innerText();
 const settingsChecks = {
   systemHealth: settingsText.includes("Sistem Sağlamlığı"),
   goLive: settingsText.includes("Real Mühitə Çıxış"),
-  integrity: settingsText.includes("Integrity score"),
-  backup: settingsText.includes("Backup export"),
+  integrity: settingsText.includes("Bütövlük balı"),
+  backup: settingsText.includes("Ehtiyat nüsxənin ixracı"),
 };
 
 const mobileErrors = [];

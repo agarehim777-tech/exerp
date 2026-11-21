@@ -66,7 +66,7 @@ function buildOnboardingRows(onboarding: Row = {}, snapshot: Row = {}): Onboardi
     { id: "ONB-5", title: "Kassa və bank açılış balansı", owner: "Maliyyə", module: "finance", detail: "Kassa/bank hesabları maliyyə modulunda yaradılır." },
     { id: "ONB-6", title: "HR əməkdaşları və payroll", owner: "HR", module: "hr", detail: "Əməkdaş kartları, sənəd faizi və cash-neutral payroll accrual tamamlanır." },
     { id: "ONB-7", title: "Satış və kredit UAT ssenarisi", owner: "Satış/Maliyyə", module: "sales", detail: "Satışdan kredit, müqavilə, rezerv və təhvil axını test edilir." },
-    { id: "ONB-8", title: "Vendor və PO axını", owner: "Procurement", module: "vendors", detail: "Vendor, minimum stok və PO təsdiq/mədaxil axını hazırlanır." },
+    { id: "ONB-8", title: "Təchizatçı və PO axını", owner: "Procurement", module: "vendors", detail: "Təchizatçı, minimum stok və PO təsdiq/mədaxil axını hazırlanır." },
     { id: "ONB-9", title: "Hesabat və analitika export", owner: "Rəhbərlik", module: "reports", detail: "Executive hesabat, ROI və audit snapshot-ları export edilir." },
     { id: "ONB-10", title: "Backup və go-live yoxlaması", owner: "Administrator", module: "settings", detail: "Integrity, backup və go-live readiness yoxlaması saxlanılır." },
   ];
@@ -130,7 +130,7 @@ function buildHelpArticles(articles: Row[] | null | undefined = [], moduleGuides
       id: "HELP-START",
       title: "Sistemi real istifadəyə necə başlatmaq olar",
       category: "Onboarding",
-      answer: "Ayarlar, anbar, məhsul, rol, maliyyə, HR, satış/kredit, vendor, hesabat və backup addımlarını ardıcıl tamamlayın.",
+      answer: "Ayarlar, anbar, məhsul, rol, maliyyə, HR, satış/kredit, təchizatçı, hesabat və ehtiyat nüsxə addımlarını ardıcıl tamamlayın.",
       tags: ["qurulum", "checklist", "go-live"],
       createdAt: currentBusinessDate,
       generated: true,

@@ -369,13 +369,13 @@ function SettingsPage({
 
       <Panel className="settings-security-panel system-health-panel">
         <PanelHeader
-          title="Sistem Sağlamlığı & Backup"
-          subtitle="DB bütövlüyü, schema versiyası, backup/export və bərpa əməliyyatları"
+          title="Sistem sağlamlığı və ehtiyat nüsxə"
+          subtitle="DB bütövlüyü, sxem versiyası, ehtiyat nüsxə/ixrac və bərpa əməliyyatları"
           icon={ShieldCheck}
         />
         <section className="metric-grid four">
           <MetricCard
-            label="Integrity score"
+            label="Bütövlük balı"
             value={`${shownIntegrity.score ?? 100}%`}
             trend={shownIntegrity.status || "Yoxlanmayıb"}
             icon={ShieldCheck}
@@ -391,24 +391,24 @@ function SettingsPage({
             className="primary-btn"
             onClick={onRunIntegrityCheck}
             disabled={!canRunSystemBackup}
-            title={!canRunSystemBackup ? "Backup və integrity üçün icazə yoxdur" : ""}
+            title={!canRunSystemBackup ? "Ehtiyat nüsxə və bütövlük üçün icazə yoxdur" : ""}
           >
             <ShieldCheck size={16} />
-            Integrity yoxla
+            Bütövlüyü yoxla
           </button>
           <button
             type="button"
             className="secondary-btn"
             onClick={onExportBackup}
             disabled={!canRunSystemBackup}
-            title={!canRunSystemBackup ? "Backup export üçün icazə yoxdur" : ""}
+            title={!canRunSystemBackup ? "Ehtiyat nüsxənin ixracı üçün icazə yoxdur" : ""}
           >
             <Download size={16} />
-            Backup export
+            Ehtiyat nüsxənin ixracı
           </button>
-          <label className={`secondary-btn file-import-btn ${!canRunSystemBackup ? "disabled" : ""}`} title={!canRunSystemBackup ? "Backup import üçün icazə yoxdur" : ""}>
+          <label className={`secondary-btn file-import-btn ${!canRunSystemBackup ? "disabled" : ""}`} title={!canRunSystemBackup ? "Ehtiyat nüsxənin idxalı üçün icazə yoxdur" : ""}>
             <Upload size={16} />
-            Backup import
+            Ehtiyat nüsxənin idxalı
             <input
               type="file"
               accept="application/json"
@@ -441,7 +441,7 @@ function SettingsPage({
         />
         <section className="metric-grid four">
           <MetricCard
-            label="Go-live score"
+            label="Hazırlıq balı"
             value={`${shownGoLive.score ?? 0}%`}
             trend={shownGoLive.status || "Yoxlanmayıb"}
             icon={ShieldCheck}
@@ -454,7 +454,7 @@ function SettingsPage({
         <div className="backup-toolbar">
           <button type="button" className="primary-btn" onClick={onRunGoLiveCheck}>
             <ShieldCheck size={16} />
-            Go-live yoxla
+            Hazırlığı yoxla
           </button>
           <StatusBadge status={shownGoLive.status || "Yoxlanmayıb"} />
           <span className="module-action-note">
@@ -475,13 +475,13 @@ function SettingsPage({
 
       <Panel className="settings-security-panel production-hardening-panel" data-testid="production-hardening-panel">
         <PanelHeader
-          title="Production Hardening"
+          title="Sistemin möhkəmləndirilməsi"
           subtitle="Backend, backup/restore, deployment monitorinqi, provider inteqrasiyaları və kod parçalanması"
           icon={ShieldCheck}
         />
         <section className="metric-grid four">
           <MetricCard
-            label="Hardening score"
+            label="Möhkəmlik balı"
             value={`${shownHardening.score ?? 0}%`}
             trend={shownHardening.status || "Yoxlanmayıb"}
             icon={ShieldCheck}
@@ -501,7 +501,7 @@ function SettingsPage({
             title={!canRunSystemBackup ? "Production hardening üçün icazə yoxdur" : ""}
           >
             <ShieldCheck size={16} />
-            Hardening yoxla
+            Möhkəmliyi yoxla
           </button>
           <StatusBadge status={shownHardening.status || "Yoxlanmayıb"} />
           <span className="module-action-note">
@@ -509,7 +509,7 @@ function SettingsPage({
           </span>
         </div>
         <DataTable
-          columns={["Qat", "Status", "Score", "Detal", "Növbəti addım"]}
+          columns={["Qat", "Status", "Bal", "Detal", "Növbəti addım"]}
           rows={hardeningItems.map((item) => [
             <strong>{item.area}</strong>,
             <StatusBadge status={item.status} />,
@@ -521,7 +521,7 @@ function SettingsPage({
       </Panel>
 
       <Panel className="settings-security-panel">
-        <PanelHeader title="Backend DB & Audit Log" subtitle="Bütün əsas əməliyyatlar qalıcı local DB və audit reyestrinə yazılır" icon={ShieldCheck} />
+        <PanelHeader title="Verilənlər bazası və audit jurnalı" subtitle="Bütün əsas əməliyyatlar qalıcı local DB və audit reyestrinə yazılır" icon={ShieldCheck} />
         <div className="db-status-grid">
           <div>
             <span>Provider</span>

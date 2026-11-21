@@ -3,7 +3,7 @@ import { DataTable, Field, IconButton, Panel, TwoLine, qty } from "../procuremen
 import { formatDate } from "../../../services/date.js";
 
 export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, onConvert, saving }) {
-  const vendorName = (id) => vendors.find((vendor) => vendor.id === id)?.name || "Vendor";
+  const vendorName = (id) => vendors.find((vendor) => vendor.id === id)?.name || "Təchizatçı";
   const toggleVendor = (vendorId) => setForm({
     ...form,
     vendor_ids: form.vendor_ids.includes(vendorId)
@@ -20,14 +20,14 @@ export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onRe
           <Field label="Miqdar" type="number" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} required />
           <Field label="Təklif üçün son tarix" type="date" value={form.due_at} onChange={(value) => setForm({ ...form, due_at: value })} />
           <div className="procurement-page-styles-lines-block">
-            <strong>Vendorlar</strong>
+            <strong>Təchizatçılar</strong>
             {vendors.map((vendor) => (
               <label key={vendor.id} className="u-display-flex u-align-items-center u-gap-8px u-font-size-13px">
                 <input type="checkbox" checked={form.vendor_ids.includes(vendor.id)} onChange={() => toggleVendor(vendor.id)} />
                 {vendor.name}
               </label>
             ))}
-            {!vendors.length && <small>Əvvəl aktiv vendor yaradın.</small>}
+            {!vendors.length && <small>Əvvəl aktiv təchizatçı yaradın.</small>}
           </div>
           <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label="RFQ yarat" tone="primary" submit disabled={saving || !vendors.length} />
@@ -35,9 +35,9 @@ export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onRe
         </form>
       </Panel>
 
-      <Panel title="RFQ və vendor müqayisəsi" icon={BarChart3}>
+      <Panel title="RFQ və təchizatçı müqayisəsi" icon={BarChart3}>
         <DataTable
-          columns={["RFQ", "Məhsul", "Vendorlar", "Son tarix", "Status", "Əməl"]}
+          columns={["RFQ", "Məhsul", "Təchizatçılar", "Son tarix", "Status", "Əməl"]}
           empty="Təklif sorğusu yoxdur."
           rows={rfqs.map((rfq) => {
             const line = rfq.workflow_lines?.[0];
@@ -45,7 +45,7 @@ export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onRe
             return [
               <TwoLine title={rfq.record_no} subtitle={rfq.title} />,
               <TwoLine title={line?.description || "—"} subtitle={`${qty(line?.quantity)} vahid`} />,
-              <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
+              <TwoLine title={`${invited.length} təchizatçı`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
               rfq.due_at ? formatDate(rfq.due_at) : "—",
               <span className={`procurement-page-styles-badge procurement-page-styles-badge-${rfq.status === "approved" ? "success" : rfq.status === "rejected" ? "danger" : "info"}`}>{rfq.status}</span>,
               <div className="procurement-page-styles-row-actions">

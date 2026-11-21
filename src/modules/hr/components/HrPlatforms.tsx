@@ -21,7 +21,7 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
   onUpdateDocuments?: (employeeKey: string, documentsComplete: number) => void;
 }) {
   const [profileView, setProfileView] = useState("Ümumi");
-  if (!selectedRecord) return <EmptyState title={records.length ? "Əməkdaş seçilməyib" : "Filterə uyğun əməkdaş tapılmadı"} />;
+  if (!selectedRecord) return <EmptyState title={records.length ? "Əməkdaş seçilməyib" : "Filtrə uyğun əməkdaş tapılmadı"} />;
 
   const documentRows = selectedRecord.documentRows || getHrDocumentRows(selectedRecord);
   const profileViews: { label: string; icon: LucideIcon; count?: number }[] = [
@@ -160,7 +160,7 @@ export function HrAttendancePlatform({ rows }: { rows: Row[] }) {
         <div>
           <span>Nəzarət</span>
           <strong>{rows.filter((row) => row.status !== "Normal").length}</strong>
-          <small>HR follow-up</small>
+          <small>HR izləmə tapşırığı</small>
         </div>
       </div>
       <DataTable
@@ -286,7 +286,7 @@ export function HrPayrollPlatform({ rows, totalNet, onMarkPaid }: {
         </div>
       </div>
       <DataTable
-        columns={["Əməkdaş", "Şöbə", "Period", "Maaş", "Bonus", "Tutulma", "Net", "İşəgötürən xərci", "Status", ""]}
+        columns={["Əməkdaş", "Şöbə", "Dövr", "Maaş", "Bonus", "Tutulma", "Net", "İşəgötürən xərci", "Status", ""]}
         rows={rows.map((row) => [
           <strong>{row.employee}</strong>,
           row.department,
@@ -322,7 +322,7 @@ export function HrRecruitmentPlatform({ rows, onCreate }: { rows: Row[]; onCreat
   return (
     <div className="hr-platform-section">
       <div className="hr-operation-toolbar">
-        <span>Vakansiya pipeline və namizəd mərhələləri</span>
+        <span>Vakansiya axını və namizəd mərhələləri</span>
         <button className="secondary-btn" onClick={onCreate}><Plus size={16} /> Vakansiya əlavə et</button>
       </div>
       <div className="hr-recruitment-pipeline">
@@ -341,7 +341,7 @@ export function HrRecruitmentPlatform({ rows, onCreate }: { rows: Row[]; onCreat
         ))}
       </div>
       <DataTable
-        columns={["Rol", "Şöbə", "Namizəd", "Mərhələ", "Owner", "Hədəf tarix", "Status"]}
+        columns={["Rol", "Şöbə", "Namizəd", "Mərhələ", "Məsul", "Hədəf tarix", "Status"]}
         rows={rows.map((row) => [
           <strong>{row.role}</strong>,
           row.department,

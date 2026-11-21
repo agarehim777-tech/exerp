@@ -46,7 +46,7 @@ describe("useRfqActions", () => {
   it("validates the form before creating an RFQ", async () => {
     const { view, setError } = setup();
     await act(() => view.result.current.saveRfq(submitEvent()));
-    expect(setError).toHaveBeenLastCalledWith("RFQ adı, məhsul, miqdar və ən azı bir vendor tələb olunur.");
+    expect(setError).toHaveBeenLastCalledWith("RFQ adı, məhsul, miqdar və ən azı bir təchizatçı tələb olunur.");
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
@@ -63,7 +63,7 @@ describe("useRfqActions", () => {
     });
     expect(saved.record.record_no).toMatch(/^RFQ/);
     expect(view.result.current.rfqForm).toEqual(emptyRfq);
-    expect(setNotice).toHaveBeenLastCalledWith("Təklif sorğusu yaradıldı və vendor müqayisəsinə göndərildi.");
+    expect(setNotice).toHaveBeenLastCalledWith("Təklif sorğusu yaradıldı və təchizatçı müqayisəsinə göndərildi.");
     expect(setSaving.mock.calls).toEqual([[true], [false]]);
     expect(mocks.list).toHaveBeenCalledTimes(2);
   });

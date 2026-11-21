@@ -30,7 +30,7 @@ function authErrorMessage(error) {
 }
 
 const MODULES = [
-  { k: "CRM", d: "Müştəri münasibətləri, pipeline, tapşırıqlar", i: "M3 3h18v4H3zM3 10h11v11H3zM17 10h4v11h-4z" },
+  { k: "CRM", d: "Müştəri münasibətləri, satış mərhələləri, tapşırıqlar", i: "M3 3h18v4H3zM3 10h11v11H3zM17 10h4v11h-4z" },
   { k: "Satış", d: "Sifariş → Göndərmə → Faktura axını", i: "M3 3v18h18M7 15l4-4 4 4 5-6" },
   { k: "Anbar", d: "Stok, hərəkət, inventar auditi", i: "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10" },
   { k: "Mühasibat", d: "IFRS, ikili yazılış, hesab planı", i: "M4 4h16v16H4zM8 8h8M8 12h8M8 16h5" },

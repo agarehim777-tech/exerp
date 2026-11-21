@@ -104,7 +104,7 @@ export function WarehouseBalancesWorkspace({
         )}
         <div className="warehouse-balance-actions">
           <button type="button" className="secondary-btn" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
-            <Filter size={16} /> Filter
+            <Filter size={16} /> Filtr
           </button>
           <button type="button" className="secondary-btn" onClick={handlePrint}>
             <FileText size={16} /> Çap
@@ -122,7 +122,7 @@ export function WarehouseBalancesWorkspace({
             {actionMenuOpen && (
               <div className="warehouse-action-menu-popover">
                 <button type="button" onClick={() => { setActionMenuOpen(false); onReceiveStock(); }}><Plus size={15} /> Mədaxil et</button>
-                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenImport(); }}><Upload size={15} /> Toplu import</button>
+                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenImport(); }}><Upload size={15} /> Toplu idxal</button>
                 <button type="button" onClick={() => { setActionMenuOpen(false); onCreateProduct(); }}><Package size={15} /> Məhsul yarat</button>
                 <button type="button" onClick={() => { setActionMenuOpen(false); onOpenOperations(); }}><Warehouse size={15} /> Anbar idarəetməsi</button>
               </div>
@@ -212,7 +212,7 @@ export function WarehouseBalanceFilters({ filters, warehouses, categories, open,
         <select value={filters.serialStatus} onChange={(event) => onChange("serialStatus", event.target.value)}>
           <option value="all">Hamısı</option>
           <option value="serial">IMEI / serial</option>
-          <option value="batch">Batch</option>
+          <option value="batch">Partiya</option>
         </select>
       </label>
       <label className="warehouse-minimum-toggle">

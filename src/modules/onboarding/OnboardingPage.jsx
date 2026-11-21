@@ -16,7 +16,7 @@ export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
   const checklistGroups = [
     { title: "Əsas qurulum", steps: rows.steps.filter((step) => ["ONB-1", "ONB-2", "ONB-3", "ONB-4"].includes(step.id)) },
     { title: "Əməliyyat UAT", steps: rows.steps.filter((step) => ["ONB-5", "ONB-6", "ONB-7", "ONB-8"].includes(step.id)) },
-    { title: "Go-live", steps: rows.steps.filter((step) => ["ONB-9", "ONB-10"].includes(step.id)) },
+    { title: "İstifadəyə başlama", steps: rows.steps.filter((step) => ["ONB-9", "ONB-10"].includes(step.id)) },
   ];
 
   return (
@@ -36,7 +36,7 @@ export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
         <div>
           <span>Məsul</span>
           <strong>{activeStep?.owner || "Komanda"}</strong>
-          <small>{activeStep?.module ? pageMeta[activeStep.module]?.title : "Go-live"}</small>
+          <small>{activeStep?.module ? pageMeta[activeStep.module]?.title : "İstifadəyə başlama"}</small>
         </div>
         <button className="primary-btn" disabled={!activeStep?.module} onClick={() => activeStep?.module && onOpenModule(activeStep.module)}>
           <ChevronRight size={16} />
@@ -44,7 +44,7 @@ export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
         </button>
       </section>
       <Panel className="onboarding-panel">
-        <PanelHeader title="Yeni şirkət onboarding wizard" subtitle="Şirkət, anbar, rol, maliyyə, bildiriş və təlim addımları" icon={ShieldCheck} />
+        <PanelHeader title="Yeni şirkət üçün quraşdırma köməkçisi" subtitle="Şirkət, anbar, rol, maliyyə, bildiriş və təlim addımları" icon={ShieldCheck} />
         <div className="onboarding-progress">
           <ProgressRow value={rows.progress} caption={`${rows.completed}/${rows.steps.length} addım tamamlandı`} />
           {rows.nextStep && <TwoLine title="Növbəti addım" subtitle={`${rows.nextStep.title} · ${rows.nextStep.owner}`} />}

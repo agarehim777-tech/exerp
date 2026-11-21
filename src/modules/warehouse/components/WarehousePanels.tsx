@@ -166,7 +166,7 @@ export function WarehouseStockToolbar({ filter, setFilter }: { filter: string; s
     <div className="warehouse-stock-toolbar">
       <div>
         <h2>Anbar üzrə mallar</h2>
-        <p>Filter seçib ümumi və ya seçilmiş anbar üzrə qalıqlara baxın</p>
+        <p>Filtr seçib ümumi və ya seçilmiş anbar üzrə qalıqlara baxın</p>
       </div>
       <div className="tabs">
         {filters.map((item) => (

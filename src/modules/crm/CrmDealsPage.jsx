@@ -27,8 +27,8 @@ export default function CrmDealsPage() {
 
   if (!activePipeline) {
     return <div className="u-padding-40px u-text-align-center">
-      <p>Pipeline hazırlanır...</p>
-      <Button variant="ghost" onClick={seedDefault} className="u-background-action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-cursor-pointer u-font-weight-700">Standart pipeline yarat</Button>
+      <p>Satış mərhələləri hazırlanır...</p>
+      <Button variant="ghost" onClick={seedDefault} className="u-background-action u-color-surface u-border-0 u-padding-10px_18px u-border-radius-10px u-cursor-pointer u-font-weight-700">Standart satış mərhələlərini yarat</Button>
     </div>;
   }
 

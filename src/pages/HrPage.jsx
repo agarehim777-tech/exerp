@@ -142,7 +142,7 @@ export default function HrPage({
       {hrView === "Recruitment" && <Panel className="hr-planning-panel">
         <PanelHeader
           title="HR planlama"
-          subtitle="Vakansiya, onboarding, təlim və maaş forecast göstəriciləri"
+          subtitle="Vakansiya, adaptasiya, təlim və maaş proqnozu göstəriciləri"
           icon={UserCog}
         />
         <div className="hr-planning-summary">
@@ -152,7 +152,7 @@ export default function HrPage({
             <small>Şöbə yükünə görə</small>
           </div>
           <div>
-            <span>Növbəti maaş forecast</span>
+            <span>Növbəti maaş proqnozu</span>
             <strong>{money(hrPlanningRows.reduce((sum, row) => sum + row.payrollForecast, 0))}</strong>
             <small>8% artım modeli</small>
           </div>
@@ -163,7 +163,7 @@ export default function HrPage({
           </div>
         </div>
         <DataTable
-          columns={["Şöbə", "Headcount", "Rəhbər", "Orta KPI", "Onboarding", "Maaş forecast", "Status"]}
+          columns={["Şöbə", "İşçi sayı", "Rəhbər", "Orta KPI", "Adaptasiya", "Maaş proqnozu", "Status"]}
           rows={hrPlanningRows.map((row) => [
             <strong>{row.department}</strong>,
             row.headcount,

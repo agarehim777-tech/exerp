@@ -366,7 +366,7 @@ export function ReportsPage({
           <span>Modul</span>
           <Select aria-label="Modul" value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
             <option>Hamısı</option><option>Satış</option><option>Kredit</option><option>Anbar</option>
-            <option>Vendor / PO</option><option>İstehsalat</option><option>Maliyyə</option><option>Faktura</option><option>HR</option>
+            <option>Təchizatçı / PO</option><option>İstehsalat</option><option>Maliyyə</option><option>Faktura</option><option>HR</option>
           </Select>
         </label>
         <label>
@@ -381,7 +381,7 @@ export function ReportsPage({
         </Button>
       </section>
 
-      {live.error && <div role="alert" className="inline-alert danger">Hesabat məlumatları yüklənmədi. Export dayandırılıb. {live.error.message}</div>}
+      {live.error && <div role="alert" className="inline-alert danger">Hesabat məlumatları yüklənmədi. İxrac dayandırılıb. {live.error.message}</div>}
       {live.degraded && !live.error && <div className="inline-alert warning">Canlı hesabat bağlantısı zəifləyib. «Yenilə» ilə təkrar yoxlayın.</div>}
       {exportError && <div className="inline-alert danger">{exportError}</div>}
 

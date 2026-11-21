@@ -69,7 +69,7 @@ describe("warehouse domain logic", () => {
 
   it("builds WMS rows with SKU, barcode and serial mode", () => {
     const [cable, phone] = buildWarehouseWmsRows(stock.W1);
-    expect(cable).toMatchObject({ sku: "SKU-KABEL-001", barcode: "869100000001", bin: "A-01", serialMode: "Batch", available: 18, status: "Normal" });
+    expect(cable).toMatchObject({ sku: "SKU-KABEL-001", barcode: "869100000001", bin: "A-01", serialMode: "Partiya", available: 18, status: "Normal" });
     expect(phone).toMatchObject({ serialMode: "IMEI/Serial", reorderQty: 9, status: "Sifariş aç" });
     expect(isSerialTrackedProduct({ price: 1500 })).toBe(true);
     expect(isSerialTrackedProduct({ price: 9999, serialTracked: false })).toBe(false);

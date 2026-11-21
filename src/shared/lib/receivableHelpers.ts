@@ -82,7 +82,7 @@ function getReceivableCollectionStatus({ amount = 0, overdueDays = 0, type = "De
 function getReceivableNextAction(row: RiskInput): string {
   if (Number(row.amount || 0) <= 0) return "Arxivdə saxla";
   if (row.type === "Kreditor") {
-    return Number(row.overdueDays || 0) > 0 ? "Vendor ödənişini bağla" : "Ödəniş tarixini təsdiqlə";
+    return Number(row.overdueDays || 0) > 0 ? "Təchizatçı ödənişini bağla" : "Ödəniş tarixini təsdiqlə";
   }
   if (Number(row.overdueDays || 0) > 90) return "Hüquqi mərhələyə ötür";
   if (Number(row.overdueDays || 0) > 30) return "Menecer eskalasiyası";
@@ -259,7 +259,7 @@ function buildReceivableRows({ customers = [], orders = [], credits = [], vendor
         sourceTypeLabel: "Vendor/PO",
         amount: pendingAmount,
         overdueDays,
-        owner: "Vendor/Maliyyə",
+        owner: "Təchizatçı/Maliyyə",
         status: pendingAmount > 0 ? "Ödəniş gözləyir" : vendor.status,
         detail: latestPo ? `${vendorPos.length} PO · son: ${latestPo.id}` : `${vendor.sku} SKU · PO yoxdur`,
         poIds: payablePos.map((po) => po.id),

@@ -101,7 +101,7 @@ function VendorManagementPage({
   return (
     <div className="stack vendor-module">
       <section className="metric-grid four">
-        <MetricCard label="Aktiv vendorlar" value={activeVendorCount} trend={`${normalizedVendors.length} ümumi`} icon={Building2} tone="primary" />
+        <MetricCard label="Aktiv təchizatçılar" value={activeVendorCount} trend={`${normalizedVendors.length} ümumi`} icon={Building2} tone="primary" />
         <MetricCard label="Ümumi SKU" value={total(normalizedVendors, "sku")} trend={`${warehouses.length} anbar`} icon={Boxes} tone="info" />
         <MetricCard label="Kvota icrası" value={percent(quotaRatio)} trend={`Q${currentBusinessQuarter} ${currentBusinessYear}`} icon={TrendingUp} tone="success" />
         <MetricCard
@@ -115,7 +115,7 @@ function VendorManagementPage({
 
       <Panel className="vendor-command-panel">
         <div className="vendor-command-head">
-          <PanelHeader title="Vendor idarəetməsi" subtitle="Təchizatçı profili, kontakt, kvota, PO və anbar mədaxil axını bir ekrandadır" icon={Building2} />
+          <PanelHeader title="Təchizatçı idarəetməsi" subtitle="Təchizatçı profili, kontakt, kvota, PO və anbar mədaxil axını bir ekrandadır" icon={Building2} />
           <div className="vendor-command-actions">
             <button className="secondary-btn" type="button" disabled={!canManagePo || products.length === 0 || warehouses.length === 0} onClick={onOpenPurchaseOrderModal}>
               <Package size={16} />
@@ -123,14 +123,14 @@ function VendorManagementPage({
             </button>
             <button className="primary-btn" type="button" disabled={!canManageVendors} onClick={onCreateVendor}>
               <Plus size={16} />
-              Yeni vendor
+              Yeni təchizatçı
             </button>
           </div>
         </div>
         <div className="vendor-toolbar">
           <label className="vendor-search">
             <Search size={16} />
-            <input value={vendorQuery} placeholder="Vendor, ölkə, kontakt üzrə axtar" onChange={(event) => setVendorQuery(event.target.value)} />
+            <input value={vendorQuery} placeholder="Təchizatçı, ölkə, kontakt üzrə axtar" onChange={(event) => setVendorQuery(event.target.value)} />
           </label>
           <label>
             <span>Status</span>
@@ -156,9 +156,9 @@ function VendorManagementPage({
 
       <section className="vendor-workspace">
         <Panel className="vendor-registry-panel">
-          <PanelHeader title="Vendor reyestri" subtitle={`${visibleVendors.length} nəticə`} icon={FileText} />
+          <PanelHeader title="Təchizatçı reyestri" subtitle={`${visibleVendors.length} nəticə`} icon={FileText} />
           <DataTable
-            columns={["Vendor", "Kontakt", "SKU", "Kvota", "Lead time", "Status", "Əməliyyat"]}
+            columns={["Təchizatçı", "Kontakt", "SKU", "Kvota", "Çatdırılma müddəti", "Status", "Əməliyyat"]}
             rows={visibleVendors.map((vendor) => {
               const key = getVendorKey(vendor);
               const ratio = vendor.quota > 0 ? (vendor.sold / vendor.quota) * 100 : 0;
@@ -190,7 +190,7 @@ function VendorManagementPage({
                     className="text-btn danger"
                     type="button"
                     disabled={!canManageVendors || vendorHasOpenPo}
-                    title={vendorHasOpenPo ? "Açıq PO olan vendor silinə bilməz" : "Vendoru sil"}
+                    title={vendorHasOpenPo ? "Açıq PO olan təchizatçı silinə bilməz" : "Vendoru sil"}
                     onClick={() => onDeleteVendor(key)}
                   >
                     Sil
@@ -202,7 +202,7 @@ function VendorManagementPage({
         </Panel>
 
         <Panel className="vendor-profile-panel">
-          <PanelHeader title="Vendor profili" subtitle="Seçilən vendor üzrə əməliyyat görünüşü" icon={Eye} />
+          <PanelHeader title="Təchizatçı profili" subtitle="Seçilən təchizatçı üzrə əməliyyat görünüşü" icon={Eye} />
           {selectedVendor ? (
             <div className="vendor-profile-card">
               <div className="vendor-profile-head">
@@ -214,7 +214,7 @@ function VendorManagementPage({
               </div>
               <div className="vendor-profile-grid">
                 <TwoLine title={selectedVendor.contact || "Kontakt yoxdur"} subtitle={selectedVendor.phone || selectedVendor.email || "Əlaqə əlavə edilməyib"} />
-                <TwoLine title={`${selectedVendor.leadTimeDays || 0} gün`} subtitle="Orta lead time" />
+                <TwoLine title={`${selectedVendor.leadTimeDays || 0} gün`} subtitle="Orta çatdırılma müddəti" />
                 <TwoLine title={selectedVendor.paymentTerms || "Şərt yoxdur"} subtitle="Ödəniş şərti" />
                 <TwoLine title={`${selectedVendorPurchaseOrders.length} PO`} subtitle={`${selectedVendorPurchaseOrders.filter(isPurchaseOrderOpen).length} açıq`} />
               </div>
@@ -235,7 +235,7 @@ function VendorManagementPage({
                   className="secondary-btn danger-outline"
                   type="button"
                   disabled={!canManageVendors || selectedVendorHasOpenPo}
-                  title={selectedVendorHasOpenPo ? "Açıq PO olan vendor silinə bilməz" : "Vendoru sil"}
+                  title={selectedVendorHasOpenPo ? "Açıq PO olan təchizatçı silinə bilməz" : "Vendoru sil"}
                   onClick={() => onDeleteVendor(getVendorKey(selectedVendor))}
                 >
                   <Trash2 size={16} />
@@ -256,18 +256,18 @@ function VendorManagementPage({
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="Bu vendor üzrə təcili satınalma ehtiyacı yoxdur" />
+                  <EmptyState title="Bu təchizatçı üzrə təcili satınalma ehtiyacı yoxdur" />
                 )}
               </div>
             </div>
           ) : (
-            <EmptyState title="Vendor seçilməyib" />
+            <EmptyState title="Təchizatçı seçilməyib" />
           )}
         </Panel>
       </section>
 
       <Panel className="procurement-panel">
-        <PanelHeader title="Procurement planı" subtitle="Anbar qalığı və satış tempinə görə vendor üzrə sifariş tövsiyələri" icon={Package} />
+        <PanelHeader title="Procurement planı" subtitle="Anbar qalığı və satış tempinə görə təchizatçı üzrə sifariş tövsiyələri" icon={Package} />
         <div className="procurement-actions">
           <button
             type="button"
@@ -287,7 +287,7 @@ function VendorManagementPage({
             <small>{purchaseNeed.length} məhsul üçün PO açıla bilər</small>
           </div>
           <div>
-            <span>Vendor riski</span>
+            <span>Təchizatçı riski</span>
             <strong>{vendorRiskCount}</strong>
             <small>Kvota və icra nəzarəti</small>
           </div>
@@ -298,7 +298,7 @@ function VendorManagementPage({
           </div>
         </div>
         <DataTable
-          columns={["Məhsul", "Vendor", "Satış", "Satış üçün", "Minimum", "Tövsiyə", "Sifarişdə", "Büdcə", "Status", "PO"]}
+          columns={["Məhsul", "Təchizatçı", "Satış", "Satış üçün", "Minimum", "Tövsiyə", "Sifarişdə", "Büdcə", "Status", "PO"]}
           rows={procurementRows.slice(0, 10).map((row) => [
             <strong>{row.product}</strong>,
             row.vendor,
@@ -325,7 +325,7 @@ function VendorManagementPage({
           columns={["PO", "Mənbə", "Məhsul", "Anbar", "Say", "Alış", "Məbləğ", "Gözlənən", "Status", "Əməliyyat"]}
           rows={filteredPurchaseOrders.map((po) => [
             <strong>{po.id}</strong>,
-            <TwoLine title={po.vendor} subtitle={po.supplierSource || po.procurementType || "Vendor PO"} />,
+            <TwoLine title={po.vendor} subtitle={po.supplierSource || po.procurementType || "Təchizatçı PO"} />,
             po.product,
             po.warehouseName,
             `${po.qty} ədəd`,

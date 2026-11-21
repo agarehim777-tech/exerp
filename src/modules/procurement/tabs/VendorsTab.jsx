@@ -8,13 +8,13 @@ export function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCanc
   return (
     <section className="procurement-page-styles-stack">
       <div className="procurement-page-styles-section-actions">
-        <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni vendor"} tone={showForm ? "ghost" : "primary"} onClick={() => {
+        <IconButton icon={showForm ? X : Plus} label={showForm ? "Formanı bağla" : "Yeni təchizatçı"} tone={showForm ? "ghost" : "primary"} onClick={() => {
           if (showForm && editingId) onCancel();
           setShowForm((value) => !value);
         }} />
       </div>
       {showForm && (
-      <Panel title={editingId ? "Vendoru redaktə et" : "Yeni vendor"} icon={Building2}>
+      <Panel title={editingId ? "Təchizatçını redaktə et" : "Yeni təchizatçı"} icon={Building2}>
         <form onSubmit={onSubmit} className="procurement-page-styles-form">
           <Field label="Ad" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
           <Field label="VÖEN" value={form.tax_id} onChange={(value) => setForm({ ...form, tax_id: value })} />
@@ -23,7 +23,7 @@ export function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCanc
           <Field label="Ünvan" value={form.address} onChange={(value) => setForm({ ...form, address: value })} wide />
           <label className="procurement-page-styles-check-line">
             <input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} />
-            Aktiv vendor kimi saxla
+            Aktiv təchizatçı kimi saxla
           </label>
           <div className="procurement-page-styles-form-actions">
             <IconButton icon={Save} label={editingId ? "Yadda saxla" : "Əlavə et"} tone="primary" disabled={saving} submit />
@@ -33,10 +33,10 @@ export function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCanc
       </Panel>
       )}
 
-      <Panel title="Vendor reyestri" icon={Building2}>
+      <Panel title="Təchizatçı reyestri" icon={Building2}>
         <DataTable
-          columns={["Vendor", "Əlaqə", "PO sayı", "Status", "Əməl"]}
-          empty="Vendor yoxdur. Sol tərəfdən ilk vendoru yaradın."
+          columns={["Təchizatçı", "Əlaqə", "PO sayı", "Status", "Əməl"]}
+          empty="Təchizatçı yoxdur. Sol tərəfdən ilk təchizatçını yaradın."
           rows={vendors.map((vendor) => {
             const vendorPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
             return [
@@ -47,7 +47,7 @@ export function VendorsTab({ vendors, form, setForm, editingId, onSubmit, onCanc
                 {vendor.is_active ? "Aktiv" : "Passiv"}
               </span>,
               <div key="actions" className="procurement-page-styles-row-actions">
-                <IconButton icon={Pencil} label="Edit" onClick={() => { setShowForm(true); onEdit(vendor); }} />
+                <IconButton icon={Pencil} label="Düzəliş" onClick={() => { setShowForm(true); onEdit(vendor); }} />
                 <IconButton icon={vendor.is_active ? XCircle : CheckCircle2} label={vendor.is_active ? "Passiv" : "Aktiv"} onClick={() => onToggle(vendor)} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(vendor)} tone="danger" />
               </div>,

@@ -383,7 +383,7 @@ function ExpensesPanel({ book, canApprove }) {
         <label className="ui-field"><span>Bitmə tarixi</span><Input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={event => setFilters({ ...filters, dateTo: event.target.value })}  /></label>
         <Button type="button" variant="secondary" onClick={() => setFilters({ search: "", category: "", status: "", dateFrom: "", dateTo: "" })}>Təmizlə</Button>
       </div>
-      <DataTable label="Xərclər" rows={visibleExpenses} emptyText="Filterə uyğun xərc yoxdur."
+      <DataTable label="Xərclər" rows={visibleExpenses} emptyText="Filtrə uyğun xərc yoxdur."
         columns={[
           { key: 'date', label: 'Tarix', nowrap: true }, { key: 'category', label: 'Kateqoriya' },
           { key: 'description', label: 'Təsvir', sticky: true }, { key: 'amount', label: 'Məbləğ', align: 'right' },

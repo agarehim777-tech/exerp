@@ -42,11 +42,11 @@ export default function SupportPage({
         <MetricCard label="Açıq sorğu" value={openTickets.length} icon={MessageSquare} tone="primary" />
         <MetricCard label="Yüksək prioritet" value={highPriority.length} icon={CircleAlert} tone={highPriority.length ? "warning" : "success"} />
         <MetricCard label="Orta SLA" value={`${avgSla} saat`} icon={CalendarClock} tone="info" />
-        <MetricCard label="Bağlı task" value={linkedTickets.length} trend={`${new Set(enrichedTickets.map((ticket) => ticket.module)).size} modul`} icon={ShieldCheck} tone="success" />
+        <MetricCard label="Bağlı tapşırıq" value={linkedTickets.length} trend={`${new Set(enrichedTickets.map((ticket) => ticket.module)).size} modul`} icon={ShieldCheck} tone="success" />
       </section>
       <section className="support-workspace">
         <Panel className="support-panel support-queue-panel" data-testid="support-task-panel">
-          <PanelHeader title="Support və task növbəsi" subtitle="Sifariş, kredit və müştəriyə bağlı operativ tapşırıqlar" icon={MessageSquare} />
+          <PanelHeader title="Dəstək və tapşırıq növbəsi" subtitle="Sifariş, kredit və müştəriyə bağlı operativ tapşırıqlar" icon={MessageSquare} />
           <DataTable
             columns={["Sorğu", "Bağlantı", "Prioritet", "Comment", "Məsul", "SLA", "Status", "Aç"]}
             rows={enrichedTickets.map((ticket) => [
@@ -133,7 +133,7 @@ export default function SupportPage({
                 <textarea
                   value={commentDraft}
                   onChange={(event) => setCommentDraft(event.target.value)}
-                  placeholder="Task üzrə comment yazın..."
+                  placeholder="Tapşırıq üzrə şərh yazın..."
                   data-testid="support-comment-input"
                 />
                 <button className="primary-btn" onClick={submitComment} data-testid="support-comment-submit">
@@ -143,7 +143,7 @@ export default function SupportPage({
               </div>
             </>
           ) : (
-            <EmptyState title="Support task yoxdur" />
+            <EmptyState title="Dəstək tapşırığı yoxdur" />
           )}
         </Panel>
       </section>

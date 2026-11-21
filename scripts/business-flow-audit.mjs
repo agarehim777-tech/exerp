@@ -730,8 +730,8 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     const [account] = await waitForCanonical(() => read('cash_accounts', '&name=eq.' + encodeURIComponent(marker)), rows => rows.length === 1, 'Purchase payment account was not persisted');
 
     await selectPath(page, '/satinalma');
-    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
-    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    await page.getByRole('button', { name: 'Təchizatçılar', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni təchizatçı', exact: true }).click();
     const vendorForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
     await vendorForm.getByLabel('Ad', { exact: true }).fill(marker);
     await vendorForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
@@ -745,7 +745,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
     await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
-    await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('50');
+    await poForm.getByLabel('Fakturada vahid qiymət', { exact: true }).fill('50');
     await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
     const [po] = await waitForCanonical(() => read('purchase_orders', '&po_number=eq.' + poNumber), rows => rows.length === 1, 'Purchase PO was not persisted');
     await page.locator('main.main tr').filter({ hasText: poNumber }).getByRole('button', { name: 'Təsdiq', exact: true }).click();
@@ -792,7 +792,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     } else {
       await page.locator('main.main tr').filter({ hasText: invoiceNumber }).getByRole('button', { name: 'Ödəniş et', exact: true }).click();
     }
-    const payment = page.getByRole('dialog', { name: viaReceivables ? 'Borcun bağlanışı' : 'Vendor fakturasının ödənişi', exact: true });
+    const payment = page.getByRole('dialog', { name: viaReceivables ? 'Borcun bağlanışı' : 'Təchizatçı fakturasının ödənişi', exact: true });
     await payment.getByLabel(viaReceivables ? 'Borc bağlanışı hesabı' : 'Ödəniş hesabı', { exact: true }).selectOption(account.id);
     const paymentCommand = viaReceivables ? 'settle_receivable_atomic' : 'pay_vendor_invoice_atomic';
     const response = await auditResponse(page,
@@ -838,18 +838,18 @@ async function auditVendorLifecycle(browser) {
     await createWarehouseWithStock(page);
     const fixture = fixtureByPage.get(page);
     await selectPath(page, '/satinalma');
-    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
+    await page.getByRole('button', { name: 'Təchizatçılar', exact: true }).click();
     const suffix = crypto.randomUUID().slice(0, 8);
     const vendorName = `QA Vendor ${suffix}`;
     const updatedName = `QA Vendor Updated ${suffix}`;
-    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni təchizatçı', exact: true }).click();
     const vendorForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
     await vendorForm.getByLabel('Ad', { exact: true }).fill(vendorName);
     await vendorForm.getByLabel('Telefon', { exact: true }).fill('0501112233');
     await vendorForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
     let state = await waitForCanonical(readVendorState, s => s.vendors.some(v => v.name === vendorName), 'Vendor create did not persist');
     const vendor = state.vendors.find(v => v.name === vendorName);
-    await page.locator('main.main tr').filter({ hasText: vendorName }).getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.locator('main.main tr').filter({ hasText: vendorName }).getByRole('button', { name: 'Düzəliş', exact: true }).click();
     await vendorForm.getByLabel('Ad', { exact: true }).fill(updatedName);
     await vendorForm.getByLabel('Email', { exact: true }).fill(`qa-${suffix}@example.invalid`);
     await vendorForm.getByRole('button', { name: 'Yadda saxla', exact: true }).click();
@@ -865,7 +865,7 @@ async function auditVendorLifecycle(browser) {
     await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
     await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
-    await poForm.getByLabel('Vahid invoice qiyməti', { exact: true }).fill('70');
+    await poForm.getByLabel('Fakturada vahid qiymət', { exact: true }).fill('70');
     await poForm.getByRole('button', { name: 'PO yarat', exact: true }).click();
     // The page inserts the PO header and then its lines in a second request; wait for both.
     state = await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.po_number === poNumber
@@ -876,13 +876,13 @@ async function auditVendorLifecycle(browser) {
     await page.locator('main.main tr').filter({ hasText: poNumber }).getByRole('button', { name: 'Təsdiq', exact: true }).click();
     await waitForCanonical(readVendorState, s => s.purchaseOrders.some(p => p.id === po.id && p.status === 'approved'), 'Vendor PO approval did not persist');
 
-    await page.getByRole('button', { name: 'Vendorlar', exact: true }).click();
+    await page.getByRole('button', { name: 'Təchizatçılar', exact: true }).click();
     await page.locator('main.main tr').filter({ hasText: updatedName }).getByRole('button', { name: 'Sil', exact: true }).click();
     state = await waitForCanonical(readVendorState, s => s.vendors.some(v => v.id === vendor.id && v.is_active === false), 'Historical vendor was not deactivated');
     assert(state.purchaseOrders.some(p => p.id === po.id && p.vendor_id === vendor.id), 'Vendor deactivation broke PO history');
 
     const disposableName = `QA Disposable Vendor ${suffix}`;
-    await page.getByRole('button', { name: 'Yeni vendor', exact: true }).click();
+    await page.getByRole('button', { name: 'Yeni təchizatçı', exact: true }).click();
     const disposableForm = page.locator('form').filter({ has: page.getByLabel('Ad', { exact: true }) });
     await disposableForm.getByLabel('Ad', { exact: true }).fill(disposableName);
     await disposableForm.getByRole('button', { name: 'Əlavə et', exact: true }).click();
@@ -1179,7 +1179,7 @@ async function auditWarehouseImport(browser) {
 
     await selectPath(page, '/anbar/mehsullar');
     await page.getByRole('button', { name: 'Əməliyyatlar', exact: true }).click();
-    await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: /Toplu import/ }).click();
+    await page.locator('.warehouse-action-menu-popover').getByRole('button', { name: /Toplu idxal/ }).click();
     const importModal = page.locator('[role="dialog"]');
     const sku = `IMP-${suffix}-001`.toUpperCase();
     const csv = [

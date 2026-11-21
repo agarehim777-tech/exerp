@@ -23,7 +23,7 @@ function formatDate(value) {
 function periodErrorMessage(error, fallback) {
   const message = error?.message || "";
   if (/accounting_period_locks|schema cache|PGRST205/i.test(message)) {
-    return "Period bağlanışı bazada aktiv deyil. Son Supabase migration-ını tətbiq edin.";
+    return "Dövr bağlanışı bazada aktiv deyil. Son Supabase migration-ını tətbiq edin.";
   }
   if (/permission_denied/i.test(message)) return "Bu əməliyyat üçün şirkət administratoru icazəsi tələb olunur.";
   return message || fallback;
@@ -53,7 +53,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
       setError("");
       setLocks(await listAccountingPeriodLocks(tenantId));
     } catch (loadError) {
-      setError(periodErrorMessage(loadError, "Period tarixçəsi yüklənmədi"));
+      setError(periodErrorMessage(loadError, "Dövr tarixçəsi yüklənmədi"));
     }
   }, [tenantId]);
 
@@ -70,7 +70,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
       await loadLocks();
       notify?.("Seçilmiş tarix daxil olmaqla bütün keçmiş maliyyə dövrü bağlandı.", "success");
     } catch (closeError) {
-      setError(periodErrorMessage(closeError, "Period bağlanmadı"));
+      setError(periodErrorMessage(closeError, "Dövr bağlanmadı"));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
       await loadLocks();
       notify?.("Maliyyə periodu yenidən açıldı və audit qeydi yaradıldı.", "success");
     } catch (reopenError) {
-      setError(periodErrorMessage(reopenError, "Period yenidən açılmadı"));
+      setError(periodErrorMessage(reopenError, "Dövr yenidən açılmadı"));
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
   return (
     <Panel className="accounting-period-panel">
       <PanelHeader
-        title="Period bağlanışı"
+        title="Dövr bağlanışı"
         subtitle="Seçilmiş tarix daxil olmaqla həmin günə qədər bütün keçmiş maliyyə əməliyyatları bloklanır."
         icon={CalendarClock}
       />

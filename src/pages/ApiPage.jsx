@@ -30,7 +30,7 @@ export default function ApiPage({
       <Panel className="api-console-panel" data-testid="api-console-panel">
         <PanelHeader
           title="API konsolu"
-          subtitle="Endpoint health, test nəticələri, retry və secret idarəetməsi"
+          subtitle="Endpoint vəziyyəti, test nəticələri, təkrar cəhd və gizli açar idarəetməsi"
           icon={ShieldCheck}
         />
         <div className="db-status-grid">
@@ -47,7 +47,7 @@ export default function ApiPage({
             <strong>{dbMeta.version || 1}</strong>
           </div>
           <div>
-            <span>Queue</span>
+            <span>Növbə</span>
             <strong>{queueTotal}</strong>
           </div>
           <div>
@@ -113,7 +113,7 @@ export default function ApiPage({
         </Panel>
 
         <Panel className="api-testlog-panel" data-testid="api-testlog-panel">
-          <PanelHeader title="Test nəticələri və retry logu" subtitle={`${logs.length} log · ${failedLogs.length} uğursuz cəhd`} icon={FileText} />
+          <PanelHeader title="Test nəticələri və təkrar cəhd jurnalı" subtitle={`${logs.length} qeyd · ${failedLogs.length} uğursuz cəhd`} icon={FileText} />
           <DataTable
             columns={["Webhook", "Rejim", "Cavab", "Latency", "Retry", "Tarix"]}
             rows={logs.slice(0, 8).map((log) => [

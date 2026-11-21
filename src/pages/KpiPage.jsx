@@ -52,8 +52,8 @@ export default function KpiPage({
       {error && <div role="alert">{error.message}<Button variant="secondary" onClick={onRetry}>Yenidən cəhd et</Button></div>}
       <section className="metric-grid four">
         <MetricCard label="Şirkət ümumi KPI" value={percent(companyKpi)} trend={`${ranking.length} əməkdaş üzrə`} icon={TrendingUp} tone="success" />
-        <MetricCard label="Period score" value={percent(activePeriod.companyScore || 0)} trend={activePeriod.period || getKpiPeriodKey()} icon={CalendarClock} tone="primary" />
-        <MetricCard label="Payout fondu" value={money(activePeriod.payoutAmount || 0)} trend={`${payoutRows.length} əməkdaş`} icon={Wallet} tone="warning" />
+        <MetricCard label="Dövr balı" value={percent(activePeriod.companyScore || 0)} trend={activePeriod.period || getKpiPeriodKey()} icon={CalendarClock} tone="primary" />
+        <MetricCard label="Ödəniş fondu" value={money(activePeriod.payoutAmount || 0)} trend={`${payoutRows.length} əməkdaş`} icon={Wallet} tone="warning" />
         <MetricCard label="Top performer" value={topPerformer?.name || "Məlumat yoxdur"} trend={topPerformer ? `${topPerformer.kpi}% KPI` : "Əməkdaş əlavə edilməyib"} icon={ShieldCheck} tone="primary" />
       </section>
 
@@ -74,17 +74,17 @@ export default function KpiPage({
         </Panel>
 
         <Panel className="kpi-period-panel" data-testid="kpi-period-panel">
-          <PanelHeader title="Period bağlanışı" subtitle="Bağla, təsdiq et və payout-u maliyyəyə yaz" icon={CalendarClock} />
+          <PanelHeader title="Dövr bağlanışı" subtitle="Bağla, təsdiq et və ödənişi maliyyəyə yaz" icon={CalendarClock} />
           <div className="kpi-period-grid">
             <div className="kpi-period-card">
-              <span>Period</span>
+              <span>Dövr</span>
               <strong>{activePeriod.period || getKpiPeriodKey()}</strong>
               <small>{activePeriod.closedAt || "Açıq hesablama"}</small>
             </div>
             <div className="kpi-period-card">
               <span>Status</span>
               <StatusBadge status={activePeriod.status || "Açıq period"} />
-              <small>{percent(activePeriod.companyScore || 0)} score</small>
+              <small>{percent(activePeriod.companyScore || 0)} bal</small>
             </div>
             <div className="kpi-period-card">
               <span>Təsdiq</span>
@@ -92,7 +92,7 @@ export default function KpiPage({
               <small>{activePeriod.approvedBy || "Təsdiq edən yoxdur"}</small>
             </div>
             <div className="kpi-period-card">
-              <span>Payout</span>
+              <span>Ödəniş</span>
               <StatusBadge status={activePeriod.payoutStatus || "Gözləyir"} />
               <small>{money(activePeriod.payoutAmount || 0)}</small>
             </div>
@@ -136,7 +136,7 @@ export default function KpiPage({
       <Panel className="kpi-payout-plan-panel" data-testid="kpi-payout-plan-panel">
         <PanelHeader title="Əməkdaş payout planı" subtitle="HR performans bonusu və satış bonuslarının yekun ödəniş siyahısı" icon={Wallet} />
         <DataTable
-          columns={["Əməkdaş", "KPI", "Satış", "Performans bonusu", "Satış bonusu", "Payout", "Status"]}
+          columns={["Əməkdaş", "KPI", "Satış", "Performans bonusu", "Satış bonusu", "Ödəniş", "Status"]}
           rows={rankingSource.map((row) => [
             <AvatarLine initials={row.initials} title={row.name} subtitle={`${row.department} · ${row.position}`} />,
             <strong>{percent(row.kpi || 0)}</strong>,
@@ -164,9 +164,9 @@ export default function KpiPage({
           </div>
         </Panel>
         <Panel className="kpi-period-history-panel">
-          <PanelHeader title="Period tarixçəsi" subtitle="Bağlanmış KPI periodları və payout statusu" icon={CalendarClock} />
+          <PanelHeader title="Dövr tarixçəsi" subtitle="Bağlanmış KPI dövrləri və ödəniş statusu" icon={CalendarClock} />
           <DataTable
-            columns={["Period", "Score", "Payout", "Təsdiq", "Ödəniş"]}
+            columns={["Dövr", "Bal", "Ödəniş məbləği", "Təsdiq", "Ödəniş"]}
             rows={periodHistory.map((period) => [
               <TwoLine title={period.period} subtitle={period.closedAt || "Açıq"} />,
               percent(period.companyScore || 0),

@@ -118,7 +118,7 @@ export function mapModuleSummary(raw: unknown, money: (value: number) => string)
       signal: overdue > 0 ? `${overdue} gecikmə` : "Gecikmə yoxdur", status: overdue > 0 ? "Risk" : "Hazır" },
     { module: "Anbar", metric: `${num(stock, "sellable")}/${num(stock, "total")}`, count: `${num(stock, "sku")} SKU`,
       signal: low > 0 ? `${low} minimum qalıq` : "Stok sağlam", status: low > 0 ? "Nəzarət" : "Hazır" },
-    { module: "Vendor / PO", metric: money(num(po, "approved_amount")), count: `${num(po, "count")} PO`,
+    { module: "Təchizatçı / PO", metric: money(num(po, "approved_amount")), count: `${num(po, "count")} PO`,
       signal: openPo > 0 ? `${openPo} təsdiqdə` : `${num(po, "vendors")} vendor aktiv`, status: openPo > 0 ? "Nəzarət" : "Hazır" },
     { module: "Maliyyə", metric: money(num(fin, "cash_inflow")), count: `${num(fin, "count")} xərc`,
       signal: pending > 0 ? `${pending} xərc təsdiqdə` : `${money(num(fin, "approved_amount"))} təsdiqli xərc`, status: pending > 0 ? "Nəzarət" : "Hazır" },

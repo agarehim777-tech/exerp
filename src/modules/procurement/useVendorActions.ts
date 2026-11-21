@@ -25,7 +25,7 @@ export function useVendorActions({ tenantId, purchaseOrders, load, setError, set
     setError("");
     setNotice("");
     if (!vendorForm.name.trim()) {
-      setError("Vendor adı tələb olunur.");
+      setError("Təchizatçı adı tələb olunur.");
       return;
     }
     setSaving(true);
@@ -43,7 +43,7 @@ export function useVendorActions({ tenantId, purchaseOrders, load, setError, set
 
     if (vendorError) setError(getError(vendorError));
     else {
-      setNotice(editingVendorId ? "Vendor məlumatları yeniləndi." : "Vendor yaradıldı.");
+      setNotice(editingVendorId ? "Təchizatçı məlumatları yeniləndi." : "Təchizatçı yaradıldı.");
       setVendorForm(emptyVendor);
       setEditingVendorId(null);
       await load();
@@ -79,12 +79,12 @@ export function useVendorActions({ tenantId, purchaseOrders, load, setError, set
     const linkedPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
     if (linkedPo.length) {
       setError("");
-      setNotice("Bu vendor üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
+      setNotice("Bu təchizatçı üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
       await supabase.from("vendors").update({ is_active: false }).eq("id", vendor.id);
       await load();
       return;
     }
-    if (!(await appConfirm(`${vendor.name} vendorunu silmək istəyirsiniz?`, { danger: true }))) return;
+    if (!(await appConfirm(`${vendor.name} təchizatçısını silmək istəyirsiniz?`, { danger: true }))) return;
     setSaving(true);
     const { error: vendorError } = await supabase.from("vendors").delete().eq("id", vendor.id);
     if (vendorError) setError(getError(vendorError));

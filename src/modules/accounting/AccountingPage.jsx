@@ -22,7 +22,7 @@ export default function AccountingPage() {
 
   return (
     <PageStack>
-      <Tabs value={tab} onChange={setTab} items={[["coa", "Hesablar planı"], ["journal", "Jurnal"], ["tb", "Trial Balance"], ["reconciliation", "Kassa / bank uzlaşdırması"], ["periods", "Period bağlanışı"]]} />
+      <Tabs value={tab} onChange={setTab} items={[["coa", "Hesablar planı"], ["journal", "Jurnal"], ["tb", "Sınaq balansı"], ["reconciliation", "Kassa / bank uzlaşdırması"], ["periods", "Dövr bağlanışı"]]} />
       {tab === "coa" && <ChartOfAccountsPanel isAdmin={isAdmin} />}
       {tab === "journal" && <JournalPanel isAdmin={isAdmin} />}
       {tab === "tb" && <TrialBalancePanel tenantId={tenantId} />}
@@ -170,7 +170,7 @@ function TrialBalancePanel({ tenantId }) {
   const totals = rows.reduce((a, r) => ({ d: a.d + Number(r.debit), c: a.c + Number(r.credit) }), { d: 0, c: 0 });
 
   return (
-    <Card title="Trial Balance" actions={<Toolbar><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /><Button onClick={load}>Yenilə</Button></Toolbar>}>
+    <Card title="Sınaq balansı" actions={<Toolbar><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /><Button onClick={load}>Yenilə</Button></Toolbar>}>
       <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Hesab" }, { key: "type", label: "Tip" }, { key: "debit", label: "Debet", align: "right" }, { key: "credit", label: "Kredit", align: "right" }, { key: "balance", label: "Balans", align: "right" }]} rows={loading ? [] : rows} emptyText={loading ? "Yüklənir…" : "Məlumat yoxdur."} renderCell={(row, column) => column.key === "code" ? <strong>{row.code}</strong> : column.key === "type" ? TYPE_LABEL[row.type] : ["debit", "credit", "balance"].includes(column.key) ? fixed2(row[column.key]) : row[column.key]} footer={<tfoot><tr><td colSpan={3} className="is-numeric"><strong>Cəm</strong></td><td className="is-numeric"><strong>{fixed2(totals.d)}</strong></td><td className="is-numeric"><strong>{fixed2(totals.c)}</strong></td><td className="is-numeric"><Badge tone={Math.abs(totals.d - totals.c) < 0.01 ? "success" : "danger"}>{Math.abs(totals.d - totals.c) < 0.01 ? "✓" : "✗ balanssız"}</Badge></td></tr></tfoot>} />
     </Card>
   );

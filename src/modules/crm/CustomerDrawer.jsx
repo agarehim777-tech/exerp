@@ -57,7 +57,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
               <Stat label="Ödənilib" value={`${formatAmount(Number(data.orders_paid || 0), { decimals: 0 })}`} />
               <Stat label="Qalıq borc" value={`${formatAmount(Number(data.orders_outstanding || 0), { decimals: 0 })}`} />
               <Stat label="Qazanıldı" value={`${formatAmount(Number(data.won_amount || 0), { decimals: 0 })}`} />
-              <Stat label="Açıq deal" value={data.open_deals?.length || 0} />
+              <Stat label="Açıq sövdələşmə" value={data.open_deals?.length || 0} />
               <Stat label="Müştəri skoru" value={`${data.analytics?.customerScore || 0}/100`} />
               <Stat label="Risk" value={data.analytics?.riskLabel || '—'} />
             </div>

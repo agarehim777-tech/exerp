@@ -55,7 +55,7 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
 
 
   function openVendorDelete(vendorKey) {
-    if (!requirePermission("vendors.manage", "vendoru silmək")) return;
+    if (!requirePermission("vendors.manage", "təchizatçını silmək")) return;
     setModal({ type: "vendorDelete", vendorKey });
   }
 

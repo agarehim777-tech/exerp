@@ -59,7 +59,7 @@ export const navItems = [
   { id: "api", label: "API & inteqrasiya", group: "system" },
   { id: "messages", label: "Mesajlar", group: "system" },
   { id: "notifications", label: "Bildirişlər", group: "system" },
-  { id: "onboarding", label: "Onboarding", group: "system" },
+  { id: "onboarding", label: "Quraşdırma", group: "system" },
   { id: "help", label: "Kömək", group: "system" },
   { id: "support", label: "Dəstək", group: "system" },
 ];
@@ -357,7 +357,7 @@ export const initialState = {
     {
       id: "SEC-VENDOR-TOKEN",
       key: "VENDOR_GATEWAY_TOKEN",
-      label: "Vendor gateway tokeni",
+      label: "Təchizatçı şlüzü tokeni",
       type: "Bearer token",
       maskedValue: "vnd_••••••••77BC",
       status: "Aktiv",

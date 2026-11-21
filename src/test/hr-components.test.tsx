@@ -44,7 +44,7 @@ describe("HR components", () => {
 
   it("renders an empty state when no employee is selected", () => {
     const { container } = render(<HrEmployeePlatform records={[]} selectedRecord={null} onSelect={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} />);
-    expect(container.textContent).toContain("Filterə uyğun əməkdaş tapılmadı");
+    expect(container.textContent).toContain("Filtrə uyğun əməkdaş tapılmadı");
   });
 
   it("approves leave and closes payroll from the tables", () => {

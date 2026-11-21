@@ -54,7 +54,7 @@ describe("dashboard and report helpers", () => {
     expect(cards.map((card) => [card.title, card.value, card.tone])).toEqual([
       ["Kredit portfeli", "0 risk", "success"],
       ["Təhvil yükü", "1 sifariş", "info"],
-      ["Vendor riski", 1, "warning"],
+      ["Təchizatçı riski", 1, "warning"],
       ["HR/KPI", "Orxan", "primary"],
     ]);
   });
@@ -66,7 +66,7 @@ describe("dashboard and report helpers", () => {
 
   it("builds module rows and a sorted risk register", () => {
     const modules = buildReportModuleRows({ expenses, invoices, warehouseStock: { "WH-1": stock }, products: [{ name: "Kabel" }] });
-    expect(modules.map((row) => row.module)).toEqual(["Satış", "Kredit", "Anbar", "Vendor / PO", "Maliyyə", "Faktura", "HR"]);
+    expect(modules.map((row) => row.module)).toEqual(["Satış", "Kredit", "Anbar", "Təchizatçı / PO", "Maliyyə", "Faktura", "HR"]);
     expect(modules.find((row) => row.module === "Maliyyə")).toMatchObject({ signal: "2 xərc təsdiqdə", status: "Nəzarət" });
 
     const risks = buildReportRiskRows({ expenses, invoices, employees: [{ id: "H1", name: "Aysel", documentsComplete: 50, salary: 800 }] });

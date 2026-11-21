@@ -56,7 +56,7 @@ describe("useVendorActions", () => {
   it("requires a vendor name before saving", async () => {
     const { view, setError, load } = setup();
     await act(() => view.result.current.saveVendor(submitEvent()));
-    expect(setError).toHaveBeenLastCalledWith("Vendor adı tələb olunur.");
+    expect(setError).toHaveBeenLastCalledWith("Təchizatçı adı tələb olunur.");
     expect(mocks.calls).toEqual([]);
     expect(load).not.toHaveBeenCalled();
   });
@@ -69,7 +69,7 @@ describe("useVendorActions", () => {
       table: "vendors", op: "insert",
       payload: { name: "Alfa MMC", tax_id: "123", email: null, phone: null, address: null, is_active: true, tenant_id: "tenant-a" },
     }]);
-    expect(setNotice).toHaveBeenLastCalledWith("Vendor yaradıldı.");
+    expect(setNotice).toHaveBeenLastCalledWith("Təchizatçı yaradıldı.");
     expect(load).toHaveBeenCalledOnce();
     expect(view.result.current.vendorForm).toEqual(emptyVendor);
     expect(setSaving.mock.calls).toEqual([[true], [false]]);
@@ -83,7 +83,7 @@ describe("useVendorActions", () => {
     expect(setTab).toHaveBeenCalledWith("vendors");
     await act(() => view.result.current.saveVendor(submitEvent()));
     expect(mocks.calls[0]).toMatchObject({ op: "update", eq: ["id", "V1"], payload: { name: "Beta", is_active: false } });
-    expect(setNotice).toHaveBeenLastCalledWith("Vendor məlumatları yeniləndi.");
+    expect(setNotice).toHaveBeenLastCalledWith("Təchizatçı məlumatları yeniləndi.");
     expect(view.result.current.editingVendorId).toBeNull();
   });
 
@@ -101,7 +101,7 @@ describe("useVendorActions", () => {
     const { view, setNotice, load } = setup([{ id: "PO1", vendor_id: "V1" }]);
     await act(() => view.result.current.deleteVendor({ id: "V1", name: "Alfa" }));
     expect(mocks.calls).toEqual([{ table: "vendors", op: "update", payload: { is_active: false }, eq: ["id", "V1"] }]);
-    expect(setNotice).toHaveBeenLastCalledWith("Bu vendor üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
+    expect(setNotice).toHaveBeenLastCalledWith("Bu təchizatçı üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
     expect(mocks.confirm).not.toHaveBeenCalled();
     expect(load).toHaveBeenCalledOnce();
   });

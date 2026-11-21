@@ -22,10 +22,10 @@ export function VendorFormModal({ vendor, onClose, onSubmit, onDelete }) {
 
   return (
     <div className="modal-shell" role="dialog" aria-modal="true"><div className="modal-card vendor-form-modal">
-      <div className="modal-head"><div><h2>{vendor ? "Vendoru redaktə et" : "Yeni vendor"}</h2><p>Vendor məlumatları, kontakt, kvota və təchizat şərtlərini bir yerdə idarə edin.</p></div><button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button></div>
+      <div className="modal-head"><div><h2>{vendor ? "Təchizatçını redaktə et" : "Yeni təchizatçı"}</h2><p>Təchizatçı məlumatları, kontakt, kvota və təchizat şərtlərini bir yerdə idarə edin.</p></div><button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla"><X size={18} /></button></div>
       {vendor && <div className="vendor-form-summary"><TwoLine title={normalizedVendor.name} subtitle={`${normalizedVendor.country} · ${normalizedVendor.sku} SKU`} /><ProgressRow value={normalizedVendor.quota > 0 ? (normalizedVendor.sold / normalizedVendor.quota) * 100 : 0} caption={`${normalizedVendor.sold}/${normalizedVendor.quota} kvota`} compact /></div>}
       <form onSubmit={(event) => { event.preventDefault(); onSubmit(values); }} className="modal-form">
-        <label><span>Vendor adı</span><input value={values.name} required autoFocus onChange={(event) => updateValue("name", event.target.value)} /></label>
+        <label><span>Təchizatçı adı</span><input value={values.name} required autoFocus onChange={(event) => updateValue("name", event.target.value)} /></label>
         <label><span>Ölkə</span><input value={values.country} required onChange={(event) => updateValue("country", event.target.value)} /></label>
         <label><span>SKU sayı</span><input type="number" min="0" value={values.sku} required onChange={(event) => updateValue("sku", event.target.value)} /></label>
         <label><span>Kvota</span><input type="number" min="0" value={values.quota} required onChange={(event) => updateValue("quota", event.target.value)} /></label>
@@ -34,7 +34,7 @@ export function VendorFormModal({ vendor, onClose, onSubmit, onDelete }) {
         <label><span>Kontakt şəxs</span><input value={values.contact} onChange={(event) => updateValue("contact", event.target.value)} /></label>
         <label><span>Telefon</span><input value={values.phone} onChange={(event) => updateValue("phone", event.target.value)} /></label>
         <label><span>Email</span><input type="email" value={values.email} onChange={(event) => updateValue("email", event.target.value)} /></label>
-        <label><span>Lead time, gün</span><input type="number" min="0" value={values.leadTimeDays} onChange={(event) => updateValue("leadTimeDays", event.target.value)} /></label>
+        <label><span>Çatdırılma müddəti, gün</span><input type="number" min="0" value={values.leadTimeDays} onChange={(event) => updateValue("leadTimeDays", event.target.value)} /></label>
         <label className="full"><span>Ödəniş şərti</span><input value={values.paymentTerms} onChange={(event) => updateValue("paymentTerms", event.target.value)} /></label>
         <label className="full"><span>Qeyd</span><input value={values.note} placeholder="Müqavilə, servis, çatdırılma və ya keyfiyyət qeydi" onChange={(event) => updateValue("note", event.target.value)} /></label>
         <div className="modal-actions vendor-modal-actions">{onDelete && <button type="button" className="secondary-btn danger-outline" onClick={onDelete}><Trash2 size={16} /> Sil</button>}<button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn"><Check size={16} /> Yadda saxla</button></div>
@@ -81,7 +81,7 @@ export function FactoryPurchaseOrderModal({ vendors = [], warehouses = [], produ
         <label><span>Alış qiyməti</span><input type="number" min="0" step="0.01" value={values.unitCost} required onChange={(event) => updateValue("unitCost", event.target.value)} /></label>
         <label><span>Stok/satış qiyməti</span><input type="number" min="0" step="0.01" value={values.salePrice} required onChange={(event) => updateValue("salePrice", event.target.value)} /></label>
         <label><span>Gözlənən tarix</span><input type="date" value={values.expectedAt} onChange={(event) => updateValue("expectedAt", event.target.value)} /></label>
-        <label className="full"><span>Qeyd</span><input value={values.note} placeholder="Zavod partiyası, invoice və ya çatdırılma qeydi" onChange={(event) => updateValue("note", event.target.value)} /></label>
+        <label className="full"><span>Qeyd</span><input value={values.note} placeholder="Zavod partiyası, faktura və ya çatdırılma qeydi" onChange={(event) => updateValue("note", event.target.value)} /></label>
         <div className="factory-order-total full"><span>Toplam alış məbləği</span><strong>{money(amount)}</strong></div>
         <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Ləğv et</button><button type="submit" className="primary-btn"><Plus size={16} /> PO yarat</button></div>
       </form>
