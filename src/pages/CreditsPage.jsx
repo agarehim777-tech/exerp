@@ -1,7 +1,7 @@
 import ModuleLink from "../shared/ui/ModuleLink.jsx";
 import { csvCell } from "../shared/lib/csvCell.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Filter, Play, RefreshCw, Search, Wallet } from "lucide-react";
+import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Play, RefreshCw, Search, Wallet } from "lucide-react";
 import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { cashAmount as money } from "../services/format.js";
 import { usePageQuery } from "../shared/hooks/usePageQuery.jsx";
@@ -62,7 +62,6 @@ function CreditsPage({
   const todayCredits = enrichedCredits.filter((item) => item.paymentState.isDueToday);
   const overdueCredits = enrichedCredits.filter((item) => item.paymentState.isOverdue);
   const completedCredits = enrichedCredits.filter((item) => isCreditClosed(item.credit, item.plan));
-  const salesCredits = enrichedCredits.filter((item) => getCreditSourceLabel(item.credit) === "Satışdan gələn");
   const monthlyDue = enrichedCredits.reduce((sum, item) => {
     if (isCreditClosed(item.credit, item.plan)) return sum;
     return sum + Number(item.paymentState.nextInstallment?.amount || 0);
@@ -85,16 +84,8 @@ function CreditsPage({
     return sum + Math.max(0, required - Number(item.credit.initialPaid || 0));
   }, 0);
   const averageMonthly = activeCredits.length ? Math.round(monthlyDue / activeCredits.length) : 0;
-  const currentMonthCredits = enrichedCredits.filter((item) => matchesCreditManagementFilter(item, "Cari ay"));
-  const linkedSalesCredits = salesCredits.filter((item) => item.credit.orderId && item.credit.contractId);
   const collectionQueueCount = todayCredits.length + overdueCredits.length;
   const handoverItems = [
-    {
-      label: "Satış bağlantısı",
-      value: `${linkedSalesCredits.length}/${salesCredits.length}`,
-      hint: "Sifariş və müqavilə ilə gələn kreditlər",
-      tone: linkedSalesCredits.length === salesCredits.length ? "success" : "warning",
-    },
     {
       label: "Qalıq ilkin ödəniş",
       value: money(initialPendingTotal),
@@ -107,12 +98,6 @@ function CreditsPage({
       hint: "Bu gün və gecikmiş ödənişlər",
       tone: collectionQueueCount > 0 ? "danger" : "success",
     },
-    {
-      label: "Maliyyə sinxronu",
-      value: money(paidTotal),
-      hint: "Əsas ödəniş borcdan, cərimə kassadan izlənir",
-      tone: "info",
-    },
   ];
   const filterItems = [
     { label: "Hamısı", title: "Hamısı", count: enrichedCredits.length, tone: "primary" },
@@ -121,7 +106,6 @@ function CreditsPage({
     { label: "Gecikmiş", title: "Gecikmiş", count: overdueCredits.length, tone: "danger" },
     { label: "Bağlanmış", title: "Bağlanmış kreditlər", count: completedCredits.length, tone: "info" },
     { label: "Bugünkü", title: "Bugünkü", count: todayCredits.length, tone: "neutral" },
-    { label: "Cari ay", title: "Cari ay", count: currentMonthCredits.length, tone: "neutral" },
   ];
   const sourceFilters = ["Bütün mənbələr", "Satışdan gələn", "Manual kredit"];
   const yearOptions = [
@@ -174,9 +158,6 @@ function CreditsPage({
   };
   const resetFilters = () => {
     setPageQuery({ ...defaults, credit: detailCreditId }, { replace: true });
-  };
-  const applyFilters = () => {
-    setSearchTerm(searchTerm.trim());
   };
   const exportVisibleCredits = () => {
     const escapeCsv = (value) => csvCell(value);
@@ -247,11 +228,6 @@ function CreditsPage({
           <div>
             <h2>Portfel siyahısı</h2>
             <p>Kreditləri prioritet, tarix və mənbə üzrə idarə edin.</p>
-          </div>
-          <div className="credit-management-summary" aria-label="Kredit portfeli xülasəsi">
-            <span><strong>{visibleCredits.length}</strong> nəticə</span>
-            <span><strong>{todayCredits.length}</strong> bu gün</span>
-            <span><strong>{salesCredits.length}</strong> satışdan</span>
           </div>
         </div>
 
@@ -326,10 +302,7 @@ function CreditsPage({
                 ))}
               </Select>
             </label>
-            <Button variant="primary" className="icon-only" title="Filterləri tətbiq et" type="button" onClick={applyFilters}>
-              <Filter size={16} />
-            </Button>
-            <Button variant="secondary" className="icon-only" title="Filterləri sıfırla" type="button" onClick={resetFilters}>
+            <Button variant="secondary" className="icon-only" title="Filtrləri sıfırla" aria-label="Filtrləri sıfırla" type="button" onClick={resetFilters}>
               <RefreshCw size={16} />
             </Button>
             <Button variant="secondary" className="credit-excel-btn" type="button" onClick={exportVisibleCredits}>
