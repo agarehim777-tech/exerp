@@ -296,17 +296,17 @@ export function ReportsPage({
       title,
       period,
       summary: [
-        ["Satis geliri", money(revenue)], ["Umumi menfeet", money(grossProfit)],
-        ["Xalis netice", money(netResult)], ["Anbar deyeri", money(stockValue)],
-        ["Aciq borc", money(reportPackage.creditBalance + reportPackage.invoiceBalance)],
+        ["Satış gəliri", money(revenue)], ["Ümumi mənfəət", money(grossProfit)],
+        ["Xalis nəticə", money(netResult)], ["Anbar dəyəri", money(stockValue)],
+        ["Açıq borc", money(reportPackage.creditBalance + reportPackage.invoiceBalance)],
       ],
     };
     if (title.startsWith('İdarəetmə paketi')) return { ...common, columns: ['Modul', 'Göstərici', 'Say', 'Siqnal', 'Status'],
       rows: moduleRows.map(row => [row.module, row.metric, row.count, row.signal, row.status]) };
-    if (title === "Aylıq satış hesabatı") return { ...common, columns: ["Sifaris", "Musteri", "Tarix", "Mehsul", "Mebleg"], rows: filteredOrders.map((row) => [row.orderNo || row.id, row.customer, row.date, row.products, money(row.amount)]) };
-    if (title === "Maliyyə mənfəət/zərər") return { ...common, columns: ["Tarix", "Kateqoriya", "Tesvir", "Status", "Mebleg"], rows: filteredExpenses.map((row) => [row.date, row.category, row.description, row.status, money(row.amount)]) };
-    if (title === "Anbar hərəkəti") return { ...common, columns: ["Mehsul", "SKU", "Qaliq", "Rezerv", "Maya", "Deyer"], rows: stockRows.map((row) => [row.product, row.sku, row.total, row.reserved, money(row.costPrice || row.price), money(Number(row.total || 0) * Number(row.costPrice || row.price || 0))]) };
-    return { ...common, columns: ["Muqavile", "Musteri", "Status", "Muddet", "Qaliq"], rows: credits.map((row) => [row.contractId || row.id, row.customer, row.status, `${row.months || row.termMonths || "—"} ay`, money(creditReportBalance(row))]) };
+    if (title === "Aylıq satış hesabatı") return { ...common, columns: ["Sifariş", "Müştəri", "Tarix", "Məhsul", "Məbləğ"], rows: filteredOrders.map((row) => [row.orderNo || row.id, row.customer, row.date, row.products, money(row.amount)]) };
+    if (title === "Maliyyə mənfəət/zərər") return { ...common, columns: ["Tarix", "Kateqoriya", "Təsvir", "Status", "Məbləğ"], rows: filteredExpenses.map((row) => [row.date, row.category, row.description, row.status, money(row.amount)]) };
+    if (title === "Anbar hərəkəti") return { ...common, columns: ["Məhsul", "SKU", "Qalıq", "Rezerv", "Maya", "Dəyər"], rows: stockRows.map((row) => [row.product, row.sku, row.total, row.reserved, money(row.costPrice || row.price), money(Number(row.total || 0) * Number(row.costPrice || row.price || 0))]) };
+    return { ...common, columns: ["Müqavilə", "Müştəri", "Status", "Müddət", "Qalıq"], rows: credits.map((row) => [row.contractId || row.id, row.customer, row.status, `${row.months || row.termMonths || "—"} ay`, money(creditReportBalance(row))]) };
   };
 
   const runDownload = async (report, format) => {

@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 
 for (const width of [1440, 375]) {
   test(`wide HR structure scrolls without hiding department actions at ${width}px`, async ({ page }) => {
-    const bundle = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";', loader: 'css', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false });
+    const bundle = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";', loader: 'css', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false, loader: { '.ttf': 'dataurl' } });
     const css = bundle.outputFiles[0].text;
     await page.setViewportSize({ width, height: 800 });
     // Exercise the real chart classes with a tree wider than its containing module.
