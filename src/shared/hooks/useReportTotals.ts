@@ -10,6 +10,10 @@ export interface ReportTotals {
   operating_expense: number;
   production_cost: number;
   production_count: number;
+  // Cost of the counted sales: booked delivery cost plus an estimate for undelivered orders. null until the
+  // database has migration 20261121110000; the page then falls back to its own row sum.
+  sales_cost: number | null;
+  sales_cost_estimated: number;
 }
 
 // Maps the report period labels to an inclusive date range; "Hamısı" means unbounded.
@@ -47,6 +51,8 @@ export function useReportTotals(tenantId: string | null | undefined, period: str
         operating_expense: Number(raw.operating_expense) || 0,
         production_cost: Number(raw.production_cost) || 0,
         production_count: Number(raw.production_count) || 0,
+        sales_cost: raw.sales_cost == null ? null : Number(raw.sales_cost) || 0,
+        sales_cost_estimated: Number(raw.sales_cost_estimated) || 0,
       } });
     }).catch(() => { if (isCurrent()) setTotals(null); });
   }, [tenantId, period, snapshotDate, scope, begin]);

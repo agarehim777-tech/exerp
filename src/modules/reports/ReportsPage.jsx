@@ -206,7 +206,10 @@ export function ReportsPage({
   // Headline totals come from the database for the whole company; a warehouse filter falls back to row sums.
   const serverTotals = warehouseFilter === "all" ? serverTotalsRaw : null;
   const revenue = serverTotals ? serverTotals.revenue : sumRows(filteredOrders, "amount");
-  const salesCost = filteredOrders.reduce(
+  // The server cost matches the server revenue (all orders of the period, cost booked at delivery). The row sum
+  // below is only the fallback for a warehouse filter or a database without sales_cost.
+  const serverSalesCost = serverTotals?.sales_cost ?? null;
+  const rowSalesCost = filteredOrders.reduce(
     (sum, order) =>
       sum +
       (order.productLines || []).reduce((lineSum, line) => {
@@ -215,6 +218,8 @@ export function ReportsPage({
       }, 0),
     0,
   );
+  const salesCost = serverSalesCost ?? rowSalesCost;
+  const estimatedSalesCost = serverSalesCost === null ? 0 : serverTotals.sales_cost_estimated;
   const operatingExpense = serverTotals ? serverTotals.operating_expense : filteredExpenses
     .filter((row) => !isCancelledExpense(row))
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
@@ -382,7 +387,7 @@ export function ReportsPage({
 
       <section className="metric-grid four">
         <MetricCard label="Satış gəliri" value={money(revenue)} trend={`${orderCount} sifariş · orta ${money(averageOrder)}`} icon={Wallet} tone="success" />
-        <MetricCard label="Ümumi mənfəət" value={money(grossProfit)} trend={`Marja ${percent(revenue ? (grossProfit / revenue) * 100 : 0)}`} icon={TrendingUp} tone={grossProfit >= 0 ? "success" : "danger"} />
+        <MetricCard label="Ümumi mənfəət" value={money(grossProfit)} trend={`Marja ${percent(revenue ? (grossProfit / revenue) * 100 : 0)}${estimatedSalesCost > 0 ? ` · ${money(estimatedSalesCost)} təxmini maya` : ""}`} icon={TrendingUp} tone={grossProfit >= 0 ? "success" : "danger"} />
         <MetricCard label="Xalis nəticə" value={money(netResult)} trend={`${money(operatingExpense)} xərc`} icon={BarChart3} tone={netResult >= 0 ? "primary" : "danger"} />
         <MetricCard label="Açıq borc" value={money(reportPackage.creditBalance + reportPackage.invoiceBalance)} trend={`${activeCustomers} müştəri`} icon={CreditCard} tone="warning" />
       </section>

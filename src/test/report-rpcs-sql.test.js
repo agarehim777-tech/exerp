@@ -49,3 +49,29 @@ it('refuses a user who is not a member of the tenant', async () => {
   await expect(db.query(`SELECT public.report_totals($1) AS result`, [TENANT])).rejects.toThrow('permission_denied');
   await expect(db.query(`SELECT public.report_module_summary($1) AS result`, [TENANT])).rejects.toThrow('permission_denied');
 });
+
+it('report_totals counts the booked delivery cost and estimates undelivered orders', async () => {
+  const P = '00000000-0000-4000-8000-0000000000a1';
+  const O1 = '00000000-0000-4000-8000-0000000000b1';
+  const O2 = '00000000-0000-4000-8000-0000000000b2';
+  const O3 = '00000000-0000-4000-8000-0000000000b3';
+  const JE = '00000000-0000-4000-8000-0000000000c1';
+  await db.exec(`
+    SET session_replication_role = replica;
+    INSERT INTO public.products (id, tenant_id, sku, name, cost_price) VALUES ('${P}', '${TENANT}', 'RPT-1', 'Report product', 30);
+    INSERT INTO public.orders (id, tenant_id, order_no, order_date, status, total) VALUES
+      ('${O1}', '${TENANT}', 'RPT-O1', current_date, 'delivered', 200),
+      ('${O2}', '${TENANT}', 'RPT-O2', current_date, 'confirmed', 100),
+      ('${O3}', '${TENANT}', 'RPT-O3', current_date, 'cancelled', 500);
+    INSERT INTO public.order_items (tenant_id, order_id, product_id, qty, unit_price) VALUES
+      ('${TENANT}', '${O1}', '${P}', 2, 100), ('${TENANT}', '${O2}', '${P}', 1, 100), ('${TENANT}', '${O3}', '${P}', 5, 100);
+    INSERT INTO public.journal_entries (id, tenant_id, entry_date, reference) VALUES ('${JE}', '${TENANT}', current_date, 'RPT');
+    INSERT INTO public.order_accounting_events (tenant_id, order_id, event_type, journal_entry_id, amount, cogs) VALUES
+      ('${TENANT}', '${O1}', 'delivery', '${JE}', 200, 55);
+    SET session_replication_role = origin;
+  `);
+  await asUser(ADMIN);
+  const totals = await call(`SELECT public.report_totals($1, NULL, NULL) AS result`, [TENANT]);
+  // Delivered: the booked 55 (not 2 x 30). Undelivered: 1 x 30 estimated. Cancelled: ignored.
+  expect(totals).toMatchObject({ revenue: 300, sales_cost: 85, sales_cost_estimated: 30 });
+});
