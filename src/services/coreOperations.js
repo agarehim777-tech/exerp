@@ -228,6 +228,32 @@ export function receiveStock({
   });
 }
 
+// Warehouse-to-warehouse move at current FIFO/average cost (server command, one transaction).
+export function transferStock({ tenantId, fromWarehouseId, toWarehouseId, productId, quantity, note = null }) {
+  return callRpc("transfer_stock", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _from_warehouse_id: requireValue(fromWarehouseId, "fromWarehouseId"),
+    _to_warehouse_id: requireValue(toWarehouseId, "toWarehouseId"),
+    _product_id: requireValue(productId, "productId"),
+    _quantity: Number(requireValue(quantity, "quantity")),
+    _note: note,
+  });
+}
+
+// Manual "Məxaric" (kind 'out', quantity > 0) or count correction (kind 'adjust', signed quantity).
+export function postManualStockMovement({ tenantId, warehouseId, productId, kind, quantity, unitCost = null, documentNo = null, note = null }) {
+  return callRpc("post_manual_stock_movement", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _warehouse_id: requireValue(warehouseId, "warehouseId"),
+    _product_id: requireValue(productId, "productId"),
+    _kind: kind,
+    _quantity: Number(requireValue(quantity, "quantity")),
+    _unit_cost: unitCost === null || unitCost === "" ? null : Number(unitCost),
+    _document_no: documentNo || null,
+    _note: note || null,
+  });
+}
+
 export function reserveStock({
   tenantId,
   warehouseId,

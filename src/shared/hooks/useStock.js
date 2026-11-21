@@ -4,7 +4,8 @@ import { supabase } from '../../integrations/supabase/client';
 import { normalizeStockMovement } from '../lib/stockMovementNormalization.js';
 import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
-import { receiveStock } from '../../services/coreOperations.js';
+import { postManualStockMovement, receiveStock, transferStock as transferStockCommand } from '../../services/coreOperations.js';
+import { describeStockCommandError } from '../lib/stockErrors.js';
 import { readInventoryBase, readStockMovementHistory } from '../../services/inventoryRead.js';
 import { formatNumber } from '../../services/format.js';
 
@@ -284,21 +285,31 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
         productId: payload.product_id,
         quantity: payload.qty,
         unitCost: payload.unit_cost,
-        referenceType: payload.doc_no || 'manual_receipt',
-        note: payload.note || null,
-      });
+        // reference_type is the source kind (it also names the cost layer); the document number goes into the note.
+        referenceType: 'manual_receipt',
+        note: [payload.doc_no, payload.note].filter(Boolean).join(' · ') || null,
+      }).catch((commandError) => { throw new Error(describeStockCommandError(commandError)); });
       await fetchBase();
       if (pageRef.current !== 0) setMovementsPage(0);
       else await fetchMovements(0);
       return;
     }
-    const { error: err } = await supabase.from('stock_movements').insert({
-      ...payload,
-      qty: Number(payload.qty) || 0,
-      unit_cost: Number(payload.unit_cost) || 0,
-      tenant_id: tenantId,
-    });
-    if (err) throw err;
+    // Məxaric and Düzəliş go through the server command: it moves the balance and the cost layers together.
+    try {
+      await postManualStockMovement({
+        tenantId,
+        warehouseId: payload.warehouse_id,
+        productId: payload.product_id,
+        kind: payload.move_type === 'out' ? 'out' : 'adjust',
+        quantity: payload.qty,
+        unitCost: payload.unit_cost,
+        documentNo: payload.doc_no,
+        note: payload.note,
+      });
+    } catch (commandError) {
+      throw new Error(describeStockCommandError(commandError));
+    }
+    await fetchBase();
     if (pageRef.current !== 0) setMovementsPage(0);
     else await fetchMovements(0);
   };
@@ -320,25 +331,14 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
       throw new Error(`Mənbə anbarda yalnız ${formatNumber(available)} ədəd mövcuddur.`);
     }
 
-    const reference = `TR-${Date.now()}`;
-    const product = source.product || {};
-    const common = {
-      tenant_id: tenantId,
-      product_id: productId,
-      sku: product.sku || source.sku || null,
-      qty: amount,
-      unit_cost: Number(source.avg_cost || 0),
-      doc_no: reference,
-      reference,
-      note: note || 'Daxili anbar transferi',
-    };
-    const { error: err } = await supabase.from('stock_movements').insert([
-      { ...common, warehouse_id: fromWarehouseId, move_type: 'out' },
-      { ...common, warehouse_id: toWarehouseId, move_type: 'in' },
-    ]);
-    if (err) throw err;
+    let result;
+    try {
+      result = await transferStockCommand({ tenantId, fromWarehouseId, toWarehouseId, productId, quantity: amount, note: note || null });
+    } catch (commandError) {
+      throw new Error(describeStockCommandError(commandError));
+    }
     await refresh();
-    return reference;
+    return `TR-${String(result?.transfer_id || '').slice(0, 8).toUpperCase()}`;
   };
 
   const setReorderPoint = async (balance, value) => {
