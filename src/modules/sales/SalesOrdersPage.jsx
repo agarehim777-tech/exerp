@@ -18,7 +18,7 @@ const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
 const STATUS_LABELS = { draft: 'Təsdiqləndi', pending: 'Təsdiqləndi', confirmed: 'Təsdiqləndi', processing: 'Təsdiqləndi', shipped: 'Təsdiqləndi', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
 const canonicalStatus = status => ['draft', 'pending', 'processing', 'shipped'].includes(status) ? 'confirmed' : status;
 
-export default function SalesOrdersPage({ repository, customers = [], products = [], selectedOrderId = '', onSelectedOrderHandled }) {
+export default function SalesOrdersPage({ repository, customers = [], products = [], selectedOrderId = '', onSelectedOrderHandled = null }) {
   const { activeTenantId, user, activeMembership, isPlatformAdmin } = useAuth();
   const { orders, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval, hasMore, loadMore, loading: ordersLoading, error: ordersError } = repository;
   const { accounts: cashAccounts } = useCashbook(activeTenantId);

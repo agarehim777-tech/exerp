@@ -117,5 +117,7 @@ export function useCustomers(tenantId, { optionsOnly = false } = {}) {
   return { customers: loaded ? customers : EMPTY_ROWS, loaded, levels, loading, error, hasMore: loaded && hasMore, loadMore, refresh: fetchAll, create, update, remove, saveLevels };
 }
 
-const EMPTY_ROWS = Object.freeze([]);
+// Frozen so no caller can fill the shared empty list; typed as the hook's row array so pages that take
+// plain arrays accept it (a readonly type made every prop it reached a checkJs error).
+const EMPTY_ROWS = /** @type {any[]} */ (Object.freeze([]));
 

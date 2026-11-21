@@ -4,6 +4,19 @@ import { CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmTasksPage, Dash
 import { pathForModule } from "../../config/routes.js";
 import { dbCustomerToLegacy, dbOrderToLegacy } from "../../shared/adapters/erpShape.js";
 
+/**
+ * The database-backed values keep the types their hooks return, so checkJs checks them against the pages'
+ * props as it did when this JSX lived in App.jsx. The other values are App state passed through.
+ * @typedef {ReturnType<typeof import("../../shared/hooks/useOrders.js").useOrders>} SalesRepository
+ * @param {{
+ *   dbCustomers: ReturnType<typeof import("../../shared/hooks/useCustomers.js").useCustomers>["customers"],
+ *   dbProducts: ReturnType<typeof import("../../shared/hooks/useProducts.js").useProducts>["products"],
+ *   dbOrders: SalesRepository["orders"],
+ *   dbSales: SalesRepository,
+ *   dbInventory: ReturnType<typeof import("../../shared/hooks/useStock.js").useStock>,
+ *   [name: string]: any,
+ * }} props
+ */
 export function SalesPages({ active, auditOperation, choosePage, completeWarehouseDelivery, dbCustomers, dbInventory, dbOrders, dbProducts, dbSales, deleteWarehouse, filtered, navigate, openLinkedCredit, openLinkedSalesOrder, query, selectedWarehouseId, setModal, setQuery, setSelectedWarehouseId, state, transferWarehouseStock }) {
   return (
     <>
