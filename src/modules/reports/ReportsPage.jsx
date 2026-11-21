@@ -35,8 +35,10 @@ function sumRows(rows, key) {
   return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0);
 }
 
+// The business date (order, expense, invoice, payment date) decides the period, as in the report_* database
+// functions; createdAt is only a fallback, so an October expense entered in November stays in October.
 function getRowDate(row, fallback) {
-  const raw = row?.createdAt || row?.date || row?.at || row?.orderDate || row?.completedAt || row?.approvedAt;
+  const raw = row?.date || row?.orderDate || row?.at || row?.completedAt || row?.approvedAt || row?.createdAt;
   const parsed = raw ? new Date(raw) : new Date(fallback);
   return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
 }
@@ -99,9 +101,12 @@ export function ReportsPage({
   const [pendingExport, setPendingExport] = useState(null);
   // Full rows load only for a warehouse filter (server functions are company-wide) or an export.
   const live = useLiveReportData(activeTenantId, { enabled: warehouseFilter !== "all" || Boolean(pendingExport) });
-  const serverModulesRaw = useReportModules(activeTenantId, period, snapshotDate);
-  const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate);
-  const serverSeries = useReportSeries(activeTenantId, snapshotDate);
+  // "Yenilə" bumps the revision so the server totals, chart and module summary are read again with the rows.
+  const [revision, setRevision] = useState(0);
+  const serverModulesRaw = useReportModules(activeTenantId, period, snapshotDate, revision);
+  const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate, revision);
+  const serverSeries = useReportSeries(activeTenantId, snapshotDate, revision);
+  const refreshReports = () => { live.refresh(); setRevision((value) => value + 1); };
   const [riskFilter, setRiskFilter] = useState("Hamısı");
   const [exportState, setExportState] = useState(null);
   const exporting = pendingExport?.scope === scope ? `${pendingExport.report.title}:${pendingExport.format}` : exportState?.scope === scope ? exportState.key : '';
@@ -366,7 +371,7 @@ export function ReportsPage({
             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
           </Select>
         </label>
-        <Button variant="secondary"  type="button" disabled={live.loading} onClick={live.refresh} title="Real datanı yenilə">
+        <Button variant="secondary"  type="button" disabled={live.loading} onClick={refreshReports} title="Real datanı yenilə">
           <RefreshCw size={16} /> {live.loading ? "Yenilənir" : "Yenilə"}
         </Button>
       </section>

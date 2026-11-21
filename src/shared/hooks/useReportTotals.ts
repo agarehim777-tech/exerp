@@ -28,8 +28,8 @@ export function reportPeriodRange(period: string, snapshotDate: string): { from:
 }
 
 // Server-computed headline totals; null until loaded or when the read fails (callers fall back to row sums).
-export function useReportTotals(tenantId: string | null | undefined, period: string, snapshotDate: string) {
-  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate]));
+export function useReportTotals(tenantId: string | null | undefined, period: string, snapshotDate: string, revision = 0) {
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate, revision]));
   const [totals, setTotals] = useState<{ scope: object; value: ReportTotals } | null>(null);
   useEffect(() => {
     const isCurrent = begin();
@@ -73,8 +73,8 @@ export function mapRiskRows(raw: unknown): ReportRiskRow[] {
 }
 
 // Six-month chart and current risk register computed in the database; null while loading or on failure.
-export function useReportSeries(tenantId: string | null | undefined, snapshotDate: string) {
-  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, snapshotDate]));
+export function useReportSeries(tenantId: string | null | undefined, snapshotDate: string, revision = 0) {
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, snapshotDate, revision]));
   const [series, setSeries] = useState<{ scope: object; value: { trend: ReportTrendRow[]; risks: ReportRiskRow[] } } | null>(null);
   useEffect(() => {
     const isCurrent = begin();
@@ -125,8 +125,8 @@ export function mapModuleSummary(raw: unknown, money: (value: number) => string)
 }
 
 // Server-computed module analytics for the selected period; null while loading or on failure.
-export function useReportModules(tenantId: string | null | undefined, period: string, snapshotDate: string) {
-  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate]));
+export function useReportModules(tenantId: string | null | undefined, period: string, snapshotDate: string, revision = 0) {
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate, revision]));
   const [summary, setSummary] = useState<{ scope: object; value: unknown } | null>(null);
   useEffect(() => {
     const isCurrent = begin();

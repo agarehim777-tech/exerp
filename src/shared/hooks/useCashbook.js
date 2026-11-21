@@ -8,7 +8,7 @@ import { createExpenseCommand, createExpenseEditCommand, createTransferCommand, 
 
 
 const newAccountCode = type => `${type === 'bank' ? 'BNK' : type === 'card' ? 'KRT' : 'KAS'}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-const newTransactionNo = (prefix = 'KAS') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+export const newTransactionNo = (prefix = 'KAS') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
 // Transactions and expenses load newest first, CASH_PAGE rows at a time; "load more" raises the limit and the
 // next read (including realtime resyncs) fetches up to it, so older rows already shown are kept.
@@ -113,6 +113,8 @@ export function useCashbook(tenantId) {
     await fetchAll();
   };
 
+  // The page passes one transaction_no per draft. If a first attempt was saved but its response was lost, the
+  // retry hits UNIQUE (tenant_id, transaction_no); that means "already saved", not a second transaction.
   const addTransaction = async (payload) => {
     const customer = customers.find(item => item.id === payload.customer_id);
     const { error: err } = await supabase.from('cash_transactions').insert({
@@ -123,7 +125,7 @@ export function useCashbook(tenantId) {
       amount: Number(payload.amount) || 0,
       tenant_id: tenantId,
     });
-    if (err) throw err;
+    if (err && !(err.code === '23505' && payload.transaction_no)) throw err;
     await fetchAll();
   };
 
