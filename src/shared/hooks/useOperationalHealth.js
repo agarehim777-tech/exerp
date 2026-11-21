@@ -16,9 +16,9 @@ export function useOperationalHealth(tenantId) {
       const [orders, credits, cash, reservations, balances, invoices, deliveries, accountingEvents] = await Promise.all([
         readAllRows(() => supabase.from('orders').select('id,order_no,status').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('credit_contracts').select('id,order_id,contract_no,status').eq('tenant_id', tenantId).order('id')),
-        readAllRows(() => supabase.from('cash_transactions').select('id,category,reference_type,reference_id,reference,description,reversed_at,reversal_of').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('cash_transactions').select('id,category,reference_type,reference_id,reference,description,reversal_of').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('stock_reservations').select('id,order_id,warehouse_id,product_id,quantity,status').eq('tenant_id', tenantId).order('id')),
-        readAllRows(() => supabase.from('stock_balances').select('warehouse_id,product_id,reserved').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('stock_balances').select('warehouse_id,product_id,reserved').eq('tenant_id', tenantId).order('warehouse_id').order('product_id')),
         readAllRows(() => supabase.from('sales_invoices').select('id,invoice_no,order_id,status').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('deliveries').select('id,delivery_no,order_id,status').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('order_accounting_events').select('id,order_id,event_type').eq('tenant_id', tenantId).order('id')),

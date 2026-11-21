@@ -3574,6 +3574,9 @@ isOneToOne: false
 "scan_erp_integrity":
 { Args: { "_tenant_id": string }; Returns: Json
                            },
+"seed_default_coa":
+{ Args: { "_tenant": string }; Returns: number
+                           },
 "seed_default_crm_pipeline":
 { Args: { "_tenant": string }; Returns: string
                            },
