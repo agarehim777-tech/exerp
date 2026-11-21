@@ -1,7 +1,6 @@
 import { BarChart3, Download, SlidersHorizontal, TrendingUp, Wallet } from "lucide-react";
 import {
   DataTable,
-  EmptyState,
   MetricCard,
   Panel,
   PanelHeader,
@@ -13,80 +12,70 @@ import { money, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { buildProjectRoiSummary } from "../../shared/analytics/projects.js";
 
+// One row of four figures, one ROI table, then the cost split and the last saved report. Collection rate and
+// risk count sit under the revenue and ROI cards instead of a second card row.
 export function ProjectsPage({ projects, snapshot = null }) {
   const summary = buildProjectRoiSummary(projects);
   const budget = total(projects, "budget");
   const collected = total(projects, "collected");
   const collectionRate = summary.revenue > 0 ? (collected / summary.revenue) * 100 : 0;
 
+  if (projects.length === 0) {
+    return (
+      <div className="stack" data-testid="project-roi-control-panel">
+        <Panel className="project-roi-empty">
+          <PanelHeader title="Layihə və kampaniya ROI" subtitle="Hələ hesablanacaq məlumat yoxdur" icon={BarChart3} />
+          <div className="project-roi-empty-body">
+            <p>Satış sifarişi və ya xərc yaranan kimi burada avtomatik satış layihəsi görünəcək: gəlir, xərc, mənfəət və ROI.</p>
+            <p>Hesabatı “ROI export” düyməsi ilə saxlaya bilərsiniz; o, layihə olandan sonra işləyir.</p>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
+
   return (
     <div className="stack">
-      <section className="metric-grid four">
-        <MetricCard label="Layihə gəliri" value={money(summary.revenue)} icon={Wallet} tone="success" />
-        <MetricCard label="Committed xərc" value={money(summary.committedCost)} trend={`Büdcə: ${money(budget)}`} icon={BarChart3} tone="warning" />
+      <section className="metric-grid four" data-testid="project-roi-control-panel">
+        <MetricCard label="Gəlir" value={money(summary.revenue)} trend={`${percent(collectionRate)} yığılıb · ${money(collected)}`} icon={Wallet} tone="success" />
+        <MetricCard label="Xərc" value={money(summary.committedCost)} trend={`Büdcə: ${money(budget)}`} icon={BarChart3} tone="warning" />
         <MetricCard label="Mənfəət" value={money(summary.profit)} trend={`Proqnoz: ${money(summary.projectedProfit)}`} icon={TrendingUp} tone={summary.profit >= 0 ? "success" : "danger"} />
-        <MetricCard label="Orta ROI" value={percent(summary.avgRoi)} trend={`${summary.riskCount} risk`} icon={SlidersHorizontal} tone={summary.riskCount ? "warning" : "primary"} />
-      </section>
-      <section className="project-roi-control-grid" data-testid="project-roi-control-panel">
-        <div>
-          <span>Yığım faizi</span>
-          <strong>{percent(collectionRate)}</strong>
-          <small>{money(collected)} toplanıb</small>
-        </div>
-        <div>
-          <span>Report status</span>
-          <strong>{snapshot ? "Hazır" : "Gözləyir"}</strong>
-          <small>{snapshot ? `${snapshot.period} · ${snapshot.projects?.length || 0} layihə` : "ROI export düyməsini işə salın"}</small>
-        </div>
-        <div>
-          <span>Riskli layihələr</span>
-          <strong>{summary.riskCount}</strong>
-          <small>Büdcə, mənfəət və yığım siqnalları</small>
-        </div>
+        <MetricCard label="Orta ROI" value={percent(summary.avgRoi)} trend={summary.riskCount ? `${summary.riskCount} riskli layihə` : "Risk yoxdur"} icon={SlidersHorizontal} tone={summary.riskCount ? "warning" : "primary"} />
       </section>
       <Panel className="project-roi-panel">
-        <PanelHeader title="Layihə və kampaniya ROI" subtitle="Məhsul, xərc kateqoriyası və satış nəticələri əsasında hesablanır" icon={BarChart3} />
+        <PanelHeader title="Layihə və kampaniya ROI" subtitle="Satış, məhsul mayası və xərclərə görə hesablanır" icon={BarChart3} />
         <DataTable
-          columns={["Layihə", "Sahib", "Büdcə", "Satış/Yığım", "Xərc", "Mənfəət", "ROI", "Status", "Növbəti addım", "Hesabat"]}
+          columns={["Layihə", "Gəlir", "Xərc", "Mənfəət", "ROI", "Status"]}
           rows={projects.map((project) => [
-            <TwoLine title={project.name} subtitle={`${project.start} → ${project.end}`} />,
-            project.owner,
-            money(project.budget || project.investmentBase),
-            <TwoLine title={money(project.revenue)} subtitle={`${project.orders} sifariş · ${percent(project.collectionRate)} yığım`} />,
-            <TwoLine title={money(project.totalCost)} subtitle={`Committed: ${money(project.committedCost)}`} />,
+            <TwoLine title={project.name} subtitle={`${project.owner || "—"} · ${project.start} → ${project.end}`} />,
+            <TwoLine title={money(project.revenue)} subtitle={`${project.orders} sifariş · ${percent(project.collectionRate)} yığılıb`} />,
+            <TwoLine title={money(project.totalCost)} subtitle={`Öhdəlik daxil: ${money(project.committedCost)}`} />,
             <TwoLine title={money(project.profit)} subtitle={`Proqnoz: ${money(project.projectedProfit)}`} />,
             <ProgressRow value={Math.max(0, Math.min(100, project.roi))} caption={percent(project.roi)} compact />,
-            <StatusBadge status={project.status} />,
-            project.nextAction,
-            project.lastExportAt || snapshot ? (
-              <TwoLine title={project.lastExportAt || snapshot.generatedAt} subtitle={`${project.exportCount || 1} export`} />
-            ) : (
-              <StatusBadge status={project.reportStatus} />
-            ),
+            <TwoLine title={<StatusBadge status={project.status} />} subtitle={project.nextAction} />,
           ])}
         />
       </Panel>
       <section className="dashboard-grid">
         <Panel className="project-roi-breakdown-panel span-2">
-          <PanelHeader title="Xərc və gəlir breakdown" subtitle="Məhsul maya dəyəri, təsdiqli xərc, gözləyən xərc və budget usage" icon={Wallet} />
+          <PanelHeader title="Xərc bölgüsü" subtitle="Məhsul mayası, təsdiqli və gözləyən xərclər, büdcə istifadəsi" icon={Wallet} />
           <DataTable
-            columns={["Layihə", "Məhsul maya", "Təsdiqli xərc", "Gözləyən xərc", "Budget usage", "Order ID-lər"]}
+            columns={["Layihə", "Məhsul mayası", "Təsdiqli xərc", "Gözləyən xərc", "Büdcə istifadəsi"]}
             rows={projects.map((project) => [
               <TwoLine title={project.name} subtitle={project.autoGenerated ? "Avtomatik portfel" : project.id} />,
               money(project.productCost),
               money(project.approvedExpenseCost),
               money(project.pendingExpenseCost),
               project.budget ? <ProgressRow value={Math.max(0, Math.min(100, project.budgetUsage))} caption={percent(project.budgetUsage)} compact /> : "—",
-              project.orderIds?.length ? project.orderIds.slice(0, 4).join(", ") : "—",
             ])}
           />
         </Panel>
         <Panel className="project-report-panel">
-          <PanelHeader title="ROI hesabat axını" subtitle="Son export snapshot-u və idarəetmə nəticəsi" icon={Download} />
+          <PanelHeader title="Son ROI hesabatı" subtitle="“ROI export” ilə saxlanan son nəticə" icon={Download} />
           {snapshot ? (
             <div className="project-report-card">
               <StatusBadge status={snapshot.summary?.riskCount ? "Nəzarət" : "Hazır"} />
-              <TwoLine title={snapshot.generatedAt} subtitle={`${snapshot.period} dövrü`} />
+              <TwoLine title={snapshot.generatedAt} subtitle={`${snapshot.period} dövrü · ${snapshot.projects?.length || 0} layihə`} />
               <div>
                 <span>Gəlir</span>
                 <strong>{money(snapshot.summary?.revenue || 0)}</strong>
@@ -101,7 +90,7 @@ export function ProjectsPage({ projects, snapshot = null }) {
               </div>
             </div>
           ) : (
-            <EmptyState title="ROI hesabatı hələ export edilməyib" />
+            <p className="project-report-hint">Hələ hesabat saxlanmayıb. Yuxarıdakı “ROI export” düyməsi indiki nəticəni bura yazır.</p>
           )}
         </Panel>
       </section>

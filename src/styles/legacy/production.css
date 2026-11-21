@@ -19,6 +19,29 @@
   font-weight: 720;
 }
 
+/* The ROI tables have five or six columns now; the shared 1060px minimum for wide registers made the
+   cost split scroll sideways even on a 1280px screen. */
+.panel.project-roi-panel table,
+.panel.project-roi-breakdown-panel table {
+  min-width: 640px;
+}
+
+.project-roi-empty-body,
+.project-report-hint {
+  display: grid;
+  gap: 8px;
+  max-width: 62ch;
+  margin: 0;
+  padding: 4px 2px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.project-roi-empty-body p {
+  margin: 0;
+}
+
 .project-roi-control-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
