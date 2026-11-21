@@ -1,7 +1,8 @@
 // Provisions an admin user for a tenant with a temporary password.
-// Caller must be a platform admin.
+// Caller must be a platform admin. The steps and their rollback live in _shared/provisionTenantAdmin.ts.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { findAuthUserByEmail } from "../_shared/findAuthUser.ts";
+import { provisionTenantAdmin } from "../_shared/provisionTenantAdmin.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -42,49 +43,39 @@ Deno.serve(async (req) => {
       .from("platform_admins").select("user_id").eq("user_id", userRes.user.id).maybeSingle();
     if (!pa) return json({ error: "forbidden" }, 403);
 
-    const { tenant_id, email, role = "admin" } = await req.json();
-    if (!tenant_id || !email) return json({ error: "tenant_id və email tələb olunur" }, 400);
-    const normalizedEmail = String(email).trim().toLowerCase();
-
-    // Find or create the auth user
-    let userId: string | null = null;
-    let password: string | null = null;
-    let created = false;
-
-    const existing = await findAuthUserByEmail(options => admin.auth.admin.listUsers(options), normalizedEmail);
-    if (existing) {
-      // Never reset an existing account's password: only grant tenant membership.
-      userId = existing.id;
-      password = null;
-    } else {
-      password = tempPassword();
-      const { data: cu, error: cErr } = await admin.auth.admin.createUser({
-        email: normalizedEmail,
-        password,
-        email_confirm: true,
-      });
-      if (cErr || !cu.user) return json({ error: cErr?.message || "İstifadəçi yaradıla bilmədi" }, 400);
-      userId = cu.user.id;
-      created = true;
-    }
-
-    // Ensure profile row exists (id references auth.users) and set active tenant
-    const { error: profileError } = await admin.from("profiles").upsert(
-      { id: userId, email: normalizedEmail, active_tenant_id: tenant_id },
-      { onConflict: "id", ignoreDuplicates: true },
-    );
-    if (profileError) throw new Error('Profile could not be saved');
-    // If profile already existed without an active tenant, make sure it's set now
-    const { error: activeTenantError } = await admin.from("profiles").update({ active_tenant_id: tenant_id }).eq("id", userId).is("active_tenant_id", null);
-    if (activeTenantError) throw new Error('Active tenant could not be saved');
-
-    // Add tenant membership
-    const { error: mErr } = await admin
-      .from("tenant_members")
-      .upsert({ tenant_id, user_id: userId, role }, { onConflict: "tenant_id,user_id" });
-    if (mErr) return json({ error: mErr.message }, 400);
-
-    return json({ email: normalizedEmail, password, user_id: userId, created });
+    const result = await provisionTenantAdmin(await req.json(), {
+      tempPassword: () => tempPassword(),
+      async tenantExists(tenantId) {
+        const { data, error } = await admin.from("tenants").select("id").eq("id", tenantId).maybeSingle();
+        if (error) throw new Error("Tenant could not be read");
+        return Boolean(data);
+      },
+      findUserByEmail: (email) => findAuthUserByEmail(options => admin.auth.admin.listUsers(options), email),
+      async createUser(email, password) {
+        const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+        if (error || !data.user) throw new Error(error?.message || "İstifadəçi yaradıla bilmədi");
+        return { id: data.user.id };
+      },
+      async deleteUser(userId) {
+        const { error } = await admin.auth.admin.deleteUser(userId);
+        if (error) throw new Error(error.message);
+      },
+      async saveProfile(userId, email, tenantId) {
+        // Ensure the profile row exists (id references auth.users) and set the active tenant when it has none.
+        const { error: profileError } = await admin.from("profiles").upsert(
+          { id: userId, email, active_tenant_id: tenantId },
+          { onConflict: "id", ignoreDuplicates: true },
+        );
+        if (profileError) throw new Error("Profile could not be saved");
+        const { error: activeTenantError } = await admin.from("profiles").update({ active_tenant_id: tenantId }).eq("id", userId).is("active_tenant_id", null);
+        if (activeTenantError) throw new Error("Active tenant could not be saved");
+      },
+      async saveMembership(tenantId, userId, role) {
+        const { error } = await admin.from("tenant_members").upsert({ tenant_id: tenantId, user_id: userId, role }, { onConflict: "tenant_id,user_id" });
+        if (error) throw new Error(error.message);
+      },
+    });
+    return json(result.body, result.status);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
