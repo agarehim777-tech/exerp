@@ -3,7 +3,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAccountingPeriods } from "../../shared/hooks/useAccountingPeriods.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, StatCard, StatGrid, TableActions } from "../../shared/ui/primitives.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { toLocalIsoDate } from "../../services/date.js";
+import { formatMonthYear, toLocalIsoDate } from "../../services/date.js";
 
 const STATUS_LABEL = { open: "Açıq", locked: "Bağlı", closed: "Yekunlaşıb" };
 const STATUS_TONE = { open: "green", locked: "amber", closed: "gray" };
@@ -14,7 +14,7 @@ function monthRange(offset = 0) {
   const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
   const iso = (d) => toLocalIsoDate(d);
   return {
-    name: start.toLocaleDateString("az-AZ", { year: "numeric", month: "long" }),
+    name: formatMonthYear(start),
     start_date: iso(start),
     end_date: iso(end),
   };

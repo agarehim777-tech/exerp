@@ -134,7 +134,11 @@ function buildExecutiveInsights({ orders, credits, vendors, employees }: { order
     return { credit, plan, paymentState: getCreditPaymentState(credit, plan) };
   });
   const overdueCount = creditRows.filter((item) => item.paymentState.isOverdue).length;
-  const topSeller = [...employees].sort((a, b) => Number(b.kpi || 0) - Number(a.kpi || 0))[0];
+  // HR employee rows carry no KPI score; only rank people who have one, or the card named the first
+  // employee as leader with "undefined% KPI".
+  const topSeller = employees
+    .filter((employee) => employee.kpi !== null && employee.kpi !== undefined && employee.kpi !== "" && Number.isFinite(Number(employee.kpi)))
+    .sort((a, b) => Number(b.kpi) - Number(a.kpi))[0];
   const vendorAtRisk = vendors.filter((vendor) => normalize(vendor.status).includes("risk") || normalize(vendor.status).includes("aşağı"));
   const openDelivery = orders.filter((order) => order.status !== "Təhvil verilib").length;
 

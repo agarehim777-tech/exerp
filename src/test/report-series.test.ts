@@ -5,6 +5,7 @@ describe("report series mapping", () => {
   it("keeps month order and numeric totals from the database", () => {
     const rows = mapTrendRows([{ month: "2026-08-01", revenue: "2000.00", expense: 0 }, { month: "2026-09-01", revenue: 0, expense: "1747" }]);
     expect(rows.map((r) => [r.revenue, r.expense])).toEqual([[2000, 0], [0, 1747]]);
+    expect(rows.map((r) => r.label)).toEqual(["avq", "sen"]);
   });
   it("normalizes risk rows", () => {
     const [row] = mapRiskRows([{ id: 1, area: "Anbar", amount: "12.5" }]);

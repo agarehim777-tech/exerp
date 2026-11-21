@@ -22,7 +22,7 @@ import {
   StatusBadge,
   TwoLine,
 } from "../../components/ui.jsx";
-import { formatPaymentDate, parsePaymentDate } from "../../services/date.js";
+import { formatMonthShort, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useLiveReportData } from "../../shared/hooks/useLiveReportData.js";
@@ -68,7 +68,7 @@ function buildMonthlyTrend(orders, expenses, snapshotDate) {
       return rowDate.getFullYear() === date.getFullYear() && rowDate.getMonth() === date.getMonth();
     };
     return {
-      label: new Intl.DateTimeFormat("az-AZ", { month: "short" }).format(date),
+      label: formatMonthShort(date),
       revenue: orders.filter(sameMonth).reduce((sum, row) => sum + Number(row.amount || 0), 0),
       expense: expenses
         .filter((row) => sameMonth(row) && !isCancelledExpense(row))
@@ -395,12 +395,16 @@ export function ReportsPage({
       <section className="reports-analytics-grid">
         <Panel className="reports-trend-panel">
           <PanelHeader title="Gəlir və xərc trendi" subtitle="Son 6 ay üzrə müqayisə" icon={BarChart3} />
+          {trendRows.every((row) => !row.revenue && !row.expense) && (
+            <p className="reports-trend-empty">Son 6 ayda gəlir və ya xərc qeydə alınmayıb.</p>
+          )}
           <div className="reports-trend-chart">
             {trendRows.map((row) => (
               <div className="reports-trend-column" key={row.label}>
                 <div className="reports-trend-bars">
-                  <span className="revenue" style={{ height: `${Math.max(4, (row.revenue / maxTrendValue) * 100)}%` }} title={money(row.revenue)} />
-                  <span className="expense" style={{ height: `${Math.max(4, (row.expense / maxTrendValue) * 100)}%` }} title={money(row.expense)} />
+                  {/* A month without revenue or expense draws no bar; the 4% floor only keeps small amounts visible. */}
+                  {row.revenue > 0 && <span className="revenue" style={{ height: `${Math.max(4, (row.revenue / maxTrendValue) * 100)}%` }} title={money(row.revenue)} />}
+                  {row.expense > 0 && <span className="expense" style={{ height: `${Math.max(4, (row.expense / maxTrendValue) * 100)}%` }} title={money(row.expense)} />}
                 </div>
                 <strong>{row.label}</strong>
               </div>

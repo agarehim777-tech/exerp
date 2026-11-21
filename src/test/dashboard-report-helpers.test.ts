@@ -59,6 +59,11 @@ describe("dashboard and report helpers", () => {
     ]);
   });
 
+  it("does not name a KPI leader from employees without a KPI score", () => {
+    const cards = buildExecutiveInsights({ orders: [], credits: [], vendors: [], employees: [{ name: "Ağayev Yusif" }, { name: "Orxan", kpi: "" }] });
+    expect(cards.at(-1)).toMatchObject({ value: "Yoxdur", desc: "KPI datası yoxdur" });
+  });
+
   it("builds module rows and a sorted risk register", () => {
     const modules = buildReportModuleRows({ expenses, invoices, warehouseStock: { "WH-1": stock }, products: [{ name: "Kabel" }] });
     expect(modules.map((row) => row.module)).toEqual(["Satış", "Kredit", "Anbar", "Vendor / PO", "Maliyyə", "Faktura", "HR"]);
