@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Pencil, Plus, RefreshCw, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { usePermissions } from '../../shared/hooks/usePermissions.js';
@@ -7,6 +7,20 @@ import { createIdempotencyKey } from '../../services/coreOperations.js';
 import { readAllRows } from '../../services/readAllRows.js';
 import './production.css';
 import { formatDate } from '../../services/date.js';
+import { formatAmount, formatNumber } from '../../services/format.js';
+import { appConfirm, appPrompt } from '../../shared/ui/dialogService.js';
+
+// Server errors of reverse_material_production, in words a user can act on.
+const REVERSAL_ERRORS = {
+  production_output_already_used: 'Hazır məhsul artıq satılıb, rezerv edilib və ya köçürülüb; bu partiyanı ləğv etmək olmaz.',
+  production_reversal_reason_required: 'Ləğv səbəbini yazın (ən azı 3 simvol).',
+  permission_denied: 'İstehsal və anbar üzrə redaktə icazəniz yoxdur.',
+};
+const reversalMessage = (failure) => {
+  const text = String(failure?.message || failure || '');
+  const known = Object.keys(REVERSAL_ERRORS).find(code => text.includes(code));
+  return known ? REVERSAL_ERRORS[known] : text;
+};
 
 export default function ProductionLedgerPage() {
   const { activeTenantId: tenantId } = useAuth();
@@ -27,7 +41,7 @@ export default function ProductionLedgerPage() {
       // Paged: a tenant can have more than the 1000 products or warehouses PostgREST returns per request.
       readAllRows(() => supabase.from('products').select('id,name,sku').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
       readAllRows(() => supabase.from('warehouses').select('id,name').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
-      supabase.from('production_batches').select('*').eq('tenant_id', tenantId).order('completed_at', { ascending: false }).limit(100),
+      supabase.from('production_batches').select('*, production_batch_materials(product_id,quantity)').eq('tenant_id', tenantId).order('completed_at', { ascending: false }).limit(100),
     ]);
     if (version !== generation.current || tenantId !== currentTenant.current) return;
     const failure = responses.find(response => response.error)?.error;
@@ -56,6 +70,34 @@ export default function ProductionLedgerPage() {
       attempt.current = null;
       await load();
     } catch (failure) { if (tenantId === currentTenant.current) setError(failure.message); }
+    finally { inFlight.current = false; setPending(false); }
+  }
+  // A posted batch already moved stock and posted a journal, so it is never deleted or edited in place: it is
+  // cancelled with a storno (reverse_material_production). "Düzəlt" cancels it and puts its values back into the
+  // form, so the corrected batch is posted as a new one.
+  async function reverseBatch(batch, { correct = false } = {}) {
+    if (!editable || !tenantId || inFlight.current) return;
+    const label = batch.batch_no ? shortBatchNo(batch.batch_no) : 'Partiya';
+    const confirmed = await appConfirm(correct
+      ? `${label} ləğv ediləcək: xammal anbara qayıdacaq, hazır məhsul çıxılacaq. Sonra eyni dəyərlərlə forma açılacaq ki, düzəldib yenidən qeyd edəsiniz.`
+      : `${label} ləğv ediləcək: xammal anbara qayıdacaq, hazır məhsul anbardan çıxılacaq və jurnal əks yazılışla bağlanacaq.`);
+    if (!confirmed) return;
+    const reason = await appPrompt(`${label} üçün ləğv səbəbini yazın:`, correct ? 'Düzəliş' : '');
+    if (reason === null) return;
+    inFlight.current = true; setPending(true); setError('');
+    try {
+      const { error: failure } = await supabase.rpc('reverse_material_production', { _tenant_id: tenantId, _batch_id: batch.id, _reason: reason });
+      if (failure) throw failure;
+      if (tenantId !== currentTenant.current) return;
+      if (correct) {
+        setDraft({ product_id: batch.product_id, warehouse_id: batch.warehouse_id, quantity: Number(batch.quantity) });
+        const rows = (batch.production_batch_materials || []).map(row => ({ product_id: row.product_id, quantity: Number(row.quantity) }));
+        setMaterials(rows.length ? rows : [{ product_id: '', quantity: 1 }]);
+        attempt.current = null;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      await load();
+    } catch (failure) { if (tenantId === currentTenant.current) setError(reversalMessage(failure)); }
     finally { inFlight.current = false; setPending(false); }
   }
   const selectProduct = (value, change, material = false) => <select aria-label={material ? 'Xammal' : 'Hazır məhsul'} required
@@ -92,12 +134,25 @@ export default function ProductionLedgerPage() {
     </form>
     <section className="production-register">
       <div className="production-actions"><h3>İstehsal reyestri</h3><button className="icon-btn" title="Yenilə" aria-label="Yenilə" onClick={load}><RefreshCw size={16} /></button></div>
-      <div className="table-scroll"><table><thead><tr><th>Partiya</th><th>Məhsul</th><th>Miqdar</th><th>Material mayası</th><th>Vahid maya</th><th>Tarix</th></tr></thead>
-        <tbody>{batches.map(batch => <tr key={batch.id} data-batch-id={batch.id}>
-          <td>{batch.batch_no}</td><td>{products.find(product => product.id === batch.product_id)?.name || batch.product_id}</td>
-          <td className="numeric">{Number(batch.quantity)}</td><td className="numeric">{Number(batch.total_cost).toFixed(2)}</td>
-          <td className="numeric">{Number(batch.unit_cost).toFixed(6)}</td><td>{formatDate(batch.completed_at)}</td>
+      <div className="table-scroll"><table><thead><tr><th>Partiya</th><th>Məhsul</th><th>Miqdar</th><th>Material mayası</th><th>Vahid maya</th><th>Tarix</th><th>Status</th><th aria-label="Əməliyyat" /></tr></thead>
+        <tbody>{batches.map(batch => <tr key={batch.id} data-batch-id={batch.id} className={batch.reversed_at ? 'production-reversed' : undefined}>
+          <td title={batch.batch_no}>{shortBatchNo(batch.batch_no)}</td><td>{products.find(product => product.id === batch.product_id)?.name || batch.product_id}</td>
+          <td className="numeric">{formatNumber(batch.quantity, { maximumFractionDigits: 3 })}</td><td className="numeric">{formatAmount(batch.total_cost)}</td>
+          <td className="numeric">{formatAmount(batch.unit_cost)}</td><td>{formatDate(batch.completed_at)}</td>
+          <td title={batch.reversal_reason || undefined}>{batch.reversed_at ? `Ləğv edilib · ${formatDate(batch.reversed_at)}` : 'Tamamlandı'}</td>
+          <td className="production-row-actions">{!batch.reversed_at && editable && <>
+            <button type="button" className="icon-btn" title="Düzəlt (ləğv edib yenidən qeyd et)" aria-label="Partiyanı düzəlt" disabled={pending}
+              onClick={() => reverseBatch(batch, { correct: true })}><Pencil size={16} /></button>
+            <button type="button" className="icon-btn" title="Ləğv et (storno)" aria-label="Partiyanı ləğv et" disabled={pending}
+              onClick={() => reverseBatch(batch)}><Undo2 size={16} /></button>
+          </>}</td>
         </tr>)}</tbody></table></div>
     </section>
   </div>;
+}
+
+// "PROD-<uuid>" is long; the first 8 characters identify a batch, the full number stays in the cell title.
+function shortBatchNo(batchNo) {
+  const text = String(batchNo || '');
+  return text.startsWith('PROD-') && text.length > 13 ? text.slice(0, 13) : text;
 }
