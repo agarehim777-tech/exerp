@@ -741,7 +741,7 @@ async function auditPurchaseOrder(browser, { viaReceivables = false } = {}) {
     await page.getByRole('button', { name: 'Yeni PO yarat', exact: true }).click();
     const poNumber = 'PO-QA-' + suffix;
     const poForm = page.locator('form').filter({ has: page.getByLabel('PO nömrəsi', { exact: true }) });
-    await poForm.getByLabel(/^Vendor/).selectOption(vendor.id);
+    await poForm.getByLabel(/^Təchizatçı/).selectOption(vendor.id);
     await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
     await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
@@ -861,7 +861,7 @@ async function auditVendorLifecycle(browser) {
     await page.getByRole('button', { name: 'Yeni PO yarat', exact: true }).click();
     const poNumber = `PO-QA-${suffix.toUpperCase()}`;
     const poForm = page.locator('form').filter({ has: page.getByLabel('PO nömrəsi', { exact: true }) });
-    await poForm.getByLabel(/^Vendor/).selectOption(vendor.id);
+    await poForm.getByLabel(/^Təchizatçı/).selectOption(vendor.id);
     await poForm.getByLabel('PO nömrəsi', { exact: true }).fill(poNumber);
     await poForm.getByLabel('SKU / məhsul kodu', { exact: true }).fill(fixture.sku);
     await poForm.getByLabel('Miqdar', { exact: true }).fill('2');
@@ -1735,7 +1735,7 @@ async function auditHrStructure(browser) {
     await page.locator(".hr-recruitment-card").filter({ hasText: vacancyRole }).waitFor();
 
     await selectModule(page, 24);
-    await page.getByRole("button", { name: "Integrity yoxla" }).click();
+    await page.getByRole("button", { name: "Bütövlüyü yoxla" }).click();
     const integrityState = await waitForHrState(s => Boolean(s.integritySnapshot),
       "Integrity check did not persist a snapshot");
     assert(

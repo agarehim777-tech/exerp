@@ -41,7 +41,7 @@ await page.waitForTimeout(150);
 
 const settingsText = await page.locator("main").innerText();
 const settingsChecks = {
-  systemHealth: settingsText.includes("Sistem Sağlamlığı"),
+  systemHealth: settingsText.includes("Sistem sağlamlığı"),
   goLive: settingsText.includes("Real Mühitə Çıxış"),
   integrity: settingsText.includes("Bütövlük balı"),
   backup: settingsText.includes("Ehtiyat nüsxənin ixracı"),
