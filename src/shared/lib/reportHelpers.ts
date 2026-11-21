@@ -122,7 +122,7 @@ function buildReportModuleRows({
       status: lowStockRows.length > 0 ? "Nəzarət" : "Hazır",
     },
     {
-      module: "Vendor / PO",
+      module: "Təchizatçı / PO",
       metric: money(approvedPoAmount),
       count: `${(purchaseOrders || []).length} PO`,
       signal: openPos.length > 0 ? `${openPos.length} təsdiqdə` : `${vendors.length} vendor aktiv`,
@@ -221,7 +221,7 @@ function buildReportRiskRows({
     .forEach((po) => {
       riskRows.push({
         id: po.id,
-        area: "Vendor / PO",
+        area: "Təchizatçı / PO",
         title: po.product,
         amount: Number(po.amount || 0),
         owner: po.vendor,

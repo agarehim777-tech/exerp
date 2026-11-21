@@ -40,7 +40,7 @@ export function useRfqActions({ tenantId, begin, setError, setNotice, setSaving,
   async function saveRfq(event: FormEvent) {
     event.preventDefault();
     if (!rfqForm.title.trim() || !rfqForm.description.trim() || Number(rfqForm.quantity) <= 0 || !rfqForm.vendor_ids.length) {
-      setError("RFQ adı, məhsul, miqdar və ən azı bir vendor tələb olunur.");
+      setError("RFQ adı, məhsul, miqdar və ən azı bir təchizatçı tələb olunur.");
       return;
     }
     setSaving(true);
@@ -58,7 +58,7 @@ export function useRfqActions({ tenantId, begin, setError, setNotice, setSaving,
         approvals: [{ role_code: "procurement_manager" }, { role_code: "finance_manager" }],
       });
       setRfqForm(emptyRfq);
-      setNotice("Təklif sorğusu yaradıldı və vendor müqayisəsinə göndərildi.");
+      setNotice("Təklif sorğusu yaradıldı və təchizatçı müqayisəsinə göndərildi.");
       await loadRfqs();
     } catch (rfqError) {
       setError(getError(rfqError));

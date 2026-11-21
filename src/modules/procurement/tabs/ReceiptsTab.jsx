@@ -28,7 +28,7 @@ export function ReceiptsTab({
             <select aria-label="PO" className="procurement-page-styles-input" value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
-                <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>
+                <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Təchizatçı"}</option>
               ))}
             </select>
           </label>
@@ -85,7 +85,7 @@ export function ReceiptsTab({
               lines.length,
               <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedReceipt(isExpanded ? null : receipt.id)} />
-                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(receipt)} />
+                <IconButton icon={Pencil} label="Düzəliş" onClick={() => onEdit(receipt)} />
                 <IconButton icon={Trash2} label="Sil" onClick={() => onDelete(receipt)} tone="danger" />
               </div>,
             ];

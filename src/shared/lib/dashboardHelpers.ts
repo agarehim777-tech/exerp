@@ -156,9 +156,9 @@ function buildExecutiveInsights({ orders, credits, vendors, employees }: { order
       tone: openDelivery > 4 ? "warning" : "info",
     },
     {
-      title: "Vendor riski",
+      title: "Təchizatçı riski",
       value: vendorAtRisk.length,
-      desc: "Kvota və təchizat üzrə zəif vendorlar",
+      desc: "Kvota və təchizat üzrə zəif təchizatçılar",
       tone: vendorAtRisk.length > 0 ? "warning" : "success",
     },
     {

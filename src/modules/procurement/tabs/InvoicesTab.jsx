@@ -27,14 +27,14 @@ export function InvoicesTab({
 }) {
   return (
     <section className="procurement-page-styles-stack">
-      <Panel title={editingId ? "Fakturanı redaktə et" : "Yeni vendor fakturası"} icon={Receipt}>
+      <Panel title={editingId ? "Fakturanı redaktə et" : "Yeni təchizatçı fakturası"} icon={Receipt}>
         <form onSubmit={onSubmit} className="procurement-page-styles-form">
           <label className="procurement-page-styles-field">
             <span>PO</span>
             <select aria-label="PO" className="procurement-page-styles-input" value={form.po_id} onChange={(event) => setForm({ ...form, po_id: event.target.value })} required disabled={!!editingId}>
               <option value="">PO seçin</option>
               {poOptions.map((po) => (
-                <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Vendor"}</option>
+                <option key={po.id} value={po.id}>{po.po_number} · {po.vendors?.name || "Təchizatçı"}</option>
               ))}
             </select>
           </label>
@@ -75,7 +75,7 @@ export function InvoicesTab({
 
       <Panel title="Faktura və 3-way match" icon={FileText}>
         <DataTable
-          columns={["Faktura", "Vendor / PO", "Məbləğ", "Status", "Əməl"]}
+          columns={["Faktura", "Təchizatçı / PO", "Məbləğ", "Status", "Əməl"]}
           empty="Faktura yoxdur."
           rows={invoices.map((invoice) => {
             const isExpanded = expandedInvoice === invoice.id;
@@ -83,13 +83,13 @@ export function InvoicesTab({
               <button key="invoice" type="button" className="procurement-page-styles-link-cell" onClick={() => setExpandedInvoice(isExpanded ? null : invoice.id)}>
                 <TwoLine title={invoice.invoice_number} subtitle={`${invoice.invoice_date || "tarixsiz"} · son ödəniş ${invoice.due_date || "qeyd yoxdur"}`} />
               </button>,
-              <TwoLine key="vendor" title={invoice.vendors?.name || "Vendor yoxdur"} subtitle={`PO ${invoice.purchase_orders?.po_number || "yoxdur"}`} />,
+              <TwoLine key="vendor" title={invoice.vendors?.name || "Təchizatçı yoxdur"} subtitle={`PO ${invoice.purchase_orders?.po_number || "yoxdur"}`} />,
               money(invoiceTotals.get(invoice.id) || 0, invoice.currency),
               <StatusPill key="status" status={invoice.status} type="invoice" />,
               <div key="actions" className="procurement-page-styles-row-actions">
                 <IconButton icon={Eye} label={isExpanded ? "Bağla" : "Bax"} onClick={() => setExpandedInvoice(isExpanded ? null : invoice.id)} />
                 <IconButton icon={RefreshCw} label="Match" onClick={() => onMatch(invoice)} />
-                <IconButton icon={Pencil} label="Edit" onClick={() => onEdit(invoice)} disabled={invoice.status === "paid"} />
+                <IconButton icon={Pencil} label="Düzəliş" onClick={() => onEdit(invoice)} disabled={invoice.status === "paid"} />
                 {invoice.status === "matched" && <IconButton icon={CheckCircle2} label="Təsdiq" onClick={() => onApprove(invoice)} tone="success" />}
                 {["matched", "approved"].includes(invoice.status) && <IconButton icon={WalletCards} label="Ödəniş et" onClick={() => onPaid(invoice)} tone="success" />}
                 {!["paid", "cancelled"].includes(invoice.status) && <IconButton icon={XCircle} label="Ləğv" onClick={() => onCancelInvoice(invoice)} tone="danger" />}

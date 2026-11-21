@@ -1,16 +1,16 @@
 // Focused domain commands; dependencies are explicit and supplied by App.
 export function createVendorRegistryActions({ auditCurrentState, getVendorKey, isPurchaseOrderOpen, normalize, normalizeVendor, notify, requirePermission, setModal, setState, state }) {
 function updateVendor(vendorKey, values) {
-    if (!requirePermission("vendors.manage", "vendoru redaktə etmək")) return;
+    if (!requirePermission("vendors.manage", "təchizatçını redaktə etmək")) return;
 
     const currentVendor = (state.vendors || []).find((vendor) => getVendorKey(vendor) === vendorKey);
     const nextVendor = normalizeVendor(values, currentVendor);
     if (!currentVendor || !nextVendor.name || !nextVendor.country) {
-      notify("Vendor adı və ölkə daxil edin.", "warning");
+      notify("Təchizatçı adı və ölkə daxil edin.", "warning");
       return;
     }
     if ((state.vendors || []).some((vendor) => getVendorKey(vendor) !== vendorKey && normalize(vendor.name) === normalize(nextVendor.name))) {
-      notify("Bu adda vendor artıq mövcuddur.", "warning");
+      notify("Bu adda təchizatçı artıq mövcuddur.", "warning");
       return;
     }
 
@@ -37,17 +37,17 @@ function updateVendor(vendorKey, values) {
       ),
     );
     setModal(null);
-    notify(`${nextVendor.name} vendor məlumatları yeniləndi.`);
+    notify(`${nextVendor.name} təchizatçı məlumatları yeniləndi.`);
   }
 
 function deleteVendor(vendorKey) {
-    if (!requirePermission("vendors.manage", "vendoru silmək")) return;
+    if (!requirePermission("vendors.manage", "təchizatçını silmək")) return;
 
     const targetVendor = (state.vendors || []).find((vendor) => getVendorKey(vendor) === vendorKey);
     if (!targetVendor) return;
     const openPoCount = (state.purchaseOrders || []).filter((po) => po.vendor === targetVendor.name && isPurchaseOrderOpen(po)).length;
     if (openPoCount > 0) {
-      notify("Bu vendor üzrə açıq PO var. Əvvəl PO-nu təsdiqləyin və ya vendoru Passiv edin.", "warning");
+      notify("Bu təchizatçı üzrə açıq PO var. Əvvəl PO-nu təsdiqləyin və ya təchizatçını Passiv edin.", "warning");
       return;
     }
 
@@ -66,7 +66,7 @@ function deleteVendor(vendorKey) {
       ),
     );
     setModal(null);
-    notify(`${targetVendor.name} vendor reyestrindən silindi.`);
+    notify(`${targetVendor.name} təchizatçı reyestrindən silindi.`);
   }
 return { updateVendor, deleteVendor };
 }

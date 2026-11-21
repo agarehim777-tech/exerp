@@ -15,7 +15,7 @@ export function DashboardTab({ purchaseOrders, poMetrics, onCreatePo, onReceive 
             <div key={po.id} className="procurement-page-styles-compact-row">
               <div>
                 <strong>{po.po_number}</strong>
-                <small>{po.vendors?.name || "Vendor yoxdur"} · {money(poMetrics.get(po.id)?.total || 0, po.currency)}</small>
+                <small>{po.vendors?.name || "Təchizatçı yoxdur"} · {money(poMetrics.get(po.id)?.total || 0, po.currency)}</small>
               </div>
               <div className="procurement-page-styles-row-actions">
                 <IconButton icon={PackageCheck} label="Mədaxil" onClick={() => onReceive(po.id)} />

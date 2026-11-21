@@ -7,7 +7,7 @@ export function movementKind(item) {
   if (type === "release") return "Rezerv açıldı";
   if (type.includes("transfer")) return "Transfer";
   if (type === "customer_return" || type === "return_in") return "Müştəri qaytarması";
-  if (type === "vendor_return") return "Vendor qaytarması";
+  if (type === "vendor_return") return "Təchizatçıya qaytarma";
   if (type === "return_quarantine") return "Karantin / zədəli";
   if (type === "adjust" || type === "adjustment") return "Stok düzəlişi";
   if (IN_TYPES.has(type)) return "Mədaxil";

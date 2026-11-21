@@ -81,10 +81,10 @@ const createConfig = {
     ],
   },
   vendors: {
-    title: "Yeni vendor",
-    subtitle: "Vendor kvota cədvəlinə əlavə olunacaq.",
+    title: "Yeni təchizatçı",
+    subtitle: "Təchizatçı kvota cədvəlinə əlavə olunacaq.",
     fields: [
-      { name: "name", label: "Vendor adı", required: true },
+      { name: "name", label: "Təchizatçı adı", required: true },
       { name: "country", label: "Ölkə", required: true },
       { name: "sku", label: "SKU sayı", type: "number", required: true },
       { name: "quota", label: "Kvota", type: "number", required: true },

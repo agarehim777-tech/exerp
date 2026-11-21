@@ -19,11 +19,11 @@ export function HelpCenterPage({ articles, guides = [], onboardingRows = { steps
       <section className="metric-grid four">
         <MetricCard label="Məqalə" value={articles.length} icon={FileText} tone="primary" />
         <MetricCard label="Modul təlimatı" value={guides.length} trend={`${readyGuides} hazır`} icon={SlidersHorizontal} tone="info" />
-        <MetricCard label="Onboarding açıq" value={activeOnboarding} icon={ShieldCheck} tone={activeOnboarding ? "warning" : "success"} />
-        <MetricCard label="Təlim snapshot" value={snapshot ? "Hazır" : "Gözləyir"} trend={snapshot?.generatedAt || "Yenilə"} icon={Check} tone={snapshot ? "success" : "warning"} />
+        <MetricCard label="Açıq quraşdırma addımı" value={activeOnboarding} icon={ShieldCheck} tone={activeOnboarding ? "warning" : "success"} />
+        <MetricCard label="Təlim vəziyyəti" value={snapshot ? "Hazır" : "Gözləyir"} trend={snapshot?.generatedAt || "Yenilə"} icon={Check} tone={snapshot ? "success" : "warning"} />
       </section>
       <Panel className="help-module-guide-panel" data-testid="help-module-guide-panel">
-        <PanelHeader title="Modul təlimatları" subtitle="Hər modulun məqsədi, əsas əməliyyatı, permission-u və növbəti addımı" icon={SlidersHorizontal} />
+        <PanelHeader title="Modul təlimatları" subtitle="Hər modulun məqsədi, əsas əməliyyatı, icazəsi və növbəti addımı" icon={SlidersHorizontal} />
         <DataTable
           columns={["Modul", "Məqsəd", "Əsas əməliyyat", "Permission", "Hazırlıq", "Növbəti addım", "Aç"]}
           rows={guides.map((guide) => [

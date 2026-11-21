@@ -14,7 +14,7 @@ const TABLE_LABEL = {
   products: "Məhsullar",
   tenant_members: "İstifadəçilər",
   purchase_orders: "Satınalma sifarişləri",
-  vendor_invoices: "Vendor fakturaları",
+  vendor_invoices: "Təchizatçı fakturaları",
   stock_movements: "Anbar hərəkətləri",
   accounting_periods: "Mühasibat dövrləri",
 };

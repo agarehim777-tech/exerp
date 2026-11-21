@@ -34,7 +34,7 @@ export function ReconciliationPanel() {
       <label><span>ERP ledger</span><Input type="number" step="0.01" value={form.ledger_balance} onChange={(e) => setForm({ ...form, ledger_balance: e.target.value })} /></label>
       <Button variant="primary"  type="submit"><Save size={16} /> Uzlaşdırma yarat</Button>
     </form>
-    <DataTable columns={["Period", "Çıxarış", "Ledger", "Fərq", "Status"]} rows={rows.map((row) => [
+    <DataTable columns={["Dövr", "Çıxarış", "Ledger", "Fərq", "Status"]} rows={rows.map((row) => [
       <TwoLine title={`${row.period_start} — ${row.period_end}`} subtitle={row.id.slice(0, 8)} />,
       money(row.statement_balance), money(row.ledger_balance),
       <strong>{money(row.difference)}</strong>, <StatusBadge status={row.status} />,

@@ -270,7 +270,7 @@ function WarehousePage({
               const coverage = purchaseOrderCoverage.get(normalize(product.name));
               return coverage?.orderedQty > 0 ? <TwoLine title={`${coverage.orderedQty} ədəd`} subtitle={coverage.latest?.id || `${coverage.count} PO`} /> : "—";
             })(),
-            product.serialTracked ? "IMEI / Serial" : "Batch",
+            product.serialTracked ? "IMEI / Serial" : "Partiya",
             <Button variant="ghost" className="text-btn" onClick={() => onEditProduct(product.id)}>Redaktə</Button>,
           ])}
         />

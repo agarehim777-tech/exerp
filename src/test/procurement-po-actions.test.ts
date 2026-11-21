@@ -72,7 +72,7 @@ describe("usePoActions", () => {
   it("validates vendor, number and lines before saving", async () => {
     const { view, setError } = setup();
     await act(() => view.result.current.savePo(submitEvent()));
-    expect(setError).toHaveBeenLastCalledWith("Vendor və PO nömrəsi tələb olunur.");
+    expect(setError).toHaveBeenLastCalledWith("Təchizatçı və PO nömrəsi tələb olunur.");
     act(() => view.result.current.setPoForm({ ...emptyPo, vendor_id: "V1", po_number: "PO-T" }));
     await act(() => view.result.current.savePo(submitEvent()));
     expect(setError).toHaveBeenLastCalledWith("PO üçün ən azı bir məhsul sətri tələb olunur.");

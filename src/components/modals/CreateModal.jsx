@@ -184,12 +184,12 @@ function CreateModal({
 
     return (
       <OperationDeleteModal
-        title="Vendoru sil"
+        title="Təchizatçını sil"
         description={`${vendor.name} · ${vendor.country || "Ölkə qeyd edilməyib"}`}
         warning={
           openPoCount > 0
-            ? `${openPoCount} açıq PO var. Əvvəl PO-ları təsdiqləyin, sonra vendor silinə bilər.`
-            : "Vendor reyestrdən silinəcək. Bağlı təsdiqlənmiş PO tarixçəsi qalacaq."
+            ? `${openPoCount} açıq PO var. Əvvəl PO-ları təsdiqləyin, sonra təchizatçı silinə bilər.`
+            : "Təchizatçı reyestrdən silinəcək. Bağlı təsdiqlənmiş PO tarixçəsi qalacaq."
         }
         confirmDisabled={openPoCount > 0}
         confirmLabel={openPoCount > 0 ? "PO açıqdır" : "Sil"}

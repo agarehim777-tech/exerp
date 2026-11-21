@@ -1,7 +1,7 @@
 export const pageMeta = {
   procurement: {
     title: "Satınalma",
-    subtitle: "Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.",
+    subtitle: "Təchizatçı, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.",
   },
   "access-check": {
     title: "İcazə yoxlaması",
@@ -110,12 +110,12 @@ export const pageMeta = {
   },
   receivables: {
     title: "Debitor & Kreditor",
-    subtitle: "Müştəri borcları, vendor öhdəlikləri və gecikmə risklərinin vahid reyestri.",
+    subtitle: "Müştəri borcları, təchizatçı öhdəlikləri və gecikmə risklərinin vahid reyestri.",
     action: "Balansı yenilə",
   },
   vendors: {
-    title: "Vendorlar & Kvota",
-    subtitle: "Vendor müqavilələri, SKU portfeli və satış kvota izləməsi.",
+    title: "Təchizatçılar və kvota",
+    subtitle: "Təchizatçı müqavilələri, SKU portfeli və satış kvota izləməsi.",
     action: "Yeni vendor",
   },
   projects: {
@@ -161,7 +161,7 @@ export const pageMeta = {
     subtitle: "Blob məlumatı ilə real cədvəllər (serial, rezerv, istehsal, bildiriş) arasında uyğunsuzluqlar.",
   },
   support: {
-    title: "Support & Task",
+    title: "Dəstək və tapşırıqlar",
     subtitle: "Daxili dəstək sorğuları, SLA, məsul şəxs və tətbiq tapşırıqları.",
     action: "Yeni sorğu",
   },
@@ -171,7 +171,7 @@ export const pageMeta = {
     action: "Məqalə əlavə et",
   },
   onboarding: {
-    title: "Onboarding Wizard",
+    title: "Quraşdırma köməkçisi",
     subtitle: "Yeni şirkət qurulumu, ilkin data və təlim addımlarının idarəsi.",
     action: "Addımı tamamla",
   },

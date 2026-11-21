@@ -43,7 +43,7 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
     <Panel className="inventory-unit-panel">
       <PanelHeader
         title="Seriya, partiya və lokasiya reyestri"
-        subtitle={`${visibleUnits.length} stok vahidi · IMEI, batch, rəf və bin izləmə`}
+        subtitle={`${visibleUnits.length} stok vahidi · IMEI, partiya, rəf və yer izləmə`}
         icon={Boxes}
         action={<Button variant="primary"  onClick={openCreate} disabled={!warehouses.length || !products.length}><Plus size={16} /> Stok vahidi</Button>}
       />

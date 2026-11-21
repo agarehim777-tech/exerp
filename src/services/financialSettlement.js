@@ -41,7 +41,7 @@ export function receivableItemView(item, now = Date.now()) {
   const days = item.due_date ? Math.max(0, Math.floor((now - Date.parse(item.due_date + 'T00:00:00+04:00')) / 86400000)) : 0;
   const aging = days === 0 ? 'Cari' : days <= 30 ? '1-30 gün' : days <= 60 ? '31-60 gün' : days <= 90 ? '61-90 gün' : '90+ gün';
   return { ...item, id: item.source_type + ':' + item.source_id, overdueDays: days, agingBucket: aging,
-    sourceType: item.source_type, sourceTypeLabel: { credit: 'Kredit', order: 'Satış', vendor_invoice: 'Vendor fakturası' }[item.source_type],
+    sourceType: item.source_type, sourceTypeLabel: { credit: 'Kredit', order: 'Satış', vendor_invoice: 'Təchizatçı fakturası' }[item.source_type],
     riskCategory: days > 90 ? 'Kritik' : days > 30 ? 'Yüksək' : 'Normal',
     collectionStatus: item.can_settle ? 'Açıq borc' : item.source_type === 'credit' ? 'Başlatma gözləyir' : 'Uyğunlaşdırma gözləyir',
     nextAction: item.can_settle ? 'Kassa ilə bağla' : item.source_type === 'credit' ? 'Krediti başlat' : '3-way match',

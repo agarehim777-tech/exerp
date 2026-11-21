@@ -87,8 +87,8 @@ it('debounces related table events into one registry reload', async () => {
 it.each([false, true])('keeps an open vendor draft mounted during background reload (error=%s)', async (failed) => {
   const { container } = render(<MemoryRouter><ProcurementPage /></MemoryRouter>);
   await waitFor(() => expect(container.querySelector('.procurement-page')).toHaveAttribute('aria-busy', 'false'));
-  fireEvent.click(screen.getByRole('button', { name: 'Vendorlar', exact: true }));
-  fireEvent.click(screen.getByRole('button', { name: 'Yeni vendor', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Təchizatçılar', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Yeni təchizatçı', exact: true }));
   fireEvent.change(screen.getByLabelText('Ad', { exact: true }), { target: { value: 'Unsaved vendor draft' } });
   let finish;
   mocks.pending = table => table === 'vendors' ? new Promise(resolve => { finish = resolve; }) : null;
@@ -119,15 +119,15 @@ it('resets tenant forms and rejects an old A response after A -> B -> A', async 
   mocks.tenant = 'tenant-b';
   rerender(<MemoryRouter><ProcurementPage /></MemoryRouter>);
   await waitFor(() => expect(screen.queryByText('Məlumatlar yüklənir')).not.toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'Vendorlar', exact: true }));
-  fireEvent.click(screen.getByRole('button', { name: 'Yeni vendor', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Təchizatçılar', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Yeni təchizatçı', exact: true }));
   fireEvent.change(screen.getByLabelText('Ad', { exact: true }), { target: { value: 'B draft' } });
   mocks.tenant = 'tenant-a';
   mocks.rows.vendors = [{ id: 'new-a', name: 'Current A', is_active: true }];
   rerender(<MemoryRouter><ProcurementPage /></MemoryRouter>);
   await waitFor(() => expect(screen.queryByText('Məlumatlar yüklənir')).not.toBeInTheDocument());
   expect(screen.queryByDisplayValue('B draft')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Vendorlar', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Təchizatçılar', exact: true }));
   expect(screen.getByText('Current A')).toBeVisible();
   await act(async () => { resolveOld({ data: [{ id: 'old-a', name: 'Stale A', is_active: true }], error: null }); });
   expect(screen.queryByText('Stale A')).not.toBeInTheDocument();
@@ -172,7 +172,7 @@ it('requires an explicitly selected tax account and recoverability confirmation 
   await waitFor(() => expect(screen.queryByText('Məlumatlar yüklənir')).not.toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Fakturalar', exact: true }));
   fireEvent.click(screen.getByRole('button', { name: 'Ödəniş et', exact: true }));
-  const dialog = await screen.findByRole('dialog', { name: 'Vendor fakturasının ödənişi' });
+  const dialog = await screen.findByRole('dialog', { name: 'Təchizatçı fakturasının ödənişi' });
   const submit = within(dialog).getByRole('button', { name: 'Ödənişi təsdiq et', exact: true });
   expect(submit).toBeDisabled();
   expect(within(dialog).queryByRole('option', { name: /Inventory/ })).not.toBeInTheDocument();

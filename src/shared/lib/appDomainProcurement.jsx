@@ -223,7 +223,7 @@ export function getPreferredVendorName(product, vendors) {
   const normalizedProduct = normalize(product);
   const direct = vendors.find((vendor) => normalizedProduct.includes(normalize(vendor.name).split(" ")[0]));
   if (direct) return direct.name;
-  return vendors[0]?.name || "Vendor təyin edilməyib";
+  return vendors[0]?.name || "Təchizatçı təyin edilməyib";
 }
 
 export function getNormalizedVendor(vendor = {}) {

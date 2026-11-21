@@ -16,7 +16,7 @@ const TABS = [
   ["reservations", "Rezerv"],
   ["production", "İstehsal"],
   ["notifications", "Bildiriş qaydaları"],
-  ["recovery", "Backup və bərpa"],
+  ["recovery", "Ehtiyat nüsxə və bərpa"],
 ];
 
 const KIND_LABELS = {
@@ -155,7 +155,7 @@ export default function DataReconciliationPage() {
           </div>
           {serverReport && (
             <div className={"ui-card"}>
-              <div className="u-font-weight-700 u-margin-bottom-10px">Database lifecycle preview</div>
+              <div className="u-font-weight-700 u-margin-bottom-10px">Verilənlər bazasının həyat dövrü: ön baxış</div>
               <p className="u-opacity-0_72">Yoxlama məlumatı dəyişmir. Düzəliş yalnız səbəb yazıldıqdan və ayrıca düymə basıldıqdan sonra tətbiq edilir.</p>
               <Input value={repairReason} onChange={(event) => setRepairReason(event.target.value)} placeholder="Təsdiqli düzəliş səbəbi" className="u-width-100 u-margin-bottom-10px" />
               <Table className={"ui-table"}>

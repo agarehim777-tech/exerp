@@ -14,7 +14,7 @@ describe("inventory 360", () => {
 
   it("classifies all important stock workflow events", () => {
     expect(movementKind({ movement_type: "customer_return" })).toBe("Müştəri qaytarması");
-    expect(movementKind({ movement_type: "vendor_return" })).toBe("Vendor qaytarması");
+    expect(movementKind({ movement_type: "vendor_return" })).toBe("Təchizatçıya qaytarma");
     expect(movementKind({ movement_type: "return_quarantine" })).toBe("Karantin / zədəli");
     expect(movementKind({ movement_type: "transfer_out" })).toBe("Transfer");
   });

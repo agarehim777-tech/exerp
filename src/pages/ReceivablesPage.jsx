@@ -98,7 +98,7 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
       </section>
       {ledger.ready && (
         <Panel className="module-action-panel">
-          <PanelHeader title="Canlı balans" subtitle="Satış, kredit və vendor məlumatlarından real vaxtda hesablanır" icon={RefreshCw} />
+          <PanelHeader title="Canlı balans" subtitle="Satış, kredit və təchizatçı məlumatlarından real vaxtda hesablanır" icon={RefreshCw} />
           <div className="db-status-grid">
             <div>
               <span>Vaxt</span>
@@ -122,7 +122,7 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
       <Panel className="receivable-control-panel" data-testid="receivable-control-panel">
         <PanelHeader
           title="Debitor/Kreditor reyestri"
-          subtitle="Aging, kolleksiya statusu, risk kateqoriyası və bağlanış workflow-u"
+          subtitle="Yaşlanma, kolleksiya statusu, risk kateqoriyası və bağlanış iş axını"
           icon={Wallet}
         />
         <div className="receivable-filter-bar">

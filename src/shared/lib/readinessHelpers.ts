@@ -615,13 +615,13 @@ function buildModuleReadiness(snapshot: Row = {}, integrityReport: Row = {}): Re
     },
     {
       module: "vendors",
-      title: "Vendor + PO",
+      title: "Təchizatçı + PO",
       status: statusFrom({ blockers: missingVendorPo.length, warnings: openPurchaseOrders.length, hasData: (snapshot.vendors || []).length > 0 }),
       primary: `${purchaseOrders.length} PO`,
       secondary: `${approvedPurchaseOrders.length} təsdiqli`,
       detail: "Zavod sifarişi, təsdiq, anbara mədaxil və maliyyə xərci",
       next: missingVendorPo.length
-        ? "Vendoru olmayan PO-ları vendor kartına bağlayın"
+        ? "Təchizatçısı olmayan PO-ları təchizatçı kartına bağlayın"
         : openPurchaseOrders.length
           ? "Açıq PO-ları təsdiqləyin və anbara mədaxil edin"
           : "Minimum stok siqnallarından yeni PO yaradın",

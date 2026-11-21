@@ -109,7 +109,7 @@ function MessagesPageV2({
       <div className="messages-summary-grid">
         <MetricCard label="Aktiv söhbət" value={counts.active} trend={`${counts.unread} oxunmamış`} icon={MessageSquare} tone="primary" />
         <MetricCard label="Qrup" value={counts.groups} trend="Daxili komanda kanalları" icon={Users} tone="success" />
-        <MetricCard label="Bağlı thread" value={counts.linked} trend="Sifariş/kredit/task" icon={GitBranch} tone="info" />
+        <MetricCard label="Bağlı thread" value={counts.linked} trend="Sifariş/kredit/tapşırıq" icon={GitBranch} tone="info" />
         <MetricCard label="Arxiv" value={counts.archived} trend="Bağlanmış yazışmalar" icon={FileText} tone="warning" />
       </div>
 
@@ -235,12 +235,12 @@ function MessagesPageV2({
                 />
                 <div className="conversation-meta">
                   <span>{conversation.time}</span>
-                  <small>{conversation.type === "group" ? "Qrup" : conversation.ticketId ? "Task" : "Şəxsi"}</small>
+                  <small>{conversation.type === "group" ? "Qrup" : conversation.ticketId ? "Tapşırıq" : "Şəxsi"}</small>
                   {conversation.unread > 0 && <strong>{conversation.unread}</strong>}
                 </div>
               </button>
             ))}
-            {visibleConversations.length === 0 && <EmptyState title="Bu filter üzrə söhbət yoxdur" />}
+            {visibleConversations.length === 0 && <EmptyState title="Bu filtr üzrə söhbət yoxdur" />}
           </div>
         </Panel>
 
@@ -274,7 +274,7 @@ function MessagesPageV2({
                   <div className="message-context-strip">
                     {selected.ticketId && (
                       <button className="secondary-btn compact" onClick={() => onOpenSupportTicket(selected.ticketId)}>
-                        Task {selected.ticketId}
+                        Tapşırıq {selected.ticketId}
                       </button>
                     )}
                     {selected.orderId && (

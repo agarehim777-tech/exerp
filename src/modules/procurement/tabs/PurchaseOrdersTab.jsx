@@ -56,9 +56,9 @@ export function PurchaseOrdersTab({
       <Panel title={editingPoId ? "PO redaktəsi" : "Yeni satınalma sifarişi"} icon={ShoppingCart}>
         <form onSubmit={onSubmit} className="procurement-page-styles-form">
           <label className="procurement-page-styles-field">
-            <span>Vendor</span>
+            <span>Təchizatçı</span>
             <select value={form.vendor_id} onChange={(event) => setForm({ ...form, vendor_id: event.target.value })} required>
-              <option value="">Vendor seçin</option>
+              <option value="">Təchizatçı seçin</option>
               {activeVendors.map((vendor) => (
                 <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
               ))}
@@ -104,7 +104,7 @@ export function PurchaseOrdersTab({
                   </label>
                   <label><span>Miqdar</span><input type="number" min="0" step="0.001" value={line.qty_ordered} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, qty_ordered: event.target.value } : item)))} /></label>
                   <label><span>Ölçü vahidi</span><input placeholder="ədəd" value={line.unit} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => itemIndex === index ? { ...item, unit:event.target.value } : item))} /></label>
-                  <label><span>Vahid invoice qiyməti</span><input type="number" min="0" step="0.0001" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} /></label>
+                  <label><span>Fakturada vahid qiymət</span><input type="number" min="0" step="0.0001" value={line.unit_price} onChange={(event) => setDraftLines(draftLines.map((item, itemIndex) => (itemIndex === index ? { ...item, unit_price: event.target.value } : item)))} /></label>
                 </div>
               </div>
             ))}
@@ -114,15 +114,15 @@ export function PurchaseOrdersTab({
             <IconButton icon={Save} label={editingPoId ? "PO yenilə" : "PO yarat"} tone="primary" disabled={saving || activeVendors.length === 0} submit />
             {editingPoId && <IconButton icon={X} label="Ləğv et" onClick={onCancel} />}
           </div>
-          {activeVendors.length === 0 && <p className="procurement-page-styles-helper-text">PO yaratmaq üçün əvvəl aktiv vendor yaradın.</p>}
+          {activeVendors.length === 0 && <p className="procurement-page-styles-helper-text">PO yaratmaq üçün əvvəl aktiv təchizatçı yaradın.</p>}
         </form>
       </Panel>
       )}
 
       <Panel title="PO reyestri" icon={ClipboardCheck}>
         <DataTable
-          columns={["PO", "Vendor", "Dəyər", "Ödənilib", "Qalıq ödəniş", "Status", "Mədaxil", "Əməl"]}
-          empty={allPurchaseOrders.length ? "Filterə uyğun PO yoxdur." : "PO yoxdur. Yuxarıdakı formadan ilk sifarişi yaradın."}
+          columns={["PO", "Təchizatçı", "Dəyər", "Ödənilib", "Qalıq ödəniş", "Status", "Mədaxil", "Əməl"]}
+          empty={allPurchaseOrders.length ? "Filtrə uyğun PO yoxdur." : "PO yoxdur. Yuxarıdakı formadan ilk sifarişi yaradın."}
           rows={purchaseOrders.map((po) => {
             const metrics = poMetrics.get(po.id) || {};
             const payment = (paymentByPo && paymentByPo.get(po.id)) || { billed: 0, paid: 0 };
@@ -134,7 +134,7 @@ export function PurchaseOrdersTab({
               <button key="po" type="button" className="procurement-page-styles-link-cell" onClick={() => setExpandedPo(isExpanded ? null : po.id)}>
                 <TwoLine title={po.po_number} subtitle={`${po.order_date || "tarixsiz"} → ${po.expected_date || "plan yoxdur"}`} />
               </button>,
-              po.vendors?.name || "Vendor yoxdur",
+              po.vendors?.name || "Təchizatçı yoxdur",
               <TwoLine key="amount" title={money(total, po.currency)} subtitle={`${metrics.lineCount || 0} sətir`} />,
               <TwoLine key="paid" title={money(paid, po.currency)} subtitle={`Fakturalanıb: ${money(payment.billed || 0, po.currency)}`} />,
               <TwoLine key="due" title={money(due, po.currency)} subtitle={due <= 0 && total > 0 ? "Tam ödənilib" : `${total > 0 ? Math.round((paid / total) * 100) : 0}% ödənilib`} />,
@@ -224,7 +224,7 @@ function PoPaymentPanel({ po, poPayments, paymentForm, setPaymentForm, paymentPo
                 <td className="u-padding-8px_10px">{payment.notes || "—"}</td>
                 <td className="u-padding-8px_10px u-text-align-right">
                   <div className="procurement-page-styles-row-actions">
-                    <IconButton icon={Pencil} label="Edit" onClick={() => onPaymentEdit(payment)} />
+                    <IconButton icon={Pencil} label="Düzəliş" onClick={() => onPaymentEdit(payment)} />
                     <IconButton icon={Trash2} label="Sil" onClick={() => onPaymentDelete(payment)} tone="danger" />
                   </div>
                 </td>

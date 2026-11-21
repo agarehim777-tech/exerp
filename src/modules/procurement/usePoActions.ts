@@ -63,7 +63,7 @@ export function usePoActions({
     setError("");
     setNotice("");
     if (!poForm.vendor_id || !poForm.po_number.trim()) {
-      setError("Vendor və PO nömrəsi tələb olunur.");
+      setError("Təchizatçı və PO nömrəsi tələb olunur.");
       return;
     }
     const validLines = poDraftLines

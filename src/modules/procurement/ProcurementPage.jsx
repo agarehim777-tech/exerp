@@ -153,7 +153,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       </header>
 
       <section className="procurement-metrics procurement-page-styles-metric-grid">
-        <Metric icon={Building2} label="Aktiv vendor" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} vendor`} tone="blue" />
+        <Metric icon={Building2} label="Aktiv təchizatçı" value={vendors.filter((vendor) => vendor.is_active).length} hint={`${vendors.length} təchizatçı`} tone="blue" />
         <Metric icon={ShoppingCart} label="Açıq PO" value={stats.openPo.length} hint={`${purchaseOrders.length} ümumi PO`} tone="amber" />
         <Metric icon={Truck} label="Mədaxil gözləyir" value={stats.waitingReceipt.length} hint="Təsdiqli və qismən PO" tone="green" />
         <Metric icon={WalletCards} label="PO dəyəri" value={money(stats.approvedSpend)} hint={`${purchaseOrders.length} ümumi PO`} tone="rose" />
@@ -162,7 +162,7 @@ function ProcurementWorkspace({ tenantId, user }) {
       <section className="procurement-page-styles-toolbar">
         <div className="procurement-page-styles-search-box">
           <Search size={17} />
-          <input className="procurement-page-styles-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Vendor, PO, GRN və ya SKU axtar..." />
+          <input className="procurement-page-styles-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Təchizatçı, PO, GRN və ya SKU axtar..." />
         </div>
         {tab === "po" && (
           <select value={poStatus} onChange={(event) => setPoStatusFilter(event.target.value)} className="procurement-page-styles-select">
@@ -185,14 +185,14 @@ function ProcurementWorkspace({ tenantId, user }) {
 
       {!poPaymentsAvailable && !loading && (
         <div role="status" className="procurement-page-styles-message procurement-page-styles-message-error">
-          Birbaşa PO ödənişi bağlıdır. Ödəniş üçün uyğun vendor fakturası tələb olunur.
+          Birbaşa PO ödənişi bağlıdır. Ödəniş üçün uyğun təchizatçı fakturası tələb olunur.
         </div>
       )}
 
       <nav className="procurement-page-styles-tabs">
         {[
           ["dashboard", BarChart3, "İcmal"],
-          ["vendors", Building2, "Vendorlar"],
+          ["vendors", Building2, "Təchizatçılar"],
           ["po", ShoppingCart, "PO"],
           ["grn", PackageCheck, "Mədaxil"],
           ["landed", Ship, "Göndəriş və maya"],
@@ -345,7 +345,7 @@ function ProcurementWorkspace({ tenantId, user }) {
           )}
         </>
       )}
-      {payingInvoice && <section role="dialog" aria-modal="true" aria-label="Vendor fakturasının ödənişi" className="modal-backdrop">
+      {payingInvoice && <section role="dialog" aria-modal="true" aria-label="Təchizatçı fakturasının ödənişi" className="modal-backdrop">
         <form className="modal-card" onSubmit={payInvoice}>
           <h2>{payingInvoice.invoice_number}</h2>
           <strong>{money(invoiceTotals.get(payingInvoice.id), payingInvoice.currency)}</strong>

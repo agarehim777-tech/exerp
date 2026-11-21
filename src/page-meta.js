@@ -55,7 +55,7 @@ export const pageMeta = {
     action: "Balansı yenilə",
   },
   vendors: {
-    title: "Vendorlar & Kvota",
+    title: "Təchizatçılar və kvota",
     subtitle: "Vendor müqavilələri, SKU portfeli və satış kvota izləməsi.",
     action: "Yeni vendor",
   },
