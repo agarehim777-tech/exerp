@@ -2069,7 +2069,7 @@ isOneToOne: false
                   ]
                 },"production_batches": {
                   Row: {
-                    "batch_no": string,"completed_at": string,"created_by": string,"id": string,"journal_entry_id": string,"product_id": string,"quantity": number,"tenant_id": string,"total_cost": number,"unit_cost": number,"valuation_method": string,"warehouse_id": string
+                    "batch_no": string,"completed_at": string,"created_by": string,"id": string,"journal_entry_id": string,"product_id": string,"quantity": number,"reversal_journal_entry_id": string | null,"reversal_reason": string | null,"reversed_at": string | null,"reversed_by": string | null,"tenant_id": string,"total_cost": number,"unit_cost": number,"valuation_method": string,"warehouse_id": string
                   }
                   ComputedFields: never
                   Insert: {
@@ -3546,6 +3546,9 @@ isOneToOne: false
                            },
 "reverse_cash_transaction":
 { Args: { "_reason": string,"_tenant_id": string,"_transaction_id": string }; Returns: string
+                           },
+"reverse_material_production":
+{ Args: { "_batch_id": string,"_reason": string,"_tenant_id": string }; Returns: Json
                            },
 "reverse_journal_entry":
 { Args: { "_entry": string,"_reason": string }; Returns: string
