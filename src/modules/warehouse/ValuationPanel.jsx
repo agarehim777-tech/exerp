@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { valuateByProduct, summarizeValuation } from "../../shared/utils/inventoryValuation";
 import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import { Select, Table } from "../../shared/ui/primitives.tsx";
+import { formatNumber } from "../../services/format.js";
 
 /**
  * Anbar dəyərləməsi paneli — FIFO / çəkili orta maya və COGS.
@@ -81,14 +82,14 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Çatışmazlıq (backorder)</div>
           <div className={`ui-tok-stat-value ${totals.shortageQty ? "sx-9d7a4ce" : "sx-7c2de19"}`}>
-            {totals.shortageQty.toLocaleString("az-AZ")}
+            {formatNumber(totals.shortageQty)}
           </div>
         </div>
       </div>
 
       {hasQuantityMismatch && !loading && (
         <div className="u-color-danger u-background-fff1f2 u-border-1px_solid_fecdd3 u-border-radius-8px u-padding-9px_12px u-margin-bottom-12px">
-          Hərəkət tarixçəsi ilə cari stok uyğun deyil: tarixçə {ledgerQty.toLocaleString("az-AZ")}, cari qalıq {currentQty.toLocaleString("az-AZ")}. Dəyər hesabatı yoxlanmalıdır.
+          Hərəkət tarixçəsi ilə cari stok uyğun deyil: tarixçə {formatNumber(ledgerQty)}, cari qalıq {formatNumber(currentQty)}. Dəyər hesabatı yoxlanmalıdır.
         </div>
       )}
 
@@ -109,7 +110,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
                 <td className="ui-tok-td">{product.name || "Naməlum məhsul"}</td>
                 <td className="ui-tok-td">{product.sku || "—"}</td>
                 <td className={`ui-tok-td sx-e634e6d ${row.qtyOnHand < 0 ? "sx-9d7a4ce" : ""}`}>
-                  {row.qtyOnHand.toLocaleString("az-AZ")}
+                  {formatNumber(row.qtyOnHand)}
                 </td>
                 <td className="ui-tok-td">{azn(row.unitCost)}</td>
                 <td className="ui-tok-td">{azn(row.inventoryValue)}</td>
@@ -119,7 +120,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
                     {row.shortageQty
                       ? `Çatışmazlıq ${row.shortageQty}`
                       : quantityMismatch
-                        ? `Cari qalıq: ${currentProductQty.toLocaleString("az-AZ")}`
+                        ? `Cari qalıq: ${formatNumber(currentProductQty)}`
                         : "Normal"}
                   </span>
                 </td>
@@ -132,7 +133,7 @@ export default function ValuationPanel({ loadMovements, products = [], balances 
         </tbody>
       </Table>
       <div className="u-font-size-12px u-opacity-0_7 u-margin-top-8px">
-        Qeyd: hesablama bütün anbar hərəkətləri ({movements.length.toLocaleString("az-AZ")}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
+        Qeyd: hesablama bütün anbar hərəkətləri ({formatNumber(movements.length)}) üzərində aparılır və maya dəyəri boş olan mədaxillərdə əvvəlki maya tətbiq edilir.
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   uniqueModuleIds,
   userHasEffectivePermission,
 } from "../shared/lib/appDomain.jsx";
+import { formatDateTime } from "../services/date.js";
 
 export default SettingsPage;
 
@@ -76,13 +77,7 @@ function SettingsPage({
   const formatAuditDate = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value || "—";
-    return new Intl.DateTimeFormat("az-AZ", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+    return formatDateTime(date, { seconds: false });
   };
   const getUserPermissionSummary = (user) => {
     const role = roles.find((item) => item.name === user.role);

@@ -6,6 +6,7 @@ import { usePermissions } from '../../shared/hooks/usePermissions.js';
 import { createIdempotencyKey } from '../../services/coreOperations.js';
 import { readAllRows } from '../../services/readAllRows.js';
 import './production.css';
+import { formatDate } from '../../services/date.js';
 
 export default function ProductionLedgerPage() {
   const { activeTenantId: tenantId } = useAuth();
@@ -95,7 +96,7 @@ export default function ProductionLedgerPage() {
         <tbody>{batches.map(batch => <tr key={batch.id} data-batch-id={batch.id}>
           <td>{batch.batch_no}</td><td>{products.find(product => product.id === batch.product_id)?.name || batch.product_id}</td>
           <td className="numeric">{Number(batch.quantity)}</td><td className="numeric">{Number(batch.total_cost).toFixed(2)}</td>
-          <td className="numeric">{Number(batch.unit_cost).toFixed(6)}</td><td>{new Date(batch.completed_at).toLocaleDateString('az-AZ')}</td>
+          <td className="numeric">{Number(batch.unit_cost).toFixed(6)}</td><td>{formatDate(batch.completed_at)}</td>
         </tr>)}</tbody></table></div>
     </section>
   </div>;

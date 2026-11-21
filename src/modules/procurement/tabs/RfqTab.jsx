@@ -1,5 +1,6 @@
 import { BarChart3, CheckCircle2, ClipboardCheck, Save, ShoppingCart, XCircle } from "lucide-react";
 import { DataTable, Field, IconButton, Panel, TwoLine, qty } from "../procurementShared.jsx";
+import { formatDate } from "../../../services/date.js";
 
 export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onReject, onConvert, saving }) {
   const vendorName = (id) => vendors.find((vendor) => vendor.id === id)?.name || "Vendor";
@@ -45,7 +46,7 @@ export function RfqTab({ rfqs, vendors, form, setForm, onSubmit, onApprove, onRe
               <TwoLine title={rfq.record_no} subtitle={rfq.title} />,
               <TwoLine title={line?.description || "—"} subtitle={`${qty(line?.quantity)} vahid`} />,
               <TwoLine title={`${invited.length} vendor`} subtitle={invited.map(vendorName).join(", ") || "—"} />,
-              rfq.due_at ? new Date(rfq.due_at).toLocaleDateString("az-AZ") : "—",
+              rfq.due_at ? formatDate(rfq.due_at) : "—",
               <span className={`procurement-page-styles-badge procurement-page-styles-badge-${rfq.status === "approved" ? "success" : rfq.status === "rejected" ? "danger" : "info"}`}>{rfq.status}</span>,
               <div className="procurement-page-styles-row-actions">
                 {rfq.status === "sent" && <IconButton icon={CheckCircle2} label="Təsdiq" tone="success" onClick={() => onApprove(rfq)} />}

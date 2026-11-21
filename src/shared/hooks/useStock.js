@@ -6,6 +6,7 @@ import { stockBalanceKey } from '../lib/stockBalanceIdentity.js';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { receiveStock } from '../../services/coreOperations.js';
 import { readInventoryBase, readStockMovementHistory } from '../../services/inventoryRead.js';
+import { formatNumber } from '../../services/format.js';
 
 const MOVEMENT_SELECT = '*, product:products(id,name,sku), warehouse:warehouses(id,name)';
 const BALANCE_SELECT = '*, product:products(id,name,sku,unit,price,minimum_stock), warehouse:warehouses(id,name,code)';
@@ -316,7 +317,7 @@ export function useStock(tenantId, { movementsPageSize = DEFAULT_PAGE_SIZE } = {
     );
     const available = sellableQty(source || {});
     if (!source || available < amount) {
-      throw new Error(`Mənbə anbarda yalnız ${available.toLocaleString('az-AZ')} ədəd mövcuddur.`);
+      throw new Error(`Mənbə anbarda yalnız ${formatNumber(available)} ədəd mövcuddur.`);
     }
 
     const reference = `TR-${Date.now()}`;

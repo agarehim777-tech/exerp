@@ -7,6 +7,7 @@ import Avatar from './Avatar.jsx';
 import BirthDateInput from './BirthDateInput.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
 import { Badge, Button, Card, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
+import { formatDate, formatDateTime } from '../../services/date.js';
 
 export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder, onOpenCredit }) {
   const { activeTenantId } = useAuth();
@@ -106,7 +107,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
 function CustomerTimeline({ items }) {
   if (!items.length) return <div className="ui-empty-box">Timeline məlumatı yoxdur.</div>;
   return <div className="u-display-grid u-gap-0">{items.map(item => <div key={item.id} className="u-display-grid u-grid-template-columns-86px_12px_minmax_0_1fr u-gap-10px u-min-height-66px">
-    <small className="u-color-text_secondary u-padding-top-2px">{item.at ? new Date(item.at).toLocaleDateString('az-AZ') : '—'}</small>
+    <small className="u-color-text_secondary u-padding-top-2px">{item.at ? formatDate(item.at) : '—'}</small>
     <span className="u-width-10px u-height-10px u-border-radius-50 u-background-0b7a5c u-margin-top-3px u-box-shadow-0_0_0_4px_dcfce7" />
     <div className="u-border-bottom-1px_solid_border u-padding-bottom-12px"><b className="u-display-block">{item.type} · {item.title}</b><span className="u-color-text_secondary u-font-size-13px">{item.detail || '—'}</span></div>
   </div>)}</div>;
@@ -172,7 +173,7 @@ function OrdersTab({ orders, count, total, onOpen }) {
   return <div className="u-display-grid u-gap-10px">
     <div className="u-display-flex u-justify-content-space_between u-gap-12px u-color-text_secondary u-font-size-12px"><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
     {orders.length === 0 ? <div className="u-padding-28px u-text-align-center u-color-text_secondary u-border-1px_dashed_line_strong u-border-radius-10px">Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <Button variant="secondary" className="ui-record-action" key={order.id} type="button" onClick={() => onOpen?.(order.id)}>
-      <span className="u-min-width-0"><strong className="u-display-block u-color-text_primary">{order.order_no || order.id}</strong><small className="u-color-text_secondary">{order.order_date ? new Date(order.order_date).toLocaleDateString('az-AZ') : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
+      <span className="u-min-width-0"><strong className="u-display-block u-color-text_primary">{order.order_no || order.id}</strong><small className="u-color-text_secondary">{order.order_date ? formatDate(order.order_date) : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
       <span className="u-text-align-right"><strong className="u-display-block u-color-0b7a5c">{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small className="u-color-info">Sifarişə bax →</small></span>
     </Button>)}
   </div>;
@@ -201,7 +202,7 @@ function OverviewTab({ c, tags, onUpdate }) {
         <Row label="Şəxsiyyət vəsiqəsinin seriya və nömrəsi" value={c.identity_card_no} />
       </>}
       <Row label="Ünvan" value={c.address} />
-      <Row label="Doğum tarixi" value={c.birth_date ? new Date(`${c.birth_date}T00:00:00`).toLocaleDateString('az-AZ') : null} />
+      <Row label="Doğum tarixi" value={c.birth_date ? formatDate(`${c.birth_date}T00:00:00`) : null} />
       <Row label="Müştəri tipi" value={c.segment === 'business' ? 'Hüquqi şəxs' : 'Fiziki şəxs'} />
       <Row label="Müştəri səviyyəsi" value={c.customer_level_override ? `${c.customer_level_override} (manual)` : (c.customer_level || 'standard')} />
       <div>
@@ -293,7 +294,7 @@ function Timeline({ items }) {
           <div className="u-flex-1">
             <div className="u-font-weight-600 u-font-size-13px">{a.subject}</div>
             {a.body && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{a.body}</div>}
-            <div className="u-font-size-11px u-color-text_secondary u-margin-top-4px">{new Date(a.occurred_at).toLocaleString('az-AZ')}</div>
+            <div className="u-font-size-11px u-color-text_secondary u-margin-top-4px">{formatDateTime(a.occurred_at)}</div>
           </div>
         </div>
       ))}

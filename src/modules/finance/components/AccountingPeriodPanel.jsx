@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, LockKeyhole, RotateCcw, TriangleAlert } from "lucide-react";
 import { Panel, PanelHeader, StatusBadge } from "../../../components/ui.jsx";
 import { appPrompt } from "../../../shared/ui/dialogService.js";
-import { toLocalIsoDate } from "../../../services/date.js";
+import { formatPaymentDate, toLocalIsoDate } from "../../../services/date.js";
 import {
   listAccountingPeriodLocks,
   lockAccountingPeriod,
@@ -17,8 +17,7 @@ function dayRange(date) {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric" })
-    .format(new Date(`${String(value).slice(0, 10)}T00:00:00`));
+  return formatPaymentDate(new Date(`${String(value).slice(0, 10)}T00:00:00`));
 }
 
 function periodErrorMessage(error, fallback) {

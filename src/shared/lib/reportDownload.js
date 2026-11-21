@@ -1,5 +1,5 @@
 import { csvCell } from "./csvCell.js";
-import { toLocalIsoDate } from "../../services/date.js";
+import { toLocalIsoDate, formatDateTime } from "../../services/date.js";
 import notoSansRegularUrl from "../../assets/fonts/NotoSans-Regular-az-subset.ttf?url";
 import notoSansBoldUrl from "../../assets/fonts/NotoSans-Bold-az-subset.ttf?url";
 
@@ -74,7 +74,7 @@ export function buildReportPdf(JsPdf, fonts, { title, period, summary = [], colu
   doc.text(pdfText(title), margin, 13);
   doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(9);
-  doc.text(`ExERP | Dövr: ${pdfText(period)} | ${new Date().toLocaleString("az-AZ")}`, margin, 21);
+  doc.text(`ExERP | Dövr: ${pdfText(period)} | ${formatDateTime(new Date())}`, margin, 21);
   y = 36;
   doc.setTextColor(25, 39, 36);
 

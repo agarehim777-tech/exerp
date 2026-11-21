@@ -1,6 +1,6 @@
 import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
 import { CalendarClock, ShieldCheck, SlidersHorizontal, TrendingUp, Wallet } from "lucide-react";
-import { money, percent } from "../services/format.js";
+import { formatNumber, money, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildKpiEmployeeScoreRows, getKpiPeriodKey } from "../shared/lib/appDomain.jsx";
@@ -66,7 +66,7 @@ export default function KpiPage({
               <TwoLine title={row.name} subtitle={row.metricKey} />,
               row.owner,
               `${row.weight}%`,
-              <strong>{`${new Intl.NumberFormat("az-AZ").format(row.actual)}${row.unit} / ${new Intl.NumberFormat("az-AZ").format(row.target)}${row.unit}`}</strong>,
+              <strong>{`${formatNumber(row.actual)}${row.unit} / ${formatNumber(row.target)}${row.unit}`}</strong>,
               <ProgressRow value={row.progress} caption={percent(row.progress)} compact />,
               <StatusBadge status={row.status} />,
             ])}

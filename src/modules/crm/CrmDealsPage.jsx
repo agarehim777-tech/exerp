@@ -6,6 +6,7 @@ import { usePipelines } from '../../shared/hooks/usePipelines.js';
 import { useDeals } from '../../shared/hooks/useDeals.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
 import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
+import { formatDate } from "../../services/date.js";
 
 export default function CrmDealsPage() {
   const { activeTenantId } = useAuth();
@@ -118,7 +119,7 @@ function DealCard({ deal }) {
       {deal.customer && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{deal.customer.name}</div>}
       <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-top-8px">
         <span className="u-font-weight-700 u-color-action">{Number(deal.amount).toFixed(0)} {deal.currency}</span>
-        {deal.expected_close && <span className="u-font-size-11px u-color-text_secondary">{new Date(deal.expected_close).toLocaleDateString('az-AZ')}</span>}
+        {deal.expected_close && <span className="u-font-size-11px u-color-text_secondary">{formatDate(deal.expected_close)}</span>}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { formatAmount } from "../services/format.js";
 import { csvCell } from "../shared/lib/csvCell.js";
-import { toLocalIsoDate } from "../services/date.js";
+import { toLocalIsoDate, formatDate, formatDateTime } from "../services/date.js";
 // Faktura PDF/çap ixracı — xarici kitabxana olmadan, brauzerin çap mühərriki ilə.
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -11,7 +11,7 @@ const escapeHtml = (value) =>
 
 const money = (value, currency = "AZN") => formatAmount(value, { currency });
 
-const date = (value) => (value ? new Date(value).toLocaleDateString('az-AZ') : '—');
+const date = (value) => (value ? formatDate(value) : '—');
 
 export function buildInvoiceHtml(invoice, options = {}) {
   const company = options.company || {};
@@ -103,7 +103,7 @@ export function buildInvoiceHtml(invoice, options = {}) {
 
   <footer>
     Bu sənəd ExERP sistemi tərəfindən elektron formada yaradılıb.
-    Yaradılma vaxtı: ${new Date().toLocaleString('az-AZ')}.
+    Yaradılma vaxtı: ${formatDateTime(new Date())}.
   </footer>
 </body></html>`;
 }

@@ -1,4 +1,4 @@
-import { formatAmount } from "../../services/format.js";
+import { formatAmount, formatNumber } from "../../services/format.js";
 import React from 'react';
 import { BarChart3, CircleDollarSign, ReceiptText, ShoppingCart, TrendingUp } from 'lucide-react';
 import {
@@ -61,7 +61,7 @@ export default function SalesDashboardPage() {
                 <LineChart data={data.daily} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e7ece9" vertical={false} />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#70827b' }} tickFormatter={(day) => day?.slice(5)} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#70827b' }} width={58} tickFormatter={(value) => Number(value).toLocaleString('az-AZ')} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#70827b' }} width={58} tickFormatter={(value) => formatNumber(Number(value))} />
                   <Tooltip formatter={(value) => [money(value), 'Satış']} labelFormatter={(label) => `Tarix: ${label}`} contentStyle={{ borderRadius: 10, borderColor: '#dbe4df' }} />
                   <Line type="monotone" dataKey="amount" stroke="#0f9f75" strokeWidth={3} dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} />
                 </LineChart>
@@ -114,7 +114,7 @@ export default function SalesDashboardPage() {
             rows={data.top_products || []}
             columns={[
               { key: 'name', label: 'Məhsul' },
-              { key: 'qty', label: 'Miqdar', align: 'right', format: (value) => Number(value || 0).toLocaleString('az-AZ') },
+              { key: 'qty', label: 'Miqdar', align: 'right', format: (value) => formatNumber(Number(value || 0)) },
               { key: 'amount', label: 'Məbləğ', align: 'right', format: money },
             ]}
  />

@@ -3,6 +3,7 @@ import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAuditLogs } from "../../shared/hooks/useAuditLogs.js";
 import { badgeClass } from "../../shared/ui/tokens.js";
+import { formatDateTime } from "../../services/date.js";
 
 const TABLE_LABEL = {
   journal_entries: "Jurnal yazılışları",
@@ -112,7 +113,7 @@ function AuditRow({ log }) {
   return (
     <>
       <tr className="u-cursor-pointer" onClick={() => setOpen((v) => !v)}>
-        <td className="ui-tok-td">{new Date(log.created_at).toLocaleString("az-AZ")}</td>
+        <td className="ui-tok-td">{formatDateTime(log.created_at)}</td>
         <td className="ui-tok-td">{TABLE_LABEL[log.table_name] || log.table_name}</td>
         <td className="ui-tok-td"><span className={`${badgeClass(ACTION_TONE[log.action])}`}>{ACTION_LABEL[log.action] || log.action}</span></td>
         <td className="ui-tok-td sx-e89ae9a sx-8b68521">{String(log.record_id || "—").slice(0, 8)}</td>

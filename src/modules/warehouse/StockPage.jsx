@@ -9,6 +9,8 @@ import { appConfirm } from "../../shared/ui/dialogService.js";
 import { azn, badgeClass, tabClass } from "../../shared/ui/tokens.js";
 import { Button, Input, Select, Table } from "../../shared/ui/primitives.tsx";
 import { foldSearchText } from "../../shared/lib/searchText.ts";
+import { formatNumber } from "../../services/format.js";
+import { formatDate } from "../../services/date.js";
 
 const MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş", transfer: "Transfer" };
 const MANUAL_MOVE_LABEL = { in: "Mədaxil", out: "Məxaric", adjust: "Düzəliş" };
@@ -68,7 +70,7 @@ export default function StockPage({ inventory: stock, products = [] }) {
         </div>
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Ümumi qalıq</div>
-          <div className="ui-tok-stat-value">{totals.qty.toLocaleString("az-AZ")}</div>
+          <div className="ui-tok-stat-value">{formatNumber(totals.qty)}</div>
         </div>
         <div className="ui-tok-stat-tile">
           <div className="ui-tok-stat-label">Anbar dəyəri (orta maya)</div>
@@ -199,10 +201,10 @@ function BalancesPanel({ stock }) {
                 <td className="ui-tok-td">{b.warehouse?.name || "—"}</td>
                 <td className="ui-tok-td">{b.product?.name || b.sku || "—"}</td>
                 <td className="ui-tok-td">{b.product?.sku || b.sku || "—"}</td>
-                <td className="ui-tok-td sx-e634e6d">{Number(b.qty || 0).toLocaleString("az-AZ")}</td>
-                <td className="ui-tok-td">{Number(b.reserved || 0).toLocaleString("az-AZ")}</td>
-                <td className={`ui-tok-td ${Number(b.problem_qty || 0) > 0 ? "sx-9d7a4ce" : ""} sx-4777d93`}>{Number(b.problem_qty || 0).toLocaleString("az-AZ")}</td>
-                <td className="ui-tok-td sx-4777d93">{saleable.toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td sx-e634e6d">{formatNumber(Number(b.qty || 0))}</td>
+                <td className="ui-tok-td">{formatNumber(Number(b.reserved || 0))}</td>
+                <td className={`ui-tok-td ${Number(b.problem_qty || 0) > 0 ? "sx-9d7a4ce" : ""} sx-4777d93`}>{formatNumber(Number(b.problem_qty || 0))}</td>
+                <td className="ui-tok-td sx-4777d93">{formatNumber(saleable)}</td>
                 <td className="ui-tok-td">
                   {isEditing ? (
                     <div className="u-display-flex u-align-items-center u-gap-6px">
@@ -224,7 +226,7 @@ function BalancesPanel({ stock }) {
                     </div>
                   ) : (
                     <div className="u-display-flex u-align-items-center u-gap-8px">
-                      <span className="u-min-width-28px u-font-weight-650">{Number(b.reorder_point || 0).toLocaleString("az-AZ")}</span>
+                      <span className="u-min-width-28px u-font-weight-650">{formatNumber(Number(b.reorder_point || 0))}</span>
                       <Button variant="ghost" type="button" onClick={() => startEditing(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi redaktə et"><Pencil size={15} /></Button>
                     </div>
                   )}
@@ -273,7 +275,7 @@ function MovementsPanel({ stock, products }) {
   return (
     <div className="stock-page-card">
       <h3 className="u-margin-top-0">
-        Anbar hərəkətləri ({stock.movementsTotal.toLocaleString("az-AZ")})
+        Anbar hərəkətləri ({formatNumber(stock.movementsTotal)})
       </h3>
       {msg && <div className="ui-tok-msg-box">{msg}</div>}
       <form onSubmit={submit} className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_130px_1fr u-gap-8px u-margin-bottom-16px">
@@ -301,11 +303,11 @@ function MovementsPanel({ stock, products }) {
         <tbody>
           {stock.movements.map((m) => (
             <tr key={m.id}>
-              <td className="ui-tok-td">{new Date(m.moved_at).toLocaleDateString("az-AZ")}</td>
+              <td className="ui-tok-td">{formatDate(m.moved_at)}</td>
               <td className="ui-tok-td">{m.warehouse?.name || "—"}</td>
               <td className="ui-tok-td">{m.product?.name || m.sku || "—"}</td>
               <td className="ui-tok-td"><span className={`${badgeClass(m.move_type === "out" ? "red" : "green")}`}>{MOVE_LABEL[m.move_type]}</span></td>
-              <td className="ui-tok-td">{Number(m.qty).toLocaleString("az-AZ")}</td>
+              <td className="ui-tok-td">{formatNumber(Number(m.qty))}</td>
               <td className="ui-tok-td">{m.doc_no || "—"}</td>
             </tr>
           ))}
@@ -366,7 +368,7 @@ function TransferPanel({ stock }) {
       <form onSubmit={submit} className="stock-page-form-grid">
         <label className="stock-page-field-label">Mənbə anbar<Select required value={form.fromWarehouseId} onChange={(e) => setForm({ ...form, fromWarehouseId: e.target.value, productId: "" })} className="ui-tok-input"><option value="">Seçin…</option>{stock.warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</Select></label>
         <label className="stock-page-field-label">Hədəf anbar<Select required value={form.toWarehouseId} onChange={(e) => setForm({ ...form, toWarehouseId: e.target.value })} className="ui-tok-input"><option value="">Seçin…</option>{stock.warehouses.filter((w) => w.id !== form.fromWarehouseId).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</Select></label>
-        <label className="stock-page-field-label">Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${Number(product.qty).toLocaleString("az-AZ")} ədəd`} /></label>
+        <label className="stock-page-field-label">Məhsul<ProductSearchSelect disabled={!form.fromWarehouseId} products={sourceBalances.map((row) => ({ id: row.product_id, name: row.product?.name || row.sku, sku: row.sku, qty: row.qty }))} value={form.productId} onChange={(productId) => setForm({ ...form, productId })} renderMeta={(product) => `${formatNumber(Number(product.qty))} ədəd`} /></label>
         <label className="stock-page-field-label">Miqdar<Input required type="number" min="0.001" step="0.001" max={selectedBalance?.qty || undefined} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="ui-tok-input" /></label>
         <label className="stock-page-field-label sx-b452654">Qeyd<Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Transfer səbəbi" className="ui-tok-input" /></label>
         <div className="u-grid-column-1_1 u-display-flex u-justify-content-flex_end"><button type="submit" disabled={busy || stock.warehouses.length < 2} className="ui-tok-primary-btn">{busy ? "Köçürülür…" : "Transfer et"}</button></div>

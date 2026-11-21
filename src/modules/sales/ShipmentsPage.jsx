@@ -4,6 +4,7 @@ import { useShipments } from '../../shared/hooks/useShipments.js';
 import StatusBadge from './StatusBadge.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
 import { Button, Table } from "../../shared/ui/primitives.tsx";
+import { formatDate } from "../../services/date.js";
 
 const NEXT = { pending: 'packed', packed: 'shipped', shipped: 'delivered' };
 
@@ -30,7 +31,7 @@ export default function ShipmentsPage() {
                 <Td>{s.carrier || '—'}</Td>
                 <Td className="u-font-family-monospace u-font-size-12px">{s.tracking_no || '—'}</Td>
                 <Td><StatusBadge status={s.status} /></Td>
-                <Td>{s.shipped_at ? new Date(s.shipped_at).toLocaleDateString('az-AZ') : '—'}</Td>
+                <Td>{s.shipped_at ? formatDate(s.shipped_at) : '—'}</Td>
                 <Td align="right">
                   <div className="u-display-inline_flex u-gap-6px">
                     {NEXT[s.status] && (

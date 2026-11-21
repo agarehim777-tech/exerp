@@ -5,7 +5,7 @@ import { money, percent } from "../services/format.js";
 import BonusAssignmentsPanel from "./BonusAssignmentsPanel.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useSalesBonusLedger } from "../shared/hooks/useSalesBonusLedger.js";
-import { toLocalIsoDate } from "../services/date.js";
+import { formatPaymentDate, toLocalIsoDate } from "../services/date.js";
 
 function todayIso() {
   return toLocalIsoDate();
@@ -27,8 +27,7 @@ function daysAgoIso(days) {
 
 function formatDateRange(start, end) {
   if (!start || !end) return "—";
-  const fmt = new Intl.DateTimeFormat("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric" });
-  return `${fmt.format(new Date(`${start}T00:00:00`))} – ${fmt.format(new Date(`${end}T00:00:00`))}`;
+  return `${formatPaymentDate(new Date(`${start}T00:00:00`))} – ${formatPaymentDate(new Date(`${end}T00:00:00`))}`;
 }
 
 function inRange(date, start, end) {

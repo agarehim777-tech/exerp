@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button, Card, DataTable, Input, Select } from '../../shared/ui/primitives.tsx';
 import StatusBadge from './StatusBadge.jsx';
-import { toLocalIsoDate } from '../../services/date.js';
+import { toLocalIsoDate, formatDate } from '../../services/date.js';
 import { parseOrderNotes, serializeOrderNotes } from '../../shared/utils/orderNotes.js';
 import { appAlert } from '../../shared/ui/dialogService.js';
 import { createIdempotencyKey } from '../../services/coreOperations.js';
@@ -110,7 +110,7 @@ export default function OrderDrawer({ order, customers = [], products = [], cash
               <Select value={draft.customer_id} onChange={e => setDraft(current => ({ ...current, customer_id: e.target.value }))} ><option value="">Müştəri seçin</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</Select>
               <Input type="date" value={draft.order_date} onChange={e => setDraft(current => ({ ...current, order_date: e.target.value }))}  />
               <Select value={draft.currency} disabled={priceEditOnly} onChange={e => setDraft(current => ({ ...current, currency: e.target.value }))} ><option>AZN</option><option>USD</option><option>EUR</option></Select>
-            </div> : <><div className="u-font-weight-600">{order.customer?.name || '—'}</div><div className="u-font-size-12px u-color-text_secondary">Tarix: {new Date(order.order_date || order.created_at).toLocaleDateString('az-AZ')}</div></>}
+            </div> : <><div className="u-font-weight-600">{order.customer?.name || '—'}</div><div className="u-font-size-12px u-color-text_secondary">Tarix: {formatDate(order.order_date || order.created_at)}</div></>}
           </Section>
 
           <Section title={`Sətrlər (${items.length})`}>

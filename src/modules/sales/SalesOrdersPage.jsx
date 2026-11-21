@@ -13,6 +13,7 @@ import { pathForRecord } from '../../config/routes.js';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import { cashAmount } from '../../services/format.js';
 import './sales-reversal.css';
+import { formatDate } from '../../services/date.js';
 
 const KANBAN_STATUSES = ['confirmed', 'delivered', 'cancelled'];
 const STATUS_LABELS = { draft: 'Təsdiqləndi', pending: 'Təsdiqləndi', confirmed: 'Təsdiqləndi', processing: 'Təsdiqləndi', shipped: 'Təsdiqləndi', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
@@ -119,7 +120,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
                 case 'balance': return <b className={`money-value ${balance > 0 ? 'amount-due' : 'amount-positive'}`}>{cashAmount(balance, order.currency || 'AZN')}</b>;
                 case 'status': return <StatusBadge status={STATUS_LABELS[order.status] || order.status} />;
                 case 'payment': return <StatusBadge status={order.payment_status} />;
-                case 'date': return new Date(order.order_date || order.created_at).toLocaleDateString('az-AZ');
+                case 'date': return formatDate(order.order_date || order.created_at);
                 default: return null;
               }
             }} />

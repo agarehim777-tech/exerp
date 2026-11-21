@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
+import { formatDateTime } from "../../services/date.js";
 
 const icon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms: '💬' };
 
@@ -53,7 +54,7 @@ export default function CrmActivitiesPage() {
               {a.body && <div className="u-font-size-13px u-color-text_secondary u-margin-top-2px">{a.body}</div>}
               <div className="u-font-size-11px u-color-text_secondary u-margin-top-4px">
                 {a.customer?.name && <b className="u-color-action">{a.customer.name} · </b>}
-                {new Date(a.occurred_at).toLocaleString('az-AZ')}
+                {formatDateTime(a.occurred_at)}
               </div>
             </div>
           </div>

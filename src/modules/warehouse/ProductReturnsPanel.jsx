@@ -3,8 +3,9 @@ import { RotateCcw } from "lucide-react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { Button, Input, Select, Table } from "../../shared/ui/primitives.tsx";
+import { formatNumber } from "../../services/format.js";
 
-const number = (value) => Number(value || 0).toLocaleString("az-AZ");
+const number = (value) => formatNumber(Number(value || 0));
 const dispositionLabel = { restock: "Yenidən satış stoku", quarantine: "Problemli stok", vendor_return: "Vendor qaytarması", write_off: "Silinmə" };
 const repairStatusLabel = { not_required: "Tələb olunmur", pending: "Təmir gözləyir", in_progress: "Təmirdə", repaired: "Təmir edildi", not_repairable: "Təmir mümkün deyil" };
 

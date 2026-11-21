@@ -16,6 +16,28 @@ export function formatPaymentDate(date) {
   return `${pad2(value.getDate())}.${pad2(value.getMonth() + 1)}.${value.getFullYear()}`;
 }
 
+const toDate = (value) => (value instanceof Date ? value : new Date(value));
+
+/** 21.11.2026 for a Date, ISO string or timestamp; "—" when it is not a date. */
+export function formatDate(value) {
+  const date = toDate(value);
+  return Number.isNaN(date.getTime()) ? "—" : formatPaymentDate(date);
+}
+
+/**
+ * 21.11.2026, 14:05:09 (seconds: false drops ":09"; shortYear: true prints 21.11.26). "—" when it is not a date.
+ * Matches Node's Intl "az-AZ" text, which Chromium cannot produce.
+ * @param {Date | string | number} value
+ * @param {{ seconds?: boolean, shortYear?: boolean }} [options]
+ */
+export function formatDateTime(value, { seconds = true, shortYear = false } = {}) {
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const year = shortYear ? pad2(date.getFullYear() % 100) : date.getFullYear();
+  const time = `${pad2(date.getHours())}:${pad2(date.getMinutes())}${seconds ? `:${pad2(date.getSeconds())}` : ""}`;
+  return `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}.${year}, ${time}`;
+}
+
 /** noy */
 export function formatMonthShort(date) {
   return AZ_MONTHS_SHORT[validDate(date).getMonth()];
