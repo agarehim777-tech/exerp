@@ -146,11 +146,7 @@ function ProcurementWorkspace({ tenantId, user }) {
 
   return (
     <main className="procurement-page procurement-page-styles-page" aria-busy={loading || saving}>
-      <header className="procurement-page-styles-header">
-        <div>
-          <h1 className="procurement-page-styles-title">Satınalma</h1>
-          <p className="procurement-page-styles-subtitle">Vendor, zavod sifarişi, mədaxil və məhsulun maya dəyəri axını.</p>
-        </div>
+      <header className="procurement-page-styles-header procurement-page-styles-header-actions-only">
         <div className="procurement-page-styles-header-actions">
           <IconButton icon={RefreshCw} label={loading ? "Yüklənir" : "Yenilə"} onClick={load} disabled={loading || saving} />
         </div>

@@ -7,6 +7,7 @@ import { useDeals } from '../../shared/hooks/useDeals.js';
 import { useCustomers } from '../../shared/hooks/useCustomers.js';
 import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 import { formatDate } from "../../services/date.js";
+import { formatAmount, cashAmount } from '../../services/format.js';
 
 export default function CrmDealsPage() {
   const { activeTenantId } = useAuth();
@@ -51,8 +52,8 @@ export default function CrmDealsPage() {
       {dealsError && <div role="alert" className="ui-notice ui-notice-warning">Sövdələşmələr yüklənmədi: {dealsError.message}</div>}
       <header className="u-display-flex u-justify-content-space_between u-align-items-center u-flex-wrap-wrap u-gap-12px">
         <div>
-          <h1 className="u-margin-0 u-font-size-26px u-font-weight-800">{activePipeline.name}</h1>
-          <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{totalOpen.toFixed(0)} ₼</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
+          <h2 className="u-margin-0 u-font-size-20px u-font-weight-700">{activePipeline.name}</h2>
+          <div className="u-color-text_secondary u-font-size-14px">Açıq: <b className="u-color-action">{formatAmount(totalOpen, { decimals: 0 })}</b> · {deals.filter(d => d.status === 'open').length} sövdələşmə</div>
         </div>
         <Button variant="ghost" onClick={() => { setDefaultStage(stages[0]?.id); setShowNew(true); }}
           className="sx-ef4ac23 sx-4eb23a8 sx-012333e sx-618e663 sx-3c85720 sx-83e4487 sx-b202c6d">+ Sövdələşmə</Button>
@@ -96,7 +97,7 @@ function StageColumn({ stage, count, sum, onAdd, children }) {
           <b className="u-flex-1">{stage.name}</b>
           <span className="u-background-surface u-padding-2px_8px u-border-radius-999px u-font-size-11px u-font-weight-700 u-color-text_secondary">{count}</span>
         </div>
-        <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{sum.toFixed(0)} ₼</div>
+        <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{formatAmount(sum, { decimals: 0 })}</div>
         <Button variant="ghost" onClick={onAdd} className="u-margin-top-6px u-width-100 u-background-transparent u-border-1px_dashed_line_strong u-padding-6px u-border-radius-8px u-cursor-pointer u-color-text_secondary u-font-size-12px">+ əlavə et</Button>
       </div>
       <div className="u-padding-8px u-display-flex u-flex-direction-column u-gap-8px u-min-height-100px u-flex-1">
@@ -118,7 +119,7 @@ function DealCard({ deal }) {
       <div className="u-font-weight-600 u-font-size-14px">{deal.title}</div>
       {deal.customer && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{deal.customer.name}</div>}
       <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-top-8px">
-        <span className="u-font-weight-700 u-color-action">{Number(deal.amount).toFixed(0)} {deal.currency}</span>
+        <span className="u-font-weight-700 u-color-action">{cashAmount(Number(deal.amount), deal.currency || 'AZN')}</span>
         {deal.expected_close && <span className="u-font-size-11px u-color-text_secondary">{formatDate(deal.expected_close)}</span>}
       </div>
     </div>

@@ -56,6 +56,10 @@
   font-size: 12px;
 }
 
+.procurement-page-styles-header-actions-only {
+  justify-content: flex-end;
+}
+
 .procurement-page-styles-header-actions {
   display: flex;
   gap: 8px;

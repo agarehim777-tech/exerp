@@ -8,6 +8,7 @@ import BirthDateInput from './BirthDateInput.jsx';
 import { appConfirm } from '../../shared/ui/dialogService.js';
 import { Badge, Button, Card, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
 import { formatDate, formatDateTime } from '../../services/date.js';
+import { formatAmount, cashAmount, formatNumber } from '../../services/format.js';
 
 export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSalesOrder, onOpenCredit }) {
   const { activeTenantId } = useAuth();
@@ -52,10 +53,10 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
             </header>
 
             <div className="u-padding-12px_20px u-display-grid u-grid-template-columns-repeat_3_1fr u-gap-8px u-background-surface_subtle u-border-bottom-1px_solid_border">
-              <Stat label="LTV (Sifariş)" value={`${Number(data.orders_total || 0).toFixed(0)} ₼`} />
-              <Stat label="Ödənilib" value={`${Number(data.orders_paid || 0).toFixed(0)} ₼`} />
-              <Stat label="Qalıq borc" value={`${Number(data.orders_outstanding || 0).toFixed(0)} ₼`} />
-              <Stat label="Qazanıldı" value={`${Number(data.won_amount || 0).toFixed(0)} ₼`} />
+              <Stat label="LTV (Sifariş)" value={`${formatAmount(Number(data.orders_total || 0), { decimals: 0 })}`} />
+              <Stat label="Ödənilib" value={`${formatAmount(Number(data.orders_paid || 0), { decimals: 0 })}`} />
+              <Stat label="Qalıq borc" value={`${formatAmount(Number(data.orders_outstanding || 0), { decimals: 0 })}`} />
+              <Stat label="Qazanıldı" value={`${formatAmount(Number(data.won_amount || 0), { decimals: 0 })}`} />
               <Stat label="Açıq deal" value={data.open_deals?.length || 0} />
               <Stat label="Müştəri skoru" value={`${data.analytics?.customerScore || 0}/100`} />
               <Stat label="Risk" value={data.analytics?.riskLabel || '—'} />
@@ -121,7 +122,7 @@ export function CreditsTab({ credits, onOpenSalesOrder, onOpenCredit }) {
     const overdue = (credit.installments || []).filter(row => row.status === 'overdue').length;
     return <Card as="article" key={credit.id} aria-label={credit.contract_no} className="ui-card-compact">
       <div className="u-display-flex u-justify-content-space_between u-gap-12px"><b>{credit.contract_no}</b><Badge tone={overdue ? 'danger' : 'success'}>{overdue ? `${overdue} gecikmə` : credit.status}</Badge></div>
-      <div className="ui-detail-grid"><Stat label="Məbləğ" value={`${Number(credit.principal || 0).toFixed(2)} ₼`} /><Stat label="Ödənilib" value={`${paid.toFixed(2)} ₼`} /><Stat label="Qalıq" value={`${balance.toFixed(2)} ₼`} /></div>
+      <div className="ui-detail-grid"><Stat label="Məbləğ" value={`${formatAmount(Number(credit.principal || 0))}`} /><Stat label="Ödənilib" value={`${formatAmount(paid)}`} /><Stat label="Qalıq" value={`${formatAmount(balance)}`} /></div>
       <small className="u-color-text_secondary">Risk {credit.risk_score || 0}/100 · Kolleksiya: {credit.collection_stage || 'current'} · {credit.term_months} ay</small>
       <div className="u-display-flex u-flex-wrap-wrap u-gap-8px u-margin-top-10px">
         {onOpenCredit && <Button type="button" onClick={() => onOpenCredit(credit.id)} variant="secondary" size="compact"><ArrowUpRight size={14} aria-hidden="true" /> Kreditə bax</Button>}
@@ -132,7 +133,7 @@ export function CreditsTab({ credits, onOpenSalesOrder, onOpenCredit }) {
         {credit.installments?.length ? <DataTable label="Kredit ödəniş cədvəli" className="ui-spacer-top"
           columns={[{ key: 'due_date', label: 'Tarix' }, { key: 'plan', label: 'Plan', align: 'right' }, { key: 'balance', label: 'Qalıq', align: 'right' }]}
           rows={[...credit.installments].sort((a, b) => a.installment_no - b.installment_no)} rowKey={row => row.id ?? row.installment_no}
-          renderCell={(row, column) => column.key === 'due_date' ? row.due_date : `${(column.key === 'plan' ? Number(row.principal_due || 0) : Math.max(0, Number(row.principal_due || 0) - Number(row.principal_paid || 0))).toFixed(2)} ₼`} /> : <p className="u-color-text_secondary u-font-size-12px">Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.</p>}
+          renderCell={(row, column) => column.key === 'due_date' ? row.due_date : `${formatAmount((column.key === 'plan' ? Number(row.principal_due || 0) : Math.max(0, Number(row.principal_due || 0) - Number(row.principal_paid || 0))))}`} /> : <p className="u-color-text_secondary u-font-size-12px">Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.</p>}
       </details>
     </Card>;
   })}</div>;
@@ -158,7 +159,7 @@ function DocumentsTab({ documents, onUpload, onDownload, onRemove }) {
     <Select value={type} onChange={event => setType(event.target.value)} ><option>Şəxsiyyət sənədi</option><option>Müqavilə</option><option>Ödəniş sənədi</option><option>Servis sənədi</option><option>Digər</option></Select>
     <Input required type="file" onChange={event => setFile(event.target.files?.[0] || null)}  />
     <Button type="submit" >Sənədi yüklə</Button>{message && <small>{message}</small>}
-  </form>{documents.map(document => <Card key={document.id} className="ui-card-compact ui-document-row"><div><b>{document.title}</b><small className="u-display-block u-color-text_secondary">{document.document_type} · {(Number(document.file_size || 0) / 1024).toFixed(1)} KB</small></div><div className="u-display-flex u-gap-6px"><Button type="button" onClick={() => onDownload(document)} variant="secondary" size="compact">Aç</Button><Button type="button" onClick={async () => (await appConfirm('Sənəd silinsin?', { danger: true })) && onRemove(document)} variant="danger" size="compact">Sil</Button></div></Card>)}{!documents.length && <div className="ui-empty-box">Sənəd əlavə edilməyib.</div>}</div>;
+  </form>{documents.map(document => <Card key={document.id} className="ui-card-compact ui-document-row"><div><b>{document.title}</b><small className="u-display-block u-color-text_secondary">{document.document_type} · {formatNumber(Number(document.file_size || 0) / 1024, { maximumFractionDigits: 1 })} KB</small></div><div className="u-display-flex u-gap-6px"><Button type="button" onClick={() => onDownload(document)} variant="secondary" size="compact">Aç</Button><Button type="button" onClick={async () => (await appConfirm('Sənəd silinsin?', { danger: true })) && onRemove(document)} variant="danger" size="compact">Sil</Button></div></Card>)}{!documents.length && <div className="ui-empty-box">Sənəd əlavə edilməyib.</div>}</div>;
 }
 
 const Stat = ({ label, value }) => (
@@ -171,10 +172,10 @@ const Stat = ({ label, value }) => (
 const orderStatusLabels = { draft: 'Yeni', pending: 'Yeni', confirmed: 'Təsdiqləndi', processing: 'Hazırlanır', shipped: 'Hazırlanır', delivered: 'Təhvil verildi', cancelled: 'Ləğv edildi' };
 function OrdersTab({ orders, count, total, onOpen }) {
   return <div className="u-display-grid u-gap-10px">
-    <div className="u-display-flex u-justify-content-space_between u-gap-12px u-color-text_secondary u-font-size-12px"><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {Number(total || 0).toFixed(2)} ₼</span></div>
+    <div className="u-display-flex u-justify-content-space_between u-gap-12px u-color-text_secondary u-font-size-12px"><span><b>Sifariş sayı:</b> {count ?? orders.length}</span><span><b>Ümumi:</b> {formatAmount(Number(total || 0))}</span></div>
     {orders.length === 0 ? <div className="u-padding-28px u-text-align-center u-color-text_secondary u-border-1px_dashed_line_strong u-border-radius-10px">Bu müştəri üzrə sifariş yoxdur.</div> : orders.map(order => <Button variant="secondary" className="ui-record-action" key={order.id} type="button" onClick={() => onOpen?.(order.id)}>
       <span className="u-min-width-0"><strong className="u-display-block u-color-text_primary">{order.order_no || order.id}</strong><small className="u-color-text_secondary">{order.order_date ? formatDate(order.order_date) : 'Tarix yoxdur'} · {orderStatusLabels[order.status] || order.status}</small></span>
-      <span className="u-text-align-right"><strong className="u-display-block u-color-0b7a5c">{Number(order.total || 0).toFixed(2)} {order.currency === 'AZN' ? '₼' : order.currency}</strong><small className="u-color-info">Sifarişə bax →</small></span>
+      <span className="u-text-align-right"><strong className="u-display-block u-color-0b7a5c">{cashAmount(Number(order.total || 0), order.currency || 'AZN')}</strong><small className="u-color-info">Sifarişə bax →</small></span>
     </Button>)}
   </div>;
 }
@@ -261,7 +262,7 @@ function DealsTab({ deals }) {
       {deals.map(d => (
         <Card key={d.id} className="ui-card-compact">
           <div className="u-font-weight-600">{d.title}</div>
-          <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{Number(d.amount).toFixed(2)} {d.currency}</div>
+          <div className="u-font-size-12px u-color-text_secondary u-margin-top-4px">{cashAmount(Number(d.amount), d.currency || 'AZN')}</div>
         </Card>
       ))}
     </div>

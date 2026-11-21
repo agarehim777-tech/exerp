@@ -15,7 +15,7 @@ it('keeps distinct contract links and reads the persisted installment amounts', 
   expect(onOpenCredit).toHaveBeenCalledWith('credit-two');
   fireEvent.click(screen.getByRole('button', { name: 'Sifarişə bax' }));
   expect(onOpenSalesOrder).toHaveBeenCalledWith('order-one');
-  expect(screen.getByText('900.00 ₼')).toBeInTheDocument();
-  expect(screen.getByText('50.00 ₼')).toBeInTheDocument();
+  expect(screen.getByText('900,00 ₼')).toBeInTheDocument();
+  expect(screen.getByText('50,00 ₼')).toBeInTheDocument();
   expect(screen.getByText('Kreditin ödəniş cədvəli hələ aktivləşdirilməyib.')).toBeInTheDocument();
 });

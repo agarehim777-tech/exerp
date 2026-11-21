@@ -1,11 +1,12 @@
-import { formatAmount, formatNumber } from "../../services/format.js";
+import { cashAmount, formatNumber } from "../../services/format.js";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { PackagePlus, Search } from "lucide-react";
 import { vendorInvoiceLineGross } from "./procurementMath.js";
 import { toLocalIsoDate } from "../../services/date.js";
 import { foldSearchText } from "../../shared/lib/searchText.ts";
 
-export const money = (value, currency = "AZN") => formatAmount(value, { currency });
+// AZN shows as ₼, other currencies by their Azerbaijani symbol or ISO code (US$, €, TRY).
+export const money = (value, currency = "AZN") => cashAmount(Number(value) || 0, currency || "AZN");
 
 export const qty = (value) => formatNumber(Number(value || 0), { maximumFractionDigits: 3 });
 

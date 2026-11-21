@@ -1,4 +1,4 @@
-import { formatAmount } from "../../services/format.js";
+import { formatAmount, formatNumber } from "../../services/format.js";
 import { Badge, Button, DataTable, Input, Select } from '../../shared/ui/primitives';
 import React, { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Clock, Info, Plus, Users, Wallet } from "lucide-react";
@@ -135,7 +135,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
             <Total label="Hesabat dövrü" value={periodLabel(period)} />
             <Total label="Əməkdaş sayı" value={`${ops.employees.length} nəfər`} />
             <Total label="Qeyd olunmuş iş günü" value={`${attendanceTotals.days} gün`} tone="#0f766e" />
-            <Total label="Cəmi iş saatı" value={`${attendanceTotals.hours.toFixed(1)} saat`} tone="#2563a9" />
+            <Total label="Cəmi iş saatı" value={`${formatNumber(attendanceTotals.hours, { maximumFractionDigits: 1 })} saat`} tone="#2563a9" />
           </div>
           <SectionTitle title="Aylıq davamiyyət cədvəli" subtitle={`${norm} iş günü norması üzrə əməkdaş nəticələri`} />
           <Table

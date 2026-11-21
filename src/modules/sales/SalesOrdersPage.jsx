@@ -11,7 +11,7 @@ import { Button, DataTable, Input, Tabs } from '../../shared/ui/primitives.jsx';
 import ModuleLink from '../../shared/ui/ModuleLink.jsx';
 import { pathForRecord } from '../../config/routes.js';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
-import { cashAmount } from '../../services/format.js';
+import { cashAmount, formatAmount } from '../../services/format.js';
 import './sales-reversal.css';
 import { formatDate } from '../../services/date.js';
 
@@ -135,7 +135,7 @@ export default function SalesOrdersPage({ repository, customers = [], products =
               <div key={st} className="u-min-width-260px u-background-surface_subtle u-border-radius-12px u-padding-10px">
                 <div className="u-display-flex u-justify-content-space_between u-align-items-center u-margin-bottom-8px">
                   <StatusBadge status={STATUS_LABELS[st]} />
-                  <div className="u-font-size-11px u-color-text_secondary u-font-weight-600">{col.length} · {sum.toFixed(0)} ₼</div>
+                  <div className="u-font-size-11px u-color-text_secondary u-font-weight-600">{col.length} · {formatAmount(sum, { decimals: 0 })}</div>
                 </div>
                 <div className="u-display-flex u-flex-direction-column u-gap-8px">
                   {col.filter(o => pageRows.includes(o)).map(o => (
@@ -220,7 +220,7 @@ function ReversalPreview({ state, reason, setReason, deleting, onClose, onConfir
       {!state.loading && <>
         <div className="reversal-impact-grid">
           <Impact icon={CreditCard} label="Bağlanacaq kredit" value={p.credit_count || 0} />
-          <Impact icon={ReceiptText} label="Geri çevriləcək ödəniş" value={`${Number(p.payment_amount || 0).toFixed(2)} ₼`} />
+          <Impact icon={ReceiptText} label="Geri çevriləcək ödəniş" value={`${formatAmount(Number(p.payment_amount || 0))}`} />
           <Impact icon={PackageCheck} label="Buraxılacaq rezerv" value={p.reservation_count || 0} />
           <Impact icon={PackageCheck} label="Anbara qaytarılacaq" value={p.stock_return_count || 0} />
         </div>

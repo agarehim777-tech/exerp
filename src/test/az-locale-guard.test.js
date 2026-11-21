@@ -26,3 +26,15 @@ it('formats Azerbaijani numbers and dates only through the services helpers', as
   }
   expect(offenders).toEqual([]);
 });
+
+// 'x.toFixed(2) ₼' prints '20087.18 ₼': no thousands separator and an English decimal point. Use formatAmount or
+// cashAmount (with the row currency) for money shown on screen.
+it('shows money amounts through the shared formatters, not toFixed', async () => {
+  const pattern = /toFixed\(\d\)\}?\s*(?:₼|AZN|\{[^}]*currency)/;
+  const offenders = [];
+  for (const file of await sourceFiles(join(process.cwd(), 'src'))) {
+    const lines = (await readFile(file, 'utf8')).split(/\r?\n/);
+    lines.forEach((line, index) => { if (pattern.test(line)) offenders.push(`${file}:${index + 1}`); });
+  }
+  expect(offenders).toEqual([]);
+});

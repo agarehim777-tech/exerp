@@ -1,6 +1,7 @@
 import React from 'react';
 import ProductPicker from './ProductPicker.jsx';
 import { Button, Input, Table } from "../../shared/ui/primitives.tsx";
+import { formatAmount } from '../../services/format.js';
 
 function lineNet(it) {
   const qty = Number(it.qty) || 0;
@@ -60,7 +61,7 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
                 <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.unit_price} onChange={e => set(i, { unit_price: e.target.value })} /></td>
                 <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.discount_pct} onChange={e => set(i, { discount_pct: e.target.value })} /></td>
                 <td className="line-items-table-cell"><Input type="number" step="0.01" className="line-items-table-inp sx-f6e3d7f" value={it.tax_rate} onChange={e => set(i, { tax_rate: e.target.value })} /></td>
-                <td className="line-items-table-cell sx-f6e3d7f sx-e634e6d">{lineTotal(it).toFixed(2)} ₼</td>
+                <td className="line-items-table-cell sx-f6e3d7f sx-e634e6d">{formatAmount(lineTotal(it))}</td>
                 <td className="line-items-table-cell">
                   <Button variant="ghost" type="button" onClick={() => remove(i)} className="u-border-0 u-background-transparent u-cursor-pointer u-color-danger u-font-size-18px">×</Button>
                 </td>
@@ -89,7 +90,7 @@ export default function LineItemsTable({ items, onChange, products = [] }) {
 function Row({ label, value, bold }) {
   return (
     <div className={`sx-f7dbba7 sx-daae847 sx-2dab903 ${bold ? "sx-f2ee35f" : "sx-f1bde2c"} ${bold ? "sx-3dd9b4c" : "sx-3044b60"} ${bold ? "sx-5cfb91b" : "sx-53deb6e"}`}>
-      <span>{label}</span><span>{value.toFixed(2)} ₼</span>
+      <span>{label}</span><span>{formatAmount(value)}</span>
     </div>
   );
 }

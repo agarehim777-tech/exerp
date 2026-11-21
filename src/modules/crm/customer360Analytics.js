@@ -1,3 +1,5 @@
+import { cashAmount } from "../../services/format.js";
+
 const amount = value => Number(value || 0);
 const dateValue = value => value ? new Date(value).getTime() : 0;
 
@@ -20,9 +22,9 @@ export function buildCustomerScore({ orders = [], credits = [], payments = [] })
 
 export function buildCustomerTimeline({ orders = [], credits = [], payments = [], activities = [], serviceCases = [], documents = [] }) {
   return [
-    ...orders.map(row => ({ id: `order-${row.id}`, at: row.order_date || row.created_at, type: "Satış", title: row.order_no, detail: `${amount(row.total).toFixed(2)} AZN · ${row.status}`, entityId: row.id })),
-    ...credits.map(row => ({ id: `credit-${row.id}`, at: row.start_date || row.created_at, type: "Kredit", title: row.contract_no, detail: `${amount(row.principal).toFixed(2)} AZN · ${row.status}`, entityId: row.id })),
-    ...payments.map(row => ({ id: `payment-${row.id}`, at: row.paid_at || row.created_at, type: "Ödəniş", title: row.receipt_no, detail: `${amount(row.amount).toFixed(2)} AZN`, entityId: row.credit_id })),
+    ...orders.map(row => ({ id: `order-${row.id}`, at: row.order_date || row.created_at, type: "Satış", title: row.order_no, detail: `${cashAmount(amount(row.total), row.currency || "AZN")} · ${row.status}`, entityId: row.id })),
+    ...credits.map(row => ({ id: `credit-${row.id}`, at: row.start_date || row.created_at, type: "Kredit", title: row.contract_no, detail: `${cashAmount(amount(row.principal))} · ${row.status}`, entityId: row.id })),
+    ...payments.map(row => ({ id: `payment-${row.id}`, at: row.paid_at || row.created_at, type: "Ödəniş", title: row.receipt_no, detail: `${cashAmount(amount(row.amount))}`, entityId: row.credit_id })),
     ...serviceCases.map(row => ({ id: `service-${row.id}`, at: row.opened_at || row.created_at, type: "Servis", title: row.case_no, detail: `${row.subject} · ${row.status}`, entityId: row.id })),
     ...documents.map(row => ({ id: `document-${row.id}`, at: row.created_at, type: "Sənəd", title: row.title, detail: row.document_type, entityId: row.id })),
     ...activities.map(row => ({ id: `activity-${row.id}`, at: row.occurred_at || row.created_at, type: "Əlaqə", title: row.subject || row.type, detail: row.notes || row.description || "", entityId: row.id })),

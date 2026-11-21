@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { Input } from "../../shared/ui/primitives.tsx";
+import { formatAmount } from '../../services/format.js';
 
 export default function ProductPicker({ products = [], value, onPick }) {
   const [q, setQ] = useState('');
@@ -33,7 +34,7 @@ export default function ProductPicker({ products = [], value, onPick }) {
               onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
               <div className="u-font-weight-600 u-font-size-13px">{p.name}</div>
               <div className="u-font-size-11px u-color-text_secondary">
-                {p.sku && `${p.sku} · `}{Number(p.price || 0).toFixed(2)} ₼
+                {p.sku && `${p.sku} · `}{formatAmount(Number(p.price || 0))}
               </div>
             </div>
           ))}

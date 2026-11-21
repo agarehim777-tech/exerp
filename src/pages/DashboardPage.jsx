@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { MetricCard, Panel, PanelHeader } from "../components/ui.jsx";
 import { Button } from "../shared/ui/primitives.tsx";
-import { money } from "../services/format.js";
+import { money, percent } from "../services/format.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCashbook } from "../shared/hooks/useCashbook.js";
 import { getOrderSellerBonuses, normalizeOrderProductLines } from "../shared/lib/appDomain.jsx";
@@ -128,7 +128,7 @@ export default function DashboardPage({
         <MetricCard
           label="Aylıq gəlir"
           value={money(dashboard.revenue)}
-          trend={`${dashboard.revenueChange >= 0 ? "+" : ""}${dashboard.revenueChange.toFixed(1)}% keçən aya`}
+          trend={`${dashboard.revenueChange >= 0 ? "+" : ""}${percent(dashboard.revenueChange)} keçən aya`}
           icon={Wallet}
           tone="success"
         />

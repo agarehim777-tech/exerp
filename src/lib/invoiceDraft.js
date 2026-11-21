@@ -1,4 +1,5 @@
 import { toLocalIsoDate } from "../services/date.js";
+import { formatAmount } from "../services/format.js";
 // Faktura kəsimi ön baxışı üçün təmiz (DB-yə toxunmayan) sənəd qurucuları.
 
 export function computeDraftTotals(lines) {
@@ -104,9 +105,9 @@ export function validateDraft(draft) {
   const rowsSum = round2(totals.rows.reduce((s, r) => s + r.line_total, 0));
   const roundingDiff = round2(rowsSum - totals.total);
   if (Math.abs(roundingDiff) > 0.005)
-    addDoc("error", `Yuvarlaqlaşdırma fərqi ${roundingDiff.toFixed(2)} ₼ — sətir cəmləri yekunla uyğun gəlmir.`);
+    addDoc("error", `Yuvarlaqlaşdırma fərqi ${formatAmount(roundingDiff)} — sətir cəmləri yekunla uyğun gəlmir.`);
   else if (Math.abs(roundingDiff) > 0)
-    addDoc("warning", `Yuvarlaqlaşdırma fərqi ${roundingDiff.toFixed(2)} ₼ (icazə verilən hədd daxilində).`);
+    addDoc("warning", `Yuvarlaqlaşdırma fərqi ${formatAmount(roundingDiff)} (icazə verilən hədd daxilində).`);
 
   const vatSum = round2(totals.vat_breakdown.reduce((s, g) => s + g.vat, 0));
   if (Math.abs(vatSum - totals.vat_total) > 0.005)
