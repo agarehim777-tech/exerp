@@ -50,7 +50,7 @@ const js = await build({ stdin: { contents: source, loader: 'jsx', resolveDir: r
       ? 'export default function Drawer({order,onClose}){return <div role="dialog" aria-label="Sifariş"><b>{order.order_no}</b><button onClick={onClose}>Bağla</button></div>;}'
       :'export const supabase={};'}));
   }}] });
-const css = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";', loader: 'css', resolveDir: repo }, bundle: true, write: false });
+const css = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";', loader: 'css', resolveDir: repo }, bundle: true, write: false, loader: { '.ttf': 'dataurl' } });
 const browser = await chromium.launch({ headless:true });
 const context = await browser.newContext();
 await context.route('**/*',route=>route.abort());

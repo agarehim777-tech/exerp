@@ -8,7 +8,7 @@ for (const width of [1920, 1440, 1180, 900, 640, 375]) {
     await page.route('http://credit-layout.test/**', route => route.fulfill({ contentType: 'text/html', body: '<html><body></body></html>' }));
     await page.goto('http://credit-layout.test/');
     const bundle = await build({ stdin: { contents: '@import "./src/styles.css"; @import "./src/styles/index.css";',
-      loader: 'css', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false });
+      loader: 'css', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false, loader: { '.ttf': 'dataurl' } });
     await page.setViewportSize({ width, height: 1000 });
     const app = await build({ stdin: { contents: `
       import React from 'react';
