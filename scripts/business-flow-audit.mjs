@@ -511,7 +511,8 @@ async function auditCreditPayment(browser) {
     await page.locator('[data-testid="credit-total-tile"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-paid-tile"]').waitFor({ state: "visible" });
     await page.locator('[data-testid="credit-balance-tile"]').waitFor({ state: "visible" });
-    const tileAmount = async id => Number((await page.locator(`[data-testid="${id}"] strong`).innerText()).replace(/[^0-9.-]/g, ''));
+    // Amounts render in Azerbaijani format ("1.234,50 ₼"): "." groups thousands, "," is the decimal mark.
+    const tileAmount = async id => Number((await page.locator(`[data-testid="${id}"] strong`).innerText()).replace(/[^0-9,-]/g, '').replace(',', '.'));
     assert(await tileAmount('credit-total-tile') === Number(sale.credit.total), 'Credit detail total differs from its server principal');
     assert(await tileAmount('credit-paid-tile') === Number(previousCredit.initialPaid), 'Credit detail does not show the collected deposit');
     assert(await tileAmount('credit-balance-tile') === Number(previousCredit.balance), 'Credit detail debt differs from the server balance');
@@ -1006,10 +1007,15 @@ async function auditFinanceModuleIntegration(browser) {
     }
     const sourceRow = page.locator('main.main tr').filter({ has: page.getByText(source.name, { exact: true }) });
     const targetRow = page.locator('main.main tr').filter({ has: page.getByText(target.name, { exact: true }) });
-    const renderedBalances = await page.evaluate(([sourceCurrency, targetCurrency]) => [
-      new Intl.NumberFormat('az-AZ', { style: 'currency', currency: sourceCurrency }).format(210),
-      new Intl.NumberFormat('az-AZ', { style: 'currency', currency: targetCurrency }).format(40),
-    ], [source.currency, target.currency]);
+    // services/format.js cashAmount: Azerbaijani separators, a non-breaking space, then the symbol (₼, US$, €) or code.
+    const azCash = (value, currency) => {
+      const symbols = { AZN: '₼', USD: 'US$', EUR: '€', GBP: '£', JPY: 'JP¥', CNY: 'CN¥' };
+      const digits = new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
+      const number = new Intl.NumberFormat('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)
+        .replace(/[,.]/g, (ch) => (ch === ',' ? '.' : ','));
+      return `${number}\u00a0${symbols[currency] || currency}`;
+    };
+    const renderedBalances = [azCash(210, source.currency), azCash(40, target.currency)];
     await sourceRow.getByText(renderedBalances[0], { exact: true }).waitFor({ state: 'visible' });
     await targetRow.getByText(renderedBalances[1], { exact: true }).waitFor({ state: 'visible' });
     assert(errors.length === 0, 'Finance integration produced browser errors: ' + errors.join(' | '));
