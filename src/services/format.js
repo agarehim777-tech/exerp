@@ -24,6 +24,18 @@ export function formatAmount(value, { currency = "₼", decimals = 2 } = {}) {
   return `${azSeparators(fixedFormatters.get(decimals).format(Number(value) || 0))} ${currency}`;
 }
 
+const numberFormatters = new Map();
+/**
+ * Plain number (quantities, counts) in Azerbaijani format: 1.234,5. Same options as Intl.NumberFormat.
+ * @param {unknown} value
+ * @param {Intl.NumberFormatOptions} [options]
+ */
+export function formatNumber(value, options = {}) {
+  const key = JSON.stringify(options);
+  if (!numberFormatters.has(key)) numberFormatters.set(key, new Intl.NumberFormat("en-US", options));
+  return azSeparators(numberFormatters.get(key).format(Number(value)));
+}
+
 export function percent(value) {
   return `${azSeparators(percentFormatter.format(value))}%`;
 }

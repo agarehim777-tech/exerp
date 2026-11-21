@@ -6,6 +6,7 @@ import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import { navItems } from "../../data.js";
 import { normalizeUserModuleAccess } from "../../shared/lib/appDomain.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
+import { formatDate } from "../../services/date.js";
 
 const ROLES = [
   { key: "owner", label: "Sahib", locked: true, hint: "Bütün icazələr avtomatik" },
@@ -502,7 +503,7 @@ export default function RolesPermissionsPage({
               <tr key={inv.id}>
                 <td className={["",'ui-align-left'].filter(Boolean).join(' ')}>{inv.email}</td>
                 <td className={""}>{ROLES.find((r) => r.key === inv.role)?.label || inv.role}</td>
-                <td className={""}>{new Date(inv.expires_at).toLocaleDateString("az-AZ")}</td>
+                <td className={""}>{formatDate(inv.expires_at)}</td>
                 <td className={""}><Button onClick={() => copyInviteLink(inv.id)} className="u-background-f0e6c8 u-border-0 u-padding-4px_10px u-border-radius-6px u-cursor-pointer u-font-size-12px">Kopyala</Button></td>
                 <td className={""}><Button onClick={async () => (await appConfirm("Ləğv edilsin?", { danger: true })) && revokeInvite(inv.id)} variant="danger" size="compact">Ləğv et</Button></td>
               </tr>

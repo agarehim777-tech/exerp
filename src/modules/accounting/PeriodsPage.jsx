@@ -3,7 +3,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAccountingPeriods } from "../../shared/hooks/useAccountingPeriods.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, StatCard, StatGrid, TableActions } from "../../shared/ui/primitives.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { formatMonthYear, toLocalIsoDate } from "../../services/date.js";
+import { formatMonthYear, toLocalIsoDate, formatDate, formatDateTime } from "../../services/date.js";
 
 const STATUS_LABEL = { open: "Açıq", locked: "Bağlı", closed: "Yekunlaşıb" };
 const STATUS_TONE = { open: "green", locked: "amber", closed: "gray" };
@@ -94,10 +94,10 @@ export default function PeriodsPage() {
       <Card title={`Mühasibat dövrləri (${periods.length})`}>
         <DataTable columns={[{ key: "name", label: "Dövr" }, { key: "start_date", label: "Başlanğıc" }, { key: "end_date", label: "Bitmə" }, { key: "status", label: "Status" }, { key: "locked_at", label: "Bağlanma" }, { key: "actions", label: "" }]} rows={periods} emptyText={loading ? "Yüklənir…" : "Dövr yaradılmayıb."} renderCell={(period, column) => ({
           name: <strong>{period.name}</strong>,
-          start_date: new Date(period.start_date).toLocaleDateString("az-AZ"),
-          end_date: new Date(period.end_date).toLocaleDateString("az-AZ"),
+          start_date: formatDate(period.start_date),
+          end_date: formatDate(period.end_date),
           status: <Badge tone={STATUS_TONE[period.status] === "green" ? "success" : STATUS_TONE[period.status] === "amber" ? "warning" : "neutral"}>{STATUS_LABEL[period.status] || period.status}</Badge>,
-          locked_at: period.locked_at ? new Date(period.locked_at).toLocaleString("az-AZ") : "—",
+          locked_at: period.locked_at ? formatDateTime(period.locked_at) : "—",
           actions: isAdmin && <TableActions><Button variant="secondary" size="compact" onClick={() => run(() => setStatus(period.id, period.status === "open" ? "locked" : "open"))}>{period.status === "open" ? "Bağla" : "Aç"}</Button><Button variant="danger" size="compact" onClick={async () => (await appConfirm("Dövr silinsin?", { danger: true })) && run(() => remove(period.id))}>Sil</Button></TableActions>,
         })[column.key]} />
       </Card>

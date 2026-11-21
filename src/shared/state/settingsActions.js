@@ -2,6 +2,7 @@ import { defaultRoles } from "../../services/permissions.js";
 import { appendAudit, defaultDbProvider, localDbSchemaVersion } from "../../services/persistence.js";
 import { baseFinanceDate, getActiveRole, getDefaultModuleAccessForRole } from "../lib/appDomain.jsx";
 import { buildAllCreditRecords, buildGoLiveReadiness, buildProductionHardeningReport, buildStateIntegrityReport, hydrateState } from "../lib/appHelpers.jsx";
+import { formatNumber } from "../../services/format.js";
 
 // Settings, notification, readiness check, backup and role switch commands,
 // moved out of App.jsx unchanged. App-local values are passed in.
@@ -171,7 +172,7 @@ export function createSettingsActions({ activeRoleInfo, apiSecretRows, apiWebhoo
     link.download = `erpaz-backup-${baseFinanceDate}.json`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 500);
-    const sizeKb = `${new Intl.NumberFormat("az-AZ", { maximumFractionDigits: 1 }).format(blob.size / 1024)} KB`;
+    const sizeKb = `${formatNumber(blob.size / 1024, { maximumFractionDigits: 1 })} KB`;
 
     setState((current) =>
       auditCurrentState(

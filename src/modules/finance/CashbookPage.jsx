@@ -6,7 +6,7 @@ import { appConfirm, appPrompt } from "../../shared/ui/dialogService.js";
 import { cashAmount } from "../../services/format.js";
 import { Button, DataTable, Input, Select, Tabs } from '../../shared/ui/primitives.tsx';
 import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
-import { toLocalIsoDate } from "../../services/date.js";
+import { toLocalIsoDate, formatDate } from "../../services/date.js";
 import { foldSearchText } from "../../shared/lib/searchText.ts";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 
@@ -261,7 +261,7 @@ function TransactionsPanel({ book, tenantId }) {
             const employee = employeeByUser.get(t.created_by);
             const partyName = t.customer?.name || t.vendor?.name || t.counterparty || "—";
             switch (column.key) {
-              case 'date': return new Date(t.occurred_at).toLocaleDateString("az-AZ");
+              case 'date': return formatDate(t.occurred_at);
               case 'number': return <b>{t.transaction_no || "—"}</b>;
               case 'account': return t.account?.name || "—";
               case 'type': return <span className={`ui-badge ui-badge-${t.category === "internal_transfer" ? "neutral" : t.direction === "in" ? "success" : "danger"}`}>{t.category === "internal_transfer" ? "Daxili transfer" : t.direction === "in" ? "Mədaxil" : "Məxaric"}</span>;
@@ -385,7 +385,7 @@ function ExpensesPanel({ book, canApprove }) {
             const cashImpact = isCancelled ? 0 : -Number(e.amount || 0);
             const currency = e.account?.currency || book.accounts.find(account => account.id === e.account_id)?.currency || 'AZN';
             switch (column.key) {
-              case 'date': return new Date(e.expense_date).toLocaleDateString("az-AZ");
+              case 'date': return formatDate(e.expense_date);
               case 'category': return e.category;
               case 'description': return e.description || "—";
               case 'amount': return <b className="money-value">{cashAmount(e.amount, currency)}</b>;

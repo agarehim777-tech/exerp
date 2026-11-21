@@ -8,6 +8,7 @@ import { total } from "../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
 import { Button, Select } from "../shared/ui/primitives";
+import { formatDateTime } from "../services/date.js";
 export default function ReceivablesPage({ onOpenSalesOrder }) {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
@@ -43,10 +44,10 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
     () => effectiveRows.map((row) => `${row.id}:${Number(row.amount || 0)}:${row.overdueDays || 0}:${row.status || ""}`).sort().join("|"),
     [effectiveRows],
   );
-  const [lastLiveUpdate, setLastLiveUpdate] = useState(() => new Date().toLocaleString("az-AZ"));
+  const [lastLiveUpdate, setLastLiveUpdate] = useState(() => formatDateTime(new Date()));
 
   useEffect(() => {
-    setLastLiveUpdate(new Date().toLocaleString("az-AZ"));
+    setLastLiveUpdate(formatDateTime(new Date()));
   }, [liveSignature]);
   const debtorRows = effectiveRows.filter((row) => row.type === "Debitor");
   const creditorRows = effectiveRows.filter((row) => row.type === "Kreditor");
@@ -185,7 +186,7 @@ export default function ReceivablesPage({ onOpenSalesOrder }) {
             rows={closures.filter(row => row.currency === currency).slice(0, 8).map((row) => [
               <TwoLine title={row.source_type} subtitle={row.source_id} />,
               cashAmount(row.amount, row.currency),
-              new Date(row.created_at).toLocaleString("az-AZ"),
+              formatDateTime(row.created_at),
               <StatusBadge status="Bağlandı" />,
             ])}
           />

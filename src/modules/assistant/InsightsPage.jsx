@@ -3,6 +3,7 @@ import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useTenantRequestScope } from '../../shared/hooks/useTenantRequestScope';
 import { AlertTriangle, Brain, Check, Loader2, RefreshCw, ThumbsDown, Zap } from "lucide-react";
+import { formatDate } from "../../services/date.js";
 
 const CATEGORY_LABELS = {
   sales: "Satış",
@@ -179,7 +180,7 @@ export default function InsightsPage() {
                 <span className={`${row.action === "dismissed" ? "sx-53875d1" : "sx-db8bce3"}`}>
                   {row.action === "dismissed" ? "rədd edildi" : row.action === "done" ? "icra olundu" : "qəbul edildi"}
                 </span>
-                <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleDateString("az-AZ")}</span>
+                <span className="u-color-text_secondary u-font-size-12px">{formatDate(row.created_at)}</span>
               </div>
             ))}
           </div>

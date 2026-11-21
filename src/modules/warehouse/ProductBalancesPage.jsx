@@ -1,4 +1,4 @@
-import { formatAmount } from "../../services/format.js";
+import { formatAmount, formatNumber } from "../../services/format.js";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, CircleDollarSign, ExternalLink, History, Package, RotateCcw, ShoppingCart, Users, X } from "lucide-react";
 import { getRecommendedOrderPlan, WarehouseBalancesWorkspace } from "../../shared/lib/appDomain.jsx";
@@ -9,10 +9,11 @@ import { shortProcurementDocumentNo } from "../procurement/documentNumbers.js";
 import ProductReturnsPanel from "./ProductReturnsPanel.jsx";
 import { buildAverageCostHistory, movementKind } from "./inventory360.js";
 import { Button, Table } from "../../shared/ui/primitives.tsx";
+import { formatDateTime } from "../../services/date.js";
 
 const money = (value) => formatAmount(value);
-const number = (value) => Number(value || 0).toLocaleString("az-AZ");
-const dateTime = (value) => value ? new Date(value).toLocaleString("az-AZ") : "—";
+const number = (value) => formatNumber(Number(value || 0));
+const dateTime = (value) => value ? formatDateTime(value) : "—";
 const movementType = (item) => item?.movement_type || item?.move_type || "";
 
 function DocumentButton({ children, onClick, title }) {

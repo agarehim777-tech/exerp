@@ -2,7 +2,7 @@
 // appHelpers.jsx bu modulu köhnə idxallar üçün yenidən ixrac edir; yeni kod birbaşa buradan idxal etsin.
 import { initialState } from "../../data.js";
 import { money, normalize } from "../../services/format.js";
-import { parsePaymentDate } from "../../services/date.js";
+import { parsePaymentDate, formatDateTime } from "../../services/date.js";
 import { getDeliveryAgeDays } from "../../modules/warehouse/deliveryDomain.jsx";
 import { buildProductLookup } from "./appDomainProcurement.jsx";
 import { getAvailableQuantity, isLowStockItem } from "./appDomainWarehouse.jsx";
@@ -448,7 +448,7 @@ function createNotificationSendLogEntry({ rule = {}, event = {}, provider = {}, 
     actionTarget: event.actionTarget || "",
     priority: event.priority || "Orta",
     status,
-    sentAt: stamp || new Date().toLocaleString("az-AZ"),
+    sentAt: stamp || formatDateTime(new Date()),
     sentAtIso,
   };
 }

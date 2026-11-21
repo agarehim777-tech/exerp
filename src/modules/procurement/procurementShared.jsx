@@ -1,4 +1,4 @@
-import { formatAmount } from "../../services/format.js";
+import { formatAmount, formatNumber } from "../../services/format.js";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { PackagePlus, Search } from "lucide-react";
 import { vendorInvoiceLineGross } from "./procurementMath.js";
@@ -7,7 +7,7 @@ import { foldSearchText } from "../../shared/lib/searchText.ts";
 
 export const money = (value, currency = "AZN") => formatAmount(value, { currency });
 
-export const qty = (value) => Number(value || 0).toLocaleString("az-AZ", { maximumFractionDigits: 3 });
+export const qty = (value) => formatNumber(Number(value || 0), { maximumFractionDigits: 3 });
 
 export const today = () => toLocalIsoDate();
 

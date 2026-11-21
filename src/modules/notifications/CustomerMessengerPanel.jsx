@@ -4,6 +4,7 @@ import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { readAllRows } from "../../services/readAllRows.js";
 import { NOTIFICATION_TEMPLATES, sendNotification, waMeLink } from "../../lib/notify.js";
+import { formatDateTime } from "../../services/date.js";
 
 export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
   const { activeTenantId } = useAuth();
@@ -156,7 +157,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
                 <span className="u-font-weight-600 u-text-transform-capitalize">{row.channel}</span>
                 <span className="u-color-text_secondary">{row.recipient}</span>
                 <span className={`messenger-status messenger-status-${row.status === "sent" ? "sent" : row.status === "failed" ? "failed" : "pending"}`}>{row.status}</span>
-                <span className="u-color-text_secondary u-font-size-12px">{new Date(row.created_at).toLocaleString("az-AZ")}</span>
+                <span className="u-color-text_secondary u-font-size-12px">{formatDateTime(row.created_at)}</span>
               </div>
             ))}
           </div>

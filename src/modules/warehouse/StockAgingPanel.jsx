@@ -4,6 +4,7 @@ import { readAllRows } from "../../services/readAllRows.js";
 import { azn, badgeClass } from "../../shared/ui/tokens.js";
 import { buildAgingRows, isMissingAgingView } from "./stockAging.js";
 import { Select, Table } from "../../shared/ui/primitives.tsx";
+import { formatNumber } from "../../services/format.js";
 
 export default function StockAgingPanel({ tenantId }) {
   const [rows, setRows] = useState([]);
@@ -118,7 +119,7 @@ export default function StockAgingPanel({ tenantId }) {
                 <td className="ui-tok-td"><b>{row.product_name}</b></td>
                 <td className="ui-tok-td">{row.sku || "—"}</td>
                 <td className="ui-tok-td">{row.age_days} gün</td>
-                <td className="ui-tok-td">{Number(row.remaining_qty).toLocaleString("az-AZ")}</td>
+                <td className="ui-tok-td">{formatNumber(Number(row.remaining_qty))}</td>
                 <td className="ui-tok-td">{azn(row.unit_cost)}</td>
                 <td className="ui-tok-td">{azn(row.stock_value)}</td>
                 <td className="ui-tok-td">

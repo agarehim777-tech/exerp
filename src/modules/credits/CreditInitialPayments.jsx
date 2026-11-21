@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { money } from "../../services/format.js";
+import { formatDateTime } from "../../services/date.js";
 
 function formatStamp(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("az-AZ", { dateStyle: "short", timeStyle: "short" });
+  return formatDateTime(date, { seconds: false, shortYear: true });
 }
 
 /**

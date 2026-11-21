@@ -1,7 +1,7 @@
 import { Badge, Button, Input, Table } from '../../shared/ui/primitives';
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { toLocalIsoDate } from "../../services/date.js";
+import { toLocalIsoDate, formatDateTime } from "../../services/date.js";
 import { useBlobReconciliation } from "../../shared/hooks/useBlobReconciliation.js";
 import { useOperationalHealth } from "../../shared/hooks/useOperationalHealth.js";
 import { useRecoveryStatus } from "../../shared/hooks/useRecoveryStatus.js";
@@ -97,7 +97,7 @@ export default function DataReconciliationPage() {
             CSV ixrac
           </Button>
           <span className="u-font-size-12px u-opacity-0_7">
-            {lastRunAt ? `Son yoxlama: ${new Date(lastRunAt).toLocaleString("az-AZ")}` : "—"}
+            {lastRunAt ? `Son yoxlama: ${formatDateTime(lastRunAt)}` : "—"}
           </span>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function DataReconciliationPage() {
             <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Sistem statusu</div><div className={["ui-stat-value",(operations.report.summary.healthy ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{operations.report.summary.healthy ? "Sağlam" : "Diqqət"}</div></div>
             <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Kritik</div><div className={"ui-stat-value"}>{operations.report.summary.critical}</div></div>
             <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Xəbərdarlıq</div><div className={"ui-stat-value"}>{operations.report.summary.warnings}</div></div>
-            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Yoxlama vaxtı</div><div className={["ui-stat-value",'ui-small-value'].filter(Boolean).join(' ')}>{new Date(operations.report.checkedAt).toLocaleString("az-AZ")}</div></div>
+            <div className={"ui-stat-card"}><div className={"ui-stat-label"}>Yoxlama vaxtı</div><div className={["ui-stat-value",'ui-small-value'].filter(Boolean).join(' ')}>{formatDateTime(operations.report.checkedAt)}</div></div>
           </div>
           <div className={"ui-card"}>
             <div className="u-font-weight-700 u-margin-bottom-10px">Satış, kredit, maliyyə və anbar əlaqələri</div>
@@ -336,6 +336,6 @@ export default function DataReconciliationPage() {
 
 function RecoveryTile({ title, run, loading }) {
   const ok = run?.conclusion === "success";
-  return <div className={"ui-stat-card"}><div className={"ui-stat-label"}>{title}</div><div className={["ui-stat-value",(ok ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{loading ? "Yüklənir" : run ? (ok ? "Uğurlu" : run.status === "in_progress" ? "İşləyir" : "Uğursuz") : "Hələ yoxdur"}</div>{run?.created_at && <small>{new Date(run.created_at).toLocaleString("az-AZ")}</small>}</div>;
+  return <div className={"ui-stat-card"}><div className={"ui-stat-label"}>{title}</div><div className={["ui-stat-value",(ok ? 'amount-due' : 'amount-positive')].filter(Boolean).join(' ')}>{loading ? "Yüklənir" : run ? (ok ? "Uğurlu" : run.status === "in_progress" ? "İşləyir" : "Uğursuz") : "Hələ yoxdur"}</div>{run?.created_at && <small>{formatDateTime(run.created_at)}</small>}</div>;
 }
 

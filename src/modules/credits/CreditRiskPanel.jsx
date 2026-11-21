@@ -4,7 +4,7 @@ import { useAuth } from "../../auth/AuthProvider.jsx";
 import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
 import { useCreditPortfolio } from "../../shared/hooks/useCreditPortfolio.js";
 import { money } from "../../services/format.js";
-import { toLocalIsoDate } from "../../services/date.js";
+import { toLocalIsoDate, formatDateTime } from "../../services/date.js";
 
 const stages = ["current", "reminder", "soft_collection", "hard_collection", "legal", "restructured", "closed"];
 export function CreditRiskPanel() {
@@ -46,7 +46,7 @@ export function CreditRiskPanel() {
         ...(history?.collection||[]).map(row=>({id:`c-${row.id}`,at:row.created_at,title:`Kolleksiya: ${row.stage}`,detail:row.note||row.outcome})),
         ...(history?.adjustments||[]).map(row=>({id:`a-${row.id}`,adjustment:row,at:row.created_at,title:`Düzəliş: ${row.adjustment_type}`,detail:`${row.requested_amount ? money(row.requested_amount)+" · " : ""}${row.reason} · ${row.approval_status || "approved"}`})),
         ...(history?.restructures||[]).map(row=>({id:`r-${row.id}`,at:row.created_at,title:"Restrukturizasiya",detail:`${row.new_term_months} ay · ${row.reason}`})),
-      ].sort((a,b)=>new Date(b.at)-new Date(a.at)).map(row=><div key={row.id}><small>{new Date(row.at).toLocaleString("az-AZ")}</small><b>{row.title}</b><span>{row.detail||"—"}</span>{row.adjustment?.approval_status==="pending" && <span className="audit-actions"><button className="secondary-btn" type="button" onClick={async()=>{await decideAdjustment({adjustmentId:row.adjustment.id,decision:"approved"});setHistory(await audit(selected.id));}}>Təsdiq et</button><button className="danger-btn" type="button" onClick={async()=>{await decideAdjustment({adjustmentId:row.adjustment.id,decision:"rejected"});setHistory(await audit(selected.id));}}>Rədd et</button></span>}</div>)}</div>
+      ].sort((a,b)=>new Date(b.at)-new Date(a.at)).map(row=><div key={row.id}><small>{formatDateTime(row.at)}</small><b>{row.title}</b><span>{row.detail||"—"}</span>{row.adjustment?.approval_status==="pending" && <span className="audit-actions"><button className="secondary-btn" type="button" onClick={async()=>{await decideAdjustment({adjustmentId:row.adjustment.id,decision:"approved"});setHistory(await audit(selected.id));}}>Təsdiq et</button><button className="danger-btn" type="button" onClick={async()=>{await decideAdjustment({adjustmentId:row.adjustment.id,decision:"rejected"});setHistory(await audit(selected.id));}}>Rədd et</button></span>}</div>)}</div>
     </section></div>}
   </Panel>;
 }

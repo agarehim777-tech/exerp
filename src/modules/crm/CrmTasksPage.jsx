@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useTasks } from '../../shared/hooks/useTasks.js';
 import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
+import { formatDateTime } from "../../services/date.js";
 
 const priColor = { high: '#ef4444', medium: '#f59e0b', low: '#94a3b8' };
 
@@ -94,7 +95,7 @@ function TaskRow({ t, onToggle, onRemove }) {
       <span className="sx-dd518b1 sx-eeb774e sx-0384986" style={{ background: priColor[t.priority] }} />
       <div className={`sx-da5cd67 ${t.done ? "sx-c9b77c9" : "sx-116e33d"} ${t.done ? "sx-8cd4ae7" : "sx-5cfb91b"} sx-3044b60`}>
         <div>{t.title}</div>
-        {t.due_at && <div className="u-font-size-11px u-color-text_secondary">{new Date(t.due_at).toLocaleString('az-AZ')}</div>}
+        {t.due_at && <div className="u-font-size-11px u-color-text_secondary">{formatDateTime(t.due_at)}</div>}
       </div>
       <Button variant="ghost" onClick={() => onRemove(t.id)} className="u-background-none u-border-0 u-cursor-pointer u-color-text_secondary u-font-size-16px">×</Button>
     </div>

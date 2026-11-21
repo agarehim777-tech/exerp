@@ -15,7 +15,7 @@ import BillingRunPanel from "./components/BillingRunPanel.jsx";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
-import { toLocalIsoDate } from "../../services/date.js";
+import { toLocalIsoDate, formatDate } from "../../services/date.js";
 import {
   azn,
 } from "../../shared/ui/tokens.js";
@@ -286,7 +286,7 @@ export function InvoiceRow({ invoice, accounts, onPost, onPay, onCancel, company
     <>
       <tr>
         <td ><b>{invoice.invoice_no}</b></td>
-        <td >{new Date(invoice.invoice_date).toLocaleDateString("az-AZ")}</td>
+        <td >{formatDate(invoice.invoice_date)}</td>
         <td >{invoice.customer?.name || "—"}</td>
         <td className="ui-emphasis is-numeric">{azn(invoice.total)}</td>
         <td >{azn(invoice.paid_amount)}</td>
