@@ -526,5 +526,7 @@ export function useOrders(tenantId) {
   return { orders: current ? orders : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, getById, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
 }
 
-const EMPTY_ROWS = Object.freeze([]);
+// Frozen so no caller can fill the shared empty list; typed as the hook's row array so pages that take
+// plain arrays accept it (a readonly type made every prop it reached a checkJs error).
+const EMPTY_ROWS = /** @type {any[]} */ (Object.freeze([]));
 

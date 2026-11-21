@@ -133,4 +133,6 @@ export function useProducts(tenantId) {
   return { products: loaded ? products : EMPTY_ROWS, loaded, loading, error, hasMore: loaded && hasMore, loadMore, refresh: fetchAll, create, update, remove, uploadImage, removeImage };
 }
 
-const EMPTY_ROWS = Object.freeze([]);
+// Frozen so no caller can fill the shared empty list; typed as the hook's row array so pages that take
+// plain arrays accept it (a readonly type made every prop it reached a checkJs error).
+const EMPTY_ROWS = /** @type {any[]} */ (Object.freeze([]));
