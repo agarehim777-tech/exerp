@@ -9,6 +9,9 @@ import './production.css';
 import { formatDate } from '../../services/date.js';
 import { formatAmount, formatNumber } from '../../services/format.js';
 import { appConfirm, appPrompt } from '../../shared/ui/dialogService.js';
+import LoadMoreBar from '../../components/LoadMoreBar.jsx';
+
+const BATCH_PAGE_SIZE = 100;
 
 // Server errors of reverse_material_production, in words a user can act on.
 const REVERSAL_ERRORS = {
@@ -32,6 +35,9 @@ export default function ProductionLedgerPage() {
   const generation = useRef(0), attempt = useRef(null), inFlight = useRef(false);
   const currentTenant = useRef(tenantId);
   currentTenant.current = tenantId;
+  // The register used to stop at the newest 100 batches without saying so; "load more" widens the page.
+  const batchLimit = useRef(BATCH_PAGE_SIZE);
+  const [hasMoreBatches, setHasMoreBatches] = useState(false);
   const editable = canEdit('production') && canEdit('warehouse');
   const load = useCallback(async () => {
     if (tenantId !== currentTenant.current) return;
@@ -41,15 +47,19 @@ export default function ProductionLedgerPage() {
       // Paged: a tenant can have more than the 1000 products or warehouses PostgREST returns per request.
       readAllRows(() => supabase.from('products').select('id,name,sku').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
       readAllRows(() => supabase.from('warehouses').select('id,name').eq('tenant_id', tenantId).eq('is_active', true).order('name').order('id')),
-      supabase.from('production_batches').select('*, production_batch_materials(product_id,quantity)').eq('tenant_id', tenantId).order('completed_at', { ascending: false }).limit(100),
+      supabase.from('production_batches').select('*, production_batch_materials(product_id,quantity)').eq('tenant_id', tenantId).order('completed_at', { ascending: false }).order('id', { ascending: false }).limit(batchLimit.current + 1),
     ]);
     if (version !== generation.current || tenantId !== currentTenant.current) return;
     const failure = responses.find(response => response.error)?.error;
     if (failure) { setError(failure.message); return; }
-    setProducts(responses[0].data); setWarehouses(responses[1].data); setBatches(responses[2].data);
+    setProducts(responses[0].data); setWarehouses(responses[1].data);
+    setHasMoreBatches(responses[2].data.length > batchLimit.current);
+    setBatches(responses[2].data.slice(0, batchLimit.current));
   }, [tenantId]);
+  const loadMoreBatches = () => { batchLimit.current += BATCH_PAGE_SIZE; load(); };
   useEffect(() => {
     setProducts([]); setWarehouses([]); setBatches([]); setError('');
+    batchLimit.current = BATCH_PAGE_SIZE; setHasMoreBatches(false);
     setDraft({ product_id: '', warehouse_id: '', quantity: 1 });
     setMaterials([{ product_id: '', quantity: 1 }]); attempt.current = null;
     load(); return () => { generation.current += 1; };
@@ -147,6 +157,7 @@ export default function ProductionLedgerPage() {
               onClick={() => reverseBatch(batch)}><Undo2 size={16} /></button>
           </>}</td>
         </tr>)}</tbody></table></div>
+      <LoadMoreBar hasMore={hasMoreBatches} onLoadMore={loadMoreBatches} loading={false} label="Daha köhnə partiyaları yüklə" />
     </section>
   </div>;
 }

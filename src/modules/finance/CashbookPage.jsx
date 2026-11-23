@@ -110,7 +110,7 @@ function AccountsPanel({ book }) {
       </form>}
       <DataTable label="Kassa və bank hesabları" rows={book.accounts} emptyText="Hesab yoxdur."
         columns={[{key:'name',label:'Ad',sticky:true},{key:'type',label:'Növ',mobileHidden:true},{key:'currency',label:'Valyuta',mobileHidden:true},{key:'balance',label:'Cari qalıq',align:'right'},{key:'action',label:'Əməl.'}]}
-        renderCell={(a, column) => {
+        renderCell={(/** @type {Record<string, any>} */ a, column) => {
           switch (column.key) {
             case 'name': return <b>{a.name}</b>;
             case 'type': return ACCOUNT_TYPE[a.type];
@@ -271,7 +271,7 @@ function TransactionsPanel({ book, tenantId }) {
           { key: 'employee', label: 'Daxil edən' }, { key: 'description', label: 'Qeyd', minWidth: 200 },
           { key: 'actions', label: 'Əməl.' },
         ]}
-        renderCell={(t, column) => {
+        renderCell={(/** @type {Record<string, any>} */ t, column) => {
             const employee = employeeByUser.get(t.created_by);
             const partyName = t.customer?.name || t.vendor?.name || t.counterparty || "—";
             switch (column.key) {
@@ -391,7 +391,7 @@ function ExpensesPanel({ book, canApprove }) {
           { key: 'accepted', label: 'Qəbul' }, { key: 'cancelled', label: 'Ləğv' },
           { key: 'impact', label: 'Kassa təsiri', align: 'right' }, { key: 'actions', label: 'Əməl.', minWidth: 200 },
         ]}
-        renderCell={(e, column) => {
+        renderCell={(/** @type {Record<string, any>} */ e, column) => {
             const isPending = ["pending", "draft"].includes(e.status);
             const isCancelled = ["cancelled", "rejected"].includes(e.status);
             const isAccepted = e.status === "paid";

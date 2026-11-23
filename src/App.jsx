@@ -93,7 +93,7 @@ import {
 import { pageMeta } from "./config/page-meta.js";
 import { PageHeader, Sidebar, Topbar } from "./components/AppShell.jsx";
 import { CompanyModulePicker, LoginScreen, PasswordChangeScreen } from "./components/AuthScreens.jsx";
-import { CrmPage, FloatingAssistant, MessagesPage, SalesPage, VendorsPage } from "./config/lazyPages.js";
+import { FloatingAssistant } from "./config/lazyPages.js";
 import {
   logoutRemote,
   remoteApiEnabled,
