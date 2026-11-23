@@ -3571,8 +3571,14 @@ isOneToOne: false
 "sales_dashboard":
 { Args: { "_from": string,"_tenant": string,"_to": string }; Returns: Json
                            },
+"save_goods_receipt":
+{ Args: { "_grn_id": string,"_header": Json,"_lines": Json,"_tenant_id": string }; Returns: Json
+                           },
 "save_purchase_order":
 { Args: { "_header": Json,"_lines": Json,"_po_id": string,"_tenant_id": string }; Returns: Json
+                           },
+"save_vendor_invoice":
+{ Args: { "_header": Json,"_invoice_id": string,"_lines": Json,"_tenant_id": string }; Returns: Json
                            },
 "scan_erp_integrity":
 { Args: { "_tenant_id": string }; Returns: Json

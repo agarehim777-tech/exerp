@@ -107,51 +107,28 @@ export function useInvoiceActions({
       return;
     }
     setSaving(true);
-    let invoiceId = editingInvoiceId;
-    const payload = {
-      vendor_id: po.vendor_id,
-      po_id: po.id,
-      invoice_number: invoiceForm.invoice_number.trim(),
-      invoice_date: invoiceForm.invoice_date || today(),
-      due_date: invoiceForm.due_date || null,
-      currency: invoiceForm.currency || po.currency || "AZN",
-      match_notes: invoiceForm.match_notes.trim() || null,
-      created_by: user?.id || null,
-    };
-
-    if (editingInvoiceId) {
-      const { error: invoiceError } = await supabase.from("vendor_invoices").update(payload).eq("id", editingInvoiceId);
-      if (invoiceError) {
-        setError(getError(invoiceError));
-        setSaving(false);
-        return;
-      }
-      const { error: deleteError } = await supabase.from("vendor_invoice_lines").delete().eq("invoice_id", editingInvoiceId);
-      if (deleteError) {
-        setError(getError(deleteError));
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { data: invoice, error: invoiceError } = await supabase
-        .from("vendor_invoices")
-        .insert({ ...payload, tenant_id: tenantId!, status: "draft" })
-        .select()
-        .single();
-      if (invoiceError) {
-        setError(getError(invoiceError));
-        setSaving(false);
-        return;
-      }
-      invoiceId = invoice.id;
-    }
-
-    const { error: lineError } = await supabase.from("vendor_invoice_lines").insert(items.map((line) => ({ ...line, invoice_id: invoiceId! })));
-    if (lineError) {
-      setError(getError(lineError));
+    // Header and lines in one transaction (save_vendor_invoice): a failed line insert no longer leaves an
+    // invoice without lines. created_by is set on insert only.
+    const { data: saved, error: saveError } = await supabase.rpc("save_vendor_invoice", {
+      _tenant_id: tenantId!,
+      _invoice_id: editingInvoiceId as string,
+      _header: {
+        vendor_id: po.vendor_id,
+        po_id: po.id,
+        invoice_number: invoiceForm.invoice_number.trim(),
+        invoice_date: invoiceForm.invoice_date || today(),
+        due_date: invoiceForm.due_date || null,
+        currency: invoiceForm.currency || po.currency || "AZN",
+        match_notes: invoiceForm.match_notes.trim() || null,
+      },
+      _lines: items,
+    });
+    if (saveError) {
+      setError(getError(saveError));
       setSaving(false);
       return;
     }
+    const invoiceId = (saved as { invoice_id?: string } | null)?.invoice_id || editingInvoiceId;
     if (!await runMatch(invoiceId!, false)) {
       setEditingInvoiceId(invoiceId);
       setSaving(false);
