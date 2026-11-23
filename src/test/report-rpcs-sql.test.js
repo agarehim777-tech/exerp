@@ -75,3 +75,40 @@ it('report_totals counts the booked delivery cost and estimates undelivered orde
   // Delivered: the booked 55 (not 2 x 30). Undelivered: 1 x 30 estimated. Cancelled: ignored.
   expect(totals).toMatchObject({ revenue: 300, sales_cost: 85, sales_cost_estimated: 30 });
 });
+
+// Codex review of 8f96db2: a warehouse filter fell back to client rows priced at today's cost, and a
+// cancelled production batch kept counting next to its corrected replacement.
+it('report_totals answers for one warehouse and leaves cancelled production out', async () => {
+  const P = '00000000-0000-4000-8000-0000000000a1';
+  const W1 = '00000000-0000-4000-8000-0000000000d1';
+  const W2 = '00000000-0000-4000-8000-0000000000d2';
+  const O1 = '00000000-0000-4000-8000-0000000000b1';
+  const O2 = '00000000-0000-4000-8000-0000000000b2';
+  const JE = '00000000-0000-4000-8000-0000000000c1';
+  await db.exec(`
+    SET session_replication_role = replica;
+    INSERT INTO public.warehouses (id, tenant_id, code, name, created_by) VALUES
+      ('${W1}', '${TENANT}', 'W1', 'Mərkəz', '${ADMIN}'), ('${W2}', '${TENANT}', 'W2', 'Filial', '${ADMIN}');
+    INSERT INTO public.deliveries (tenant_id, order_id, warehouse_id, delivery_no, status, created_by)
+      VALUES ('${TENANT}', '${O1}', '${W1}', 'DLV-1', 'delivered', '${ADMIN}');
+    INSERT INTO public.sales_cost_allocations (tenant_id, order_id, order_item_id, warehouse_id, product_id, quantity, unit_cost, total_cost)
+      SELECT '${TENANT}', '${O1}', i.id, '${W1}', '${P}', 2, 27.5, 55 FROM public.order_items i WHERE i.order_id = '${O1}';
+    INSERT INTO public.stock_reservations (tenant_id, order_id, warehouse_id, product_id, quantity, status, created_by)
+      VALUES ('${TENANT}', '${O2}', '${W2}', '${P}', 1, 'active', '${ADMIN}');
+    INSERT INTO public.production_batches (tenant_id, batch_no, warehouse_id, product_id, quantity, total_cost, unit_cost,
+        valuation_method, journal_entry_id, created_by, completed_at, reversed_at) VALUES
+      ('${TENANT}', 'PROD-OK', '${W1}', '${P}', 1, 40, 40, 'fifo', '${JE}', '${ADMIN}', now(), NULL),
+      ('${TENANT}', 'PROD-CANCELLED', '${W1}', '${P}', 1, 70, 70, 'fifo', '${JE}', '${ADMIN}', now(), now());
+    SET session_replication_role = origin;
+  `);
+  await asUser(ADMIN);
+  const all = await call(`SELECT public.report_totals($1, NULL, NULL) AS result`, [TENANT]);
+  expect(all).toMatchObject({ revenue: 300, production_cost: 40, production_count: 1 });
+  const w1 = await call(`SELECT public.report_totals($1, NULL, NULL, $2) AS result`, [TENANT, W1]);
+  // Only the delivered order of W1, at the cost W1 booked; W1's live production batch.
+  expect(w1).toMatchObject({ revenue: 200, order_count: 1, sales_cost: 55, sales_cost_estimated: 0, production_cost: 40 });
+  const w2 = await call(`SELECT public.report_totals($1, NULL, NULL, $2) AS result`, [TENANT, W2]);
+  expect(w2).toMatchObject({ revenue: 100, order_count: 1, sales_cost: 30, sales_cost_estimated: 30, production_count: 0 });
+  const summary = await call(`SELECT public.report_module_summary($1, NULL, NULL) AS result`, [TENANT]);
+  expect(summary.production).toMatchObject({ cost: 40, count: 1 });
+});

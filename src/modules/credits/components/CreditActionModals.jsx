@@ -191,6 +191,8 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
 
 
 
+const toCents = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
 export function QuickCollectModal({ item, onReceivePayment, onClose }) {
   const { credit, plan, paymentState } = item;
   const debt = getCreditDebtFormula(item);
@@ -198,12 +200,13 @@ export function QuickCollectModal({ item, onReceivePayment, onClose }) {
     Number(paymentState.nextInstallment?.amount || plan.monthly || 0),
     Number(debt.balance || 0),
   );
-  const [principalAmount, setPrincipalAmount] = useState(/** @type {number | string} */ (Math.round(suggested)));
+  const [principalAmount, setPrincipalAmount] = useState(/** @type {number | string} */ (toCents(suggested)));
   const [penaltyAmount, setPenaltyAmount] = useState(/** @type {number | string} */ (0));
   // One idempotent receipt key per modal opening prevents duplicate postings.
   const [receiptNo] = useState(() => createIdempotencyKey("KRD"));
-  const principal = Math.max(0, Math.round(Number(principalAmount || 0)));
-  const penalty = Math.max(0, Math.round(Number(penaltyAmount || 0)));
+  // Payments keep their qəpik: 100.49 used to be posted as 100.
+  const principal = Math.max(0, toCents(principalAmount));
+  const penalty = Math.max(0, toCents(penaltyAmount));
 
   function submit(event) {
     event.preventDefault();
@@ -230,6 +233,7 @@ export function QuickCollectModal({ item, onReceivePayment, onClose }) {
                 aria-label="Əsas məbləğ"
                 type="number"
                 min="0"
+                step="0.01"
                 value={principalAmount}
                 onChange={(event) => setPrincipalAmount(event.target.value)}
               />
@@ -240,6 +244,7 @@ export function QuickCollectModal({ item, onReceivePayment, onClose }) {
                 aria-label="Gecikmə faizi"
                 type="number"
                 min="0"
+                step="0.01"
                 value={penaltyAmount}
                 onChange={(event) => setPenaltyAmount(event.target.value)}
               />

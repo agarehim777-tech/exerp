@@ -104,7 +104,8 @@ export function ReportsPage({
   // "Yenilə" bumps the revision so the server totals, chart and module summary are read again with the rows.
   const [revision, setRevision] = useState(0);
   const serverModulesRaw = useReportModules(activeTenantId, period, snapshotDate, revision);
-  const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate, revision);
+  // The server answers for the whole company or for the selected warehouse (orders, their booked cost, production).
+  const serverTotalsRaw = useReportTotals(activeTenantId, period, snapshotDate, revision, warehouseFilter === "all" ? null : warehouseFilter);
   const serverSeries = useReportSeries(activeTenantId, snapshotDate, revision);
   const refreshReports = () => { live.refresh(); setRevision((value) => value + 1); };
   const [riskFilter, setRiskFilter] = useState("Hamısı");
@@ -203,11 +204,12 @@ export function ReportsPage({
     () => new Map(products.map((product) => [normalize(product.name), product])),
     [products],
   );
-  // Headline totals come from the database for the whole company; a warehouse filter falls back to row sums.
-  const serverTotals = warehouseFilter === "all" ? serverTotalsRaw : null;
+  // Headline totals come from the database, for the company or the selected warehouse; row sums are only the
+  // fallback when the server read fails.
+  const serverTotals = serverTotalsRaw;
   const revenue = serverTotals ? serverTotals.revenue : sumRows(filteredOrders, "amount");
-  // The server cost matches the server revenue (all orders of the period, cost booked at delivery). The row sum
-  // below is only the fallback for a warehouse filter or a database without sales_cost.
+  // The server cost matches the server revenue (the period's orders, cost booked at delivery). The row sum below is
+  // only the fallback for a failed server read or a database without sales_cost.
   const serverSalesCost = serverTotals?.sales_cost ?? null;
   const rowSalesCost = filteredOrders.reduce(
     (sum, order) =>

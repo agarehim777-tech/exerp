@@ -3539,7 +3539,7 @@ isOneToOne: false
 { Args: { "_limit"?: number,"_tenant_id": string }; Returns: Json
                            },
 "report_totals":
-{ Args: { "_from"?: string,"_tenant_id": string,"_to"?: string }; Returns: Json
+{ Args: { "_from"?: string,"_tenant_id": string,"_to"?: string,"_warehouse_id"?: string }; Returns: Json
                            },
 "reserve_stock":
 { Args: { "_order_id": string,"_order_item_id"?: string,"_product_id": string,"_quantity"?: number,"_tenant_id": string,"_warehouse_id": string }; Returns: string
