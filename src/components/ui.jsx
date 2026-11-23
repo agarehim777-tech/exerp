@@ -8,6 +8,7 @@ function normalizeText(value) {
 /**
  * @param {{ label: any, value: any, trend?: any, icon: any, tone?: string, onClick?: any, title?: string }} props
  */
+/** @param {{ label?: any, value?: any, trend?: any, icon?: any, tone?: string, onClick?: any, title?: string }} props */
 export function MetricCard({ label, value, trend, icon: Icon, tone = "primary", onClick, title }) {
   return (
     <article
@@ -43,6 +44,7 @@ export function Panel({ children, className = "", ...props }) {
   );
 }
 
+/** @param {{ title?: any, subtitle?: any, icon?: any }} props */
 export function PanelHeader({ title, subtitle, icon: Icon }) {
   return (
     <div className="panel-header">
@@ -96,6 +98,7 @@ function statusClass(status) {
   return "neutral";
 }
 
+/** @param {{ title?: any, subtitle?: any }} props */
 export function TwoLine({ title, subtitle }) {
   return (
     <div className="two-line">
@@ -114,6 +117,7 @@ export function AvatarLine({ initials, title, subtitle }) {
   );
 }
 
+/** @param {{ label?: any, value: any, caption?: any, compact?: boolean }} props */
 export function ProgressRow({ label, value, caption, compact = false }) {
   const bounded = Math.max(0, Math.min(100, value));
   return (
@@ -129,6 +133,7 @@ export function ProgressRow({ label, value, caption, compact = false }) {
   );
 }
 
+/** @param {{ title?: any }} props */
 export function EmptyState({ title }) {
   return (
     <div className="empty-state">
