@@ -42,6 +42,18 @@ jobs:
           VITE_SUPABASE_URL: https://offline-ci.invalid
           VITE_SUPABASE_PUBLISHABLE_KEY: offline-ci
 
+      - name: Unit test coverage summary
+        if: ${{ !cancelled() && hashFiles('coverage/coverage-summary.json') != '' }}
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('coverage/coverage-summary.json') != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage
+          retention-days: 14
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
