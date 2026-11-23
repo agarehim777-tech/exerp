@@ -48,12 +48,14 @@ export const pathToModule = Object.fromEntries(
   Object.entries(moduleRoutes).map(([k, v]) => [v, k]),
 );
 
-// Köhnə blob-əsaslı modullar → DB-əsaslı ekvivalentləri.
+// Köhnə blob-əsaslı modullar → DB-əsaslı ekvivalentləri. Köhnə Faktura, Təchizatçılar və Anbar səhifələri
+// silinib: onların linkləri (panel, bildiriş, quraşdırma addımları) bu əsas səhifələrə gedir.
 export const legacyModuleAliases = {
   finance: "accounting",
-  invoices: "sales",
+  invoices: "ar-invoices",
   "sales-shipments": "sales",
   warehouse: "stock",
+  vendors: "procurement",
 };
 
 // Tarixi (köhnə) URL-lər. Modul adını/URL-ini dəyişəndə köhnə dəyəri bura əlavə et

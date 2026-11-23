@@ -8,8 +8,9 @@ export function useModuleNavigation() {
   const navigate = useNavigate();
   const [active, setActiveState] = useState<string>(() => moduleFromPath(location.pathname));
   const setActive = useCallback((id: string) => {
-    setActiveState(id);
     const target = pathForModule(id);
+    // Resolve retired module ids (e.g. "warehouse" -> "stock") even when the URL does not change.
+    setActiveState(moduleFromPath(target));
     if (location.search || (location.pathname !== target && !location.pathname.startsWith(target + '/'))) {
       navigate(target);
     }
