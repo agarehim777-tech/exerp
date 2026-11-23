@@ -1,5 +1,5 @@
-// Mal qəbulu (GRN): PO seçəndə qəbul sətirlərini qurma, redaktə, yaddaşa yazma və silmə. Yazandan/siləndən sonra
-// PO statusu recomputePoStatus ilə yenidən hesablanır (usePoActions-dan gəlir).
+// Mal qəbulu (GRN): PO seçəndə qəbul sətirlərini qurma, redaktə, yaddaşa yazma və silmə. Başlıq, sətirlər və PO
+// statusu bir tranzaksiyada save_goods_receipt RPC ilə yazılır; silmədən sonra PO statusu recomputePoStatus ilə hesablanır.
 // ProcurementPage.jsx səhifənin ortaq setter-lərini ötürür; GRN məntiqini burada dəyişin.
 import { useState, type FormEvent } from "react";
 import { supabase } from "../../integrations/supabase/client";
@@ -107,58 +107,23 @@ export function useReceiptActions({
       return;
     }
     setSaving(true);
-    let receiptId = editingReceiptId;
-    if (editingReceiptId) {
-      const { error: receiptError } = await supabase
-        .from("goods_receipts")
-        .update({
-          po_id: receiptForm.po_id,
-          grn_number: receiptForm.grn_number.trim(),
-          receipt_date: receiptForm.receipt_date || today(),
-          notes: receiptForm.notes.trim() || null,
-        })
-        .eq("id", editingReceiptId);
-      if (receiptError) {
-        setError(getError(receiptError));
-        setSaving(false);
-        return;
-      }
-      const { error: deleteError } = await supabase.from("goods_receipt_lines").delete().eq("grn_id", editingReceiptId);
-      if (deleteError) {
-        setError(getError(deleteError));
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { data: receipt, error: receiptError } = await supabase
-        .from("goods_receipts")
-        .insert({
-          tenant_id: tenantId!,
-          po_id: receiptForm.po_id,
-          grn_number: receiptForm.grn_number.trim(),
-          receipt_date: receiptForm.receipt_date || today(),
-          notes: receiptForm.notes.trim() || null,
-          received_by: user?.id || null,
-        })
-        .select()
-        .single();
-      if (receiptError) {
-        setError(getError(receiptError));
-        setSaving(false);
-        return;
-      }
-      receiptId = receipt.id;
-    }
-
-    const { error: lineError } = await supabase.from("goods_receipt_lines").insert(items.map((line) => ({ ...line, grn_id: receiptId! })));
-    if (lineError) {
-      setError(getError(lineError));
+    // Header, lines and the PO status in one transaction: a failed line insert no longer leaves an empty GRN.
+    const { error: saveError } = await supabase.rpc("save_goods_receipt", {
+      _tenant_id: tenantId!,
+      _grn_id: editingReceiptId as string,
+      _header: {
+        po_id: receiptForm.po_id,
+        grn_number: receiptForm.grn_number.trim(),
+        receipt_date: receiptForm.receipt_date || today(),
+        notes: receiptForm.notes.trim() || null,
+      },
+      _lines: items,
+    });
+    if (saveError) {
+      setError(getError(saveError));
       setSaving(false);
       return;
     }
-
-    const nextReceiptLines = [...receiptLines.filter((line) => line.grn_id !== receiptId), ...items.map((line) => ({ ...line, grn_id: receiptId }))];
-    await recomputePoStatus(receiptForm.po_id, nextReceiptLines);
     setNotice(editingReceiptId ? "GRN yeniləndi və PO statusu hesablandı." : "Mədaxil qeyd edildi və PO statusu hesablandı.");
     resetReceiptForm();
     await load();
@@ -171,8 +136,9 @@ export function useReceiptActions({
     const { error: receiptError } = await supabase.from("goods_receipts").delete().eq("id", receipt.id);
     if (receiptError) setError(getError(receiptError));
     else {
-      await recomputePoStatus(receipt.po_id, receiptLines.filter((line) => line.grn_id !== receipt.id));
-      setNotice("GRN silindi və PO statusu yeniləndi.");
+      const statusError = await recomputePoStatus(receipt.po_id, receiptLines.filter((line) => line.grn_id !== receipt.id));
+      if (statusError) setError(`GRN silindi, amma PO statusu yenilənmədi: ${getError(statusError)}`);
+      else setNotice("GRN silindi və PO statusu yeniləndi.");
       await load();
     }
     setSaving(false);

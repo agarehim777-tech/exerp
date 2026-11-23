@@ -11,8 +11,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../shared/ui/dialogService.js", () => ({ appConfirm: mocks.confirm }));
 vi.mock("../integrations/supabase/client", () => ({
   supabase: {
-    rpc: async (name: string, args: unknown) => {
+    rpc: async (name: string, args: any) => {
       mocks.calls.push({ table: "rpc", op: name, payload: args });
+      if (name === "save_vendor_invoice") return { data: { invoice_id: args._invoice_id || "INV-NEW" }, error: mocks.error };
       return { data: name === "evaluate_invoice_match" ? [{ po_line_id: "L1", status: "ok" }] : null, error: mocks.rpcError };
     },
     from: (table: string) => {
@@ -91,17 +92,22 @@ describe("useInvoiceActions", () => {
     expect(mocks.calls).toEqual([]);
   });
 
-  it("creates a draft invoice, its lines and runs the 3-way match", async () => {
+  // Header and lines go to save_vendor_invoice in one call, so a failed line insert cannot leave an
+  // invoice without lines.
+  it("creates a draft invoice with its lines in one server call and runs the 3-way match", async () => {
     const { view, setNotice, load } = setup();
     act(() => view.result.current.choosePoForInvoice("PO1"));
     act(() => view.result.current.setInvoiceDraftLines(view.result.current.invoiceDraftLines.slice(0, 1)));
     await act(() => view.result.current.saveInvoice(submitEvent()));
     expect(mocks.calls[0]).toMatchObject({
-      table: "vendor_invoices", op: "insert",
-      payload: { vendor_id: "V1", po_id: "PO1", currency: "USD", tenant_id: "tenant-a", status: "draft", created_by: "user-1", match_notes: null, due_date: null },
+      table: "rpc", op: "save_vendor_invoice",
+      payload: {
+        _tenant_id: "tenant-a", _invoice_id: null,
+        _header: { vendor_id: "V1", po_id: "PO1", currency: "USD", match_notes: null, due_date: null },
+        _lines: [{ po_line_id: "L1", qty_invoiced: 6, unit_price: 25, tax_rate: 18 }],
+      },
     });
-    expect(mocks.calls[1]).toMatchObject({ table: "vendor_invoice_lines", op: "insert", payload: [{ po_line_id: "L1", qty_invoiced: 6, unit_price: 25, tax_rate: 18, invoice_id: "INV-NEW" }] });
-    expect(mocks.calls.slice(2).map((call) => call.op).sort()).toEqual(["apply_invoice_match", "evaluate_invoice_match"]);
+    expect(mocks.calls.slice(1).map((call) => call.op).sort()).toEqual(["apply_invoice_match", "evaluate_invoice_match"]);
     expect(view.result.current.matchRows).toEqual({ "INV-NEW": [{ po_line_id: "L1", status: "ok" }] });
     expect(setNotice).toHaveBeenLastCalledWith("Faktura yaradıldı və 3-way match hesablandı.");
     expect(load).toHaveBeenCalledOnce();
@@ -124,9 +130,8 @@ describe("useInvoiceActions", () => {
     act(() => view.result.current.editInvoice({ id: "I1", po_id: "PO1", invoice_number: "INV-7", currency: "USD" }));
     expect(view.result.current.invoiceDraftLines[0]).toMatchObject({ qty_invoiced: "3", unit_price: "20", tax_rate: "18" });
     await act(() => view.result.current.saveInvoice(submitEvent()));
-    expect(mocks.calls.slice(0, 3).map((call) => `${call.table}:${call.op}:${call.id ?? ""}`)).toEqual([
-      "vendor_invoices:update:I1", "vendor_invoice_lines:delete:I1", "vendor_invoice_lines:insert:",
-    ]);
+    expect(mocks.calls[0]).toMatchObject({ table: "rpc", op: "save_vendor_invoice",
+      payload: { _invoice_id: "I1", _header: { invoice_number: "INV-7" } } });
     expect(setNotice).toHaveBeenLastCalledWith("Faktura yeniləndi və 3-way match hesablandı.");
   });
 

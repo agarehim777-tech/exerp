@@ -179,7 +179,9 @@ export function usePoActions({
     const anyReceived = lines.some((line) => (map.get(line.id) || 0) > 0);
     const allReceived = lines.every((line) => (map.get(line.id) || 0) >= toNumber(line.qty_ordered));
     const nextStatus = allReceived ? "received" : anyReceived ? "partial" : "approved";
-    await supabase.from("purchase_orders").update({ status: nextStatus }).eq("id", poId);
+    // Returns the write error (if any) so the caller can tell the user the PO status is stale.
+    const { error: statusError } = await supabase.from("purchase_orders").update({ status: nextStatus }).eq("id", poId);
+    return statusError || null;
   }
 
   async function deletePo(po: Row) {
