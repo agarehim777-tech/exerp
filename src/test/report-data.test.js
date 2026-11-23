@@ -27,10 +27,14 @@ it('reads every page with an explicit tenant and stable ordering, including a la
     { id: 'reversal', category: 'transaction_reversal', reversal_of: original, direction: 'out', amount: 100 },
   ];
   mocks.rows.production_batches = [{ id: 'batch', product: { name: 'Device' }, warehouse: { name: 'Main' },
-    warehouse_id: 'warehouse', quantity: '2', total_cost: '150.00', completed_at: '2026-10-05T08:00:00Z' }];
+    warehouse_id: 'warehouse', quantity: '2', total_cost: '150.00', completed_at: '2026-10-05T08:00:00Z' },
+    // Cancelled batch: left out of the report rows, like report_totals leaves it out of the totals.
+    { id: 'cancelled', product: { name: 'Device' }, warehouse_id: 'warehouse', quantity: '1', total_cost: '70.00',
+      completed_at: '2026-10-06T08:00:00Z', reversed_at: '2026-10-07T08:00:00Z' }];
   const result = await loadReportData('tenant-a');
   expect(result.cashEntries).toHaveLength(999);
   expect(result.cashEntries.some(row => row.id === original || row.id === 'reversal')).toBe(false);
+  expect(result.productionPlans).toHaveLength(1);
   expect(result.productionPlans[0]).toMatchObject({ product: 'Device', totalCost: 150, qty: 2, warehouseId: 'warehouse' });
   expect(mocks.queries.filter(row => row.table === 'cash_transactions').map(row => row.start)).toEqual([0, 500, 1000, 1001]);
   expect(mocks.queries.every(row => row.filters.some(([key, value]) => key === 'tenant_id' && value === 'tenant-a'))).toBe(true);
