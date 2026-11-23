@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useRealtimeResync } from "./useRealtimeResync";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 import { readAllRows, readRowsByIds } from "../../services/readAllRows";
 
 export function useSalesBonusLedger(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [assignments, setAssignments] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setAssignments([]); setEntries([]); }, [tenantId]);
   const refresh = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     const [assignmentResult, entryResult] = await Promise.all([
       readAllRows(() => supabase.from("order_bonus_assignments").select("*").eq("tenant_id", tenantId).order("effective_from", { ascending: false }).order("id")),
       readAllRows(() => supabase.from("sales_bonus_entries").select("*").eq("tenant_id", tenantId).order("accrued_on", { ascending: false }).order("id")),
     ]);
+    if (!isCurrent()) return;
     const nextError = assignmentResult.error || entryResult.error;
     setError(nextError || null);
     if (!assignmentResult.error) setAssignments(assignmentResult.data || []);
@@ -27,6 +32,7 @@ export function useSalesBonusLedger(tenantId) {
       if (orderIds.length) {
         const { data: orderRows, error: orderError } = await readRowsByIds(orderIds, (chunk) => supabase.from("orders")
           .select("id,order_no,customer_id").eq("tenant_id", tenantId).in("id", chunk).order("id"));
+        if (!isCurrent()) return;
         if (orderError) setError(orderError);
         else {
           ordersById = new Map((orderRows || []).map((row) => [row.id, row]));
@@ -34,6 +40,7 @@ export function useSalesBonusLedger(tenantId) {
           if (customerIds.length) {
             const { data: customerRows, error: customerError } = await readRowsByIds(customerIds, (chunk) => supabase.from("customers")
               .select("id,name").eq("tenant_id", tenantId).in("id", chunk).order("id"));
+            if (!isCurrent()) return;
             if (customerError) setError(customerError);
             else customersById = new Map((customerRows || []).map((row) => [row.id, row]));
           }
@@ -45,7 +52,7 @@ export function useSalesBonusLedger(tenantId) {
       }));
     }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { refresh(); }, [refresh]);
   useRealtimeResync(tenantId, ["order_bonus_assignments", "sales_bonus_entries"], refresh, { channelPrefix: "sales-bonus-ledger" });

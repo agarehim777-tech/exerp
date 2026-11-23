@@ -2,14 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { readAllRows } from '../../services/readAllRows.js';
 import { supabase } from '../../integrations/supabase/client';
 import { buildOperationalHealth } from '../lib/operationalHealth.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function useOperationalHealth(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => { setReport(null); }, [tenantId]);
+
   const refresh = useCallback(async () => {
     if (!tenantId) return setReport(null);
+    const isCurrent = begin();
     setLoading(true);
     setError('');
     try {
@@ -23,6 +28,7 @@ export function useOperationalHealth(tenantId) {
         readAllRows(() => supabase.from('deliveries').select('id,delivery_no,order_id,status').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('order_accounting_events').select('id,order_id,event_type').eq('tenant_id', tenantId).order('id')),
       ]);
+      if (!isCurrent()) return;
       const failed = [orders, credits, cash, reservations, balances, invoices, deliveries, accountingEvents].find((result) => result.error);
       if (failed) throw failed.error;
       setReport(buildOperationalHealth({
@@ -31,11 +37,11 @@ export function useOperationalHealth(tenantId) {
         deliveries: deliveries.data, accountingEvents: accountingEvents.data,
       }));
     } catch (healthError) {
-      setError(healthError.message || String(healthError));
+      if (isCurrent()) setError(healthError.message || String(healthError));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { refresh(); }, [refresh]);
   return { report, loading, error, refresh };

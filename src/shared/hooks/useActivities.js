@@ -1,21 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function useActivities(tenantId, { customerId, dealId, limit = 100 } = {}) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  useEffect(() => { setItems([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     let q = supabase.from('crm_activities').select('*, customer:customers(id,name)').eq('tenant_id', tenantId);
     if (customerId) q = q.eq('customer_id', customerId);
     if (dealId) q = q.eq('deal_id', dealId);
     q = q.order('occurred_at', { ascending: false }).limit(limit);
-    const { data } = await q;
-    setItems(data || []);
+    const { data, error: readError } = await q;
+    if (!isCurrent()) return;
+    setError(readError || null);
+    if (!readError) setItems(data || []);
     setLoading(false);
-  }, [tenantId, customerId, dealId, limit]);
+  }, [tenantId, customerId, dealId, limit, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -36,7 +43,12 @@ export function useActivities(tenantId, { customerId, dealId, limit = 100 } = {}
     return data;
   };
 
-  const remove = async (id) => { await supabase.from('crm_activities').delete().eq('id', id); };
+  // A refused delete (RLS, viewer role) must not look like success.
+  const remove = async (id) => {
+    const { error: deleteError } = await supabase.from('crm_activities').delete().eq('id', id);
+    if (deleteError) throw deleteError;
+    await fetchAll();
+  };
 
-  return { items, loading, refresh: fetchAll, create, remove };
+  return { items, loading, error, refresh: fetchAll, create, remove };
 }

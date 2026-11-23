@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { readAllRows } from '../../services/readAllRows.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function useShipments(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setShipments([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId) { setShipments([]); setError(null); return; }
+    const isCurrent = begin();
     setLoading(true);
     // Paged: one shipment per order, past the 1000 rows PostgREST returns per request.
     const { data, error: readError } = await readAllRows(() => supabase
@@ -17,10 +21,11 @@ export function useShipments(tenantId) {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .order('id'));
+    if (!isCurrent()) return;
     setError(readError || null);
     setShipments(data || []);
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -52,6 +57,7 @@ export function useShipments(tenantId) {
       .insert({ tenant_id: tenantId, order_id, shipment_no, carrier, tracking_no, notes })
       .select().single();
     if (error) throw error;
+    await fetchAll();
     return data;
   };
 
@@ -61,11 +67,13 @@ export function useShipments(tenantId) {
     if (status === 'delivered') patch.delivered_at = new Date().toISOString();
     const { error } = await supabase.from('sales_shipments').update(patch).eq('id', id);
     if (error) throw error;
+    await fetchAll();
   };
 
   const remove = async (id) => {
     const { error } = await supabase.from('sales_shipments').delete().eq('id', id);
     if (error) throw error;
+    await fetchAll();
   };
 
   return { shipments, loading, error, refresh: fetchAll, create, setStatus, remove };

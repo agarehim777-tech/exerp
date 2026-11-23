@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { listInventoryUnits, removeInventoryUnit, saveInventoryUnit } from "../../services/enterpriseWorkflows.js";
 import { supabase } from "../../integrations/supabase/client";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 
 export function useInventoryUnits(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setUnits([]); }, [tenantId]);
   const refresh = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     try {
-      setUnits(await listInventoryUnits({ tenantId }));
+      const nextUnits = await listInventoryUnits({ tenantId });
+      if (!isCurrent()) return;
+      setUnits(nextUnits);
       setError(null);
     } catch (nextError) {
-      setError(nextError);
+      if (isCurrent()) setError(nextError);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {

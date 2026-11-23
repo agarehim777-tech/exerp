@@ -1,23 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function useAccountingPeriods(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setPeriods([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     const { data, error: err } = await supabase
       .from('accounting_periods')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('start_date', { ascending: false });
+    if (!isCurrent()) return;
     setError(err || null);
     setPeriods(data || []);
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

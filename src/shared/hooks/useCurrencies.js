@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 import { toLocalIsoDate } from '../../services/date.js';
 
 export function useCurrencies(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [currencies, setCurrencies] = useState([]);
   const [rates, setRates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setCurrencies([]); setRates([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId) { setCurrencies([]); setRates([]); return; }
+    const isCurrent = begin();
     setLoading(true);
     try {
       const [cRes, rRes] = await Promise.all([
@@ -18,17 +22,18 @@ export function useCurrencies(tenantId) {
         supabase.from('exchange_rates').select('*').eq('tenant_id', tenantId)
           .order('rate_date', { ascending: false }).limit(200),
       ]);
+      if (!isCurrent()) return;
       if (cRes.error) throw cRes.error;
       if (rRes.error) throw rRes.error;
       setCurrencies(cRes.data || []);
       setRates(rRes.data || []);
       setError(null);
     } catch (e) {
-      setError(e.message || String(e));
+      if (isCurrent()) setError(e.message || String(e));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
   const degraded = useRealtimeResync(tenantId, ['currencies', 'exchange_rates'], fetchAll, { channelPrefix: 'fx' });

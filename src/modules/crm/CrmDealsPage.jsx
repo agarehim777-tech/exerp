@@ -16,6 +16,7 @@ export default function CrmDealsPage() {
   const { customers } = useCustomers(activeTenantId);
   const [showNew, setShowNew] = useState(false);
   const [defaultStage, setDefaultStage] = useState(null);
+  const [moveError, setMoveError] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -44,12 +45,18 @@ export default function CrmDealsPage() {
     if (deal.stage_id === newStageId) return;
     const stage = stages.find(s => s.id === newStageId);
     const status = stage?.is_won ? 'won' : stage?.is_lost ? 'lost' : 'open';
-    await move(deal.id, newStageId, status);
+    try {
+      await move(deal.id, newStageId, status);
+      setMoveError('');
+    } catch (failure) {
+      setMoveError(`Sövdələşmə köçürülmədi: ${failure?.message || 'naməlum xəta'}`);
+    }
   };
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px u-height-100">
       {dealsError && <div role="alert" className="ui-notice ui-notice-warning">Sövdələşmələr yüklənmədi: {dealsError.message}</div>}
+      {moveError && <div role="alert" className="ui-notice ui-notice-warning">{moveError}</div>}
       <header className="u-display-flex u-justify-content-space_between u-align-items-center u-flex-wrap-wrap u-gap-12px">
         <div>
           <h2 className="u-margin-0 u-font-size-20px u-font-weight-700">{activePipeline.name}</h2>

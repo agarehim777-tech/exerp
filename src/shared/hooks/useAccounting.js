@@ -1,23 +1,28 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { useTenantRequestScope } from "./useTenantRequestScope";
 
 export function useChartOfAccounts() {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
+  const { begin } = useTenantRequestScope(tenantId);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setAccounts([]); }, [tenantId]);
   const reload = useCallback(async () => {
     if (!tenantId) { setAccounts([]); setError(null); setLoading(false); return; }
+    const isCurrent = begin();
     setLoading(true);
     const { data, error: readError } = await supabase.from("chart_of_accounts")
       .select("*").eq("tenant_id", tenantId).order("code");
+    if (!isCurrent()) return;
     setError(readError || null);
     setAccounts(data || []);
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -53,21 +58,25 @@ export function useChartOfAccounts() {
 export function useJournalEntries() {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
+  const { begin } = useTenantRequestScope(tenantId);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setEntries([]); }, [tenantId]);
   const reload = useCallback(async () => {
     if (!tenantId) { setEntries([]); setError(null); setLoading(false); return; }
+    const isCurrent = begin();
     setLoading(true);
     const { data, error: readError } = await supabase.from("journal_entries")
       .select("*, journal_lines(*, chart_of_accounts(code, name, type))")
       .eq("tenant_id", tenantId)
       .order("entry_date", { ascending: false }).limit(200);
+    if (!isCurrent()) return;
     setError(readError || null);
     setEntries(data || []);
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { reload(); }, [reload]);
 

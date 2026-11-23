@@ -8,7 +8,8 @@ const priColor = { high: '#ef4444', medium: '#f59e0b', low: '#94a3b8' };
 
 export default function CrmTasksPage() {
   const { activeTenantId } = useAuth();
-  const { items, create, toggle, remove } = useTasks(activeTenantId);
+  const { items, error: loadError, create, toggle, remove } = useTasks(activeTenantId);
+  const [actionError, setActionError] = useState('');
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
   const [pri, setPri] = useState('medium');
@@ -31,11 +32,19 @@ export default function CrmTasksPage() {
     return b;
   }, [items]);
 
+  // Writes report a refused save or delete instead of failing silently (unhandled promise).
+  const run = async (action) => {
+    try { await action(); setActionError(''); return true; }
+    catch (actionFailure) { setActionError(actionFailure?.message || 'Əməliyyat alınmadı.'); return false; }
+  };
   const add = async () => {
     if (!title.trim()) return;
-    await create({ title, due_at: due ? new Date(due).toISOString() : null, priority: pri });
-    setTitle(''); setDue('');
+    if (await run(() => create({ title, due_at: due ? new Date(due).toISOString() : null, priority: pri }))) {
+      setTitle(''); setDue('');
+    }
   };
+  const toggleTask = (id, done) => run(() => toggle(id, done));
+  const removeTask = (id) => run(() => remove(id));
 
   return (
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
@@ -51,18 +60,22 @@ export default function CrmTasksPage() {
         <Button variant="ghost" onClick={add} className="u-background-action u-color-surface u-border-0 u-padding-8px_18px u-border-radius-8px u-cursor-pointer u-font-weight-700">+ Əlavə et</Button>
       </div>
 
+      {(actionError || loadError) && (
+        <div role="alert" className="inline-alert danger">{actionError || `Tapşırıqlar yüklənmədi: ${loadError.message}`}</div>
+      )}
+
       <div className="u-display-grid u-grid-template-columns-repeat_auto_fit_minmax_250px_1fr u-gap-12px">
-        <Bucket title="Gecikən" color="#ef4444" tasks={buckets.overdue} onToggle={toggle} onRemove={remove} />
-        <Bucket title="Bu gün" color="#10b981" tasks={buckets.today} onToggle={toggle} onRemove={remove} />
-        <Bucket title="Bu həftə" color="#38bdf8" tasks={buckets.week} onToggle={toggle} onRemove={remove} />
-        <Bucket title="Sonra" color="#a78bfa" tasks={buckets.later} onToggle={toggle} onRemove={remove} />
+        <Bucket title="Gecikən" color="#ef4444" tasks={buckets.overdue} onToggle={toggleTask} onRemove={removeTask} />
+        <Bucket title="Bu gün" color="#10b981" tasks={buckets.today} onToggle={toggleTask} onRemove={removeTask} />
+        <Bucket title="Bu həftə" color="#38bdf8" tasks={buckets.week} onToggle={toggleTask} onRemove={removeTask} />
+        <Bucket title="Sonra" color="#a78bfa" tasks={buckets.later} onToggle={toggleTask} onRemove={removeTask} />
       </div>
 
       {buckets.done.length > 0 && (
         <details className="u-background-surface u-border-1px_solid_border u-border-radius-12px u-padding-12px">
           <summary className="u-cursor-pointer u-font-weight-600 u-color-text_secondary">Tamamlanmış ({buckets.done.length})</summary>
           <div className="u-margin-top-8px u-display-flex u-flex-direction-column u-gap-6px">
-            {buckets.done.map(t => <TaskRow key={t.id} t={t} onToggle={toggle} onRemove={remove} />)}
+            {buckets.done.map(t => <TaskRow key={t.id} t={t} onToggle={toggleTask} onRemove={removeTask} />)}
           </div>
         </details>
       )}

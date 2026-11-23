@@ -8,7 +8,8 @@ const icon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms
 
 export default function CrmActivitiesPage() {
   const { activeTenantId } = useAuth();
-  const { items, create } = useActivities(activeTenantId, { limit: 200 });
+  const { items, error: loadError, create } = useActivities(activeTenantId, { limit: 200 });
+  const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
   const [subject, setSubject] = useState('');
   const [type, setType] = useState('note');
@@ -17,8 +18,13 @@ export default function CrmActivitiesPage() {
 
   const add = async () => {
     if (!subject.trim()) return;
-    await create({ type, subject });
-    setSubject('');
+    try {
+      await create({ type, subject });
+      setSubject('');
+      setActionError('');
+    } catch (createError) {
+      setActionError(createError?.message || 'Aktivlik əlavə edilmədi.');
+    }
   };
 
   return (
@@ -40,6 +46,10 @@ export default function CrmActivitiesPage() {
             className={`sx-0352431 sx-1eb7905 sx-4fd67c1 sx-b202c6d ${filter === t ? "sx-534bc5a" : "sx-0695ff9"} ${filter === t ? "sx-4eb23a8" : "sx-53deb6e"} sx-e634e6d sx-6b9c179`}>{t === 'all' ? 'Hamısı' : `${icon[t] || ''} ${t}`}</button>
         ))}
       </div>
+
+      {(actionError || loadError) && (
+        <div role="alert" className="inline-alert danger">{actionError || `Aktivliklər yüklənmədi: ${loadError.message}`}</div>
+      )}
 
       <div className="u-background-surface u-border-1px_solid_border u-border-radius-14px u-padding-16px u-display-flex u-flex-direction-column u-gap-8px">
         {filtered.length === 0 ? (

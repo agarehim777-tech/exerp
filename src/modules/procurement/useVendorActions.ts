@@ -78,9 +78,15 @@ export function useVendorActions({ tenantId, purchaseOrders, load, setError, set
   async function deleteVendor(vendor: Row) {
     const linkedPo = purchaseOrders.filter((po) => po.vendor_id === vendor.id);
     if (linkedPo.length) {
+      // The notice used to be shown before the update and regardless of its result.
+      const { error: deactivateError } = await supabase.from("vendors").update({ is_active: false }).eq("id", vendor.id);
+      if (deactivateError) {
+        setNotice("");
+        setError(getError(deactivateError));
+        return;
+      }
       setError("");
       setNotice("Bu təchizatçı üzrə PO tarixi var. Silmək əvəzinə passiv statusa keçirildi.");
-      await supabase.from("vendors").update({ is_active: false }).eq("id", vendor.id);
       await load();
       return;
     }

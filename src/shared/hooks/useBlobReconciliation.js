@@ -2,18 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { readAllRows } from '../../services/readAllRows.js';
 import { supabase } from '../../integrations/supabase/client';
 import { buildReconciliationReport } from '../lib/blobReconciliation.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 /**
  * Blob (tenant_state_snapshots) ilə real cədvəlləri müqayisə edən barışdırma hook-u.
  */
 export function useBlobReconciliation(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastRunAt, setLastRunAt] = useState(null);
 
+  useEffect(() => { setReport(null); }, [tenantId]);
   const run = useCallback(async () => {
     if (!tenantId) { setReport(null); return; }
+    const isCurrent = begin();
     setLoading(true);
     setError(null);
     try {
@@ -29,6 +33,7 @@ export function useBlobReconciliation(tenantId) {
         readAllRows(() => supabase.from('products').select('id, name').eq('tenant_id', tenantId).order('id')),
       ]);
 
+      if (!isCurrent()) return;
       const firstError = [snapRes, unitsRes, reservationRes, balanceRes, wfRes, notifRes, prodRes].find((r) => r.error)?.error;
       if (firstError) throw firstError;
 
@@ -51,11 +56,11 @@ export function useBlobReconciliation(tenantId) {
       );
       setLastRunAt(new Date().toISOString());
     } catch (e) {
-      setError(e.message || String(e));
+      if (isCurrent()) setError(e.message || String(e));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { run(); }, [run]);
 
