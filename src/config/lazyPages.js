@@ -22,14 +22,12 @@ export const HelpCenterPage = named(() => import("../modules/help/HelpCenterPage
 export const SettingsPage = lazy(() => import("../pages/SettingsPage.jsx"));
 
 /* ----------------------------------------------------------------- CRM */
-export const CrmPage = lazy(() => import("../pages/CrmPage.jsx"));
 export const CrmCustomersPageV2 = lazy(() => import("../modules/crm/CrmCustomersPage.jsx"));
 export const CrmDealsPage = lazy(() => import("../modules/crm/CrmDealsPage.jsx"));
 export const CrmActivitiesPage = lazy(() => import("../modules/crm/CrmActivitiesPage.jsx"));
 export const CrmTasksPage = lazy(() => import("../modules/crm/CrmTasksPage.jsx"));
 
 /* --------------------------------------------------------------- Sales */
-export const SalesPage = lazy(() => import("../pages/SalesPage.jsx"));
 export const SalesDashboardPage = lazy(() => import("../modules/sales/SalesDashboardPage.jsx"));
 export const SalesOrdersPage = lazy(() => import("../modules/sales/SalesOrdersPage.jsx"));
 export const DeliveriesPage = lazy(() => import("../pages/DeliveriesPage.jsx"));
@@ -38,7 +36,6 @@ export const ContractsPage = named(() => import("../modules/contracts/ContractsP
 
 /* --------------------------------------------- Procurement & warehouse */
 export const ProcurementPage = lazy(() => import("../modules/procurement/ProcurementPage.jsx"));
-export const VendorsPage = lazy(() => import("../pages/VendorsPage.jsx"));
 export const VendorManagementPage = lazy(() => import("../pages/VendorManagementPage.jsx"));
 export const WarehousePage = lazy(() => import("../pages/WarehousePage.jsx"));
 export const StockPage = lazy(() => import("../modules/warehouse/StockPage.jsx"));
@@ -64,7 +61,6 @@ export const AssistantPage = lazy(() => import("../modules/assistant/AssistantPa
 export const InsightsPage = lazy(() => import("../modules/assistant/InsightsPage.jsx"));
 // Launcher only: the AI chat panel (and its AI SDK chunk) loads on first open.
 export const FloatingAssistant = lazy(() => import("../modules/assistant/AssistantLauncher.jsx"));
-export const MessagesPage = lazy(() => import("../pages/MessagesPage.jsx"));
 export const NotificationsPage = lazy(() => import("../pages/NotificationsPage.jsx"));
 export const CustomerMessengerPanel = lazy(() => import("../modules/notifications/CustomerMessengerPanel.jsx"));
 export const SupportPage = lazy(() => import("../pages/SupportPage.jsx"));

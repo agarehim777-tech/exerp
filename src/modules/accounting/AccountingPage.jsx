@@ -9,6 +9,7 @@ import ConfirmActionDialog from "../../shared/components/ConfirmActionDialog.jsx
 import { appAlert } from "../../shared/ui/dialogService.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, Select, TableActions, Tabs, Toolbar } from "../../shared/ui/primitives.jsx";
 import { formatNumber } from "../../services/format.js";
+import LoadMoreBar from "../../components/LoadMoreBar.jsx";
 // Ledger columns show plain 2-decimal amounts (debit/credit); Azerbaijani separators, no currency sign.
 const fixed2 = (value) => formatNumber(Number(value) || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -74,7 +75,7 @@ function ChartOfAccountsPanel({ isAdmin }) {
 }
 
 function JournalPanel({ isAdmin }) {
-  const { entries, loading, error: entriesError, createEntry, post, remove, reverse } = useJournalEntries();
+  const { entries, loading, error: entriesError, createEntry, post, remove, reverse, hasMore, loadMore } = useJournalEntries();
   const { accounts } = useChartOfAccounts();
   const [showForm, setShowForm] = useState(false);
   const [entryDate, setEntryDate] = useState(toLocalIsoDate());
@@ -109,7 +110,7 @@ function JournalPanel({ isAdmin }) {
   };
 
   return (
-    <Card title={`Jurnal yazılışları (${entries.length})`} actions={isAdmin && <Button onClick={() => setShowForm(!showForm)}>{showForm ? "Bağla" : "+ Yeni yazılış"}</Button>}>
+    <Card title={`Jurnal yazılışları (${entries.length}${hasMore ? "+" : ""})`} actions={isAdmin && <Button onClick={() => setShowForm(!showForm)}>{showForm ? "Bağla" : "+ Yeni yazılış"}</Button>}>
       {entriesError && <div role="alert" className="ui-notice ui-notice-warning">Jurnal yazılışları yüklənmədi: {entriesError.message}</div>}
       {msg && <Notice tone={msg.startsWith("Xəta") || msg.includes("bərabər") ? "danger" : "info"}>{msg}</Notice>}
       {showForm && (
@@ -147,6 +148,7 @@ function JournalPanel({ isAdmin }) {
         </form>
       )}
       <DataTable columns={[{ key: "entry_date", label: "Tarix" }, { key: "reference", label: "Ref" }, { key: "description", label: "Təsvir" }, { key: "total", label: "Cəm", align: "right" }, { key: "status", label: "Status" }, ...(isAdmin ? [{ key: "actions", label: "" }] : [])]} rows={loading ? [] : entries} emptyText={loading ? "Yüklənir…" : "Jurnal yazılışı yoxdur."} renderCell={(entry, column) => ({ entry_date: entry.entry_date, reference: entry.reference || "—", description: entry.description || "—", total: fixed2((entry.journal_lines || []).reduce((sum, line) => sum + Number(line.debit), 0)), status: <Badge tone={entry.posted ? "success" : "neutral"}>{entry.posted ? "Postlanıb" : "Layihə"}</Badge>, actions: <TableActions>{!entry.posted && <Button variant="secondary" size="compact" onClick={() => setPendingAction({ type: "post", entry })}>Postla</Button>}{!entry.posted && <Button variant="danger" size="compact" onClick={() => setPendingAction({ type: "delete", entry })}>Sil</Button>}{entry.posted && entry.source_type !== "journal_reversal" && <Button variant="danger" size="compact" onClick={() => { setReason(""); setPendingAction({ type: "reverse", entry }); }}>Əks yazılış</Button>}</TableActions> })[column.key]} />
+      <LoadMoreBar hasMore={hasMore} onLoadMore={loadMore} loading={loading} label="Daha köhnə yazılışları yüklə" />
       <ConfirmActionDialog open={Boolean(pendingAction)} title={pendingAction?.type === 'reverse' ? 'Əks jurnal yaradılsın?' : pendingAction?.type === 'post' ? 'Jurnal postlansın?' : 'Jurnal layihəsi silinsin?'} description={pendingAction?.type === 'reverse' ? 'Orijinal jurnal dəyişməyəcək; debet və kreditləri əks olan yeni jurnal yaradılacaq.' : pendingAction?.type === 'post' ? 'Postlandıqdan sonra jurnal dəyişdirilə və silinə bilməz.' : 'Yalnız post edilməmiş jurnal layihəsi silinəcək.'} confirmLabel={pendingAction?.type === 'reverse' ? 'Əks yazılış yarat' : pendingAction?.type === 'post' ? 'Postla' : 'Layihəni sil'} destructive={pendingAction?.type !== 'post'} reason={reason} onReasonChange={pendingAction?.type === 'reverse' ? setReason : undefined} reasonRequired={pendingAction?.type === 'reverse'} onCancel={() => setPendingAction(null)} onConfirm={async () => { try { if (pendingAction.type === 'post') await post(pendingAction.entry.id); else if (pendingAction.type === 'reverse') await reverse(pendingAction.entry.id, reason); else await remove(pendingAction.entry.id); setPendingAction(null); } catch (error) { setMsg(`Xəta: ${error.message}`); } }} />
     </Card>
   );

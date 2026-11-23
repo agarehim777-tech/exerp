@@ -97,6 +97,5 @@
   "src/test/tenant-ui-write-coalescing.test.jsx": 10,
   "src/test/ui-navigation-table.test.jsx": 3,
   "src/test/warehouse-import-sql.test.js": 1,
-  "src/test/warehouse-table-pagination.test.jsx": 3,
-  "tests/realtime-sync.spec.ts": 1
+  "src/test/warehouse-table-pagination.test.jsx": 3
 }
