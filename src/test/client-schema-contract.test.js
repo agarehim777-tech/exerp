@@ -15,9 +15,7 @@ import { expect, it } from 'vitest';
 const traverse = /** @type {any} */ (traverseModule).default || traverseModule;
 const FILTERS = new Set(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'is', 'ilike', 'like', 'order']);
 // Known mismatches fixed in an open PR; remove the entry when it lands.
-const ALLOWED = new Set([
-  'src/shared/hooks/useStock.js stock_movements.insert', // fix/stock-manual-movements moves this to server commands
-]);
+const ALLOWED = new Set([]);
 
 async function schema() {
   const types = await readFile('src/integrations/supabase/types.ts', 'utf8');
