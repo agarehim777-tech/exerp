@@ -32,15 +32,18 @@ export function reportPeriodRange(period: string, snapshotDate: string): { from:
 }
 
 // Server-computed headline totals; null until loaded or when the read fails (callers fall back to row sums).
-export function useReportTotals(tenantId: string | null | undefined, period: string, snapshotDate: string, revision = 0) {
-  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate, revision]));
+// warehouseId limits orders, their cost and production to one warehouse (operating expenses stay company-wide).
+export function useReportTotals(tenantId: string | null | undefined, period: string, snapshotDate: string, revision = 0,
+  warehouseId: string | null = null) {
+  const { scope, begin } = useTenantRequestScope(JSON.stringify([tenantId, period, snapshotDate, revision, warehouseId]));
   const [totals, setTotals] = useState<{ scope: object; value: ReportTotals } | null>(null);
   useEffect(() => {
     const isCurrent = begin();
     setTotals(null);
     if (!tenantId) return undefined;
     const { from, to } = reportPeriodRange(period, snapshotDate);
-    Promise.resolve(supabase.rpc("report_totals", { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined })).then(({ data, error }) => {
+    const args = { _tenant_id: tenantId, _from: from ?? undefined, _to: to ?? undefined, ...(warehouseId ? { _warehouse_id: warehouseId } : {}) };
+    Promise.resolve(supabase.rpc("report_totals", args)).then(({ data, error }) => {
       if (!isCurrent()) return;
       if (error || !data) { console.warn("report_totals failed", error); return; }
       const raw = data as Record<string, unknown>;
@@ -55,7 +58,7 @@ export function useReportTotals(tenantId: string | null | undefined, period: str
         sales_cost_estimated: Number(raw.sales_cost_estimated) || 0,
       } });
     }).catch(() => { if (isCurrent()) setTotals(null); });
-  }, [tenantId, period, snapshotDate, scope, begin]);
+  }, [tenantId, period, snapshotDate, warehouseId, scope, begin]);
   return totals?.scope === scope ? totals.value : null;
 }
 

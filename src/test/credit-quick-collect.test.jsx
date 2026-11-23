@@ -13,15 +13,16 @@ it('keeps StartCreditModal importable from CreditsPage', () => {
   expect(PageStartCreditModal).toBe(StartCreditModal);
 });
 
-it('collects a rounded installment with one receipt per opening and closes', () => {
+// Credit plans end with a cents-exact remainder; rounding to whole manats left qəpik unpaid forever.
+it('collects the installment to the qəpik with one receipt per opening and closes', () => {
   const receive = vi.fn();
   const close = vi.fn();
   const { container } = render(<QuickCollectModal item={item} onReceivePayment={receive} onClose={close} />);
   const [principal, penalty] = container.querySelectorAll('input[type="number"]');
-  expect(principal).toHaveValue(100);
+  expect(principal).toHaveValue(100.4);
   fireEvent.change(penalty, { target: { value: '4.6' } });
   fireEvent.submit(container.querySelector('form'));
-  expect(receive).toHaveBeenCalledWith('CR-1', { principalAmount: 100, penaltyAmount: 5, receiptNo: expect.stringMatching(/^KRD/) });
+  expect(receive).toHaveBeenCalledWith('CR-1', { principalAmount: 100.4, penaltyAmount: 4.6, receiptNo: expect.stringMatching(/^KRD/) });
   expect(close).toHaveBeenCalledOnce();
 });
 
