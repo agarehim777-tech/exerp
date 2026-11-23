@@ -46,6 +46,7 @@ import { Button, Select } from "../shared/ui/primitives.tsx";
 
 export default WarehousePage;
 
+/** @param {Record<string, any>} props Page props come from App state (untyped rows). */
 function WarehousePage({
   warehouses,
   warehouseStock,
@@ -90,13 +91,14 @@ function WarehousePage({
     : summaryByWarehouse.get(selectedWarehouse?.id) || getWarehouseStockSummary([], 0, products);
   const stockAlerts = buildWarehouseStockAlerts(warehouses, warehouseStock, products);
   const transferSuggestions = buildWarehouseTransferSuggestions(warehouses, warehouseStock);
-  const visibleWarehouses = filterRows(warehouses, query).filter((warehouse) =>
+  const visibleWarehouses = /** @type {Record<string, any>[]} */ (filterRows(warehouses, query)).filter((warehouse) =>
     warehouseStatusFilter === "Hamısı" ? true : warehouse.status === warehouseStatusFilter,
   );
   const warehouseList = visibleWarehouses.length > 0 ? visibleWarehouses : [];
   const visibleItems = filterWarehouseItems(filterRows(selectedItems, query), stockFilter);
   const purchaseOrderCoverage = useMemo(() => buildPurchaseOrderCoverage(purchaseOrders), [purchaseOrders]);
-  const wmsRows = buildWarehouseWmsRows(visibleItems, products).map((row) => {
+  /** @type {Record<string, any>[]} */
+  const wmsRows = buildWarehouseWmsRows(visibleItems, products).map((/** @type {Record<string, any>} */ row) => {
     const coverage = purchaseOrderCoverage.get(normalize(row.product)) || { orderedQty: 0, count: 0, latest: null };
     return {
       ...row,
@@ -141,7 +143,6 @@ function WarehousePage({
         onOpenImport={onOpenImport}
         onCreateProduct={onCreateProduct}
         onEditProduct={onEditProduct}
-        onSelectWarehouse={onSelect}
         onOpenOperations={() => {
           if (operationsRef.current) {
             operationsRef.current.open = true;

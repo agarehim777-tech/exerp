@@ -5,6 +5,7 @@ import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildKpiEmployeeScoreRows, getKpiPeriodKey } from "../shared/lib/appDomain.jsx";
 import { Button, Input, Select } from "../shared/ui/primitives";
+/** @param {Record<string, any>} props Page props come from App state (untyped rows). */
 export default function KpiPage({
   employees,
   salesBonuses = [],
