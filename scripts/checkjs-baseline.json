@@ -61,7 +61,6 @@
   "src/services/inventoryRead.js": 2,
   "src/services/warehouseImport.js": 1,
   "src/shared/adapters/erpShape.js": 1,
-  "src/shared/hooks/useAccounting.js": 1,
   "src/shared/hooks/useActivities.js": 2,
   "src/shared/hooks/useBlobReconciliation.js": 5,
   "src/shared/hooks/useCreditPortfolio.js": 2,

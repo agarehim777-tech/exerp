@@ -3520,6 +3520,9 @@ isOneToOne: false
 "release_stock_reservation":
 { Args: { "_reservation_id": string,"_tenant_id": string }; Returns: undefined
                            },
+"post_manual_stock_movement":
+{ Args: { "_document_no"?: string,"_kind": string,"_note"?: string,"_product_id": string,"_quantity": number,"_tenant_id": string,"_unit_cost"?: number,"_warehouse_id": string }; Returns: string
+                           },
 "reopen_accounting_period":
 { Args: { "_period_lock_id": string,"_reason": string,"_tenant_id": string }; Returns: undefined
                            },
@@ -3574,6 +3577,9 @@ isOneToOne: false
 "scan_erp_integrity":
 { Args: { "_tenant_id": string }; Returns: Json
                            },
+"seed_default_coa":
+{ Args: { "_tenant": string }; Returns: number
+                           },
 "seed_default_crm_pipeline":
 { Args: { "_tenant": string }; Returns: string
                            },
@@ -3597,6 +3603,9 @@ isOneToOne: false
                            },
 "transfer_cash_atomic":
 { Args: { "_payload": Json,"_request_key": string,"_tenant_id": string }; Returns: Json
+                           },
+"transfer_stock":
+{ Args: { "_from_warehouse_id": string,"_note"?: string,"_product_id": string,"_quantity": number,"_tenant_id": string,"_to_warehouse_id": string }; Returns: Json
                            },
 "trial_balance":
 { Args: { "_from": string,"_tenant": string,"_to": string }; Returns: {

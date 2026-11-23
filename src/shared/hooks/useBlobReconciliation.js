@@ -23,7 +23,7 @@ export function useBlobReconciliation(tenantId) {
         readAllRows(() => supabase.from('stock_reservations')
           .select('id, product_id, warehouse_id, order_id, quantity, status, order:orders(order_no)')
           .eq('tenant_id', tenantId).order('id')),
-        readAllRows(() => supabase.from('stock_balances').select('product_id, warehouse_id, reserved').eq('tenant_id', tenantId).order('id')),
+        readAllRows(() => supabase.from('stock_balances').select('product_id, warehouse_id, reserved').eq('tenant_id', tenantId).order('warehouse_id').order('product_id')),
         readAllRows(() => supabase.from('workflow_records').select('id, module, record_no, title, status').eq('tenant_id', tenantId).eq('module', 'production').order('id')),
         readAllRows(() => supabase.from('notification_deliveries').select('id, template_code, status, sent_at, scheduled_at, created_at, metadata').eq('tenant_id', tenantId).order('id')),
         readAllRows(() => supabase.from('products').select('id, name').eq('tenant_id', tenantId).order('id')),
