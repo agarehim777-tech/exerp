@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../shared/ui/dialogService.js", () => ({ appConfirm: mocks.confirm }));
 vi.mock("../integrations/supabase/client", () => ({
   supabase: {
+    rpc: async (name: string, payload: unknown) => {
+      mocks.calls.push({ table: "rpc", op: name, payload });
+      return { data: { grn_id: "GRN-NEW" }, error: mocks.error };
+    },
     from: (table: string) => {
       if (!["goods_receipts", "goods_receipt_lines"].includes(table)) throw new Error(`unexpected table ${table}`);
       const record = (op: string, payload?: unknown, id?: unknown) => mocks.calls.push({ table, op, payload, id });
@@ -96,19 +100,21 @@ describe("useReceiptActions", () => {
     expect(mocks.calls).toEqual([]);
   });
 
-  it("creates a receipt with its lines and recomputes the PO status", async () => {
+  // Header, lines and PO status go to save_goods_receipt in one call: a failed line insert can no longer
+  // leave a GRN without lines (the server recomputes the PO status in the same transaction).
+  it("creates a receipt with its lines in one server call", async () => {
     const { view, recomputePoStatus, setNotice, load } = setup();
     act(() => view.result.current.choosePoForReceipt("PO1"));
     act(() => view.result.current.setReceiptDraftLines(view.result.current.receiptDraftLines.map((line, index) => (
       index === 0 ? { ...line, qty_received: "5", qty_rejected: "1", unit_volume_m3: "0.2" } : { ...line, qty_received: "0" }
     ))));
     await act(() => view.result.current.saveReceipt(submitEvent()));
-    expect(mocks.calls[0]).toMatchObject({ table: "goods_receipts", op: "insert", payload: { tenant_id: "tenant-a", po_id: "PO1", received_by: "user-1", notes: null } });
-    expect(mocks.calls[1]).toEqual({
-      table: "goods_receipt_lines", op: "insert", id: undefined,
-      payload: [{ po_line_id: "L1", qty_received: 5, qty_rejected: 1, unit_volume_m3: 0.2, grn_id: "GRN-NEW" }],
-    });
-    expect(recomputePoStatus).toHaveBeenCalledWith("PO1", [{ po_line_id: "L1", qty_received: 5, qty_rejected: 1, unit_volume_m3: 0.2, grn_id: "GRN-NEW" }]);
+    expect(mocks.calls).toHaveLength(1);
+    expect(mocks.calls[0]).toMatchObject({ table: "rpc", op: "save_goods_receipt", payload: {
+      _tenant_id: "tenant-a", _grn_id: null, _header: { po_id: "PO1", notes: null },
+      _lines: [{ po_line_id: "L1", qty_received: 5, qty_rejected: 1, unit_volume_m3: 0.2 }],
+    } });
+    expect(recomputePoStatus).not.toHaveBeenCalled();
     expect(setNotice).toHaveBeenLastCalledWith("Mədaxil qeyd edildi və PO statusu hesablandı.");
     expect(load).toHaveBeenCalledOnce();
     expect(view.result.current.receiptDraftLines).toEqual([]);
@@ -123,10 +129,20 @@ describe("useReceiptActions", () => {
     expect(view.result.current.receiptDraftLines[0]).toMatchObject({ outstanding: 10, qty_received: "6", qty_rejected: "1", unit_volume_m3: "0.3" });
     act(() => view.result.current.setReceiptDraftLines(view.result.current.receiptDraftLines.map((line, index) => (index === 0 ? line : { ...line, qty_received: "0" }))));
     await act(() => view.result.current.saveReceipt(submitEvent()));
-    expect(mocks.calls.map((call) => `${call.table}:${call.op}:${call.id ?? ""}`)).toEqual([
-      "goods_receipts:update:G1", "goods_receipt_lines:delete:G1", "goods_receipt_lines:insert:",
-    ]);
+    expect(mocks.calls).toEqual([expect.objectContaining({ table: "rpc", op: "save_goods_receipt",
+      payload: expect.objectContaining({ _grn_id: "G1", _header: expect.objectContaining({ grn_number: "GRN-7" }) }) })]);
     expect(setNotice).toHaveBeenLastCalledWith("GRN yeniləndi və PO statusu hesablandı.");
+  });
+
+  it("keeps the form when the server refuses the receipt", async () => {
+    const { view, setError, load } = setup();
+    act(() => view.result.current.choosePoForReceipt("PO1"));
+    act(() => view.result.current.setReceiptDraftLines(view.result.current.receiptDraftLines.map((line) => ({ ...line, unit_volume_m3: "0.1" }))));
+    mocks.error = { message: "purchase_receipt_quantity_exceeded" };
+    await act(() => view.result.current.saveReceipt(submitEvent()));
+    expect(setError).toHaveBeenLastCalledWith("purchase_receipt_quantity_exceeded");
+    expect(load).not.toHaveBeenCalled();
+    expect(view.result.current.receiptDraftLines).not.toEqual([]);
   });
 
   it("deletes a receipt only after confirmation and reports errors", async () => {
