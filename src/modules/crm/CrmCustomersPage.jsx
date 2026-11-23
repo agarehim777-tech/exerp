@@ -112,7 +112,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
 
       <section className="ui-detail-stack">
         <div className="u-display-flex u-justify-content-space_between u-gap-12px u-align-items-center u-margin-bottom-12px">
-          <div><h3 className="u-margin-0 u-font-size-17px">Ad günləri</h3><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Bu gün və qarşıdakı 30 gün</p></div>
+          <div><h3 className="u-margin-0 u-font-size-16px">Ad günləri</h3><p className="u-margin-3px_0_0 u-color-text_secondary u-font-size-12px">Bu gün və qarşıdakı 30 gün</p></div>
           <span className="u-background-fef3c7 u-color-92400e u-padding-5px_10px u-border-radius-999px u-font-size-12px u-font-weight-700">{birthdays.length} müştəri</span>
         </div>
         {!birthdays.length ? <div className="u-color-text_secondary u-font-size-13px">Yaxınlaşan ad günü yoxdur.</div> : <div className="u-display-grid u-gap-8px">

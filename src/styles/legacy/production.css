@@ -16,7 +16,7 @@
 .report-checklist span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 700;
 }
 
 /* The ROI tables have five or six columns now; the shared 1060px minimum for wide registers made the
@@ -303,7 +303,7 @@
 .production-material-editor .section-title-row span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .production-material-editor {
@@ -426,7 +426,7 @@
   border-radius: 50%;
   color: var(--accent-strong);
   background: #e6f4ef;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .rank-row > strong {

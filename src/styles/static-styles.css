@@ -382,7 +382,7 @@
   background: #f8fafc;
   color: #64748b;
   border-bottom: 1px solid #e5e7eb;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .procurement-page-styles-td {
@@ -615,7 +615,7 @@
 
 .stock-page-section-title {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
   line-height: 1.3;
   color: #12372c;
 }
@@ -637,7 +637,7 @@
   display: grid;
   gap: 6px;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   color: #334b43;
 }
 
@@ -749,7 +749,7 @@
 .products-page-summary-label {
   font-size: 12px;
   color: #718079;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .products-page-summary-value {
@@ -778,7 +778,7 @@
 }
 
 .consent-h1 {
-  font-size: 1.3rem;
+  font-size: 20px;
   margin-bottom: 12px;
 }
 
@@ -1115,7 +1115,7 @@
 }
 
 .insights-page--s-card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #0f172a;
   margin-top: 8px;
@@ -1209,7 +1209,7 @@
 }
 
 .customer-messenger-panel--s-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #0f172a;
 }
@@ -1310,7 +1310,7 @@
 
 .sx-e634e6d.sx-e634e6d { font-weight: 600; }
 
-.sx-4777d93.sx-4777d93 { font-weight: 650; }
+.sx-4777d93.sx-4777d93 { font-weight: 600; }
 
 .sx-17ac2e7.sx-17ac2e7 { width: 88px; }
 
@@ -1334,7 +1334,7 @@
 
 .sx-f1bde2c.sx-f1bde2c { font-weight: 400; }
 
-.sx-3dd9b4c.sx-3dd9b4c { font-size: 15px; }
+.sx-3dd9b4c.sx-3dd9b4c { font-size: 14px; }
 
 .sx-3044b60.sx-3044b60 { font-size: 13px; }
 
@@ -1350,7 +1350,7 @@
   padding: 0 9px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .procurement-page-styles-icon-button {
@@ -1600,7 +1600,7 @@
 
 .sx-a69329c.sx-a69329c { color: #c0392b; }
 
-.sx-9463d77.sx-9463d77 { font-weight: 750; }
+.sx-9463d77.sx-9463d77 { font-weight: 700; }
 
 .sx-e7ec540.sx-e7ec540 { margin-bottom: 0; }
 

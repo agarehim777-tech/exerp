@@ -24,7 +24,7 @@
 .order-detail-grid small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .sales-control-tile strong {
@@ -101,7 +101,7 @@
 .sales-context-grid span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .sales-registry-summary strong {
@@ -162,7 +162,7 @@
   margin-bottom: 4px;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .sales-order-head h3 {
@@ -368,7 +368,7 @@
   background: transparent;
   padding: 0 4px;
   font-size: 14px;
-  font-weight: 740;
+  font-weight: 700;
 }
 
 .warehouse-balance-tabs button.active {
@@ -448,7 +448,7 @@
   padding: 0 9px;
   text-align: left;
   font-size: 13px;
-  font-weight: 680;
+  font-weight: 600;
 }
 
 .warehouse-action-menu-popover button:hover {
@@ -477,7 +477,7 @@
 .warehouse-balance-filters label > span {
   color: #526071;
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 700;
 }
 
 .warehouse-balance-filters select,
@@ -586,7 +586,7 @@
   color: #526071;
   background: #f8fafc;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
   padding: 10px 9px;
 }
 
@@ -645,7 +645,7 @@
   border-bottom: 0;
   color: #1e3a5f;
   background: #eff4fa;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .warehouse-operations-drawer {
@@ -665,7 +665,7 @@
   cursor: pointer;
   list-style: none;
   font-size: 13px;
-  font-weight: 720;
+  font-weight: 700;
 }
 
 .warehouse-operations-drawer > summary::-webkit-details-marker {
@@ -681,7 +681,7 @@
 .warehouse-operations-drawer > summary span:last-child {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .warehouse-operations-drawer > summary span:last-child svg {
@@ -719,7 +719,7 @@
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -853,7 +853,7 @@
 .warehouse-signal-empty {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .warehouse-control-tile strong {
@@ -997,7 +997,7 @@
   flex-wrap: wrap;
   color: #334155;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .warehouse-stats span {
@@ -1159,7 +1159,7 @@
   background: #fbfcfe;
   color: var(--text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .stage-pill:hover,

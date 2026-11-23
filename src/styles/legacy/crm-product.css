@@ -100,7 +100,7 @@
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .field.full,
@@ -138,7 +138,7 @@
   gap: 12px;
   padding: 0;
   color: var(--text);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .switch {
@@ -236,7 +236,7 @@
 .factory-order-snapshot strong,
 .factory-order-total strong {
   color: var(--text);
-  font-size: 19px;
+  font-size: 18px;
   line-height: 1.15;
 }
 
@@ -263,7 +263,7 @@
   gap: 7px;
   padding: 0 22px 18px;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .hr-delete-reassignment select {
@@ -287,7 +287,7 @@
 
 .modal-head h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
 }
 
 .modal-head p {
@@ -333,7 +333,7 @@
   margin-bottom: 10px;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -349,7 +349,7 @@
   margin-top: 14px;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .order-modal-form select,
@@ -454,12 +454,12 @@
 .product-360-flow-strip span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .product-360-metric strong {
   color: var(--text);
-  font-size: 21px;
+  font-size: 20px;
   line-height: 1.05;
 }
 
@@ -545,7 +545,7 @@
   background: transparent;
   color: #08775d;
   font: inherit;
-  font-weight: 750;
+  font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -674,7 +674,7 @@
   gap: 6px;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .serial-pick-list select {
@@ -721,7 +721,7 @@
   margin-top: 8px;
   color: #b91c1c;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .order-stock-warning svg {
@@ -839,7 +839,7 @@
   background: #163b2f;
   box-shadow: var(--shadow);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .empty-state {
@@ -857,7 +857,7 @@
   padding: 0;
   color: var(--blue);
   background: transparent;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .row-link.active {
@@ -1048,7 +1048,7 @@
   gap: 5px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .crm-registry-toolbar select,
@@ -1304,12 +1304,12 @@
   padding: 0;
   text-align: left;
   font: inherit;
-  font-weight: 820;
+  font-weight: 800;
 }
 
 .crm-customer-link {
   overflow: hidden;
-  font-size: 15px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1492,7 +1492,7 @@
   border-radius: 50%;
   color: white;
   background: #1495e8;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .customer-360-profile-card div {
@@ -1505,7 +1505,7 @@
 .customer-360-profile-field strong {
   overflow: hidden;
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1683,7 +1683,7 @@
   overflow: hidden;
   color: var(--text);
   font-size: 14px;
-  font-weight: 850;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1699,7 +1699,7 @@
   padding: 10px 12px;
   color: var(--text);
   font-size: 13px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .customer-360-schedule-scroll {
@@ -1799,7 +1799,7 @@
   margin: 0;
   color: var(--text);
   font-size: 13px;
-  font-weight: 820;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

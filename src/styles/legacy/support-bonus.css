@@ -105,7 +105,7 @@
   background: white;
   padding: 0 10px;
   color: var(--text);
-  font-weight: 720;
+  font-weight: 700;
 }
 
 .support-link-grid {
@@ -242,7 +242,7 @@
 .message-list-head h3 {
   margin: 0;
   color: var(--text);
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .message-list-head p {
@@ -314,7 +314,7 @@
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .segmented-control button.active {
@@ -332,7 +332,7 @@
 .message-participant-picker > span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .message-field input,
@@ -456,7 +456,7 @@
   background: #eef2f6;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .chat-panel {
@@ -591,7 +591,7 @@
   color: var(--muted);
   background: transparent;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .tabs button.active {
@@ -718,7 +718,7 @@
 .kpi-last-payout span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .kpi-period-card strong,
@@ -818,7 +818,7 @@
   margin-right: auto;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .api-ops-grid {
@@ -913,7 +913,7 @@
 
 .permission-effective-cell strong {
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .permission-effective-cell span,
@@ -944,7 +944,7 @@
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .user-create-form input,
@@ -965,7 +965,7 @@
   gap: 8px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .module-access-grid {

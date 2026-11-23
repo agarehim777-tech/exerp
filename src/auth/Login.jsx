@@ -115,7 +115,7 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+        /* Manrope and Sora (with the ə/₼ fallback faces) are loaded once by index.html for the whole app. */
         .xp, .xp * { box-sizing: border-box; }
         .xp {
           /* Typography scale */
@@ -137,7 +137,7 @@ export default function Login() {
           --ls-wide: 0.1em;
           --ls-widest: 0.18em;
 
-          min-height: 100vh; font-family: 'Inter', system-ui, sans-serif;
+          min-height: 100vh; font-family: 'Manrope', system-ui, sans-serif;
           font-size: var(--fs-base); line-height: var(--lh-normal);
           color: #e6f2ec; -webkit-font-smoothing: antialiased;
           background: #07120f;
@@ -262,7 +262,7 @@ export default function Login() {
         .xp-term { position:relative; background:#03110d; border:1px solid rgba(230,242,236,.1); border-radius:.75rem; font-family: 'JetBrains Mono', ui-monospace, monospace; overflow:hidden; box-shadow: 0 40px 100px -30px rgba(0,0,0,.7); }
         .xp-term-h { display:flex; align-items:center; gap:.4rem; padding:.7rem 1rem; border-bottom:1px solid rgba(230,242,236,.08); background: rgba(0,0,0,.3); }
         .xp-term-h span { width:.6rem; height:.6rem; border-radius:999px; background:rgba(230,242,236,.15); }
-        .xp-term-h b { margin-left:.75rem; color:#9fb8ae; font-family:'Inter',sans-serif; font-size:var(--fs-xs); font-weight:500; letter-spacing:.05em; }
+        .xp-term-h b { margin-left:.75rem; color:#9fb8ae; font-family:'Manrope',sans-serif; font-size:var(--fs-xs); font-weight:500; letter-spacing:.05em; }
         .xp-term-body { padding: 1.5rem; font-size:var(--fs-sm); line-height:var(--lh-loose); color:#9fb8ae; }
         .xp-term-body .p { color:#c9a84c; }
         .xp-term-body .c { color:#e6f2ec; }

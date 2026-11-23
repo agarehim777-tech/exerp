@@ -14,7 +14,7 @@
   gap: 7px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .hr-builder-form input,
@@ -123,7 +123,7 @@
 }
 
 .hr-org-company-card strong {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .hr-org-company-card small {
@@ -870,7 +870,7 @@
 .avatar.large {
   width: 54px;
   height: 54px;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .hr-profile-head h3 {
@@ -970,7 +970,7 @@
 .hr-profile-focus-card small,
 .hr-document-summary span { color: var(--muted); font-size: 12px; }
 .hr-profile-focus-card strong,
-.hr-document-summary strong { color: var(--text); font-size: 17px; }
+.hr-document-summary strong { color: var(--text); font-size: 16px; }
 
 .hr-profile-grid .two-line,
 .hr-platform-summary div,

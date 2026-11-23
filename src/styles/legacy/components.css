@@ -8,7 +8,7 @@
   justify-content: center;
   gap: 8px;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -124,7 +124,7 @@
   display: block;
   margin-top: 8px;
   color: var(--text);
-  font-size: 25px;
+  font-size: 24px;
   line-height: 1.05;
 }
 
@@ -205,7 +205,7 @@
   background: transparent;
   font: inherit;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -267,7 +267,7 @@
   font-size: 11px;
 }
 
-.seller-performance-summary strong { font-size: 17px; }
+.seller-performance-summary strong { font-size: 16px; }
 .seller-performance-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
 .seller-performance-head,
 .seller-performance-row {
@@ -278,14 +278,14 @@
   gap: 12px;
   padding: 11px 14px;
 }
-.seller-performance-head { color: var(--muted); background: #f4f7f9; font-size: 11px; font-weight: 750; text-transform: uppercase; }
+.seller-performance-head { color: var(--muted); background: #f4f7f9; font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .seller-performance-row { border-top: 1px solid var(--line); font-size: 12px; }
 .seller-performance-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .seller-performance-person > div { display: grid; gap: 2px; min-width: 0; }
 .seller-performance-person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seller-performance-rank { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: #08775c; background: #e8f6f1; font-weight: 800; }
-.seller-positive { color: #07815f; font-weight: 750; }
-.seller-balance { color: #c2413b; font-weight: 750; }
+.seller-positive { color: #07815f; font-weight: 700; }
+.seller-balance { color: #c2413b; font-weight: 700; }
 .seller-collection { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 7px; }
 .seller-collection i { height: 6px; overflow: hidden; border-radius: 999px; background: #e5e9e7; }
 .seller-collection b { display: block; height: 100%; border-radius: inherit; background: #0c9b73; }
@@ -349,7 +349,7 @@
   margin: 0;
   font-size: 16px;
   line-height: 1.25;
-  font-weight: 740;
+  font-weight: 700;
 }
 
 .panel-header p {
@@ -381,7 +381,7 @@
 .bar-item small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .bar-visual {
@@ -685,7 +685,7 @@ th {
   color: var(--muted);
   background: #f6f8fb;
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 700;
   text-align: left;
   padding: 11px 12px;
   border-top: 1px solid var(--line);
@@ -713,7 +713,7 @@ tr:hover td {
   padding: 0 8px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -838,7 +838,7 @@ tr:hover td {
   border-radius: 999px;
   background: #edf1f6;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .workflow-step small {
