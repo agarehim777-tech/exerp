@@ -1,13 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function useDeals(tenantId, pipelineId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setDeals([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId || !pipelineId) { setDeals([]); setError(null); return; }
+    const isCurrent = begin();
     setLoading(true);
     const { data, error: readError } = await supabase
       .from('crm_deals')
@@ -15,10 +19,11 @@ export function useDeals(tenantId, pipelineId) {
       .eq('tenant_id', tenantId)
       .eq('pipeline_id', pipelineId)
       .order('sort_order');
+    if (!isCurrent()) return;
     setError(readError || null);
     setDeals(data || []);
     setLoading(false);
-  }, [tenantId, pipelineId]);
+  }, [tenantId, pipelineId, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

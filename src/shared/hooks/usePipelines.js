@@ -1,23 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 export function usePipelines(tenantId) {
+  const { begin } = useTenantRequestScope(tenantId);
   const [pipelines, setPipelines] = useState([]);
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => { setPipelines([]); setStages([]); }, [tenantId]);
   const fetchAll = useCallback(async () => {
     if (!tenantId) return;
+    const isCurrent = begin();
     setLoading(true);
     const [{ data: p, error: pe }, { data: s, error: se }] = await Promise.all([
       supabase.from('crm_pipelines').select('*').eq('tenant_id', tenantId).order('created_at'),
       supabase.from('crm_stages').select('*').eq('tenant_id', tenantId).order('sort_order'),
     ]);
+    if (!isCurrent()) return;
     if (pe || se) setError(pe || se);
-    else { setPipelines(p || []); setStages(s || []); }
+    else { setError(null); setPipelines(p || []); setStages(s || []); }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, begin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

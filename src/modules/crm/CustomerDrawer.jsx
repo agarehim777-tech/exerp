@@ -17,14 +17,20 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
   const [tab, setTab] = useState('overview');
   const [activityType, setActivityType] = useState('note');
   const [activityText, setActivityText] = useState('');
+  const [activityError, setActivityError] = useState('');
 
   const c = data?.customer;
 
   const addActivity = async () => {
     if (!activityText.trim()) return;
-    await createActivity({ type: activityType, subject: activityText, customer_id: customerId });
-    setActivityText('');
-    refresh();
+    try {
+      await createActivity({ type: activityType, subject: activityText, customer_id: customerId });
+      setActivityText('');
+      setActivityError('');
+      refresh();
+    } catch (createError) {
+      setActivityError(createError?.message || 'Əlaqə əlavə edilmədi.');
+    }
   };
 
   return (
@@ -90,6 +96,7 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
                       placeholder="Nə baş verdi?" className="u-flex-1" />
                     <Button onClick={addActivity} aria-label="Əlaqə əlavə et" title="Əlaqə əlavə et" className="ui-icon-button"><Plus size={18} /></Button>
                   </div>
+                  {activityError && <div role="alert" className="inline-alert danger">{activityError}</div>}
                   <Timeline items={data.activities || []} />
                 </div>
               )}
