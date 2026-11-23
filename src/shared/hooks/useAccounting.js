@@ -55,6 +55,8 @@ export function useChartOfAccounts() {
   return { accounts, loading, error, reload, seedDefaults, create, update, remove };
 }
 
+const JOURNAL_PAGE_SIZE = 200;
+
 export function useJournalEntries() {
   const { activeMembership } = useAuth();
   const tenantId = activeMembership?.tenant_id;
@@ -62,8 +64,11 @@ export function useJournalEntries() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(JOURNAL_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => { setEntries([]); }, [tenantId]);
+  useEffect(() => { setEntries([]); setLimit(JOURNAL_PAGE_SIZE); setHasMore(false); }, [tenantId]);
+  // Newest first, one page at a time: the list used to stop at 200 entries without saying so.
   const reload = useCallback(async () => {
     if (!tenantId) { setEntries([]); setError(null); setLoading(false); return; }
     const isCurrent = begin();
@@ -71,12 +76,16 @@ export function useJournalEntries() {
     const { data, error: readError } = await supabase.from("journal_entries")
       .select("*, journal_lines(*, chart_of_accounts(code, name, type))")
       .eq("tenant_id", tenantId)
-      .order("entry_date", { ascending: false }).limit(200);
+      .order("entry_date", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
     if (!isCurrent()) return;
     setError(readError || null);
-    setEntries(data || []);
+    if (!readError) {
+      setHasMore((data || []).length > limit);
+      setEntries((data || []).slice(0, limit));
+    }
     setLoading(false);
-  }, [tenantId, begin]);
+  }, [tenantId, begin, limit]);
+  const loadMore = useCallback(() => setLimit((current) => current + JOURNAL_PAGE_SIZE), []);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -108,7 +117,7 @@ export function useJournalEntries() {
     await reload();
   };
 
-  return { entries, loading, error, reload, createEntry, post, remove, reverse };
+  return { entries, loading, error, reload, createEntry, post, remove, reverse, hasMore, loadMore };
 }
 
 export async function fetchTrialBalance(tenantId, from, to) {
