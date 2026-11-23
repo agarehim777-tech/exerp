@@ -17,7 +17,7 @@ it('runs CI fully offline, without a database environment or credentials', () =>
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   expect(pkg.scripts['verify:release:offline']).not.toContain('verify:core-backend');
   // The unit tests run once, with coverage (npm run test:coverage).
-  expect(pkg.scripts['verify:release:offline']).toMatch(/npm (test|run test:coverage)/);
+  expect(pkg.scripts['verify:release:offline']).toMatch(/npm (test|run test:coverage)/);
 });
 
 it('has no workflow that writes to the backup project except the manual restore drill', () => {
