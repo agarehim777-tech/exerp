@@ -136,7 +136,7 @@
 .credit-detail-modal-head > div > p { margin-top: 4px; }
 .credit-detail-title-meta { margin-top: 7px; }
 .credit-detail-title-meta span { max-width: 210px; border-radius: 5px; background: #f1f5f3; }
-.credit-detail-modal-body { padding: 14px; }
+.credit-detail-modal-body { padding: 14px; container: credit-modal / inline-size; }
 
 .credit-detail-layout {
   grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
@@ -227,7 +227,55 @@
   box-shadow: none;
 }
 
-.credit-detail-records { grid-template-columns: minmax(260px, 0.82fr) minmax(360px, 1.18fr); }
+.credit-detail-records { grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr); }
+
+/* The modal is narrower than the screen, so screen breakpoints never fired and the contract column spilled
+   under the payment panel. The layout follows the modal width instead: below ~860 px the payment panel
+   moves under the contract; a narrow contract column turns tile rows into two columns and stacks
+   history and schedule. */
+.credit-detail-primary { container: credit-primary / inline-size; }
+
+/* The schedule is a scroll box; its rows must take their content height, or a wrapped date field is drawn
+   under the next row. */
+.credit-schedule { grid-auto-rows: max-content; align-content: start; container: credit-schedule / inline-size; }
+
+/* One line per month whenever the schedule box is wide enough, whatever the screen width. */
+@container credit-schedule (min-width: 360px) {
+  .credit-schedule label { grid-template-columns: 50px minmax(64px, 1fr) 74px 132px; }
+  .credit-schedule input,
+  .credit-schedule small { grid-column: auto; }
+}
+
+@container credit-modal (max-width: 860px) {
+  .credit-detail-layout,
+  .credit-detail-layout.is-started { grid-template-columns: minmax(0, 1fr); }
+  .credit-detail-aside { position: static; }
+}
+
+@container credit-primary (max-width: 560px) {
+  .credit-context-grid,
+  .credit-contract-snapshot,
+  .credit-terms-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .credit-context-grid div:nth-child(2n),
+  .credit-contract-tile:nth-child(2n),
+  .credit-terms-strip > div:nth-child(2n) { border-right: 0; }
+  .credit-context-grid div:nth-child(-n + 2),
+  .credit-contract-tile:nth-child(-n + 2),
+  .credit-terms-strip > div:nth-child(-n + 2) { border-bottom: 1px solid #e2e9e6; }
+}
+
+@container credit-primary (max-width: 520px) {
+  .credit-detail-records { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container credit-primary (max-width: 380px) {
+  .credit-context-grid,
+  .credit-contract-snapshot,
+  .credit-terms-strip { grid-template-columns: minmax(0, 1fr); }
+  .credit-context-grid div,
+  .credit-contract-tile,
+  .credit-terms-strip > div { border-right: 0; }
+}
 
 @media (max-width: 900px) {
   .credit-detail-layout,

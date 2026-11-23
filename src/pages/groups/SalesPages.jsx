@@ -1,6 +1,6 @@
 // Dashboard, CRM, sales, stock, product, warehouse and delivery pages, moved from App.jsx.
 // App.jsx renders this with the values the pages need; add or change these pages' props here.
-import { CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmTasksPage, DashboardPage, DeliveriesPage, ProductsPage, SalesDashboardPage, SalesOrdersPage, StockPage, WarehousePage } from "../../config/lazyPages.js";
+import { CrmActivitiesPage, CrmCustomersPageV2, CrmDealsPage, CrmTasksPage, DashboardPage, DeliveriesPage, ProductsPage, SalesDashboardPage, SalesOrdersPage, StockPage } from "../../config/lazyPages.js";
 import { pathForModule } from "../../config/routes.js";
 import { dbCustomerToLegacy, dbOrderToLegacy } from "../../shared/adapters/erpShape.js";
 
@@ -62,29 +62,6 @@ export function SalesPages({ active, auditOperation, choosePage, completeWarehou
                 setQuery(document?.receipt_no || document?.shipment_no || "");
                 choosePage("procurement");
               }}
-              onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
-            />
-          )}
-          {active === "warehouse" && (
-            <WarehousePage
-              warehouses={state.warehouses}
-              warehouseStock={state.warehouseStock}
-              products={state.products || []}
-              orders={state.orders}
-              purchaseOrders={state.purchaseOrders || []}
-              selectedWarehouseId={selectedWarehouseId}
-              query={query}
-              onSelect={setSelectedWarehouseId}
-              onEdit={(warehouseId) =>
-                setModal({ type: "warehouse", mode: "edit", warehouseId })
-              }
-              onDelete={deleteWarehouse}
-              onCompleteDelivery={completeWarehouseDelivery}
-              onTransferStock={transferWarehouseStock}
-              onReceiveStock={() => setModal({ type: "stockIntake" })}
-              onOpenImport={() => setModal({ type: "warehouseImport" })}
-              onCreateProduct={() => setModal({ type: "product", mode: "create" })}
-              onEditProduct={(productId) => setModal({ type: "product", mode: "edit", productId })}
               onTrackAction={(action, detail) => auditOperation({ module: "Anbar", action, detail })}
             />
           )}
