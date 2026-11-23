@@ -9,6 +9,23 @@ const STOCK_ERROR_MESSAGES = {
   reservation_not_found: "Rezervasiya tapılmadı və ya artıq bağlanıb.",
 };
 
+// Anbar hərəkəti və transfer əmrlərinin xətaları.
+const STOCK_COMMAND_MESSAGES = {
+  insufficient_stock: "Seçilmiş anbarda kifayət qədər sərbəst qalıq yoxdur.",
+  invalid_stock_quantity: "Miqdar düzgün deyil: məxaric üçün müsbət, düzəliş üçün sıfırdan fərqli ədəd daxil edin.",
+  invalid_stock_receipt: "Mədaxil üçün müsbət miqdar və mənfi olmayan maya dəyəri daxil edin.",
+  invalid_stock_transfer: "Fərqli mənbə və hədəf anbar seçin.",
+  invalid_stock_scope: "Məhsul və ya anbar bu şirkətə aid deyil, ya da anbar passivdir.",
+  permission_denied: "Anbar əməliyyatı üçün icazəniz yoxdur.",
+  accounting_period_locked: "Bu tarix üçün mühasibat dövrü bağlıdır.",
+};
+
+export function describeStockCommandError(error) {
+  const raw = collectErrorText(error);
+  const match = Object.keys(STOCK_COMMAND_MESSAGES).find((key) => raw.includes(key));
+  return match ? STOCK_COMMAND_MESSAGES[match] : (error?.message || "Anbar əməliyyatı alınmadı.");
+}
+
 // Postgres/PostgREST xəta kodunu message, details, hint və code sahələrinin
 // hər birində saxlaya bilər — hamısını birlikdə yoxlayırıq.
 function collectErrorText(error) {

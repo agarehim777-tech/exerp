@@ -2,8 +2,10 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useStock } from '../shared/hooks/useStock.js';
 
-const mocks = vi.hoisted(() => ({ receive: vi.fn(), insert: vi.fn(), reads: vi.fn() }));
-vi.mock('../services/coreOperations.js', () => ({ receiveStock: mocks.receive }));
+const mocks = vi.hoisted(() => ({ receive: vi.fn(), manual: vi.fn(), transfer: vi.fn(), insert: vi.fn(), reads: vi.fn() }));
+vi.mock('../services/coreOperations.js', () => ({
+  receiveStock: mocks.receive, postManualStockMovement: mocks.manual, transferStock: mocks.transfer,
+}));
 vi.mock('../integrations/supabase/client', () => ({ supabase: {
   from: (table) => {
     mocks.reads(table);
@@ -30,7 +32,7 @@ describe('manual stock receipt command', () => {
     const readsBefore = mocks.reads.mock.calls.length;
     await act(async () => { await result.current.addMovement(payload); });
     expect(mocks.receive).toHaveBeenCalledExactlyOnceWith({ tenantId: 'tenant', warehouseId: 'warehouse',
-      productId: 'product', quantity: '5', unitCost: '1200', referenceType: 'WH-QA', note: 'Receipt' });
+      productId: 'product', quantity: '5', unitCost: '1200', referenceType: 'manual_receipt', note: 'WH-QA · Receipt' });
     expect(mocks.insert).not.toHaveBeenCalled();
     expect(mocks.reads.mock.calls.length).toBeGreaterThan(readsBefore);
   });
@@ -40,8 +42,31 @@ describe('manual stock receipt command', () => {
     await waitFor(() => expect(result.current.loaded).toBe(true));
     mocks.receive.mockRejectedValueOnce(new Error('permission_denied'));
     await act(async () => {
-      await expect(result.current.addMovement(payload)).rejects.toThrow('permission_denied');
+      await expect(result.current.addMovement(payload)).rejects.toThrow('Anbar əməliyyatı üçün icazəniz yoxdur.');
     });
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  // Məxaric/Düzəliş and transfers used to insert legacy move_type/qty rows the table no longer has.
+  it('sends a manual write-off and a count correction through the server command', async () => {
+    mocks.manual.mockResolvedValue('movement');
+    const { result } = renderHook(() => useStock('tenant'));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    await act(async () => { await result.current.addMovement({ ...payload, move_type: 'out', qty: '2' }); });
+    await act(async () => { await result.current.addMovement({ ...payload, move_type: 'adjust', qty: '-1', unit_cost: '' }); });
+    expect(mocks.manual.mock.calls.map(([args]) => [args.kind, args.quantity, args.documentNo])).toEqual([
+      ['out', '2', 'WH-QA'], ['adjust', '-1', 'WH-QA'],
+    ]);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it('explains a stock shortage from the server in Azerbaijani', async () => {
+    mocks.manual.mockRejectedValueOnce(new Error('insufficient_stock'));
+    const { result } = renderHook(() => useStock('tenant'));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    await act(async () => {
+      await expect(result.current.addMovement({ ...payload, move_type: 'out' }))
+        .rejects.toThrow('Seçilmiş anbarda kifayət qədər sərbəst qalıq yoxdur.');
+    });
   });
 });

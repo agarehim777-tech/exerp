@@ -71,7 +71,7 @@
   "src/shared/hooks/useLiveReportData.js": 1,
   "src/shared/hooks/useOrders.js": 5,
   "src/shared/hooks/useSalesInvoices.js": 5,
-  "src/shared/hooks/useStock.js": 5,
+  "src/shared/hooks/useStock.js": 3,
   "src/shared/hooks/useTasks.js": 2,
   "src/shared/hooks/useTenantUiPersistence.js": 1,
   "src/shared/lib/appDomainFinance.jsx": 1,
