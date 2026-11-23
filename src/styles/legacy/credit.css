@@ -24,7 +24,7 @@
 .credit-management-topline p {
   margin: 3px 0 0;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .credit-management-summary {
@@ -69,7 +69,7 @@
   color: #334155;
   background: white;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
@@ -153,7 +153,7 @@
 .credit-handover-item strong {
   overflow: hidden;
   color: var(--text);
-  font-size: 17px;
+  font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -196,7 +196,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .credit-directory-head span {
@@ -342,7 +342,7 @@
   color: white;
   background: #0ea5e9;
   font-size: 11px;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .credit-customer-copy {
@@ -360,7 +360,7 @@
 
 .credit-customer-copy strong {
   color: var(--text);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .credit-customer-copy span {
@@ -370,7 +370,7 @@
 
 .credit-customer-copy b {
   color: #334155;
-  font-weight: 820;
+  font-weight: 800;
 }
 
 .credit-contract-cell {
@@ -390,7 +390,7 @@
 
 .credit-contract-cell strong {
   color: var(--text);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .credit-contract-cell span {
@@ -441,7 +441,7 @@
 }
 
 .credit-directory-panel .two-line strong {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .credit-directory-panel .two-line span {
@@ -497,7 +497,7 @@
   color: #334155;
   background: #f8fafc;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -649,7 +649,7 @@
 
 .credit-signal-row > span {
   color: var(--text);
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .credit-signal-row div span,
@@ -798,7 +798,7 @@
 .credit-detail-head span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .credit-detail-head h2 {
@@ -913,7 +913,7 @@
   gap: 7px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .credit-payment-inputs input {
@@ -1008,7 +1008,7 @@
   min-width: max-content;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .credit-history-list {
@@ -1125,7 +1125,7 @@
   background: transparent;
   padding: 0;
   font: inherit;
-  font-weight: 780;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
@@ -1258,7 +1258,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  font-weight: 740;
+  font-weight: 700;
 }
 
 .credit-debt-formula .ok {
@@ -1348,7 +1348,7 @@
   cursor: pointer;
   color: #334155;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .credit-schedule-panel summary::after {
@@ -1570,7 +1570,7 @@
 .report-risk-toolbar > span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -1587,7 +1587,7 @@
   padding: 0 11px;
   color: var(--muted);
   background: white;
-  font-weight: 720;
+  font-weight: 700;
 }
 
 .report-risk-tabs button.active {
@@ -1625,7 +1625,7 @@
 .reports-filter-bar label > span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 700;
   text-transform: uppercase;
 }
 

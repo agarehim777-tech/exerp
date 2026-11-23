@@ -220,7 +220,7 @@ function BalancesPanel({ stock }) {
                     </div>
                   ) : (
                     <div className="u-display-flex u-align-items-center u-gap-8px">
-                      <span className="u-min-width-28px u-font-weight-650">{formatNumber(Number(b.reorder_point || 0))}</span>
+                      <span className="u-min-width-28px u-font-weight-600">{formatNumber(Number(b.reorder_point || 0))}</span>
                       <Button variant="ghost" type="button" onClick={() => startEditing(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi redaktə et"><Pencil size={15} /></Button>
                     </div>
                   )}

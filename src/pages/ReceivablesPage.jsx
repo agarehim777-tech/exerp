@@ -227,7 +227,7 @@ function DebtDetail({ row, onClose, onOpenSalesOrder }) {
     <aside onClick={event => event.stopPropagation()} className="u-width-480px u-max-width-100 u-height-100 u-overflow-y-auto u-background-surface u-padding-20px u-box-sizing-border_box u-box-shadow-10px_0_30px_rgba_15_23_42_16">
       <div className="u-display-flex u-justify-content-space_between u-align-items-flex_start u-margin-bottom-18px">
         <div><small className="u-color-text_secondary u-font-weight-700">BORC MƏLUMATI</small><h2 className="u-margin-5px_0">{row.party}</h2><StatusBadge status={row.type} /></div>
-        <Button type="button" onClick={onClose} className="u-border-0 u-background-transparent u-font-size-25px u-cursor-pointer">×</Button>
+        <Button type="button" onClick={onClose} className="u-border-0 u-background-transparent u-font-size-24px u-cursor-pointer">×</Button>
       </div>
       <div className="u-display-grid u-grid-template-columns-repeat_2_minmax_0_1fr u-gap-9px">
         {detailRows.map(([label, value]) => <div key={label} className="u-padding-11px u-border-1px_solid_border u-border-radius-9px u-background-surface_subtle"><small className="u-display-block u-color-text_secondary u-margin-bottom-4px">{label}</small><strong className="u-overflow-wrap-anywhere">{value || "—"}</strong></div>)}

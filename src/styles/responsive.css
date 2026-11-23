@@ -26,7 +26,7 @@
   }
 
   .main { padding: 12px 10px 24px; }
-  .main .page-header h1 { font-size: 21px; }
+  .main .page-header h1 { font-size: 20px; }
   .main .page-header { flex-direction: row; text-align: left; align-items: center; gap: 12px; }
   .main .page-header > button { width: auto; flex: 0 0 auto; }
   .metric-grid,
@@ -63,7 +63,7 @@
   .credit-workspace .metric-card > div > strong { font-size: 16px; }
   .credit-workspace .metric-icon { display: none; }
   .credit-workspace .credit-handover-item { padding: 10px; }
-  .credit-workspace .credit-handover-item strong { font-size: 15px; overflow-wrap: anywhere; }
+  .credit-workspace .credit-handover-item strong { font-size: 14px; overflow-wrap: anywhere; }
   .credit-directory-head { flex-direction: row; align-items: center; }
   .credit-directory-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; }
   .credit-directory-filters > label { width: 100%; min-width: 0; }

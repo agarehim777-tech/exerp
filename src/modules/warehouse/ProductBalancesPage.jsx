@@ -146,7 +146,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
 
 function HistoryTable({ title, headers, rows, empty, loading }) {
   return <section>
-    <h3 className="u-margin-0_0_12px u-color-173a30 u-font-size-17px">{title}</h3>
+    <h3 className="u-margin-0_0_12px u-color-173a30 u-font-size-16px">{title}</h3>
     <div className="warehouse-balance-table-wrap">
       <Table className="warehouse-balance-table"><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
         <tbody>{loading ? <tr><td colSpan={headers.length}>Tarixçə yüklənir…</td></tr> : rows.length ? rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>) : <tr><td colSpan={headers.length} className="warehouse-balance-empty">{empty}</td></tr>}</tbody>

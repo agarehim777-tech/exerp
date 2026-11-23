@@ -168,7 +168,7 @@
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .vendor-toolbar input,
@@ -356,7 +356,7 @@
   color: var(--accent-strong);
   padding: 0 10px;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -939,7 +939,7 @@
   }
 
   .page-header h1 {
-    font-size: 23px;
+    font-size: 22px;
   }
 
   .bar-chart {

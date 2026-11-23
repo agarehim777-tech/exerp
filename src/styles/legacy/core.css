@@ -114,7 +114,7 @@ button {
   gap: 7px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .login-card select,
@@ -187,8 +187,8 @@ button {
 }
 
 .brand-name {
-  font-size: 15px;
-  font-weight: 760;
+  font-size: 14px;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -265,7 +265,7 @@ button {
   background: rgba(255, 255, 255, 0.05);
   font: inherit;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -293,7 +293,7 @@ button {
   border-radius: 50%;
   background: #e6f4ef;
   color: var(--accent-strong);
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .avatar {
@@ -306,7 +306,7 @@ button {
 
 .admin-name {
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .workspace {
@@ -457,7 +457,7 @@ button {
 .session-pill span {
   color: var(--text);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .session-pill strong {
@@ -507,7 +507,7 @@ button {
   background: var(--accent);
   color: white;
   font-size: var(--font-size-xs);
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .counter.danger {
@@ -532,7 +532,7 @@ button {
   margin: 0;
   font-size: clamp(23px, 3vw, 30px);
   line-height: 1.14;
-  font-weight: 760;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -583,7 +583,7 @@ button {
 .period-confirmation { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45; }
 .period-confirmation input { margin-top: 3px; accent-color: var(--accent); }
 .period-error { padding: 10px 12px; border-radius: var(--radius); background: #fff1f2; color: var(--red); font-size: 13px; }
-.accounting-period-history h3 { margin: 0 0 12px; font-size: 15px; }
+.accounting-period-history h3 { margin: 0 0 12px; font-size: 14px; }
 .accounting-period-history .table-wrap { max-height: 310px; overflow: auto; }
 .period-empty { padding: 20px; color: var(--muted); text-align: center; font-size: 13px; }
 
