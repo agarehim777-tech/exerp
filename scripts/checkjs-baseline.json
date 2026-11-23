@@ -40,7 +40,6 @@
   "src/pages/groups/FinancePages.jsx": 2,
   "src/pages/groups/SystemPages.jsx": 1,
   "src/pages/HrPage.jsx": 1,
-  "src/pages/InvoicesPage.jsx": 3,
   "src/pages/PlatformAdminPage.jsx": 3,
   "src/pages/SettingsPage.jsx": 5,
   "src/services/auditSync.js": 4,

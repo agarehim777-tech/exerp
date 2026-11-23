@@ -36,14 +36,11 @@ export const ContractsPage = named(() => import("../modules/contracts/ContractsP
 
 /* --------------------------------------------- Procurement & warehouse */
 export const ProcurementPage = lazy(() => import("../modules/procurement/ProcurementPage.jsx"));
-export const VendorManagementPage = lazy(() => import("../pages/VendorManagementPage.jsx"));
-export const WarehousePage = lazy(() => import("../pages/WarehousePage.jsx"));
 export const StockPage = lazy(() => import("../modules/warehouse/StockPage.jsx"));
 export const ProductsPage = lazy(() => import("../modules/warehouse/ProductBalancesPage.jsx"));
 
 /* ------------------------------------------------------------- Finance */
 export const CashbookPage = lazy(() => import("../modules/finance/CashbookPage.jsx"));
-export const InvoicesPage = lazy(() => import("../pages/InvoicesPage.jsx"));
 export const SalesInvoicesPage = lazy(() => import("../modules/finance/SalesInvoicesPage.jsx"));
 export const ReceivablesPage = lazy(() => import("../pages/ReceivablesPage.jsx"));
 export const AccountingPageV2 = lazy(() => import("../modules/accounting/AccountingPage.jsx"));
