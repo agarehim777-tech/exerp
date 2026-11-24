@@ -1,4 +1,4 @@
-// Typed ports of the legacy widgets from components/ui.jsx. Markup and class names are identical
+// Typed ports of the former components/ui.jsx widgets. Markup and class names are identical
 // (metric-card, panel, panel-header, status, two-line, ...) so existing CSS and E2E selectors keep working.
 import { Filter } from 'lucide-react';
 import type { ComponentType, HTMLAttributes, ReactNode } from 'react';
