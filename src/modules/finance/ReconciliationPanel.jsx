@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, RefreshCw, Save } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { Button, Input, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { listReconciliations, saveReconciliation } from "../../services/enterpriseWorkflows.js";
 import { money } from "../../services/format.js";
 import { toLocalIsoDate } from "../../services/date.js";
-import { Button, Input } from "../../shared/ui/primitives.tsx";
 
 const today = () => toLocalIsoDate();
 export function ReconciliationPanel() {
