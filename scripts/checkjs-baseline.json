@@ -92,7 +92,7 @@
   "src/test/supabase-audit-backend.test.js": 4,
   "src/test/supabase-read-limiter.test.js": 3,
   "src/test/tenant-persistence.test.js": 11,
-  "src/test/tenant-ui-write-coalescing.test.jsx": 10,
+  "src/test/tenant-ui-write-coalescing.test.jsx": 8,
   "src/test/ui-navigation-table.test.jsx": 3,
   "src/test/warehouse-import-sql.test.js": 1,
   "src/test/warehouse-table-pagination.test.jsx": 3

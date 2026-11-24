@@ -1810,9 +1810,10 @@ async function auditSupportMessaging(browser) {
   const saveMessage = async (text, action) => {
     const response = await auditResponse(page, response => {
       const request = response.request();
-      if (request.method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/tenant_state_snapshots')) return false;
+      // The snapshot is saved through save_tenant_state_patch with only the changed keys.
+      if (request.method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/rpc/save_tenant_state_patch')) return false;
       const payload = request.postDataJSON();
-      return payload?.tenant_id === auditBackend.tenantId && payload.state?.supportTickets?.some(
+      return payload?._tenant_id === auditBackend.tenantId && payload._patch?.supportTickets?.some(
         ticket => ticket.comments?.some(comment => comment.text === text));
     }, action, { timeout: AUDIT_WAIT_TIMEOUT_MS });
     // The unchanged outer flow deadline bounds queueing and the actual server acknowledgement.

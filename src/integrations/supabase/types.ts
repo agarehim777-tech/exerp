@@ -3580,6 +3580,9 @@ isOneToOne: false
 "save_vendor_invoice":
 { Args: { "_header": Json,"_invoice_id": string,"_lines": Json,"_tenant_id": string }; Returns: Json
                            },
+"save_tenant_state_patch":
+{ Args: { "_patch": Json,"_schema_version"?: number,"_tenant_id": string }; Returns: Json
+                           },
 "scan_erp_integrity":
 { Args: { "_tenant_id": string }; Returns: Json
                            },
