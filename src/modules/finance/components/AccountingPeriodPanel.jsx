@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, LockKeyhole, RotateCcw, TriangleAlert } from "lucide-react";
-import { Panel, PanelHeader, StatusBadge } from "../../../components/ui.jsx";
+import { Button, Input, Panel, PanelHeader, StatusBadge, Table } from "../../../shared/ui/primitives.tsx";
 import { appPrompt } from "../../../shared/ui/dialogService.js";
 import { formatPaymentDate, toLocalIsoDate } from "../../../services/date.js";
 import {
@@ -8,7 +8,6 @@ import {
   lockAccountingPeriod,
   reopenAccountingPeriod,
 } from "../../../services/coreOperations.js";
-import { Button, Input, Table } from "../../../shared/ui/primitives.tsx";
 
 function dayRange(date) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;

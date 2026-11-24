@@ -1,5 +1,5 @@
 import { Download, FileText, X } from "lucide-react";
-import { StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { money } from "../../services/format.js";
 // Finance domain logic (close checklist, support context, aging, cash summary, expense status, ledger) lives in
 // financeDomain.ts; this file keeps the finance UI components and re-exports the moved logic for old imports.
