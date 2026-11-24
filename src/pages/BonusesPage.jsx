@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Award, CalendarIcon, Percent, Users, Wallet } from "lucide-react";
-import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { money, percent } from "../services/format.js";
 import BonusAssignmentsPanel from "./BonusAssignmentsPanel.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";

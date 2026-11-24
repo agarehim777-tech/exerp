@@ -1,5 +1,5 @@
 import { CalendarClock, CircleAlert, MessageSquare, Send, ShieldCheck } from "lucide-react";
-import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { useMemo, useState } from "react";
 import { buildSupportTicketContext } from "../shared/lib/appDomain.jsx";
 export default function SupportPage({

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileText, GitBranch, MessageSquare, Plus, Send, Trash2, Users, X } from "lucide-react";
-import { AvatarLine, EmptyState, MetricCard, Panel, StatusBadge } from "../components/ui.jsx";
+import { AvatarLine, EmptyState, MetricCard, Panel, StatusBadge } from "../shared/ui/primitives.tsx";
 import { normalizeMessageThread } from "../shared/lib/appHelpers.jsx";
 import { appConfirm } from "../shared/ui/dialogService.js";
 

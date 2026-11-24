@@ -1,11 +1,10 @@
 import { CalendarClock, Check, CircleAlert, Download, Filter, Search, Truck } from "lucide-react";
-import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { Button, EmptyState, Input, MetricCard, Panel, PanelHeader, Select, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { useCallback, useMemo, useState } from "react";
 import { money } from "../services/format.js";
 import { currentBusinessDate } from "../shared/lib/appDomain.jsx";
 import { OrderProductLines, enrichDeliveryOrder, exportDeliveryQueueCsv, getDeliveryDisplayStage, getDeliveryStockCheck, getDeliveryTotalQuantity, getOrderPaymentMethod, isDeliveryQueueOrder, summarizeOrderProducts } from "../modules/warehouse/deliveryDomain.jsx";
-import { Button, Input, Select } from "../shared/ui/primitives.tsx";
 import { foldSearchText } from "../shared/lib/searchText.ts";
 
 function getSalesDocumentNumber(order) {

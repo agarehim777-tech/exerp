@@ -1,5 +1,5 @@
 import { CalendarClock, CircleAlert, FileText, UserCog } from "lucide-react";
-import { DataTable, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { formatPaymentDate, parsePaymentDate } from "../services/date.js";
 import { money } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";

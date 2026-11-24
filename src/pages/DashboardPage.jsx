@@ -10,8 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { MetricCard, Panel, PanelHeader } from "../components/ui.jsx";
-import { Button } from "../shared/ui/primitives.tsx";
+import { Button, MetricCard, Panel, PanelHeader } from "../shared/ui/primitives.tsx";
 import { money, percent } from "../services/format.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCashbook } from "../shared/hooks/useCashbook.js";

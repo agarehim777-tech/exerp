@@ -2,7 +2,7 @@ import { localDbKey, localDbSchemaVersion } from "../services/persistence.js";
 import { defaultRoles } from "../services/permissions.js";
 import { useState } from "react";
 import { Bell, Check, CircleAlert, Database, Download, Plus, ShieldCheck, Upload, UserCog, X } from "lucide-react";
-import { DataTable, EmptyState, Field, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TextField as Field, TwoLine } from "../shared/ui/primitives.tsx";
 import {
   Toggle,
   getActiveRole,

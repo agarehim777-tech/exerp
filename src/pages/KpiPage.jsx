@@ -1,10 +1,22 @@
-import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge, TwoLine } from "../components/ui.jsx";
+import {
+  AvatarLine,
+  Button,
+  EmptyState,
+  Input,
+  MetricCard,
+  Panel,
+  PanelHeader,
+  ProgressRow,
+  Select,
+  SimpleTable as DataTable,
+  StatusBadge,
+  TwoLine,
+} from "../shared/ui/primitives.tsx";
 import { CalendarClock, ShieldCheck, SlidersHorizontal, TrendingUp, Wallet } from "lucide-react";
 import { formatNumber, money, percent } from "../services/format.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useState } from "react";
 import { buildKpiEmployeeScoreRows, getKpiPeriodKey } from "../shared/lib/appDomain.jsx";
-import { Button, Input, Select } from "../shared/ui/primitives";
 /** @param {Record<string, any>} props Page props come from App state (untyped rows). */
 export default function KpiPage({
   employees,
