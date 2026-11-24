@@ -101,16 +101,16 @@ import {
 } from "./remote-api.js";
 import {
   AvatarLine,
-  DataTable,
   EmptyState,
-  Field,
   MetricCard,
   Panel,
   PanelHeader,
   ProgressRow,
+  SimpleTable as DataTable,
   StatusBadge,
+  TextField as Field,
   TwoLine,
-} from "./components/ui.jsx";
+} from "./shared/ui/primitives.tsx";
 import { money, normalize } from "./services/format.js";
 import { useTenantRequestScope } from './shared/hooks/useTenantRequestScope.js';
 import { createIdempotencyKey } from "./services/coreOperations.js";

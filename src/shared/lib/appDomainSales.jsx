@@ -1,5 +1,5 @@
 import { CreditCard, FileText, Package, Users, Wallet, X } from "lucide-react";
-import { DataTable, EmptyState, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { EmptyState, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { useMemo } from "react";
 import { money } from "../../services/format.js";
 import { getCreditDisplayPlan, getCreditInitials } from "./credit.js";
