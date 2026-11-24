@@ -1,16 +1,19 @@
 // HR platforma bölmələri: əməkdaş 360 profili, davamiyyət, məzuniyyət, payroll və recruitment.
 // HR məntiqi shared/lib/hrDomain.ts-dədir; appDomainHr.jsx bu komponentləri köhnə idxallar üçün yenidən ixrac edir.
 import { CalendarClock, Check, FileText, LayoutDashboard, Pencil, Plus, Trash2, Users, Wallet, type LucideIcon } from "lucide-react";
-import { useState, type ComponentType } from "react";
-import { AvatarLine, DataTable as LegacyDataTable, EmptyState, ProgressRow as LegacyProgressRow, StatusBadge, TwoLine } from "../../../components/ui.jsx";
+import { useState } from "react";
+import {
+  AvatarLine,
+  EmptyState,
+  ProgressRow,
+  SimpleTable as DataTable,
+  StatusBadge,
+  TwoLine,
+} from "../../../shared/ui/primitives.tsx";
 import { money, percent } from "../../../services/format.js";
 import { getHrDocumentRows } from "../../../shared/lib/hrDomain.ts";
 
 type Row = Record<string, any>;
-
-// ui.jsx is untyped JS, so TypeScript would treat its optional props (onRowClick, caption) as required.
-const DataTable = LegacyDataTable as ComponentType<any>;
-const ProgressRow = LegacyProgressRow as ComponentType<any>;
 
 export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, onDelete, onUpdateDocuments }: {
   records: Row[];

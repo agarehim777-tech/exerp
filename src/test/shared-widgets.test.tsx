@@ -9,9 +9,10 @@ import { MetricCard, PanelHeader, ProgressRow, SimpleTable, StatusBadge, statusC
 afterEach(cleanup);
 
 // UI phase 2: folders listed here have moved to shared/ui and must not import components/ui.jsx again.
-const MIGRATED = ["src/modules/warehouse"];
+const MIGRATED = ["src/modules/warehouse", "src/modules/hr", "src/pages/HrPage.jsx"];
 
 function sourceFiles(dir: string): string[] {
+  if (!statSync(dir).isDirectory()) return [dir];
   return readdirSync(dir).flatMap(name => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return sourceFiles(path);

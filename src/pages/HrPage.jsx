@@ -1,12 +1,24 @@
 import HrOperationsPanel from "../modules/hr/HrOperationsPanel.jsx";
-import { AvatarLine, DataTable, EmptyState, MetricCard, Panel, PanelHeader, ProgressRow, StatusBadge } from "../components/ui.jsx";
+import {
+  AvatarLine,
+  Button,
+  EmptyState,
+  Input,
+  MetricCard,
+  Panel,
+  PanelHeader,
+  ProgressRow,
+  Select,
+  SimpleTable as DataTable,
+  StatusBadge,
+  Tabs,
+} from "../shared/ui/primitives.tsx";
 import { Building2, Pencil, Plus, Search, Trash2, TrendingUp, UserCog, Users, Wallet } from "lucide-react";
 import { money, percent } from "../services/format.js";
 import { foldSearchText } from "../shared/lib/searchText.ts";
 import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
-import { Button, Input, Select, Tabs } from '../shared/ui/primitives.jsx';
 import { getEmployeeKey } from "../shared/lib/appDomain.jsx";
 import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({

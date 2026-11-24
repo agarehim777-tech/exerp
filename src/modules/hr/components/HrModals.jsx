@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarClock, Check, Plus, Trash2, X } from "lucide-react";
-import { AvatarLine } from "../../../components/ui.jsx";
+import { AvatarLine, Button, Input, Select } from "../../../shared/ui/primitives.tsx";
 import {
   currentBusinessDate,
   getDepartmentParentName,
@@ -9,7 +9,6 @@ import {
   getEmployeeManager,
   hrLevelOptions,
 } from "../../../shared/lib/appDomain.jsx";
-import { Button, Input, Select } from "../../../shared/ui/primitives.tsx";
 
 export function HrEmployeeModal({ employee = null, employees = [], departments: departmentRecords = [], onClose, onSubmit }) {
   const existingManager = employee ? getEmployeeManager(employee, employees) : null;

@@ -9,8 +9,6 @@ import { type WarehouseStock } from "../../../shared/lib/warehouseDomain.ts";
 
 type Row = Record<string, any>;
 
-// ui.jsx is untyped JS, so TypeScript would treat its optional props (DataTable onRowClick, PanelHeader icon) as required.
-
 export function BarcodeBadge({ barcode, qrPayload }: { barcode: string | number; qrPayload?: string }) {
   const widths = String(barcode)
     .slice(0, 12)

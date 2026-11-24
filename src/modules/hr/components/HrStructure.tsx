@@ -2,7 +2,7 @@
 // HR məntiqi shared/lib/hrDomain.ts-dədir; appDomainHr.jsx bu komponentləri köhnə idxallar üçün yenidən ixrac edir.
 import { Building2, ChevronRight, Users } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { EmptyState, StatusBadge, TwoLine } from "../../../components/ui.jsx";
+import { EmptyState, StatusBadge, TwoLine } from "../../../shared/ui/primitives.tsx";
 import { getEmployeeKey, buildHrDepartmentTree, getHrDepartmentIds, getHrDepartmentScope, buildHrReportingForest, getHrDepartmentLead, getHrDraft, getDepartmentParentName, hrLevelOptions } from "../../../shared/lib/hrDomain.ts";
 
 type Row = Record<string, any>;
