@@ -1,4 +1,3 @@
-import { Button, Select } from "../../shared/ui/primitives.tsx";
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
@@ -13,15 +12,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { reportTemplates } from "../../data.js";
-import {
-  DataTable,
-  EmptyState,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  StatusBadge,
-  TwoLine,
-} from "../../components/ui.jsx";
+import { Button, EmptyState, MetricCard, Panel, PanelHeader, Select, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { formatMonthShort, formatPaymentDate, parsePaymentDate } from "../../services/date.js";
 import { money, normalize, percent } from "../../services/format.js";
 import { useAuth } from "../../auth/AuthProvider.jsx";
