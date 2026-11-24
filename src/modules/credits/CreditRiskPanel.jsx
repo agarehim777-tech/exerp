@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FileText, RefreshCw, ShieldAlert } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
-import { DataTable, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { useCreditPortfolio } from "../../shared/hooks/useCreditPortfolio.js";
 import { money } from "../../services/format.js";
 import { toLocalIsoDate, formatDateTime } from "../../services/date.js";
