@@ -1,8 +1,8 @@
 // Anbar panelləri: barkod nişanı, təhvil sifarişləri, toggle, anbar nəzarəti, stok filtr toolbar-ı və transfer tövsiyələri.
 // Məntiq shared/lib/warehouseDomain.ts-dədir; appDomainWarehouse.jsx bunları yenidən ixrac edir.
 import { Check, SlidersHorizontal, Truck } from "lucide-react";
-import { type ComponentType, type ReactNode } from "react";
-import { DataTable as LegacyDataTable, Panel, PanelHeader as LegacyPanelHeader, StatusBadge, TwoLine } from "../../../components/ui.jsx";
+import { type ReactNode } from "react";
+import { Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../../shared/ui/primitives.tsx";
 import { money, percent } from "../../../services/format.js";
 import { getDeliveryStockCheck, getDeliveryTotalQuantity, OrderProductLines } from "../deliveryDomain.jsx";
 import { type WarehouseStock } from "../../../shared/lib/warehouseDomain.ts";
@@ -10,8 +10,6 @@ import { type WarehouseStock } from "../../../shared/lib/warehouseDomain.ts";
 type Row = Record<string, any>;
 
 // ui.jsx is untyped JS, so TypeScript would treat its optional props (DataTable onRowClick, PanelHeader icon) as required.
-const DataTable = LegacyDataTable as ComponentType<any>;
-const PanelHeader = LegacyPanelHeader as ComponentType<any>;
 
 export function BarcodeBadge({ barcode, qrPayload }: { barcode: string | number; qrPayload?: string }) {
   const widths = String(barcode)

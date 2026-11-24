@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
-import { DataTable } from "../../../components/ui.jsx";
+import { SimpleTable as DataTable } from "../../../shared/ui/primitives.tsx";
 import { money } from "../../../services/format.js";
 import { parseWarehouseImportCsv, downloadWarehouseImportTemplate } from "../warehouseImportCsv.ts";
 
