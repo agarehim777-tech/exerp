@@ -3,7 +3,7 @@
 // appDomainFinance.jsx re-exports these for old imports; change the credit detail UI here.
 import { useRef, useState, type ComponentType, type FormEvent } from "react";
 import { CalendarClock, X } from "lucide-react";
-import { ProgressRow as ProgressRowJs, StatusBadge as StatusBadgeJs } from "../../../components/ui.jsx";
+import { ProgressRow, StatusBadge } from "../../../shared/ui/primitives.tsx";
 import { CreditInitialPaymentsHistory as CreditInitialPaymentsHistoryJs } from "../CreditInitialPayments.jsx";
 import { money } from "../../../services/format.js";
 import { round2 } from "../../../shared/utils/invoiceMath.js";
@@ -22,9 +22,7 @@ type CreditDetailProps = {
   onOpenSalesOrder?: (orderId: string) => void;
 };
 
-// ui.jsx is untyped JavaScript, so TypeScript would treat its optional props as required.
-const ProgressRow = ProgressRowJs as ComponentType<any>;
-const StatusBadge = StatusBadgeJs as ComponentType<any>;
+// CreditInitialPaymentsHistory is untyped JavaScript, so TypeScript would treat its optional props as required.
 const CreditInitialPaymentsHistory = CreditInitialPaymentsHistoryJs as ComponentType<any>;
 
 export function CreditDetailModal({ item, sendCreditSms, onUpdatePaymentDate, onReceivePayment, onOpenSalesOrder, onClose }: CreditDetailProps & { onClose: () => void }) {

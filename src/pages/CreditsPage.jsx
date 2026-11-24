@@ -2,13 +2,12 @@ import ModuleLink from "../shared/ui/ModuleLink.jsx";
 import { csvCell } from "../shared/lib/csvCell.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, CircleAlert, CreditCard, Download, Eye, Play, RefreshCw, Search, Wallet } from "lucide-react";
-import { DataTable, MetricCard, Panel, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { Button, Input, MetricCard, Panel, Select, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { cashAmount as money } from "../services/format.js";
 import { usePageQuery } from "../shared/hooks/usePageQuery.jsx";
 import { pathForRecord } from "../config/routes.js";
 import { formatPaymentDate, parsePaymentDate, toLocalIsoDate } from "../services/date.js";
 import { baseCreditDate, currentBusinessYear, CreditDetailModal, getCreditDebtFormula, getCreditDisplayPlan, getCreditInitials, getCreditManagementStatus, getCreditPaidTotal, getCreditPaymentState, getCreditRowDate, getCreditSourceLabel, isCreditClosed, isCreditStarted, matchesCreditManagementFilter, matchesCreditSearch, matchesCreditSourceFilter, monthNamesAz } from "../shared/lib/appDomain.jsx";
-import { Button, Input, Select } from "../shared/ui/primitives.tsx";
 import { QuickCollectModal, StartCreditModal } from "../modules/credits/components/CreditActionModals.jsx";
 
 // The start-credit and quick-collect modals live in modules/credits/components/CreditActionModals.jsx.
