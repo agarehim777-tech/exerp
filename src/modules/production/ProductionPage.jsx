@@ -11,15 +11,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import {
-  DataTable,
-  EmptyState,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  StatusBadge,
-  TwoLine,
-} from "../../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { money, normalize, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 
