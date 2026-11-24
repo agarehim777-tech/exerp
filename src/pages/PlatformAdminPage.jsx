@@ -1,5 +1,5 @@
 import { Building2, CalendarClock, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
-import { DataTable, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { supabase } from "../integrations/supabase/client";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useCallback, useEffect, useState } from "react";

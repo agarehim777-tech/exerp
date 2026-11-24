@@ -1,5 +1,5 @@
 import { Bell, Check, CircleAlert, Send, ShieldCheck } from "lucide-react";
-import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { normalize } from "../services/format.js";
 export default function NotificationsPage({
   notifications,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, History, Plus, Save, Trash2 } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
-import { Panel, PanelHeader, StatusBadge } from "../components/ui.jsx";
+import { Panel, PanelHeader, StatusBadge } from "../shared/ui/primitives.tsx";
 import { useOrders } from "../shared/hooks/useOrders.js";
 import { useSalesBonusLedger } from "../shared/hooks/useSalesBonusLedger.js";
 import { toLocalIsoDate } from "../services/date.js";

@@ -1,5 +1,5 @@
 import { Building2, Check, CircleAlert, RefreshCw, TrendingUp, Wallet } from "lucide-react";
-import { DataTable, EmptyState, MetricCard, Panel, PanelHeader, StatusBadge, TwoLine } from "../components/ui.jsx";
+import { Button, EmptyState, MetricCard, Panel, PanelHeader, Select, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { cashAmount } from "../services/format.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useReceivableLedger } from "../shared/hooks/useFinancialSettlement.js";
@@ -7,7 +7,6 @@ import { receivableItemView } from "../services/financialSettlement.js";
 import { total } from "../shared/utils/aggregate.js";
 import { useEffect, useMemo, useState } from "react";
 import { buildReceivableAgingSummary } from "../shared/lib/appDomain.jsx";
-import { Button, Select } from "../shared/ui/primitives";
 import { formatDateTime } from "../services/date.js";
 export default function ReceivablesPage({ onOpenSalesOrder }) {
   const { activeMembership } = useAuth();
