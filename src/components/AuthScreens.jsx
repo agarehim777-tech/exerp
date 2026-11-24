@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Boxes, Check, ShieldCheck } from "lucide-react";
-import { StatusBadge, TwoLine } from "./ui.jsx";
+import { StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { navIcons } from "../config/navigation-icons.js";
 import { changeRemotePassword } from "../remote-api.js";
 

@@ -1,7 +1,7 @@
 import { lazy, useState } from "react";
 import { resolveModalKind } from "../../config/modal-registry.js";
 import { Download, FileText, Plus, X } from "lucide-react";
-import { TwoLine } from "../ui.jsx";
+import { TwoLine } from "../../shared/ui/primitives.tsx";
 import { money, normalize } from "../../services/format.js";
 import { getEmployeeKey, isPurchaseOrderOpen, getVendorKey } from "../../shared/lib/appDomain.jsx";
 import { WarehouseImportModal } from "../../modules/warehouse/components/WarehouseImportModal.jsx";

@@ -1,15 +1,13 @@
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Boxes } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as legacyUi from "../components/ui.jsx";
 import { MetricCard, PanelHeader, ProgressRow, SimpleTable, StatusBadge, statusClass } from "../shared/ui/primitives.tsx";
 
 afterEach(cleanup);
 
-// UI phase 2: folders listed here have moved to shared/ui and must not import components/ui.jsx again.
-const MIGRATED = ["src/modules/warehouse", "src/modules/hr", "src/pages/HrPage.jsx", "src/modules/finance", "src/shared/lib/appDomainFinance.jsx", "src/modules/credits", "src/pages/CreditsPage.jsx", "src/modules/procurement", "src/modules/production", "src/modules/projects", "src/modules/reports"];
+// UI phase 2 is complete: components/ui.jsx is gone and nothing in src may import it again.
 
 function sourceFiles(dir: string): string[] {
   if (!statSync(dir).isDirectory()) return [dir];
@@ -21,11 +19,6 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe("shared widgets", () => {
-  it("keeps the legacy entry point as a pure re-export", () => {
-    expect(legacyUi.StatusBadge).toBe(StatusBadge);
-    expect(legacyUi.DataTable).toBe(SimpleTable);
-  });
-
   it("maps Azerbaijani status words to the same tone classes", () => {
     expect(statusClass("Kritik")).toBe("danger");
     expect(statusClass("Ödənilib")).toBe("ok");
@@ -65,8 +58,11 @@ describe("shared widgets", () => {
     expect(container.querySelector("progress")?.getAttribute("value")).toBe("100");
   });
 
-  it.each(MIGRATED)("%s no longer imports components/ui.jsx", folder => {
-    const offenders = sourceFiles(folder).filter(file => /components\/ui(\.jsx)?["']/.test(readFileSync(file, "utf8")));
+  it("keeps the legacy components/ui.jsx removed", () => {
+    expect(existsSync("src/components/ui.jsx")).toBe(false);
+    // Matches "../components/ui.jsx" as well as the relative "./ui.jsx" / "../ui.jsx" forms used inside src/components.
+    const legacyImport = /from\s*["'](?:[^"']*\/components|(?:\.\.?\/)*\.\.?)\/ui(?:\.jsx)?["']/;
+    const offenders = sourceFiles("src").filter(file => legacyImport.test(readFileSync(file, "utf8")));
     expect(offenders).toEqual([]);
   });
 });
