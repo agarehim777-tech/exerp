@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { Boxes, Pencil, Plus, Save, Trash2, X } from "lucide-react";
-import { DataTable, EmptyState, Panel, PanelHeader, StatusBadge, TwoLine } from "../../components/ui.jsx";
+import { Button, EmptyState, Input, Panel, PanelHeader, Select, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useInventoryUnits } from "../../shared/hooks/useInventoryUnits.js";
 import { money } from "../../services/format.js";
 import ProductSearchSelect from "../../components/ProductSearchSelect.jsx";
 import { appConfirm } from "../../shared/ui/dialogService.js";
-import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 
 const emptyUnit = {
   warehouse_id: "", product_id: "", serial_no: "", imei: "", batch_no: "", expiry_date: "",

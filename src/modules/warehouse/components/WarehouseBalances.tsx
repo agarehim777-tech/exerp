@@ -2,7 +2,7 @@
 // və anbarlar üzrə paylanma. Məntiq shared/lib/warehouseDomain.ts-dədir; appDomainWarehouse.jsx bunları yenidən ixrac edir.
 import { ChevronLeft, ChevronRight, Download, FileText, Filter, Package, Plus, RefreshCw, Search, ShoppingCart, Upload, Warehouse } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { StatusBadge, TwoLine } from "../../../components/ui.jsx";
+import { StatusBadge, TwoLine } from "../../../shared/ui/primitives.tsx";
 import { money } from "../../../services/format.js";
 import { warehouseBalanceFilterDefaults, buildWarehouseBalanceRows, filterWarehouseBalanceRows, exportWarehouseBalanceCsv, type WarehouseStock } from "../../../shared/lib/warehouseDomain.ts";
 

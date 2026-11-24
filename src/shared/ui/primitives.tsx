@@ -58,3 +58,4 @@ export function TableActions({ children }: { children?: ReactNode }) { return <d
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return <div className="ui-table-wrap"><table className={join('ui-table', className)} {...props} /></div>;
 }
+export * from './widgets.tsx';
