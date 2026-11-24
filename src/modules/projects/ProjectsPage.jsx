@@ -1,13 +1,5 @@
 import { BarChart3, Download, SlidersHorizontal, TrendingUp, Wallet } from "lucide-react";
-import {
-  DataTable,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  ProgressRow,
-  StatusBadge,
-  TwoLine,
-} from "../../components/ui.jsx";
+import { MetricCard, Panel, PanelHeader, ProgressRow, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { money, percent } from "../../services/format.js";
 import { total } from "../../shared/utils/aggregate.js";
 import { buildProjectRoiSummary } from "../../shared/analytics/projects.js";
