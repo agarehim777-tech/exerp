@@ -1,12 +1,6 @@
 import { Check, FileText, SlidersHorizontal } from "lucide-react";
 import { contractTemplates } from "../../data.js";
-import {
-  DataTable,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  StatusBadge,
-} from "../../components/ui.jsx";
+import { MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge } from "../../shared/ui/primitives.tsx";
 import { money } from "../../services/format.js";
 
 export function ContractsPage({ contracts, onExport }) {
