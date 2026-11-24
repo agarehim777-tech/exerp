@@ -1,13 +1,5 @@
 import { Building2, Check, ChevronRight, ShieldCheck, Users } from "lucide-react";
-import {
-  DataTable,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  ProgressRow,
-  StatusBadge,
-  TwoLine,
-} from "../../components/ui.jsx";
+import { MetricCard, Panel, PanelHeader, ProgressRow, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { pageMeta } from "../../config/page-meta.js";
 import { percent } from "../../services/format.js";
 

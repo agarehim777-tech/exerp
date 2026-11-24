@@ -1,13 +1,5 @@
 import { Check, FileText, ShieldCheck, SlidersHorizontal } from "lucide-react";
-import {
-  DataTable,
-  EmptyState,
-  MetricCard,
-  Panel,
-  PanelHeader,
-  StatusBadge,
-  TwoLine,
-} from "../../components/ui.jsx";
+import { EmptyState, MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 
 export function HelpCenterPage({ articles, guides = [], onboardingRows = { steps: [] }, snapshot = null, onOpenModule }) {
   const categories = [...new Set(articles.map((article) => article.category))];
