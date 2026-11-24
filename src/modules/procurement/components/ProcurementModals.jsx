@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
-import { ProgressRow, TwoLine } from "../../../components/ui.jsx";
+import { ProgressRow, TwoLine } from "../../../shared/ui/primitives.tsx";
 import { formatDateInput } from "../../../services/date.js";
 import { money } from "../../../services/format.js";
 import { addDays } from "../../../shared/lib/credit.js";
