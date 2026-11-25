@@ -29,7 +29,6 @@ body { background: var(--bg); }
 .topbar {
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: saturate(1.1) blur(10px);
-  -webkit-backdrop-filter: saturate(1.1) blur(10px);
   border-bottom: 1px solid var(--line);
 }
 

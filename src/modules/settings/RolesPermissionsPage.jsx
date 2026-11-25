@@ -248,7 +248,7 @@ export default function RolesPermissionsPage({
 
 
   return (
-    <div className="u-display-grid u-gap-20px">
+    <div className="u-display-grid u-grid-template-columns-minmax_0_1fr u-gap-20px">
       <div className={"ui-card"}>
         <div className={"ui-toolbar"}>
           <div>
