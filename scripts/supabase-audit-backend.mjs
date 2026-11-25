@@ -125,7 +125,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
   const capabilities = await request('rest/v1/rpc/erp_runtime_capabilities', { method: 'POST', data: {}, token });
   if (Number(capabilities?.schema_version) < 3) throw new Error('ERP_SCHEMA_MIGRATION_REQUIRED');
   // HR and contract collections live in dedicated tables; rows come back in the app's collection shape.
-  const stateCollections = ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts'];
+  const stateCollections = ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts', 'supportTickets'];
   const readDedicatedCollections = async (names, name) => {
     const rows = [];
     for (const collection of names) {

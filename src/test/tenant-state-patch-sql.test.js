@@ -47,20 +47,20 @@ it('applies on the replayed repo schema', () => {
 it('lets a member save keys of modules they can edit and skips settings', async () => {
   const result = await patch(MEMBER, {
     conversations: [{ id: 'C1' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }],
-    supportTickets: [{ id: 'T1' }], settings: { company: 'x' },
+    kpiTargets: [{ id: 'K1' }], settings: { company: 'x' },
   });
   expect(result.saved.sort()).toEqual(['auditLog', 'conversations', 'projects']);
-  // The default member role edits messages and projects, but not the support or settings modules.
-  expect(result.denied.sort()).toEqual(['settings', 'supportTickets']);
+  // The default member role edits messages and projects, but not the kpi or settings modules.
+  expect(result.denied.sort()).toEqual(['kpiTargets', 'settings']);
   expect(await snapshot()).toEqual({ conversations: [{ id: 'C1' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }] });
 });
 
 it('merges keys so users working in different modules keep each other\'s changes', async () => {
-  await patch(ADMIN, { settings: { company: 'Snap MMC' }, supportTickets: [{ id: 'T1' }] });
+  await patch(ADMIN, { settings: { company: 'Snap MMC' }, kpiTargets: [{ id: 'K1' }] });
   await patch(MEMBER, { conversations: [{ id: 'C1' }, { id: 'C2' }] });
   expect(await snapshot()).toEqual({
     conversations: [{ id: 'C1' }, { id: 'C2' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }],
-    settings: { company: 'Snap MMC' }, supportTickets: [{ id: 'T1' }],
+    settings: { company: 'Snap MMC' }, kpiTargets: [{ id: 'K1' }],
   });
 });
 
@@ -73,5 +73,5 @@ it('refuses non-members, operational collections and a non-object patch', async 
 
 it('maps unknown keys to settings', async () => {
   const result = await patch(MEMBER, { somethingNew: 1 });
-  expect(result).toEqual({ saved: [], denied: ['somethingNew'] });
+  expect(result).toEqual({ saved: [], denied: ['somethingNew'], ignored: [] });
 });

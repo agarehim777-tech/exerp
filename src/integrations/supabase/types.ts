@@ -2695,6 +2695,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"support_tickets": {
+                  Row: {
+                    "linked_label": string | null,"linked_type": string | null,"metadata": NonNullable<Json>,"module": string | null,"opened_at": string | null,"owner": string | null,"priority": string | null,"record_key": string,"requester": string | null,"sla_hours": number | null,"sort_position": number,"status": string | null,"tenant_id": string,"thread_id": string | null,"title": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "linked_label"?: string | null,"linked_type"?: string | null,"metadata"?: NonNullable<Json>,"module"?: string | null,"opened_at"?: string | null,"owner"?: string | null,"priority"?: string | null,"record_key": string,"requester"?: string | null,"sla_hours"?: number | null,"sort_position"?: number,"status"?: string | null,"tenant_id": string,"thread_id"?: string | null,"title"?: string | null
+                  }
+                  Update: {
+                    "linked_label"?: string | null,"linked_type"?: string | null,"metadata"?: NonNullable<Json>,"module"?: string | null,"opened_at"?: string | null,"owner"?: string | null,"priority"?: string | null,"record_key"?: string,"requester"?: string | null,"sla_hours"?: number | null,"sort_position"?: number,"status"?: string | null,"tenant_id"?: string,"thread_id"?: string | null,"title"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "support_tickets_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"tenant_collection_records": {
                   Row: {
                     "collection": string,"created_at": string,"created_by": string | null,"data": NonNullable<Json>,"id": string,"position": number,"record_key": string,"tenant_id": string,"updated_at": string

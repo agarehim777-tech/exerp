@@ -45,6 +45,8 @@ it('creates every table and column the app adapter writes, with RLS and module p
       `SELECT relrowsecurity FROM pg_class WHERE oid = $1::regclass`, [`public.${definition.table}`],
     )).rows[0];
     expect(table.relrowsecurity, collection).toBe(true);
+    // support_tickets has per-command policies (support or messages); support-tickets-table-sql.test.js pins them.
+    if (collection === 'supportTickets') continue;
     const policies = (await db.query(
       `SELECT policyname, cmd FROM pg_policies WHERE schemaname = 'public' AND tablename = $1 ORDER BY policyname`,
       [definition.table],
