@@ -1810,11 +1810,11 @@ async function auditSupportMessaging(browser) {
   const saveMessage = async (text, action) => {
     const response = await auditResponse(page, response => {
       const request = response.request();
-      // The snapshot is saved through save_tenant_state_patch with only the changed keys.
-      if (request.method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/rpc/save_tenant_state_patch')) return false;
+      // Tickets are rows in support_tickets, saved by the collection sync (comments live in metadata).
+      if (request.method() !== 'POST' || !new URL(response.url()).pathname.endsWith('/rpc/apply_collection_changes')) return false;
       const payload = request.postDataJSON();
-      return payload?._tenant_id === auditBackend.tenantId && payload._patch?.supportTickets?.some(
-        ticket => ticket.comments?.some(comment => comment.text === text));
+      return payload?._tenant === auditBackend.tenantId && payload._changes?.some(change => change.table === 'support_tickets'
+        && change.row?.metadata?.comments?.some(comment => comment.text === text));
     }, action, { timeout: AUDIT_WAIT_TIMEOUT_MS });
     // The unchanged outer flow deadline bounds queueing and the actual server acknowledgement.
     assert(response.ok(), 'Linked support message save was rejected: ' + response.status());
@@ -1826,7 +1826,9 @@ async function auditSupportMessaging(browser) {
     await page.locator('[data-testid="support-task-panel"]').waitFor();
     await page.locator('[data-testid="support-comment-input"]').fill(commentText);
     await saveMessage(commentText, () => page.locator('[data-testid="support-comment-submit"]').click());
-    let state = await waitForState(s => s.supportTickets?.some(t => t.comments?.some(c => c.text === commentText)),
+    // The ticket row (support_tickets) and its message thread (snapshot) are saved by separate writers.
+    const commentThread = s => s.conversations?.some(item => item.messages?.some(message => message.text === commentText));
+    let state = await waitForState(s => s.supportTickets?.some(t => t.comments?.some(c => c.text === commentText)) && commentThread(s),
       'Support comment was not persisted');
     let ticket = state.supportTickets?.find(t => t.comments?.some(c => c.text === commentText));
     assert(ticket?.id, "Support action did not create a task");
@@ -1842,8 +1844,10 @@ async function auditSupportMessaging(browser) {
     assert(chatText.includes(ticket.id), "Message thread does not show the linked support task");
     await page.getByPlaceholder('Mesaj yazın...', { exact: true }).fill(replyText);
     await saveMessage(replyText, () => page.getByRole('button', { name: 'Mesaj göndər', exact: true }).click());
-    state = await waitForState(s => s.supportTickets?.some(t => t.id === ticket.id && t.comments?.some(c => c.text === replyText)),
-      'Message reply was not persisted on its support task');
+    const replyThread = s => s.conversations?.some(item => item.ticketId === ticket.id && item.messages?.some(message => message.text === replyText));
+    const replyAudit = s => s.auditLog?.some(entry => entry.action === "Bağlı task-a mesaj yazıldı");
+    state = await waitForState(s => s.supportTickets?.some(t => t.id === ticket.id && t.comments?.some(c => c.text === replyText))
+      && replyThread(s) && replyAudit(s), 'Message reply was not persisted on its support task');
     ticket = state.supportTickets?.find((item) => item.id === ticket.id);
     conversation = state.conversations?.find((item) => item.ticketId === ticket.id);
     assert(ticket?.comments?.some((comment) => comment.text === replyText), "Message reply was not written back to the support task");

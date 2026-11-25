@@ -23,26 +23,26 @@ const patches = () => mocks.rpc.mock.calls.map(([name, args]) => {
 
 it('sends nothing on load and then only the keys the user changed', async () => {
   vi.useFakeTimers();
-  mocks.snapshot = { theme: 'light', supportTickets: [{ id: 'T1' }] };
+  mocks.snapshot = { theme: 'light', kpiTargets: [{ id: 'T1' }] };
   const options = { tenantId: 'tenant-a', userId: 'user-a', setState: vi.fn(), hydrateState, localKey: 'test-ui', schemaVersion: 3 };
   const { rerender } = renderHook(({ state }) => useTenantUiPersistence({ ...options, state }),
-    { initialProps: { state: { theme: 'light', supportTickets: [{ id: 'T1' }] } } });
+    { initialProps: { state: { theme: 'light', kpiTargets: [{ id: 'T1' }] } } });
   await act(async () => { await Promise.resolve(); });
   await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
   expect(mocks.rpc).not.toHaveBeenCalled();
 
   // Operational rows have their own tables: changing them never writes the snapshot.
-  rerender({ state: { theme: 'light', supportTickets: [{ id: 'T1' }], orders: [{ id: 'O1' }] } });
+  rerender({ state: { theme: 'light', kpiTargets: [{ id: 'T1' }], orders: [{ id: 'O1' }] } });
   await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
   expect(mocks.rpc).not.toHaveBeenCalled();
 
-  rerender({ state: { theme: 'light', supportTickets: [{ id: 'T1' }, { id: 'T2' }] } });
+  rerender({ state: { theme: 'light', kpiTargets: [{ id: 'T1' }, { id: 'T2' }] } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-  expect(patches()).toEqual([{ supportTickets: [{ id: 'T1' }, { id: 'T2' }] }]);
+  expect(patches()).toEqual([{ kpiTargets: [{ id: 'T1' }, { id: 'T2' }] }]);
   expect(mocks.rpc.mock.calls[0][1]).toMatchObject({ _tenant_id: 'tenant-a', _schema_version: 3 });
 
   // The saved value becomes the new baseline: the same state is not sent again.
-  rerender({ state: { theme: 'light', supportTickets: [{ id: 'T1' }, { id: 'T2' }] } });
+  rerender({ state: { theme: 'light', kpiTargets: [{ id: 'T1' }, { id: 'T2' }] } });
   await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
 });
@@ -90,20 +90,20 @@ it('does not drain queued edits after leaving a tenant', async () => {
 it('retries a failed patch and reports keys the server refused as a warning', async () => {
   vi.useFakeTimers();
   mocks.rpc.mockImplementationOnce(async () => ({ data: null, error: { message: 'network' } }));
-  mocks.rpc.mockImplementationOnce(async () => ({ data: { saved: ['supportTickets'], denied: ['settings'] }, error: null }));
+  mocks.rpc.mockImplementationOnce(async () => ({ data: { saved: ['kpiTargets'], denied: ['settings'] }, error: null }));
   const onError = vi.fn();
   const onWarning = vi.fn();
   const options = { tenantId: 'tenant-a', userId: 'user-a', setState: vi.fn(), hydrateState, localKey: 'test-ui', schemaVersion: 3, onError, onWarning };
   const { rerender } = renderHook(({ state }) => useTenantUiPersistence({ ...options, state }),
-    { initialProps: { state: { supportTickets: [], settings: { a: 1 } } } });
+    { initialProps: { state: { kpiTargets: [], settings: { a: 1 } } } });
   await act(async () => { await Promise.resolve(); });
-  rerender({ state: { supportTickets: [{ id: 'T1' }], settings: { a: 2 } } });
+  rerender({ state: { kpiTargets: [{ id: 'T1' }], settings: { a: 2 } } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(onError).toHaveBeenCalledTimes(1);
   // The next change re-sends the failed keys together with the new one.
-  rerender({ state: { supportTickets: [{ id: 'T1' }, { id: 'T2' }], settings: { a: 2 } } });
+  rerender({ state: { kpiTargets: [{ id: 'T1' }, { id: 'T2' }], settings: { a: 2 } } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-  expect(patches()[1]).toEqual({ supportTickets: [{ id: 'T1' }, { id: 'T2' }], settings: { a: 2 } });
+  expect(patches()[1]).toEqual({ kpiTargets: [{ id: 'T1' }, { id: 'T2' }], settings: { a: 2 } });
   expect(onWarning).toHaveBeenCalledWith(expect.objectContaining({ message: 'tenant_state_denied: settings' }));
 });
 
