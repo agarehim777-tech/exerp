@@ -1,6 +1,10 @@
-.production-fields { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 12px; }
+.production-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
 .production-command, .production-register { padding: 16px 0; border-bottom: 1px solid var(--border-color, #dce4e4); }
 .production-fields label { display: grid; gap: 6px; min-width: 0; }
+/* Long product names in the selects must not widen the form past a phone screen: the page grid and the
+   field grids use minmax(0, 1fr), otherwise their implicit column grows to the widest <select>. */
+.production-ledger { grid-template-columns: minmax(0, 1fr); }
+.production-fields select, .production-fields input, .production-material select, .production-material input { width: 100%; min-width: 0; }
 .production-ledger select, .production-ledger input { height: 38px; width: 100%; min-width: 0; }
 .production-material { display: grid; grid-template-columns: minmax(0, 3fr) minmax(100px, 1fr) 38px; gap: 12px; margin-bottom: 8px; }
 .production-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
@@ -8,7 +12,7 @@
 .production-register .table-scroll { overflow-x: auto; }
 .production-register table { width: 100%; }
 .production-register td, .production-register th { padding: 10px; white-space: nowrap; text-align: left; }
-@media (max-width: 900px) { .production-fields { grid-template-columns: 1fr; } .production-material { grid-template-columns: minmax(0, 2fr) 90px 38px; gap: 8px; } }
+@media (max-width: 900px) { .production-fields { grid-template-columns: minmax(0, 1fr); } .production-material { grid-template-columns: minmax(0, 2fr) 90px 38px; gap: 8px; } }
 .production-register .production-reversed td { color: var(--muted, #70827b); }
 .production-register .production-reversed td:first-child { text-decoration: line-through; }
 .production-row-actions { display: flex; gap: 6px; justify-content: flex-end; }

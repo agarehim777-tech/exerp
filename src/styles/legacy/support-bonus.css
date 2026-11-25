@@ -251,10 +251,11 @@
   font-size: 12px;
 }
 
+/* The list column is ~330px wide: the tabs wrap so "Arxiv" is not hidden behind a sideways scroll. */
 .message-filter-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding-bottom: 2px;
 }
 

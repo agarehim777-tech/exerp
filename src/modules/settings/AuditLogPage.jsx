@@ -3,6 +3,7 @@ import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { useAuditLogs } from "../../shared/hooks/useAuditLogs.js";
 import { badgeClass } from "../../shared/ui/tokens.js";
+import { Table } from "../../shared/ui/primitives.tsx";
 import { formatDateTime } from "../../services/date.js";
 
 const TABLE_LABEL = {
@@ -85,7 +86,7 @@ export default function AuditLogPage() {
           <button className="ui-tok-secondary-btn" onClick={refresh}>Yenilə</button>
         </div>
 
-        <table className="ui-tok-table">
+        <Table className="ui-tok-table">
           <thead>
             <tr>
               <th className="ui-tok-th">Vaxt</th><th className="ui-tok-th">Cədvəl</th><th className="ui-tok-th">Əməliyyat</th>
@@ -100,7 +101,7 @@ export default function AuditLogPage() {
               <tr><td className="ui-tok-td" colSpan={5}>Audit qeydi yoxdur.</td></tr>
             )}
           </tbody>
-        </table>
+        </Table>
       </div>
     </div>
   );

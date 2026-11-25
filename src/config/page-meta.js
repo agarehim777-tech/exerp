@@ -80,6 +80,18 @@ export const pageMeta = {
     subtitle: "Satış sifarişlərindən avtomatik faktura, ƏDV bölgüsü və e-qaimə hazırlığı.",
     action: "Faktura yarat",
   },
+  insights: {
+    title: "AI Tövsiyələr",
+    subtitle: "Satış, anbar və maliyyə datasından çıxarılan tövsiyələr və risk siqnalları.",
+  },
+  cashbook: {
+    title: "Kassa & Xərclər",
+    subtitle: "Kassa və bank hesabları, mədaxil-məxaric əməliyyatları və xərclərin uçotu.",
+  },
+  "ar-invoices": {
+    title: "Satış fakturaları",
+    subtitle: "Sifarişlər üzrə fakturalaşdırma, ödəniş statusu və debitor borcları.",
+  },
   accounting: {
     title: "Mühasibat",
     subtitle: "Hesablar planı, jurnal yazılışları, balans, P&L və cash flow görünüşü.",

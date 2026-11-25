@@ -152,7 +152,7 @@ export default function Login() {
         /* Top bar */
         .xp-top { position: relative; z-index: 2; width:min(100% - 2rem,76rem); min-height:4.75rem; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding: .8rem 0; border-bottom:1px solid rgba(230,242,236,.08); }
         .xp-brand { display:flex; align-items:center; gap:.7rem; }
-        .xp-mark { width:2.25rem; height:2.25rem; border-radius:.45rem; background:#c9a84c; color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Sora',sans-serif; font-size:.95rem; line-height:1; box-shadow:0 10px 26px -12px rgba(201,168,76,.65);}
+        .xp-brand .xp-mark { width:2.25rem; height:2.25rem; border-radius:.45rem; background:#c9a84c; color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Sora',sans-serif; font-size:.95rem; line-height:1; box-shadow:0 10px 26px -12px rgba(201,168,76,.65);}
         .xp-brand b { font-family:'Sora',sans-serif; font-size: var(--fs-base); color:#fff; font-weight:700; line-height:1.2; }
         .xp-brand span { color:#c9a84c; font-weight:600; margin-left:.15rem; font-size: var(--fs-base); }
         .xp-links { display:flex; gap:.25rem; }
