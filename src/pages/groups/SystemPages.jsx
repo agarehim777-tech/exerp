@@ -6,7 +6,7 @@ import { remoteApiEnabled } from "../../remote-api.js";
 import { defaultRoles, permissionCatalog } from "../../services/permissions.js";
 import { filterRows, modulePermissionCatalog } from "../../shared/lib/appDomain.jsx";
 
-export function SystemPages({ active, activeRoleInfo, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole, choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage, exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead, messageContextOptions, messageParticipantOptions, notificationAutomationRows, notificationFilter, notificationProviderRows, notify, onboardingRows, openLinkedCredit, openLinkedCustomer, openLinkedSalesOrder, openSupportConversation, openSupportTicket, productionHardeningReport, query, rotateApiSecret, runApiAction, runGoLiveCheck, runIntegrityCheck, runNotificationDispatchAction, runProductionHardeningCheck, saveSettings, selectMessageThread, selectedSupportTicketId, sendMessage, setDraftMessage, setNotificationFilter, setSelectedSupportTicketId, state, toggleSetting, toggleUserModuleAccess, updateCompany, updateSupportTicketStatus, updateUserProfile, updateUserRole, updateUserStatus }) {
+export function SystemPages({ active, activeRoleInfo, collectionsLoading, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole, choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage, exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead, messageContextOptions, messageParticipantOptions, notificationAutomationRows, notificationFilter, notificationProviderRows, notify, onboardingRows, openLinkedCredit, openLinkedCustomer, openLinkedSalesOrder, openSupportConversation, openSupportTicket, productionHardeningReport, query, rotateApiSecret, runApiAction, runGoLiveCheck, runIntegrityCheck, runNotificationDispatchAction, runProductionHardeningCheck, saveSettings, selectMessageThread, selectedSupportTicketId, sendMessage, setDraftMessage, setNotificationFilter, setSelectedSupportTicketId, state, toggleSetting, toggleUserModuleAccess, updateCompany, updateSupportTicketStatus, updateUserProfile, updateUserRole, updateUserStatus }) {
   return (
     <>
           {active === "platform" && <PlatformAdminPage />}
@@ -35,6 +35,7 @@ export function SystemPages({ active, activeRoleInfo, addSupportTicketComment, a
           {active === "support" && (
             <SupportPage
               tickets={filtered.supportTickets}
+              loading={collectionsLoading}
               orders={state.orders}
               credits={creditRecords}
               customers={state.customers}
@@ -68,6 +69,7 @@ export function SystemPages({ active, activeRoleInfo, addSupportTicketComment, a
           {active === "messages" && (
             <MessagesPageV2
               conversations={filtered.conversations}
+              loading={collectionsLoading}
               conversationId={conversationId}
               setConversationId={selectMessageThread}
               draftMessage={draftMessage}

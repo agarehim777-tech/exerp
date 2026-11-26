@@ -40,7 +40,7 @@ import { createModuleActions } from "./shared/state/moduleActions.js";
 import { createCreditActions } from "./shared/state/creditActions.js";
 import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
-const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets"];
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -600,6 +600,7 @@ function App() {
 
           <Suspense fallback={<div className="page-suspense-loader u-padding-32px u-opacity-0_6" >Yüklənir…</div>}>
           <SystemPages {...{
+            collectionsLoading: !collectionSync.ready,
             active, activeRoleInfo, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole,
             choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage,
             exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead,

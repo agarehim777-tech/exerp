@@ -87,9 +87,9 @@ it('saves ticket rows through apply_collection_changes', async () => {
 
 it('ignores supportTickets in snapshot patches from old tabs and saves the rest', async () => {
   const { rows: [{ r }] } = await db.query(`SELECT public.save_tenant_state_patch($1, $2) AS r`,
-    [TENANT, JSON.stringify({ supportTickets: [{ id: 'OLD' }], conversations: [{ id: 'C1' }] })]);
-  expect(r).toEqual({ saved: ['conversations'], denied: [], ignored: ['supportTickets'] });
+    [TENANT, JSON.stringify({ supportTickets: [{ id: 'OLD' }], notifications: [{ id: 'C1' }] })]);
+  expect(r).toEqual({ saved: ['notifications'], denied: [], ignored: ['supportTickets'] });
   const { rows: [{ state }] } = await db.query(`SELECT state FROM public.tenant_state_snapshots WHERE tenant_id = $1`, [TENANT]);
-  expect(state.conversations).toEqual([{ id: 'C1' }]);
+  expect(state.notifications).toEqual([{ id: 'C1' }]);
   expect(state.supportTickets).toEqual([ticket, { title: 'Açarsız' }]);
 });

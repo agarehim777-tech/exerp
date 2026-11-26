@@ -100,23 +100,28 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
     const beforeRead = collectionRows(latest.current, names, tenantId);
     setStatus({ phase: "loading", error: null });
     try {
-      const rows: CollectionRow[] = [];
       // Bound each scan to one indexed collection; do not repeatedly count and
       // sort every collection while loading later pages of a large tenant.
-      for (const name of names) {
+      // Collections load in parallel (pages of one collection stay sequential): read one after another,
+      // ten tables kept Messages and Support at 0 for ~4.5 s after opening the app.
+      const readCollection = async (name: string) => {
+        const collected: CollectionRow[] = [];
         for (let offset = 0; ;) {
           const { data, error, count } = await tableFor(name).select("*", { count: "exact" })
             .eq("tenant_id", tenantId)
             .order("sort_position").order("record_key").range(offset, offset + 499);
           if (error) throw error;
-          if (!session.alive) return;
+          if (!session.alive) return collected;
           if (typeof count !== 'number' || !Number.isInteger(count)) throw new Error("Collection read requires an exact count");
           if (!data?.length && offset < count) throw new Error("Collection read ended before all records were loaded");
-          rows.push(...(data || []).map(row => fromDedicatedRow(row, name)));
+          collected.push(...(data || []).map(row => fromDedicatedRow(row, name)));
           offset += data?.length || 0;
           if (offset >= count) break;
         }
-      }
+        return collected;
+      };
+      const rows: CollectionRow[] = (await Promise.all(names.map(readCollection))).flat();
+      if (!session.alive) return;
       const next: Record<string, AppRecord[]> = Object.fromEntries(names.map(name => [name, []]));
       rows.forEach(row => { if (next[row.collection]) next[row.collection].push(rowToApp(row)); });
       session.baseline = collectionRows(next, names, tenantId);
