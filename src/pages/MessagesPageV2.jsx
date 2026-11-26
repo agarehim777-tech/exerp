@@ -23,6 +23,8 @@ function MessagesPageV2({
   onOpenCredit,
   onOpenSupportTicket,
   onOpenCustomer,
+  // Threads come from message_threads after the collection sync finishes; until then show loading, not "none".
+  loading = false,
 }) {
   const [filter, setFilter] = useState("active");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -240,7 +242,7 @@ function MessagesPageV2({
                 </div>
               </button>
             ))}
-            {visibleConversations.length === 0 && <EmptyState title="Bu filtr üzrə söhbət yoxdur" />}
+            {visibleConversations.length === 0 && <EmptyState title={loading ? "Söhbətlər yüklənir…" : "Bu filtr üzrə söhbət yoxdur"} />}
           </div>
         </Panel>
 
@@ -333,7 +335,7 @@ function MessagesPageV2({
               </div>
             </>
           ) : (
-            <EmptyState title="Mesaj tapılmadı" />
+            <EmptyState title={loading ? "Söhbətlər yüklənir…" : "Mesaj tapılmadı"} />
           )}
         </Panel>
       </section>

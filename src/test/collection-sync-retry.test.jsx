@@ -189,3 +189,19 @@ it('preserves edits during hydration without backfilling unchanged browser recor
   expect(mocks.save).toHaveBeenCalledTimes(1);
   expect(mocks.save.mock.calls[0][0].map(change => change.row.record_key)).toEqual(['new']);
 });
+
+it('starts every collection read at once instead of one table after another', async () => {
+  // Ten sequential reads kept Messages and Support at 0 for ~4.5 s after opening the app.
+  const names = ['employees', 'departments', 'conversations', 'supportTickets'];
+  const pending = [];
+  mocks.load.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [], departments: [], conversations: [], supportTickets: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections: names, state, setState });
+    return { state, sync };
+  });
+  await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(names.length));
+  expect(result.current.sync.ready).toBe(false);
+  await act(async () => { pending.forEach((resolve) => resolve({ data: [], error: null, count: 0 })); });
+  await waitFor(() => expect(result.current.sync.ready).toBe(true));
+});

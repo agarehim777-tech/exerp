@@ -600,6 +600,7 @@ function App() {
 
           <Suspense fallback={<div className="page-suspense-loader u-padding-32px u-opacity-0_6" >Yüklənir…</div>}>
           <SystemPages {...{
+            collectionsLoading: !collectionSync.ready,
             active, activeRoleInfo, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole,
             choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage,
             exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead,
