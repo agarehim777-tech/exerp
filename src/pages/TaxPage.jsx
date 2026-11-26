@@ -18,8 +18,10 @@ export default function TaxPage({ taxRows, payrollTaxRows, invoiceSummary, accou
       Number(row.incomeTax || 0) +
       Number(row.employeeSocial || 0) +
       Number(row.employeeUnemployment || 0) +
+      Number(row.employeeMedical || 0) +
       Number(row.employerSocial || 0) +
-      Number(row.employerUnemployment || 0),
+      Number(row.employerUnemployment || 0) +
+      Number(row.employerMedical || 0),
     0,
   );
   const employerCost = total(payrollTaxRows, "employerCost");
@@ -102,13 +104,13 @@ export default function TaxPage({ taxRows, payrollTaxRows, invoiceSummary, accou
       <Panel>
         <PanelHeader title="Payroll vergi hesabı" subtitle="Gross, gəlir vergisi, sosial ödəniş və net əmək haqqı" />
         <DataTable
-          columns={["Əməkdaş", "Şöbə", "Gross", "Gəlir vergisi", "İşçi DSMF/işsizlik", "Net", "İşəgötürən xərci"]}
+          columns={["Əməkdaş", "Şöbə", "Gross", "Gəlir vergisi", "İşçi DSMF/işsizlik/tibbi", "Net", "İşəgötürən xərci"]}
           rows={payrollTaxRows.map((row) => [
             <strong>{row.employee}</strong>,
             row.department,
             money(row.gross),
             money(row.incomeTax),
-            money(row.employeeSocial + row.employeeUnemployment),
+            money(row.employeeSocial + row.employeeUnemployment + (row.employeeMedical || 0)),
             <strong>{money(row.net)}</strong>,
             money(row.employerCost),
           ])}

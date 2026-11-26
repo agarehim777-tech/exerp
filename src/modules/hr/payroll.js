@@ -20,7 +20,7 @@ export function calcPayroll(input = {}) {
     incomeTax: tax.incomeTax,
     socialEmployee: tax.employeeSocial,
     unemploymentEmployee: tax.employeeUnemployment,
-    medicalEmployee: 0,
+    medicalEmployee: tax.employeeMedical,
     otherDeductions: round2(deduction),
     totalDeductions: round2(tax.totalDeductions + deduction),
     net: round2(Math.max(0, tax.net - deduction)),

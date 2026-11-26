@@ -291,8 +291,10 @@ function getTaxAmountByType(type: unknown, { invoices, payrollTaxRows, accountin
         Number(row.incomeTax || 0) +
         Number(row.employeeSocial || 0) +
         Number(row.employeeUnemployment || 0) +
+        Number(row.employeeMedical || 0) +
         Number(row.employerSocial || 0) +
-        Number(row.employerUnemployment || 0),
+        Number(row.employerUnemployment || 0) +
+        Number(row.employerMedical || 0),
       0,
     );
   }
