@@ -16,6 +16,8 @@ export default function SupportPage({
   onOpenSalesOrder,
   onOpenCredit,
   onOpenCustomer,
+  // Tickets come from support_tickets after the collection sync finishes; until then show loading, not "none".
+  loading = false,
 }) {
   const [commentDraft, setCommentDraft] = useState("");
   const enrichedTickets = useMemo(
@@ -48,6 +50,7 @@ export default function SupportPage({
         <Panel className="support-panel support-queue-panel" data-testid="support-task-panel">
           <PanelHeader title="Dəstək və tapşırıq növbəsi" subtitle="Sifariş, kredit və müştəriyə bağlı operativ tapşırıqlar" icon={MessageSquare} />
           <DataTable
+            emptyText={loading ? "Sorğular yüklənir…" : undefined}
             columns={["Sorğu", "Bağlantı", "Prioritet", "Comment", "Məsul", "SLA", "Status", "Aç"]}
             rows={enrichedTickets.map((ticket) => [
               <TwoLine title={ticket.title} subtitle={`${ticket.id} · ${ticket.createdAt}`} />,
@@ -143,7 +146,7 @@ export default function SupportPage({
               </div>
             </>
           ) : (
-            <EmptyState title="Dəstək tapşırığı yoxdur" />
+            <EmptyState title={loading ? "Sorğular yüklənir…" : "Dəstək tapşırığı yoxdur"} />
           )}
         </Panel>
       </section>

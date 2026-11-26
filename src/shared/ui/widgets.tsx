@@ -61,14 +61,14 @@ const isColumnConfig = (column: SimpleColumn): column is Omit<TableColumn, 'key'
   typeof column === 'object' && column !== null && !Array.isArray(column) && 'label' in column && !('$$typeof' in column);
 
 /** Positional table: each row is an array of cells, columns are labels (numeric labels align right). */
-export function SimpleTable({ columns, rows, onRowClick, ...props }: SimpleTableProps) {
+export function SimpleTable({ columns, rows, onRowClick, emptyText = "Axtarışa uyğun məlumat tapılmadı", ...props }: SimpleTableProps) {
   const normalized = columns.map((column, index): TableColumn => {
     if (isColumnConfig(column)) return { ...column, key: index };
     const label = column as ReactNode;
     return { key: index, label, align: numericLabels.test(String(label)) ? 'right' : 'left' };
   });
   return <SharedDataTable<ReactNode[]> {...props} columns={normalized} rows={rows}
-    emptyText="Axtarışa uyğun məlumat tapılmadı"
+    emptyText={emptyText}
     renderCell={(row, column) => row[Number(column.key)]}
     onRowClick={onRowClick ? (_row, index) => onRowClick(index) : undefined} />;
 }
