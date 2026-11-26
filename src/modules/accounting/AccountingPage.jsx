@@ -1,3 +1,5 @@
+import { journalTotals } from "../../shared/lib/journalTotals.ts";
+import { useTenantRequestScope } from "../../shared/hooks/useTenantRequestScope";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
@@ -87,11 +89,7 @@ function JournalPanel({ isAdmin }) {
   const [pendingAction, setPendingAction] = useState(null);
   const [reason, setReason] = useState("");
 
-  const totals = useMemo(() => {
-    const d = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
-    const c = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
-    return { d, c, balanced: d === c && d > 0 };
-  }, [lines]);
+  const totals = useMemo(() => journalTotals(lines), [lines]);
 
   const addLine = () => setLines([...lines, { account_id: "", debit: 0, credit: 0, memo: "" }]);
   const upd = (i, field, val) => setLines(lines.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
@@ -154,19 +152,22 @@ function JournalPanel({ isAdmin }) {
   );
 }
 
-function TrialBalancePanel({ tenantId }) {
+export function TrialBalancePanel({ tenantId }) {
   const [from, setFrom] = useState(toLocalIsoDate(new Date(new Date().getFullYear(), 0, 1)));
   const [to, setTo] = useState(toLocalIsoDate());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { begin } = useTenantRequestScope(JSON.stringify([tenantId, from, to]));
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    const isCurrent = begin();
+    setRows([]);
+    if (!tenantId) { setLoading(false); return; }
     setLoading(true);
-    try { setRows(await fetchTrialBalance(tenantId, from, to)); }
-    catch (e) { appAlert(e.message); }
-    setLoading(false);
-  }, [tenantId, from, to]);
+    try { const next = await fetchTrialBalance(tenantId, from, to); if (isCurrent()) setRows(next); }
+    catch (e) { if (isCurrent()) appAlert(e.message); }
+    finally { if (isCurrent()) setLoading(false); }
+  }, [tenantId, from, to, begin]);
   useEffect(() => { load(); }, [load]);
 
   const totals = rows.reduce((a, r) => ({ d: a.d + Number(r.debit), c: a.c + Number(r.credit) }), { d: 0, c: 0 });

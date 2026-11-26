@@ -19,6 +19,7 @@ vi.mock('../integrations/supabase/client', () => {
         db.queries.push(query);
         const builder = {
           select: () => builder, order: () => builder, limit: () => builder, like: () => builder,
+          range: () => builder, gte: () => builder, lte: () => builder,
           eq: (column, value) => { query.filters.push([column, value]); return builder; },
           insert: (row) => { db.inserts.push([table, row]); return builder; },
           single: async () => ({ data: { id: 'new' }, error: null }),

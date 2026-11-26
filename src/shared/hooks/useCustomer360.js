@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { buildCustomerScore, buildCustomerTimeline } from '../../modules/crm/customer360Analytics.js';
+import { readAllRows, readRowsByIds } from '../../services/readAllRows.js';
+import { useTenantRequestScope } from './useTenantRequestScope';
 
 const withCustomerMeta = (customer) => {
   if (!customer || !String(customer.notes || '').startsWith('__crm_meta__:')) return customer;
@@ -24,6 +26,7 @@ const isActiveCredit = (credit, activeOrderIds) => {
 };
 
 export function useCustomer360(customerId) {
+  const { begin } = useTenantRequestScope(customerId);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -31,14 +34,16 @@ export function useCustomer360(customerId) {
   const fetchFallback = useCallback(async () => {
     const [customerResult, dealsResult, activitiesResult, tasksResult, ordersResult, tagsResult] = await Promise.all([
       supabase.from('customers').select('*').eq('id', customerId).single(),
-      supabase.from('crm_deals').select('*').eq('customer_id', customerId),
+      readAllRows(() => supabase.from('crm_deals').select('*').eq('customer_id', customerId).order('id')),
       supabase.from('crm_activities').select('*').eq('customer_id', customerId).order('occurred_at', { ascending: false }).limit(20),
-      supabase.from('crm_tasks').select('*').eq('customer_id', customerId).eq('done', false),
-      supabase.from('orders').select('id,order_no,order_date,status,total,paid_amount,payment_status,currency,created_by').eq('customer_id', customerId).order('order_date', { ascending: false }),
-      supabase.from('crm_customer_tags').select('tag:crm_tags(id,name,color)').eq('customer_id', customerId),
+      readAllRows(() => supabase.from('crm_tasks').select('*').eq('customer_id', customerId).eq('done', false).order('id')),
+      readAllRows(() => supabase.from('orders').select('id,order_no,order_date,status,total,paid_amount,payment_status,currency,created_by').eq('customer_id', customerId).order('order_date', { ascending: false }).order('id')),
+      readAllRows(() => supabase.from('crm_customer_tags').select('tag:crm_tags(id,name,color)').eq('customer_id', customerId).order('tag_id')),
     ]);
 
-    if (customerResult.error) throw customerResult.error;
+    for (const result of [customerResult, dealsResult, activitiesResult, tasksResult, ordersResult, tagsResult]) {
+      if (result.error) throw result.error;
+    }
     const deals = dealsResult.data || [];
     const orders = (ordersResult.data || []).filter(isActiveOrder);
     return {
@@ -57,18 +62,20 @@ export function useCustomer360(customerId) {
   }, [customerId]);
 
   const fetchIt = useCallback(async () => {
-    if (!customerId) { setData(null); setError(null); return; }
+    const isCurrent = begin();
+    if (!customerId) { setData(null); setError(null); setLoading(false); return; }
+    setData(null);
     setLoading(true);
     setError(null);
     try {
       const { data: json, error: rpcError } = await supabase.rpc('customer_360', { _customer: customerId });
       let result = rpcError || !json?.customer ? await fetchFallback() : json;
       {
-        const { data: orders, error: ordersError } = await supabase
+        const { data: orders, error: ordersError } = await readAllRows(() => supabase
           .from('orders')
           .select('id,order_no,order_date,status,total,paid_amount,payment_status,currency,created_by')
           .eq('customer_id', customerId)
-          .order('order_date', { ascending: false });
+          .order('order_date', { ascending: false }).order('id'));
         if (ordersError) throw ordersError;
         const detailedOrders = (orders || []).filter(isActiveOrder);
         result = {
@@ -81,14 +88,18 @@ export function useCustomer360(customerId) {
         };
       }
       const [creditResult, documentResult, serviceResult] = await Promise.all([
-        supabase.from('credit_contracts').select('*, installments:credit_installments(*), payments:credit_payments(*)').eq('customer_id', customerId).order('created_at', { ascending: false }),
-        supabase.from('customer_documents').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }),
-        supabase.from('customer_service_cases').select('*, product:products(id,name,sku)').eq('customer_id', customerId).order('created_at', { ascending: false }),
+        readAllRows(() => supabase.from('credit_contracts').select('*, installments:credit_installments(*), payments:credit_payments(*)').eq('customer_id', customerId).order('created_at', { ascending: false }).order('id')),
+        readAllRows(() => supabase.from('customer_documents').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }).order('id')),
+        readAllRows(() => supabase.from('customer_service_cases').select('*, product:products(id,name,sku)').eq('customer_id', customerId).order('created_at', { ascending: false }).order('id')),
       ]);
+      for (const result of [creditResult, documentResult, serviceResult]) {
+        if (result.error) throw result.error;
+      }
       const orderIds = (result.orders || []).map(order => order.id);
       const itemResult = orderIds.length
-        ? await supabase.from('order_items').select('*, product:products(id,name,sku)').in('order_id', orderIds)
+        ? await readRowsByIds(orderIds, ids => supabase.from('order_items').select('*, product:products(id,name,sku)').in('order_id', ids).order('id'))
         : { data: [], error: null };
+      if (itemResult.error) throw itemResult.error;
       const itemsByOrder = new Map();
       (itemResult.data || []).forEach(item => itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) || []), item]));
       const orders = (result.orders || []).map(order => ({ ...order, items: itemsByOrder.get(order.id) || [] }));
@@ -101,14 +112,15 @@ export function useCustomer360(customerId) {
       const serviceCases = serviceResult.error ? [] : (serviceResult.data || []);
       const analytics = buildCustomerScore({ orders, credits, payments });
       const timeline = buildCustomerTimeline({ orders, credits, payments, activities: result.activities || [], serviceCases, documents });
-      setData({ ...result, customer: withCustomerMeta(result.customer), orders, credits, payments, documents, serviceCases, analytics, timeline });
+      if (isCurrent()) setData({ ...result, customer: withCustomerMeta(result.customer), orders, credits, payments, documents, serviceCases, analytics, timeline });
     } catch (nextError) {
+      if (!isCurrent()) return;
       setData(null);
       setError(nextError);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [customerId, fetchFallback]);
+  }, [customerId, fetchFallback, begin]);
 
   useEffect(() => { fetchIt(); }, [fetchIt]);
 
