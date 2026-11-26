@@ -51,23 +51,23 @@ it('keeps one patch in flight and merges later edits into the next one', async (
   vi.useFakeTimers();
   let release;
   mocks.rpc.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-  mocks.snapshot = { conversations: [{ text: 'original' }], theme: 'light' };
+  mocks.snapshot = { notifications: [{ text: 'original' }], theme: 'light' };
   const options = { tenantId: 'tenant-a', userId: 'user-a', setState: vi.fn(), hydrateState, localKey: 'test-ui', schemaVersion: 3 };
   const { rerender } = renderHook(({ state }) => useTenantUiPersistence({ ...options, state }),
-    { initialProps: { state: { conversations: [{ text: 'original' }], theme: 'light' } } });
+    { initialProps: { state: { notifications: [{ text: 'original' }], theme: 'light' } } });
   await act(async () => { await Promise.resolve(); });
-  rerender({ state: { conversations: [{ text: 'second' }], theme: 'light' } });
+  rerender({ state: { notifications: [{ text: 'second' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  rerender({ state: { conversations: [{ text: 'latest reply' }], theme: 'light' } });
+  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-  rerender({ state: { conversations: [{ text: 'latest reply' }], theme: 'dark' } });
+  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'dark' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  await act(async () => { release({ data: { saved: ['conversations'], denied: [] }, error: null }); await Promise.resolve(); });
+  await act(async () => { release({ data: { saved: ['notifications'], denied: [] }, error: null }); await Promise.resolve(); });
   expect(patches()).toEqual([
-    { conversations: [{ text: 'second' }] },
-    { conversations: [{ text: 'latest reply' }], theme: 'dark' },
+    { notifications: [{ text: 'second' }] },
+    { notifications: [{ text: 'latest reply' }], theme: 'dark' },
   ]);
 });
 

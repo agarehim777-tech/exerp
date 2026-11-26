@@ -82,10 +82,10 @@ it('narrows fixture reads and paginates composite stock identities with a stable
   await expect(backend.readState({ scope: 'unknown' })).rejects.toThrow('SCOPE');
   urls.length = 0;
   await backend.readState({ scope: 'hr' });
-  expect(urls.every(url => /snapshot|employees|hr_|business_contracts|support_tickets|audit_events|expenses/.test(url.pathname))).toBe(true);
+  expect(urls.every(url => /snapshot|employees|hr_|business_contracts|support_tickets|message_threads|audit_events|expenses/.test(url.pathname))).toBe(true);
   expect(urls.some(url => url.pathname.endsWith('/tenant_collection_records'))).toBe(false);
   expect(urls.map(url => url.pathname.split('/').pop())).toEqual(expect.arrayContaining(
-    ['employees', 'hr_departments', 'hr_leave_requests', 'hr_vacancies', 'business_contracts', 'support_tickets']));
+    ['employees', 'hr_departments', 'hr_leave_requests', 'hr_vacancies', 'business_contracts', 'support_tickets', 'message_threads']));
   expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module'))
     .toBe('in.(HR,HR/Payroll)');
   expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);

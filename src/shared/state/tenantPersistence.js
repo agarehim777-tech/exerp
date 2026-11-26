@@ -27,6 +27,8 @@ export const snapshotBackedCollections = Object.freeze([
   "contracts",
   // Support tickets: one row per ticket in support_tickets (20261125090000).
   "supportTickets",
+  // Message conversations: one row per thread in message_threads (20261126090000).
+  "conversations",
 ]);
 
 export const operationalCollections = Object.freeze([
