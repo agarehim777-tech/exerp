@@ -1567,6 +1567,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"message_threads": {
+                  Row: {
+                    "last_at": string | null,"metadata": NonNullable<Json>,"person": string | null,"record_key": string,"sort_position": number,"status": string | null,"team": string | null,"tenant_id": string,"ticket_id": string | null,"title": string | null,"type": string | null,"unread": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "last_at"?: string | null,"metadata"?: NonNullable<Json>,"person"?: string | null,"record_key": string,"sort_position"?: number,"status"?: string | null,"team"?: string | null,"tenant_id": string,"ticket_id"?: string | null,"title"?: string | null,"type"?: string | null,"unread"?: number | null
+                  }
+                  Update: {
+                    "last_at"?: string | null,"metadata"?: NonNullable<Json>,"person"?: string | null,"record_key"?: string,"sort_position"?: number,"status"?: string | null,"team"?: string | null,"tenant_id"?: string,"ticket_id"?: string | null,"title"?: string | null,"type"?: string | null,"unread"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "message_threads_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"notification_deliveries": {
                   Row: {
                     "attempts": number,"body": string,"channel": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"entity_id": string | null,"entity_type": string | null,"id": string,"last_error": string | null,"metadata": NonNullable<Json>,"provider": string | null,"provider_message_id": string | null,"recipient": string,"scheduled_at": string,"sent_at": string | null,"status": string,"subject": string | null,"template_code": string | null,"tenant_id": string

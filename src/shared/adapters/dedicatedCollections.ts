@@ -10,6 +10,7 @@ export const collectionDefinitions: Record<string, Definition> = {
   cashEntries: { table: 'finance_entries', fields: {"description": "description", "amount": "amount", "currency": "currency", "direction": "direction", "category": "category", "date": "date", "status": "status", "accountId": "account_id"} },
   financeAccounts: { table: 'finance_account_records', fields: {"name": "name", "code": "code", "type": "type", "currency": "currency", "openingBalance": "opening_balance", "status": "status"} },
   supportTickets: { table: 'support_tickets', fields: {"title": "title", "requester": "requester", "module": "module", "priority": "priority", "status": "status", "owner": "owner", "slaHours": "sla_hours", "createdAt": "opened_at", "threadId": "thread_id", "linkedType": "linked_type", "linkedLabel": "linked_label"} },
+  conversations: { table: 'message_threads', fields: {"type": "type", "title": "title", "person": "person", "status": "status", "team": "team", "ticketId": "ticket_id", "unread": "unread", "time": "last_at"} },
   credits: { table: 'finance_credit_records', fields: {"customer": "customer", "contractId": "contract_id", "orderId": "order_id", "total": "total", "initialPayment": "initial_payment", "balance": "balance", "months": "months", "status": "status"} },
 };
 export function definitionFor(collection: string): Definition {
