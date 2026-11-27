@@ -348,7 +348,7 @@ export function ReportsPage({
   return (
     <div className="stack reports-module">
       <section className="reports-filter-bar">
-        <div><Filter size={17} /><strong>Hesabat filtrləri</strong></div>
+        <div><Filter size={16} /><strong>Hesabat filtrləri</strong></div>
         <label>
           <span>Dövr</span>
           <Select aria-label="Dövr" value={period} onChange={(event) => setPeriod(event.target.value)}>
@@ -470,8 +470,8 @@ export function ReportsPage({
                 <div><strong>{report.title}</strong><span>{report.desc}</span><small>{report.cadence} · {reportPackage.rows} data sətri</small></div>
                 <StatusBadge status={report.cadence} />
                 <div className="report-actions">
-                  <Button variant="secondary" size="compact"  onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</Button>
-                  <Button variant="primary" size="compact"  data-testid={report.isPackage ? "report-package-export" : "report-template-export"} onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={15} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</Button>
+                  <Button variant="secondary" size="compact"  onClick={() => runDownload(report, "PDF")} disabled={!exportReady || Boolean(exporting)}><Download size={16} /> {exporting === `${report.title}:PDF` ? "Hazırlanır" : "PDF"}</Button>
+                  <Button variant="primary" size="compact"  data-testid={report.isPackage ? "report-package-export" : "report-template-export"} onClick={() => runDownload(report, "Excel")} disabled={!exportReady || Boolean(exporting)}><Download size={16} /> {exporting === `${report.title}:Excel` ? "Hazırlanır" : "Excel"}</Button>
                 </div>
               </article>
             ))}

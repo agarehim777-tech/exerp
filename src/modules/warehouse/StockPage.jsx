@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ChevronUp, Pencil, X } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import { usePermissions } from "../../shared/hooks/usePermissions.js";
 import ValuationPanel from "./ValuationPanel.jsx";
@@ -221,7 +221,7 @@ function BalancesPanel({ stock }) {
                   ) : (
                     <div className="u-display-flex u-align-items-center u-gap-8px">
                       <span className="u-min-width-28px u-font-weight-600">{formatNumber(Number(b.reorder_point || 0))}</span>
-                      <Button variant="ghost" type="button" onClick={() => startEditing(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi redaktə et"><Pencil size={15} /></Button>
+                      <Button variant="ghost" type="button" onClick={() => startEditing(b)} className="stock-page-secondary-action-btn sx-296600a" aria-label="Kritik həddi redaktə et"><Pencil size={16} /></Button>
                     </div>
                   )}
                 </td>
@@ -321,7 +321,7 @@ function MovementsPanel({ stock, products }) {
             disabled={stock.movementsPage === 0 || stock.movementsLoading}
             onClick={() => stock.setMovementsPage((page) => Math.max(0, page - 1))}
  >
-            ← Əvvəlki
+            <ChevronLeft size={14} aria-hidden="true" className="u-vertical-align-middle" /> Əvvəlki
           </button>
           <button
             type="button"
@@ -329,7 +329,7 @@ function MovementsPanel({ stock, products }) {
             disabled={stock.movementsPage + 1 >= stock.movementsPageCount || stock.movementsLoading}
             onClick={() => stock.setMovementsPage((page) => page + 1)}
  >
-            Növbəti →
+            Növbəti <ChevronRight size={14} aria-hidden="true" className="u-vertical-align-middle" />
           </button>
         </div>
       </div>
@@ -432,7 +432,7 @@ function WarehousesPanel({ stock, isAdmin }) {
         <h2 className="stock-page-section-title">Anbarlar ({stock.warehouses.length})</h2>
         {isAdmin && (
           <button type="button" className={`${isFormOpen ? "stock-page-secondary-action-btn" : "ui-tok-primary-btn"}`} onClick={toggleForm}>
-            {isFormOpen ? "Formanı bağla ↑" : "+ Yeni anbar"}
+            {isFormOpen ? <>Formanı bağla <ChevronUp size={14} aria-hidden="true" className="u-vertical-align-middle" /></> : "+ Yeni anbar"}
           </button>
         )}
       </div>

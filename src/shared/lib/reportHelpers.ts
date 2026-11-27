@@ -146,7 +146,7 @@ function buildReportModuleRows({
       module: "HR",
       metric: money(payrollCost),
       count: `${employees.length} əməkdaş`,
-      signal: documentGaps.length > 0 ? `${documentGaps.length} sənəd açığı` : "Payroll hazır",
+      signal: documentGaps.length > 0 ? `${documentGaps.length} sənəd açığı` : "Əmək haqqı hazır",
       status: documentGaps.length > 0 ? "Nəzarət" : "Hazır",
     },
   ];

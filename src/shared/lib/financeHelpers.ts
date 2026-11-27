@@ -328,7 +328,7 @@ function buildDefaultTaxCalendarItems({ invoices, payrollTaxRows, accounting }: 
     },
     {
       id: `TAX-AUTO-PAYROLL-${period}`,
-      title: "Payroll vergi/DSMF",
+      title: "Əmək haqqı vergisi/DSMF",
       type: "Payroll",
       period,
       dueDate: buildTaxDueDate(15, 1),

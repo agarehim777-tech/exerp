@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, Plus, X } from 'lucide-react';
+import { ArrowUpRight, Mail, MessageSquare, Phone, Plus, StickyNote, Users, X } from 'lucide-react';
 import { useCustomer360 } from '../../shared/hooks/useCustomer360.js';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -85,11 +85,11 @@ export default function CustomerDrawer({ customerId, onClose, onUpdate, onOpenSa
                 <div>
                   <div className="ui-form-grid ui-spacer-bottom">
                     <Select value={activityType} onChange={e => setActivityType(e.target.value)}>
-                      <option value="note">📝 Qeyd</option>
-                      <option value="call">📞 Zəng</option>
-                      <option value="meeting">🤝 Görüş</option>
-                      <option value="email">✉️ E-poçt</option>
-                      <option value="sms">💬 SMS</option>
+                      <option value="note">Qeyd</option>
+                      <option value="call">Zəng</option>
+                      <option value="meeting">Görüş</option>
+                      <option value="email">E-poçt</option>
+                      <option value="sms">SMS</option>
                     </Select>
                     <Input value={activityText} onChange={e => setActivityText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && addActivity()}
@@ -291,14 +291,14 @@ function TasksTab({ tasks }) {
   );
 }
 
-const activityIcon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms: '💬' };
+const activityIcon = { call: Phone, meeting: Users, email: Mail, note: StickyNote, sms: MessageSquare };
 function Timeline({ items }) {
   if (items.length === 0) return <div className="u-color-text_secondary u-text-align-center u-padding-20px">Hələ aktivlik yoxdur</div>;
   return (
     <div className="u-display-flex u-flex-direction-column u-gap-10px">
       {items.map(a => (
         <div key={a.id} className="u-display-flex u-gap-10px u-padding-10px u-background-surface_subtle u-border-radius-10px">
-          <span className="u-font-size-18px">{activityIcon[a.type] || '•'}</span>
+          <span className="u-font-size-18px">{(() => { const Icon = activityIcon[a.type]; return Icon ? <Icon size={18} aria-hidden="true" /> : '•'; })()}</span>
           <div className="u-flex-1">
             <div className="u-font-weight-600 u-font-size-13px">{a.subject}</div>
             {a.body && <div className="u-font-size-12px u-color-text_secondary u-margin-top-2px">{a.body}</div>}

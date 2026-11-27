@@ -1,3 +1,4 @@
+import { ArrowLeftRight } from "lucide-react";
 import React, { useState, useMemo } from 'react';
 import { foldSearchText } from "../../shared/lib/searchText.ts";
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -97,7 +98,7 @@ export default function CrmCustomersPage({ onOpenSalesOrder, onOpenCredit }) {
         ].map(stat => <StatCard key={stat.label} {...stat} />)}
       </StatGrid>
 
-      {duplicateGroups.length > 0 && <section className="u-background-fff7ed u-border-1px_solid_fdba74 u-border-radius-10px u-padding-14px"><b className="u-color-9a3412">Dublikat ola bilən müştərilər</b><div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-top-8px">{duplicateGroups.map(([left, right]) => <Button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} variant="secondary" size="compact">{left.name} ↔ {right.name}</Button>)}</div></section>}
+      {duplicateGroups.length > 0 && <section className="u-background-fff7ed u-border-1px_solid_fdba74 u-border-radius-10px u-padding-14px"><b className="u-color-9a3412">Dublikat ola bilən müştərilər</b><div className="u-display-flex u-gap-8px u-flex-wrap-wrap u-margin-top-8px">{duplicateGroups.map(([left, right]) => <Button key={`${left.id}-${right.id}`} type="button" onClick={() => setOpenId(left.id)} variant="secondary" size="compact">{left.name} <ArrowLeftRight size={14} aria-hidden="true" className="u-vertical-align-middle" /> {right.name}</Button>)}</div></section>}
 
       <Toolbar>
         <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Axtar: ad, telefon, FİN, VÖEN, vəsiqə..."

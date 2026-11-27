@@ -142,7 +142,7 @@ export default function CustomerMessengerPanel({ companyName = "ExERP" }) {
           <a href={whatsappLink} target="_blank" rel="noreferrer" className="customer-messenger-panel--s-link"><ExternalLink size={14} /> Linki aç</a>
         )}
         <button onClick={send} disabled={busy || !recipient || !text.trim() || !activeTenantId} className="customer-messenger-panel--s-primary">
-          <Send size={15} /> {channel === "whatsapp" ? "WhatsApp-da aç və qeyd et" : "Telegram-a göndər"}
+          <Send size={16} /> {channel === "whatsapp" ? "WhatsApp-da aç və qeyd et" : "Telegram-a göndər"}
         </button>
       </div>
 

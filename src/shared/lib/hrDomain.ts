@@ -446,6 +446,8 @@ export function buildHrRecruitmentRows(planningRows: Row[], vacancies: Row[] = [
 }
 
 export const hrPlatformTabs = ["Komanda", "İş vaxtı", "Məzuniyyət", "Payroll", "Recruitment"];
+// Tab keys stay in the URL (?tab=Payroll); this is what the page shows.
+export const hrPlatformTabLabels: Record<string, string> = { Payroll: "Əmək haqqı", Recruitment: "İşə qəbul" };
 
 export function buildHrDepartmentTree(structure: Row[] = []): Row[] {
   const nodes = new Map<string, Row>();

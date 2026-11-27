@@ -57,7 +57,7 @@ export function SearchableOrderSelect({ value, options, onChange, placeholder, a
         {visibleOptions.length ? visibleOptions.map((option) => (
           <button type="button" role="option" aria-selected={option.value === value} key={option.value} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}>
             <span><strong>{option.label}</strong>{option.subtitle && <small>{option.subtitle}</small>}</span>
-            {option.value === value && <Check size={15} />}
+            {option.value === value && <Check size={16} />}
           </button>
         )) : <div className="order-search-select-empty">Uyğun nəticə tapılmadı</div>}
         {options.length > 50 && !normalizedQuery && <div className="order-search-select-hint">Nəticələri azaltmaq üçün yazmağa başlayın</div>}

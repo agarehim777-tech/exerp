@@ -38,7 +38,7 @@ export default function SalesDashboardPage() {
   return (
     <main className="sales-analytics-page">
       <header className="sales-analytics-head">
-        <span className="sales-analytics-eyebrow"><BarChart3 size={15} /> Son 30 gün</span>
+        <span className="sales-analytics-eyebrow"><BarChart3 size={16} /> Son 30 gün</span>
       </header>
 
       <section className="sales-analytics-kpis" aria-label="Əsas satış göstəriciləri">
@@ -127,7 +127,7 @@ function Kpi({ label, value, icon: Icon, tone }) {
   return (
     <article className={`sales-analytics-kpi tone-${tone}`}>
       <div><span>{label}</span><strong>{value}</strong></div>
-      <i><Icon size={21} /></i>
+      <i><Icon size={20} /></i>
     </article>
   );
 }

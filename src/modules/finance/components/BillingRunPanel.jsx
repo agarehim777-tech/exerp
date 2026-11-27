@@ -8,6 +8,7 @@ import ProductSearchSelect from "../../../components/ProductSearchSelect.jsx";
 import { azn } from "../../../shared/ui/tokens.js";
 import { Button, Input, Select, Table } from "../../../shared/ui/primitives.tsx";
 import { formatAmount } from "../../../services/format.js";
+import { OctagonX, TriangleAlert } from "lucide-react";
 
 export default function BillingRunPanel({ tenantId, customers, products, nextInvoiceNo, onCreateDraft, invoicesVersion }) {
   const [tab, setTab] = useState("orders");
@@ -202,7 +203,7 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
       <div className="ui-spacer-top">
         {issues.map((i, k) => (
           <div key={k} className={i.level === "error" ? "ui-validation-error" : "ui-validation-warning"}>
-            {i.level === "error" ? "⛔" : "⚠"} {i.message}
+            {i.level === "error" ? <OctagonX size={14} aria-hidden="true" className="u-vertical-align-middle" /> : <TriangleAlert size={14} aria-hidden="true" className="u-vertical-align-middle" />} {i.message}
           </div>
         ))}
       </div>
@@ -373,13 +374,13 @@ function InvoicePreviewModal({ initialDraft, customers = [], products = [], busy
             </div>
             {validation.docIssues.map((i, k) => (
               <div key={k} className={i.level === "error" ? "ui-validation-error" : "ui-validation-warning"}>
-                {i.level === "error" ? "⛔" : "⚠"} {i.message}
+                {i.level === "error" ? <OctagonX size={14} aria-hidden="true" className="u-vertical-align-middle" /> : <TriangleAlert size={14} aria-hidden="true" className="u-vertical-align-middle" />} {i.message}
               </div>
             ))}
             {validation.lineIssues.flatMap((issues, index) =>
               issues.filter((i) => i.level === "error").map((i, k) => (
                 <div key={`${index}-${k}`} className="ui-validation-error">
-                  ⛔ Sətir {index + 1}: {i.message}
+                  <OctagonX size={14} aria-hidden="true" className="u-vertical-align-middle" /> Sətir {index + 1}: {i.message}
                 </div>
               )))}
           </div>

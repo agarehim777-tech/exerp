@@ -18,14 +18,14 @@ function LauncherButton({ onOpen }) {
         className="floating-assistant-toggle"
         aria-label="AI köməkçini aç"
       >
-        <MessageCircle size={22} />
+        <MessageCircle size={24} />
       </button>
       <style>{`
         .floating-assistant {
           position: fixed;
           left: 16px;
           bottom: 16px;
-          z-index: 1000;
+          z-index: var(--z-fab, 40);
           display: flex;
           flex-direction: column;
           align-items: flex-start;

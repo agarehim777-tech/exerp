@@ -978,7 +978,7 @@ async function auditFinanceModuleIntegration(browser) {
     const beforeTransfer = await summary();
     assert(accountBalance(beforeTransfer, source.id) === 250 && accountBalance(beforeTransfer, target.id) === 0,
       'Opening balances differ from the server ledger');
-    await page.getByRole('button', { name: '↔ Pul transferi', exact: true }).click();
+    await page.getByRole('button', { name: 'Pul transferi', exact: true }).click();
     const transferForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Transfer et', exact: true }) });
     await transferForm.locator('select').nth(0).selectOption(source.id);
     await transferForm.locator('select').nth(1).selectOption(target.id);

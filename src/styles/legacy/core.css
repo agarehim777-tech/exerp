@@ -30,6 +30,11 @@
   background: var(--bg);
 }
 
+/* Headings without a component size follow the type scale (browser defaults gave 19.5px h2). */
+h2 { font-size: 18px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; }
+
 h1, h2, h3, h4, .brand-title, .kpi-value, .stat-value {
   font-family: Sora, Manrope, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0;
@@ -162,7 +167,7 @@ button {
   flex-direction: column;
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-sidebar, 20);
 }
 
 .brand {
@@ -224,7 +229,7 @@ button {
   gap: 11px;
   min-height: 38px;
   padding: 9px 10px;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   text-align: left;
   font-size: 14px;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
@@ -260,7 +265,7 @@ button {
   justify-content: flex-start;
   gap: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
+  border-radius: var(--radius);
   color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.05);
   font: inherit;
@@ -326,7 +331,7 @@ button {
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-sticky, 10);
 }
 
 .searchbox {

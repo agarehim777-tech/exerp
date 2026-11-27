@@ -100,7 +100,7 @@ export function createSupportModuleActions({ activeRoleInfo, auditCurrentState, 
         {
           id: createPrefixedId("COM"),
           author: activeRoleInfo?.name || "Admin",
-          text: `Task yaradıldı: ${signal?.detail || "Ümumi platform yoxlaması"}`,
+          text: `Tapşırıq yaradıldı: ${signal?.detail || "Ümumi platform yoxlaması"}`,
           at: stamp,
           mine: true,
         },

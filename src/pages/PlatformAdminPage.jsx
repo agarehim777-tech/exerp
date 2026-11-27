@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
+import { Building2, CalendarClock, Pencil, Play, ShieldCheck, Snowflake, Trash2, Users } from "lucide-react";
 import { MetricCard, Panel, PanelHeader, SimpleTable as DataTable, StatusBadge, TwoLine } from "../shared/ui/primitives.tsx";
 import { supabase } from "../integrations/supabase/client";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -301,9 +301,9 @@ export default function PlatformAdminPage() {
               <div className="table-actions u-display-flex u-gap-4px" >
                 <button type="button" className="icon-btn" title="Redaktə" onClick={() => startEdit(t)}><Pencil size={14} /></button>
                 {t.status === "active" ? (
-                  <button type="button" className="icon-btn" title="Dondur" onClick={() => setStatus(t, "frozen")}>❄</button>
+                  <button type="button" className="icon-btn" title="Dondur" onClick={() => setStatus(t, "frozen")}><Snowflake size={14} aria-hidden="true" /></button>
                 ) : (
-                  <button type="button" className="icon-btn" title="Aktivləşdir" onClick={() => setStatus(t, "active")}>▶</button>
+                  <button type="button" className="icon-btn" title="Aktivləşdir" onClick={() => setStatus(t, "active")}><Play size={14} aria-hidden="true" /></button>
                 )}
                 <button type="button" className="icon-btn danger" title="Sil" onClick={() => deleteTenant(t)}><Trash2 size={14} /></button>
               </div>,

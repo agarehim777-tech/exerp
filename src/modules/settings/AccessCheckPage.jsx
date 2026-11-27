@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { useAuth } from "../../auth/AuthProvider.jsx";
+import { Check, X } from "lucide-react";
 
 function Pill({ ok, label }) {
   const bg = ok === null ? "#e5e7eb" : ok ? "#dcfce7" : "#fee2e2";
   const fg = ok === null ? "#374151" : ok ? "#166534" : "#991b1b";
   return (
     <span className="sx-f456d36 sx-1eb7905 sx-6b9c179 sx-e634e6d" style={{ background: bg, color: fg }}>
-      {ok === null ? "—" : ok ? "✓" : "✗"} {label}
+      {ok === null ? "—" : ok ? <Check size={14} aria-hidden="true" className="u-vertical-align-middle" /> : <X size={14} aria-hidden="true" className="u-vertical-align-middle" />} {label}
     </span>
   );
 }
