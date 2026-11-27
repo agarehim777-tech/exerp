@@ -213,7 +213,7 @@ function App() {
   const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
   const refreshDbInventory = dbInventory.refresh;
-  const { ready: tenantStateReady } = useTenantUiPersistence({
+  const { ready: tenantStateReady, cleared: tenantStateCleared } = useTenantUiPersistence({
     tenantId: activeTenantId, userId: authUser?.id, state, setState, hydrateState,
     localKey: localDbKey, schemaVersion: localDbSchemaVersion,
     onWarning: useCallback((error) => console.warn('[tenant-ui-state]', error), []),
@@ -231,7 +231,7 @@ function App() {
 
   const collectionSync = useCollectionSync({
     tenantId: activeTenantId,
-    ready: tenantStateReady,
+    ready: tenantStateCleared,
     collections: syncedCollections,
     state,
     setState,
