@@ -1,13 +1,10 @@
-import { ENABLE_LEGACY_WRITES } from "../../config/legacyWrites.js";
 import { supabase } from "../../integrations/supabase/client";
 import { ensureMainCashAccount } from "../../services/cashAccounts.js";
 import { postCreditPayment, startCreditContract } from "../../services/coreOperations.js";
 import { money } from "../../services/format.js";
-import { baseCreditDate } from "../lib/appDomain.jsx";
-import { buildAllCreditRecords, getCreditIdForOrder } from "../lib/appHelpers.jsx";
-import { applyCreditPrincipalPayment, buildCreditPlan, getCreditDisplayPlan, isCreditStarted } from "../lib/credit.js";
+import { buildAllCreditRecords } from "../lib/appHelpers.jsx";
+import { applyCreditPrincipalPayment, getCreditDisplayPlan, isCreditStarted } from "../lib/credit.js";
 import { round2 } from "../utils/invoiceMath.js";
-import { createPrefixedId } from "../utils/id.js";
 
 // Credit commands (payment schedule dates, payments, initial payments, activation, SMS),
 // moved out of App.jsx unchanged. Payments and activation go through the server commands
@@ -109,92 +106,7 @@ export function createCreditActions({ activeTenantId, auditOperation, creditReco
       return false;
     }
 
-    if (!ENABLE_LEGACY_WRITES) {
-      notify(`${targetCredit.contractId || targetCredit.id}: ${money(cashAmount)} kassaya daxil oldu.`);
-      return true;
-    }
-
-    const cashEntry = {
-      id: createPrefixedId("KS"),
-      source: "Kredit ödənişi",
-      creditId,
-      orderId: targetCredit.orderId,
-      customer: targetCredit.customer,
-      contractId: targetCredit.contractId,
-      device: targetCredit.device || targetCredit.product,
-      principal: paymentResult.appliedPrincipal,
-      penalty: penaltyAmount,
-      amount: cashAmount,
-      date: baseCreditDate,
-      note: values.note || "",
-    };
-
-    setState((current) => {
-      return {
-        ...current,
-        cashEntries: [cashEntry, ...(current.cashEntries || [])],
-        orders: current.orders.map((order) => {
-          const isLinkedOrder = targetCredit.orderId
-            ? order.id === targetCredit.orderId
-            : order.creditId === creditId || getCreditIdForOrder(order) === creditId;
-
-          if (!isLinkedOrder) return order;
-
-          const nextPaid = Math.min(
-            Number(order.amount || 0),
-            Number(order.paid || 0) + paymentResult.appliedPrincipal,
-          );
-
-          return {
-            ...order,
-            paid: nextPaid,
-            creditBalance: paymentResult.nextBalance,
-            creditMonthly: paymentResult.nextMonthly,
-            creditLastPayment: paymentResult.installments[paymentResult.installments.length - 1]?.amount || 0,
-            paymentStatus: paymentResult.nextBalance <= 0 ? "Ödənilib" : "Kredit satış",
-          };
-        }),
-        credits: (() => {
-          const exists = current.credits.some((credit) => credit.id === creditId);
-          const source = exists ? null : targetCredit;
-          const nextCredits = exists ? current.credits : [source, ...current.credits];
-
-          return nextCredits.map((item) =>
-            item.id === creditId
-              ? {
-                ...item,
-                balance: paymentResult.nextBalance,
-                installments: paymentResult.installments,
-                paidMonths: paymentResult.nextPaidMonths,
-                rate: Math.round((paymentResult.nextPaidMonths / Math.max(1, Number(item.months || 12))) * 100),
-                monthly: paymentResult.nextMonthly,
-                next: paymentResult.nextDue,
-                status: paymentResult.status,
-                payments: [
-                  {
-                    date: baseCreditDate,
-                    principal: paymentResult.appliedPrincipal,
-                    penalty: penaltyAmount,
-                    cashIn: cashAmount,
-                    extraApplied: paymentResult.extraPrincipal,
-                  },
-                  ...(item.payments || []),
-                ],
-              }
-              : item,
-          );
-        })(),
-      };
-    });
-
-    notify(
-      `${targetCredit.id}: ${money(cashAmount)} kassaya daxil oldu. Əsas borc ${money(paymentResult.appliedPrincipal)} azaldı.`,
-    );
-    auditOperation({
-      module: "Kredit/Maliyyə",
-      action: "Kredit ödənişi qəbul edildi",
-      detail: `${creditId}: əsas ${money(paymentResult.appliedPrincipal)}, gecikmə ${money(penaltyAmount)}`,
-    });
+    notify(`${targetCredit.contractId || targetCredit.id}: ${money(cashAmount)} kassaya daxil oldu.`);
     return true;
   }
 
@@ -232,55 +144,7 @@ export function createCreditActions({ activeTenantId, auditOperation, creditReco
       return false;
     }
 
-    const nextPaid = round2(alreadyPaid + payment);
-    if (!ENABLE_LEGACY_WRITES) {
-      notify(`${money(payment)} ilkin ödəniş kassaya qəbul edildi.`);
-      return true;
-    }
-    setState((current) => ({
-      ...current,
-      cashEntries: [
-        {
-          id: createPrefixedId("KS"),
-          source: "Kredit ilkin ödənişi",
-          creditId,
-          orderId: targetCredit.orderId,
-          customer: targetCredit.customer,
-          contractId: targetCredit.contractId,
-          amount: payment,
-          principal: payment,
-          penalty: 0,
-          date: baseCreditDate,
-          note: "İlkin ödəniş (beh)",
-        },
-        ...(current.cashEntries || []),
-      ],
-      orders: current.orders.map((order) => {
-        const isLinkedOrder = targetCredit.orderId
-          ? order.id === targetCredit.orderId
-          : order.creditId === creditId || getCreditIdForOrder(order) === creditId;
-        if (!isLinkedOrder) return order;
-        return {
-          ...order,
-          paid: Math.min(Number(order.amount || 0), Number(order.paid || 0) + payment),
-          initialPaid: nextPaid,
-        };
-      }),
-      credits: (() => {
-        const exists = current.credits.some((credit) => credit.id === creditId);
-        const nextCredits = exists ? current.credits : [targetCredit, ...current.credits];
-        return nextCredits.map((item) =>
-          item.id === creditId ? { ...item, requiredInitial, initialPaid: nextPaid } : item,
-        );
-      })(),
-    }));
-
-    notify(`${money(payment)} ilkin ödəniş qəbul edildi. Yığılıb: ${money(nextPaid)} / ${money(requiredInitial)}.`);
-    auditOperation({
-      module: "Kredit/Maliyyə",
-      action: "İlkin ödəniş qəbul edildi",
-      detail: `${creditId}: ${money(payment)} · toplam ${money(nextPaid)}/${money(requiredInitial)}`,
-    });
+    notify(`${money(payment)} ilkin ödəniş kassaya qəbul edildi.`);
     return true;
   }
 
@@ -315,44 +179,7 @@ export function createCreditActions({ activeTenantId, auditOperation, creditReco
       return false;
     }
 
-    if (!ENABLE_LEGACY_WRITES) {
-      notify("Kredit başladıldı və ödəniş cədvəli aktiv edildi.");
-      return true;
-    }
-
-    const plan = buildCreditPlan({
-      total: targetCredit.total,
-      initialPayment: targetCredit.initialPayment,
-      months: targetCredit.months,
-      startDate,
-    });
-    const startedAt = new Date().toISOString();
-    const startedCredit = {
-      ...targetCredit,
-      status: "Aktiv",
-      startDate,
-      startedAt,
-      installments: plan.installments,
-      monthly: plan.monthly,
-      lastPayment: plan.lastPayment,
-      next: plan.installments[0]?.due || "—",
-    };
-
-    setState((current) => {
-      const exists = current.credits.some((credit) => credit.id === creditId);
-      return {
-        ...current,
-        credits: exists
-          ? current.credits.map((credit) => (credit.id === creditId ? startedCredit : credit))
-          : [startedCredit, ...current.credits],
-      };
-    });
     notify("Kredit başladıldı və ödəniş cədvəli aktiv edildi.");
-    auditOperation({
-      module: "Kredit",
-      action: "Kredit başladıldı",
-      detail: `${creditId} · başlanma ${startDate} · ilk ödəniş ${plan.installments[0]?.due || "—"}`,
-    });
     return true;
   }
 
