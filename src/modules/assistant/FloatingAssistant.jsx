@@ -147,7 +147,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
  className="floating-assistant-toggle"
         aria-label={open ? "AI köməkçini bağla" : "AI köməkçini aç"}
  >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
+        {open ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
       <style>{`
@@ -155,7 +155,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
           position: fixed;
           left: 16px;
           bottom: 16px;
-          z-index: 1000;
+          z-index: var(--z-fab);
           display: flex;
           flex-direction: column;
           align-items: flex-start;
@@ -186,7 +186,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
           flex-direction: column;
           background: var(--color-surface, #ffffff);
           border: 1px solid var(--color-border, #e2e8f0);
-          border-radius: 18px;
+          border-radius: var(--radius-xl);
           box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
           overflow: hidden;
           animation: faPanelIn 0.25s ease-out;
@@ -211,7 +211,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
         .floating-assistant-avatar {
           width: 34px;
           height: 34px;
-          border-radius: 10px;
+          border-radius: var(--radius);
           background: linear-gradient(135deg, var(--color-primary, #10b981), var(--color-primary-dark, #059669));
           color: #fff;
           display: grid;
@@ -229,7 +229,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
         .floating-assistant-close {
           width: 28px;
           height: 28px;
-          border-radius: 8px;
+          border-radius: var(--radius);
           border: none;
           background: transparent;
           color: var(--color-muted, #64748b);
@@ -290,7 +290,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
         .floating-assistant-bubble {
           max-width: 82%;
           padding: 8px 12px;
-          border-radius: 14px;
+          border-radius: var(--radius-dashboard);
           font-size: 13px;
           line-height: 1.5;
         }
@@ -309,7 +309,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
           padding: 8px 12px;
           background: var(--color-surface, #fff);
           border: 1px solid var(--color-border, #e2e8f0);
-          border-radius: 14px;
+          border-radius: var(--radius-dashboard);
           font-size: 12px;
           color: var(--color-muted, #64748b);
           display: flex;
@@ -321,13 +321,13 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
           background: #fef2f2;
           border: 1px solid #fecaca;
           color: #b91c1c;
-          border-radius: 10px;
+          border-radius: var(--radius);
           font-size: 12px;
         }
         .floating-assistant-tool {
           margin-top: 6px;
           background: var(--color-muted-bg, #f1f5f9);
-          border-radius: 8px;
+          border-radius: var(--radius);
           padding: 6px 8px;
           font-size: 11px;
         }
@@ -359,7 +359,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
         .floating-assistant-input {
           flex: 1;
           border: 1px solid var(--color-border, #e2e8f0);
-          border-radius: 10px;
+          border-radius: var(--radius);
           padding: 9px 12px;
           font-size: 13px;
           outline: none;
@@ -373,7 +373,7 @@ export default function FloatingAssistant({ defaultOpen = false } = {}) {
         .floating-assistant-stop {
           width: 34px;
           height: 34px;
-          border-radius: 10px;
+          border-radius: var(--radius);
           border: none;
           display: grid;
           place-items: center;
@@ -427,7 +427,7 @@ function MessageBubble({ m }) {
             return (
               <details key={i} className="floating-assistant-tool">
                 <summary>
-                  <Wrench size={10} /> {name} · <span className="u-color-text_secondary">{state}</span>
+                  <Wrench size={12} /> {name} · <span className="u-color-text_secondary">{state}</span>
                 </summary>
                 {p.input && <pre className="floating-assistant-pre">Input: {JSON.stringify(p.input, null, 2)}</pre>}
                 {p.output && <pre className="floating-assistant-pre">{JSON.stringify(p.output, null, 2).slice(0, 1200)}</pre>}

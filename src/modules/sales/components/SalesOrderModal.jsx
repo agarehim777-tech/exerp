@@ -328,7 +328,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     <option>Ümumi</option>
                   </Select>
                   <Input value={item.text} onChange={(event) => setInternalNotes((rows) => rows.map((row) => row.id === item.id ? { ...row, text: event.target.value } : row))} placeholder={`${item.recipient} üçün qeyd yazın…`} />
-                  <Button variant="ghost" type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={17} /></Button>
+                  <Button variant="ghost" type="button" className="line-delete" onClick={() => setInternalNotes((rows) => rows.length === 1 ? rows.map((row) => ({ ...row, text: "" })) : rows.filter((row) => row.id !== item.id))} aria-label="Qeydi sil"><Trash2 size={16} /></Button>
                 </div>
               ))}
             </div>
@@ -374,7 +374,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     onClick={() => removeProductRow(row.id)}
                     aria-label="Məhsul sətrini sil"
                   >
-                    <Trash2 size={17} />
+                    <Trash2 size={16} />
                   </Button>
                   {getRowSerialOptions(row).length > 0 && (
                     <div className="serial-pick-list">
@@ -564,7 +564,7 @@ export function SalesOrderModal({ type, onClose, onCreate, orderOptions, default
                     onClick={() => removeSellerRow(row.id)}
                     aria-label="Satıcı sətrini sil"
                   >
-                    <Trash2 size={17} />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               ))}

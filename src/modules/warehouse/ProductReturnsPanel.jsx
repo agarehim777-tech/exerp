@@ -67,7 +67,7 @@ export default function ProductReturnsPanel({ product, warehouses = [] }) {
   };
 
   return <section className="product-return-workspace">
-    <h3><RotateCcw size={17} /> Problemli məhsul və silinmə</h3>
+    <h3><RotateCcw size={16} /> Problemli məhsul və silinmə</h3>
     <p className="u-margin-4px_0_14px u-color-66756f u-font-size-13px">Anbarda olan məhsulu problemli stoka keçirin və ya fiziki qalıqdan silin.</p>
     <form onSubmit={submit} className="product-return-form">
       <label>Anbar<Select required value={form.warehouse_id} onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}><option value="">Seçin</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</Select></label>

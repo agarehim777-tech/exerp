@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
 import { useAuth } from "./AuthProvider.jsx";
+import { CircleCheck, CircleX } from "lucide-react";
 
 export default function AcceptInvite() {
   const nav = useNavigate();
@@ -30,8 +31,8 @@ export default function AcceptInvite() {
     <div className="u-max-width-480px u-margin-80px_auto u-padding-24px u-background-surface u-border-radius-12px u-text-align-center u-box-shadow-0_8px_32px_rgba_0_0_0_0_08">
       <h2>Şirkət dəvəti</h2>
       {status === "checking" && <p>Yoxlanılır…</p>}
-      {status === "ok" && <p className="u-color-text_primary">✓ Dəvət qəbul edildi. Yönləndirilirsiniz…</p>}
-      {status === "error" && <p className="u-color-b23a3a">✗ {msg}</p>}
+      {status === "ok" && <p className="u-color-text_primary"><CircleCheck size={16} aria-hidden="true" className="u-vertical-align-middle" /> Dəvət qəbul edildi. Yönləndirilirsiniz…</p>}
+      {status === "error" && <p className="u-color-b23a3a"><CircleX size={16} aria-hidden="true" className="u-vertical-align-middle" /> {msg}</p>}
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { total } from "../shared/utils/aggregate.js";
 import { useMemo, useState } from "react";
 import { usePageQuery } from '../shared/hooks/usePageQuery.jsx';
 import { getEmployeeKey } from "../shared/lib/appDomain.jsx";
-import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
+import { HrAttendancePlatform, HrEmployeePlatform, HrLeavePlatform, HrPayrollPlatform, HrRecruitmentPlatform, HrStructureBuilder, HrStructureTree, buildHrAttendanceRows, buildHrEmployeeRecords, buildHrLeaveRows, buildHrPayrollRows, buildHrPlanningRows, buildHrRecruitmentRows, buildHrStructure, getEmployeeLevel, getEmployeeManagerName, hrPlatformTabLabels, hrPlatformTabs, isHrLeadershipLevel } from "../shared/lib/appDomain.jsx";
 export default function HrPage({
   employees,
   allEmployees = employees,
@@ -105,7 +105,7 @@ export default function HrPage({
           icon={UserCog}
         />
         <div className="hr-platform-toolbar">
-          <Tabs items={hrPlatformTabs.map(tab => [tab, tab])} value={hrView} onChange={setHrView} />
+          <Tabs items={hrPlatformTabs.map(tab => [tab, hrPlatformTabLabels[tab] || tab])} value={hrView} onChange={setHrView} />
           <div className="hr-platform-kpis">
             <span>{pendingLeaveCount} məzuniyyət təsdiqdə</span>
             <span>{paidPayrollCount}/{payrollRows.length} payroll ödənildi</span>

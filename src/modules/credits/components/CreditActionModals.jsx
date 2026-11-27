@@ -180,7 +180,7 @@ export function StartCreditModal({ item, onStartCredit, onPayInitial, onClose })
           <div className="modal-actions">
             <Button variant="secondary" type="button"  disabled={Boolean(saving)} onClick={onClose}>Ləğv et</Button>
             <Button variant="primary" type="submit"  disabled={Boolean(saving) || !initialComplete}>
-              <Play size={15} /> {saving === "start" ? "Başladılır..." : "Krediti başlat"}
+              <Play size={16} /> {saving === "start" ? "Başladılır..." : "Krediti başlat"}
             </Button>
           </div>
         </form>

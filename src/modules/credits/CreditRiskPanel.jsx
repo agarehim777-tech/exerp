@@ -41,7 +41,7 @@ export function CreditRiskPanel() {
           <h3>Qismən bağlanış / güzəşt</h3><label>Növ<select name="type"><option value="waiver">Güzəşt</option><option value="principal">Qismən bağlanış</option><option value="penalty">Cərimə düzəlişi</option></select></label><label>Məbləğ<input required min="0.01" step="0.01" name="amount" type="number" /></label><label>Səbəb<textarea required name="reason" /></label><button className="secondary-btn">Təsdiqə göndər</button>
         </form>
       </div>
-      <h3><FileText size={17}/> Kredit audit timeline</h3><div className="credit-audit-list">{[
+      <h3><FileText size={16}/> Kredit audit timeline</h3><div className="credit-audit-list">{[
         ...(history?.payments||[]).map(row=>({id:`p-${row.id}`,at:row.paid_at,title:`Ödəniş ${row.receipt_no}`,detail:money(row.amount)})),
         ...(history?.collection||[]).map(row=>({id:`c-${row.id}`,at:row.created_at,title:`Kolleksiya: ${row.stage}`,detail:row.note||row.outcome})),
         ...(history?.adjustments||[]).map(row=>({id:`a-${row.id}`,adjustment:row,at:row.created_at,title:`Düzəliş: ${row.adjustment_type}`,detail:`${row.requested_amount ? money(row.requested_amount)+" · " : ""}${row.reason} · ${row.approval_status || "approved"}`})),

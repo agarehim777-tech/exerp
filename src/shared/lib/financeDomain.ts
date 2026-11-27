@@ -84,7 +84,7 @@ export function buildSupportTicketContext(ticket: Row, { orders = [], credits = 
     comments,
     linkedLabel,
     commentCount: comments.length + (thread?.messages?.length || 0),
-    latestComment: comments[comments.length - 1]?.text || thread?.preview || "Comment yoxdur",
+    latestComment: comments[comments.length - 1]?.text || thread?.preview || "Şərh yoxdur",
   };
 }
 

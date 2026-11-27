@@ -235,7 +235,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
                   <Input type="number" min="1" value={row.qty} onChange={(event) => changeProduct(row.id, "qty", event.target.value)} disabled={delivered} />
                   <Input type="number" min="0" value={row.price} onChange={(event) => changeProduct(row.id, "price", event.target.value)} disabled={delivered} />
                   <Button variant="ghost" type="button" className="line-delete" onClick={() => removeProductRow(row.id)} disabled={delivered} aria-label="Məhsul sətrini sil">
-                    <Trash2 size={17} />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               ))}
@@ -299,7 +299,7 @@ export function SalesOperationModal({ order, orderOptions, onClose, onSubmit }) 
                     <span>% bonus</span>
                   </label>
                   <Button variant="ghost" type="button" className="line-delete" onClick={() => removeSellerRow(row.id)} aria-label="Satıcı sətrini sil">
-                    <Trash2 size={17} />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               ))}

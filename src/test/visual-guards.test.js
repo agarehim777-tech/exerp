@@ -50,3 +50,54 @@ describe('visual guards', () => {
     expect(css).toMatch(/@media \(max-width: 900px\) \{ \.production-fields \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   });
 });
+
+function sourceFiles(dir, pattern) {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return name === 'test' ? [] : sourceFiles(path, pattern);
+    return pattern.test(name) ? [path] : [];
+  });
+}
+
+describe('visual system', () => {
+  it('puts page-level layers on the --z-* scale (local stacking may use 0-5)', () => {
+    // A FAB at 1000 covered modals and toasts at 70 hid under modal overlays.
+    const offenders = [];
+    for (const file of sourceFiles('src', /\.(css|jsx)$/)) {
+      if (/utilities\.css$|Login\.jsx$/.test(file)) continue;
+      for (const m of readFileSync(file, 'utf8').matchAll(/z-index\s*:\s*([^;}\n]+)/g)) {
+        const value = m[1].trim();
+        if (!/^var\(--z-[a-z]+\)$/.test(value) && !(Number(value) >= 0 && Number(value) <= 5)) offenders.push(`${file}: ${value}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('sizes lucide icons on the icon scale', () => {
+    const allowed = new Set([12, 14, 16, 18, 20, 24, 28, 36, 56]);
+    const offenders = [];
+    for (const file of sourceFiles('src', /\.(jsx|tsx)$/)) {
+      const code = readFileSync(file, 'utf8');
+      const names = [...code.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/g)]
+        .flatMap((m) => m[1].split(',').map((n) => n.trim().split(/\s+as\s+/).pop()).filter(Boolean));
+      for (const name of [...names, 'Icon', 'GroupIcon', 'ActiveTabIcon']) {
+        for (const m of code.matchAll(new RegExp(`<${name}\b[^<>]*?\bsize=\{(\d+)\}`, 'g'))) {
+          if (!allowed.has(Number(m[1]))) offenders.push(`${file}: <${name} size={${m[1]}}>`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('uses lucide icons instead of Unicode or emoji symbols (text arrows like "A → B" are fine)', () => {
+    const offenders = sourceFiles('src', /\.(jsx|tsx)$/)
+      .filter((file) => /[✓✗✕⛔⚠❄▶▾⌕◌↔↑←📞🤝✉📝💬]/u.test(readFileSync(file, 'utf8')));
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps landing font sizes in px on the type scale (rem rendered 8-12.19px on the 13px root)', () => {
+    const login = readFileSync('src/auth/Login.jsx', 'utf8');
+    expect(login).not.toMatch(/font-size\s*:\s*[0-9.]+rem/);
+    expect(login).not.toMatch(/--fs-[a-z0-9-]+\s*:\s*[0-9.]+rem/);
+  });
+});

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "./AuthProvider.jsx";
 import { supabase } from "../integrations/supabase/client";
 import { appAlert, appConfirm } from "../shared/ui/dialogService.js";
+import { Check, ChevronDown, X } from "lucide-react";
 
 export default function TenantSwitcher() {
   const { memberships, activeTenantId, setActiveTenant, refresh } = useAuth();
@@ -36,7 +37,7 @@ export default function TenantSwitcher() {
       <button onClick={() => setOpen(!open)} className="tenant-switcher-btn">
         🏢 {active?.tenants?.name || "Şirkət"}
         {active?.role && <span className="tenant-switcher-role-badge">{roleLabel(active.role)}</span>}
-        <span className="u-margin-left-4px">▾</span>
+        <ChevronDown size={14} aria-hidden="true" className="u-margin-left-4px u-vertical-align-middle" />
       </button>
       {open && (
         <div className="tenant-switcher-panel">
@@ -52,13 +53,13 @@ export default function TenantSwitcher() {
                   disabled={isActive || busy === m.tenant_id}
                   className={`tenant-switcher-row-btn ${isActive ? "sx-83e4487" : "sx-1e29eef"} ${isActive ? "sx-7c2de19" : "sx-4c30a91"}`}
  >
-                  {isActive ? "✓ " : ""}{m.tenants?.name}
+                  {isActive ? <><Check size={14} aria-hidden="true" className="u-vertical-align-middle" />{" "}</> : ""}{m.tenants?.name}
                   <span className="u-color-8a9a92 u-font-size-11px u-margin-left-6px">/{m.tenants?.slug}</span>
                   <span className="tenant-switcher-inline-role-badge">{roleLabel(m.role)}</span>
                 </button>
                 {m.role === "owner" && !isActive && (
                   <button onClick={() => remove(m.tenant_id)} disabled={busy === m.tenant_id} className="tenant-switcher-del-btn" title="Sil">
-                    ✕
+                    <X size={14} aria-hidden="true" />
                   </button>
                 )}
               </div>
