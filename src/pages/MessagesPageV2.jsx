@@ -211,11 +211,11 @@ function MessagesPageV2({
 
               <div className="message-form-actions">
                 <button className="secondary-btn compact" onClick={() => setComposerOpen(false)}>
-                  <X size={15} />
+                  <X size={16} />
                   Bağla
                 </button>
                 <button className="primary-btn compact" onClick={createThread} disabled={!canSubmitNewThread}>
-                  <Plus size={15} />
+                  <Plus size={16} />
                   Yarat
                 </button>
               </div>
@@ -268,7 +268,7 @@ function MessagesPageV2({
                       }}
                       disabled={!canManage}
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -330,7 +330,7 @@ function MessagesPageV2({
                   disabled={!canSend || selected.archived}
                   title={selected.archived ? "Arxiv söhbətə mesaj yazmaq üçün əvvəl aktiv edin" : !canSend ? "Daxili mesaj göndərmək üçün icazə yoxdur" : ""}
                 >
-                  <Send size={17} />
+                  <Send size={16} />
                 </button>
               </div>
             </>

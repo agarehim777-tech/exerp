@@ -216,7 +216,7 @@ function ReversalPreview({ state, reason, setReason, deleting, onClose, onConfir
   const p = state.preview || {};
   return <div className="reversal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section className="reversal-dialog" role="dialog" aria-modal="true" aria-labelledby="reversal-title">
-      <header><div><span className="reversal-warning"><AlertTriangle size={18} /></span><div><h2 id="reversal-title">Satışın ləğv təsiri</h2><p>{state.loading ? 'Əlaqələr yoxlanılır…' : `${p.order_no} üzrə dəyişəcək qeydlər`}</p></div></div><button type="button" onClick={onClose} aria-label="Bağla"><X size={19} /></button></header>
+      <header><div><span className="reversal-warning"><AlertTriangle size={18} /></span><div><h2 id="reversal-title">Satışın ləğv təsiri</h2><p>{state.loading ? 'Əlaqələr yoxlanılır…' : `${p.order_no} üzrə dəyişəcək qeydlər`}</p></div></div><button type="button" onClick={onClose} aria-label="Bağla"><X size={20} /></button></header>
       {!state.loading && <>
         <div className="reversal-impact-grid">
           <Impact icon={CreditCard} label="Bağlanacaq kredit" value={p.credit_count || 0} />

@@ -49,7 +49,7 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
       <PanelHeader title="Sifariş üzrə bonus bölgüsü" subtitle="Yeni bölgü seçilən tarixdən sonrakı kassa daxilolmalarına tətbiq edilir" icon={History} />
       <div className={`bonus-assignment-actions ${open ? "sx-fa3e1c7" : "sx-e7ec540"}`} >
         <button type="button" className="secondary-btn compact" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           {open ? "Bölgü formasını bağla" : "Bölgü formasını aç"}
         </button>
       </div>
@@ -70,9 +70,9 @@ export default function BonusAssignmentsPanel({ onRowsChange }) {
           ))}
         </div>
         <div className="bonus-assignment-actions">
-          <button type="button" className="secondary-btn compact" onClick={() => setLines((rows) => [...rows, { seller_name: "", rate: "" }])}><Plus size={15} /> Satıcı əlavə et</button>
+          <button type="button" className="secondary-btn compact" onClick={() => setLines((rows) => [...rows, { seller_name: "", rate: "" }])}><Plus size={16} /> Satıcı əlavə et</button>
           <span>Ümumi faiz: <strong>{totalRate}%</strong></span>
-          <button className="primary-btn compact" type="submit" disabled={ledger.loading}><Save size={15} /> Bölgünü yadda saxla</button>
+          <button className="primary-btn compact" type="submit" disabled={ledger.loading}><Save size={16} /> Bölgünü yadda saxla</button>
         </div>
       </form>
       {message ? <div className="bonus-assignment-message">{message}</div> : null}

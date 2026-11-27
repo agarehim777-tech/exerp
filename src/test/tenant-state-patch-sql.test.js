@@ -46,26 +46,26 @@ it('applies on the replayed repo schema', () => {
 
 it('lets a member save keys of modules they can edit and skips settings', async () => {
   const result = await patch(MEMBER, {
-    notifications: [{ id: 'C1' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }],
+    notificationRules: [{ id: 'C1' }], projectRoiSnapshot: { roi: 12 }, auditLog: [{ id: 'A1' }],
     kpiTargets: [{ id: 'K1' }], settings: { company: 'x' },
   });
-  expect(result.saved.sort()).toEqual(['auditLog', 'notifications', 'projects']);
-  // The default member role edits notifications and projects, but not the kpi or settings modules.
+  expect(result.saved.sort()).toEqual(['auditLog', 'notificationRules', 'projectRoiSnapshot']);
+  // The default member role edits notificationRules and projects, but not the kpi or settings modules.
   expect(result.denied.sort()).toEqual(['kpiTargets', 'settings']);
-  expect(await snapshot()).toEqual({ notifications: [{ id: 'C1' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }] });
+  expect(await snapshot()).toEqual({ notificationRules: [{ id: 'C1' }], projectRoiSnapshot: { roi: 12 }, auditLog: [{ id: 'A1' }] });
 });
 
 it('merges keys so users working in different modules keep each other\'s changes', async () => {
   await patch(ADMIN, { settings: { company: 'Snap MMC' }, kpiTargets: [{ id: 'K1' }] });
-  await patch(MEMBER, { notifications: [{ id: 'C1' }, { id: 'C2' }] });
+  await patch(MEMBER, { notificationRules: [{ id: 'C1' }, { id: 'C2' }] });
   expect(await snapshot()).toEqual({
-    notifications: [{ id: 'C1' }, { id: 'C2' }], projects: [{ id: 'P1' }], auditLog: [{ id: 'A1' }],
+    notificationRules: [{ id: 'C1' }, { id: 'C2' }], projectRoiSnapshot: { roi: 12 }, auditLog: [{ id: 'A1' }],
     settings: { company: 'Snap MMC' }, kpiTargets: [{ id: 'K1' }],
   });
 });
 
 it('refuses non-members, operational collections and a non-object patch', async () => {
-  await expect(patch(OUTSIDER, { notifications: [] })).rejects.toThrow('permission_denied');
+  await expect(patch(OUTSIDER, { notificationRules: [] })).rejects.toThrow('permission_denied');
   await expect(patch(ADMIN, { orders: [{ id: 'O1' }] })).rejects.toThrow('tenant_state_key_not_allowed');
   await as(ADMIN);
   await expect(db.query(`SELECT public.save_tenant_state_patch($1, '[]'::jsonb)`, [TENANT])).rejects.toThrow('tenant_state_patch_invalid');

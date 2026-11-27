@@ -18,7 +18,7 @@ function normalizeOperationalLabels(snapshot: Row = {}): Row {
     onboarding: {
       ...(snapshot.onboarding || {}),
       companyStage: normalize(snapshot.onboarding?.companyStage).includes("demo")
-        ? "Go-live hazırlığı"
+        ? "İstifadəyə hazırlıq"
         : snapshot.onboarding?.companyStage,
     },
     invoiceSettings: {

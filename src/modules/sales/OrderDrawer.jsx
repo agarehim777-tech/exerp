@@ -10,7 +10,8 @@ import { formatAmount, formatNumber } from '../../services/format.js';
 // Ledger columns show plain 2-decimal amounts (debit/credit); Azerbaijani separators, no currency sign.
 const fixed2 = (value) => formatNumber(Number(value) || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const priceEditOnly = import.meta.env.VITE_ENABLE_LEGACY_WRITES !== 'true';
+// Sale lines are changed only through edit_sales_order_atomic (prices); currency, products and quantities stay fixed.
+const priceEditOnly = true;
 
 const SALES_STATUS = {
   draft: { label: 'Təsdiqləndi' },

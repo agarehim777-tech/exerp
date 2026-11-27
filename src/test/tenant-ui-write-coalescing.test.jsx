@@ -1,4 +1,5 @@
-import { act, renderHook, cleanup } from '@testing-library/react';
+import { act, renderHook, cleanup, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { changedSnapshotKeys, snapshotKeyJson, useTenantUiPersistence } from '../shared/hooks/useTenantUiPersistence.js';
 
@@ -6,13 +7,15 @@ import { changedSnapshotKeys, snapshotKeyJson, useTenantUiPersistence } from '..
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(async () => ({ data: { saved: [], denied: [] }, error: null })),
   snapshot: {},
+  // Lets a test hold the snapshot read open.
+  gate: null,
 }));
 vi.mock('../integrations/supabase/client', () => ({ supabase: {
-  from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { state: mocks.snapshot }, error: null }) }) }) }),
+  from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => { if (mocks.gate) await mocks.gate; return { data: { state: mocks.snapshot }, error: null }; } }) }) }),
   rpc: mocks.rpc,
 } }));
 afterEach(() => {
-  cleanup(); vi.useRealTimers(); vi.clearAllMocks(); mocks.snapshot = {};
+  cleanup(); vi.useRealTimers(); vi.clearAllMocks(); mocks.snapshot = {}; mocks.gate = null;
   mocks.rpc.mockImplementation(async () => ({ data: { saved: [], denied: [] }, error: null }));
 });
 const hydrateState = value => value;
@@ -51,23 +54,23 @@ it('keeps one patch in flight and merges later edits into the next one', async (
   vi.useFakeTimers();
   let release;
   mocks.rpc.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-  mocks.snapshot = { notifications: [{ text: 'original' }], theme: 'light' };
+  mocks.snapshot = { notificationRules: [{ text: 'original' }], theme: 'light' };
   const options = { tenantId: 'tenant-a', userId: 'user-a', setState: vi.fn(), hydrateState, localKey: 'test-ui', schemaVersion: 3 };
   const { rerender } = renderHook(({ state }) => useTenantUiPersistence({ ...options, state }),
-    { initialProps: { state: { notifications: [{ text: 'original' }], theme: 'light' } } });
+    { initialProps: { state: { notificationRules: [{ text: 'original' }], theme: 'light' } } });
   await act(async () => { await Promise.resolve(); });
-  rerender({ state: { notifications: [{ text: 'second' }], theme: 'light' } });
+  rerender({ state: { notificationRules: [{ text: 'second' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'light' } });
+  rerender({ state: { notificationRules: [{ text: 'latest reply' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'dark' } });
+  rerender({ state: { notificationRules: [{ text: 'latest reply' }], theme: 'dark' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  await act(async () => { release({ data: { saved: ['notifications'], denied: [] }, error: null }); await Promise.resolve(); });
+  await act(async () => { release({ data: { saved: ['notificationRules'], denied: [] }, error: null }); await Promise.resolve(); });
   expect(patches()).toEqual([
-    { notifications: [{ text: 'second' }] },
-    { notifications: [{ text: 'latest reply' }], theme: 'dark' },
+    { notificationRules: [{ text: 'second' }] },
+    { notificationRules: [{ text: 'latest reply' }], theme: 'dark' },
   ]);
 });
 
@@ -110,4 +113,24 @@ it('retries a failed patch and reports keys the server refused as a warning', as
 it('diffs top-level keys by JSON value', () => {
   const saved = snapshotKeyJson({ a: [1], b: { x: 1 }, c: null });
   expect(changedSnapshotKeys({ a: [1], b: { x: 2 }, c: undefined, d: 'new' }, saved)).toEqual({ b: { x: 2 }, d: 'new' });
+});
+
+it('reports the tenant as cleared before the snapshot arrives and keeps collections loaded meanwhile', async () => {
+  // Collection tables start loading after the reset instead of after the snapshot read.
+  let release;
+  mocks.gate = new Promise((resolve) => { release = resolve; });
+  mocks.snapshot = { theme: 'dark' };
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({});
+    const persistence = useTenantUiPersistence({ tenantId: 'tenant-a', userId: 'user-a', state, setState,
+      hydrateState, localKey: 'test-ui', schemaVersion: 3, onError: undefined, onWarning: undefined });
+    return { state, setState, persistence };
+  });
+  await waitFor(() => expect(result.current.persistence.cleared).toBe(true));
+  expect(result.current.persistence.ready).toBe(false);
+  // A collection finished loading while the snapshot read is still open.
+  act(() => result.current.setState((current) => ({ ...current, employees: [{ id: 'E1' }], supportTickets: [{ id: 'T1' }] })));
+  await act(async () => { release(); });
+  await waitFor(() => expect(result.current.persistence.ready).toBe(true));
+  expect(result.current.state).toMatchObject({ theme: 'dark', employees: [{ id: 'E1' }], supportTickets: [{ id: 'T1' }] });
 });

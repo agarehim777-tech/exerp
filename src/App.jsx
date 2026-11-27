@@ -18,7 +18,6 @@ import { useExpensesSync } from "./shared/hooks/useExpensesSync.js";
 import { useKpiLedger } from "./shared/hooks/useFinancialSettlement.js";
 import { useCollectionSync } from "./shared/hooks/useCollectionSync.js";
 import { useDbReadBridge } from "./shared/hooks/useDbReadBridge.js";
-import { useLegacyOrderMigrations, useLegacyPayrollExpense } from "./shared/hooks/useLegacyMigrations.js";
 import { useKpiViews } from "./shared/selectors/kpiViews.js";
 import { useFinanceViews } from "./shared/selectors/financeViews.js";
 import { useOperationsViews } from "./shared/selectors/operationsViews.js";
@@ -40,7 +39,7 @@ import { createModuleActions } from "./shared/state/moduleActions.js";
 import { createCreditActions } from "./shared/state/creditActions.js";
 import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
-const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations"];
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations", "notifications", "notificationSendLog", "projects", "productionPlans", "knowledgeBase", "taxCalendar", "currencyRates", "apiWebhookLogs", "reportExports", "receivableClosures"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -199,7 +198,6 @@ import {
 import { SystemPages } from "./pages/groups/SystemPages.jsx";
 import { SalesPages } from "./pages/groups/SalesPages.jsx";
 import { FinancePages } from "./pages/groups/FinancePages.jsx";
-import { ENABLE_LEGACY_WRITES } from "./config/legacyWrites.js";
 
 function App() {
 
@@ -213,7 +211,7 @@ function App() {
   const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
   const refreshDbInventory = dbInventory.refresh;
-  const { ready: tenantStateReady } = useTenantUiPersistence({
+  const { ready: tenantStateReady, cleared: tenantStateCleared } = useTenantUiPersistence({
     tenantId: activeTenantId, userId: authUser?.id, state, setState, hydrateState,
     localKey: localDbKey, schemaVersion: localDbSchemaVersion,
     onWarning: useCallback((error) => console.warn('[tenant-ui-state]', error), []),
@@ -222,7 +220,6 @@ function App() {
 
   const expenseSync = useExpensesSync({
     tenantId: activeTenantId,
-    allowLegacyWrites: ENABLE_LEGACY_WRITES,
     ready: tenantStateReady,
     expenses: state.expenses,
     setState,
@@ -231,14 +228,13 @@ function App() {
 
   const collectionSync = useCollectionSync({
     tenantId: activeTenantId,
-    ready: tenantStateReady,
+    ready: tenantStateCleared,
     collections: syncedCollections,
     state,
     setState,
     onError: useCallback((error) => console.error('[collection-sync]', error), []),
   });
 
-  useLegacyOrderMigrations({ activeTenantId, tenantStateReady, dbOrders, updateDbOrder, refreshDbOrders, state });
 
   useDbReadBridge({
     tenantId: activeTenantId, ready: tenantStateReady,
@@ -271,8 +267,8 @@ function App() {
   const [selectedSupportTicketId, setSelectedSupportTicketId] = useState("");
 
   const creditSourceOrders = useMemo(
-    () => (!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders),
-    [dbOrders, dbOrdersLoaded, state.orders],
+    () => dbOrders.map(dbOrderToLegacy),
+    [dbOrders],
   );
   const creditRecords = useMemo(
     () => buildAllCreditRecords(creditSourceOrders, state.credits),
@@ -349,7 +345,6 @@ function App() {
     activeTenantId, authUser, notify, setAuthError, setState, state, tenantStateReady,
   });
 
-  useLegacyPayrollExpense({ state, setState });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
@@ -453,7 +448,7 @@ function App() {
     selectedKpiPeriod, setSelectedSupportTicketId, setState, state, taxCalendarRows, todayActionRows,
   });
 
-  const { createRecord } = createRecordCreationActions({ ENABLE_LEGACY_WRITES, activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage });
+  const { createRecord } = createRecordCreationActions({ activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage });
 
 
   const { updateVendor, deleteVendor } = createVendorRegistryActions({ auditCurrentState, getVendorKey, isPurchaseOrderOpen, normalize, normalizeVendor, notify, requirePermission, setModal, setState, state });

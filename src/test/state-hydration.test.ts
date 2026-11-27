@@ -26,7 +26,7 @@ describe("state hydration and numbering", () => {
       invoiceSettings: { eTaxMode: "demo" },
       productionPlans: [{ id: "P1", product: "Showroom demo dəsti" }, { id: "P2", product: "Masa" }],
     });
-    expect(labels.onboarding.companyStage).toBe("Go-live hazırlığı");
+    expect(labels.onboarding.companyStage).toBe("İstifadəyə hazırlıq");
     expect(labels.invoiceSettings.eTaxMode).toBe("E-qaimə inteqrasiya rejimi");
     expect(labels.productionPlans.map((plan: { product: string }) => plan.product)).toEqual(["Showroom nümayiş dəsti", "Masa"]);
   });

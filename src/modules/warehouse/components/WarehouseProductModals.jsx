@@ -168,7 +168,7 @@ export function ProductFormModal({ product, onClose, onSubmit, onDelete }) {
                   <ImagePlus size={16} /> {values.imagePreview ? "Şəkli dəyiş" : "Şəkil əlavə et"}
                   <input type="file" accept="image/jpeg,image/png,image/webp" onChange={selectImage} />
                 </label>
-                {values.imagePreview && <Button variant="danger" type="button"  onClick={clearImage}><Trash2 size={15} /> Şəkli sil</Button>}
+                {values.imagePreview && <Button variant="danger" type="button"  onClick={clearImage}><Trash2 size={16} /> Şəkli sil</Button>}
               </div>
               {imageError && <small className="product-image-error">{imageError}</small>}
             </div>

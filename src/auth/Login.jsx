@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../integrations/supabase/client";
+import { Bell, Search } from "lucide-react";
 
 function sanitizeNext(raw) {
   if (!raw) return "/";
@@ -119,15 +120,15 @@ export default function Login() {
         .xp, .xp * { box-sizing: border-box; }
         .xp {
           /* Typography scale */
-          --fs-display: 3.75rem;
-          --fs-h2: 2.375rem;
-          --fs-h3: 1.5rem;
-          --fs-h4: 1.0625rem;
-          --fs-lead: 1.0625rem;
-          --fs-base: 0.9375rem;
-          --fs-sm: 0.8125rem;
-          --fs-xs: 0.75rem;
-          --fs-2xs: 0.6875rem;
+          --fs-display: 48px;
+          --fs-h2: 28px;
+          --fs-h3: 20px;
+          --fs-h4: 14px;
+          --fs-lead: 14px;
+          --fs-base: 12px;
+          --fs-sm: 11px;
+          --fs-xs: 11px;
+          --fs-2xs: 11px;
           --lh-tight: 1.05;
           --lh-snug: 1.2;
           --lh-normal: 1.55;
@@ -152,7 +153,7 @@ export default function Login() {
         /* Top bar */
         .xp-top { position: relative; z-index: 2; width:min(100% - 2rem,76rem); min-height:4.75rem; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding: .8rem 0; border-bottom:1px solid rgba(230,242,236,.08); }
         .xp-brand { display:flex; align-items:center; gap:.7rem; }
-        .xp-brand .xp-mark { width:2.25rem; height:2.25rem; border-radius:.45rem; background:#c9a84c; color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Sora',sans-serif; font-size:.95rem; line-height:1; box-shadow:0 10px 26px -12px rgba(201,168,76,.65);}
+        .xp-brand .xp-mark { width:2.25rem; height:2.25rem; border-radius:.45rem; background:#c9a84c; color:#0b1f1a; display:flex; align-items:center; justify-content:center; font-weight:800; font-family:'Sora',sans-serif; font-size:12px; line-height:1; box-shadow:0 10px 26px -12px rgba(201,168,76,.65);}
         .xp-brand b { font-family:'Sora',sans-serif; font-size: var(--fs-base); color:#fff; font-weight:700; line-height:1.2; }
         .xp-brand span { color:#c9a84c; font-weight:600; margin-left:.15rem; font-size: var(--fs-base); }
         .xp-links { display:flex; gap:.25rem; }
@@ -163,7 +164,7 @@ export default function Login() {
         .xp-ghost:hover { border-color:#c9a84c; color:#c9a84c; }
         .xp-cta { min-height:2.55rem; background:#d2b45a; color:#102019; border:1px solid #d2b45a; padding:.6rem 1.1rem; border-radius:.4rem; font:inherit; font-size:var(--fs-sm); font-weight:700; cursor:pointer; transition:.2s; box-shadow:0 12px 30px -16px rgba(210,180,90,.8); white-space:nowrap;}
         .xp-cta:hover { background:#d9ba5e; transform: translateY(-1px); }
-        @media(max-width:900px){ .xp{--fs-display:3.15rem;} .xp-links{ display:none;} .xp-top{width:calc(100% - 2rem); min-height:4.25rem; padding:.65rem 0;} }
+        @media(max-width:900px){ .xp{--fs-display:48px;} .xp-links{ display:none;} .xp-top{width:calc(100% - 2rem); min-height:4.25rem; padding:.65rem 0;} }
         @media(max-width:520px){ .xp-brand div{ display:none;} }
 
         /* Hero */
@@ -172,58 +173,58 @@ export default function Login() {
         .xp-eyebrow i { width:.4rem; height:.4rem; border-radius:999px; background:#c9a84c; box-shadow:0 0 10px #c9a84c; }
         .xp-h1 { max-width:58rem; margin:0 auto 1.2rem; font-family:'Sora',sans-serif; font-weight:600; font-size:var(--fs-display); line-height:1.12; letter-spacing:0; color:#f7faf8; text-wrap:balance; }
         .xp-h1 em { font-style:normal; color:#d5bc72; font-family:inherit; }
-        .xp-lede { max-width: 46rem; margin: 0 auto 1.5rem; font-size: 1rem; line-height:1.7; color:#aec2ba; text-wrap:balance; }
+        .xp-lede { max-width: 46rem; margin: 0 auto 1.5rem; font-size: 13px; line-height:1.7; color:#aec2ba; text-wrap:balance; }
         .xp-hero-cta { display:inline-flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
 
         /* Product preview */
         .xp-product { max-width:68rem; margin:2rem auto 0; text-align:left; border:1px solid rgba(230,242,236,.16); border-radius:.5rem; overflow:hidden; background:#f4f7f6; color:#10241e; box-shadow:0 36px 90px -34px rgba(0,0,0,.9); }
         .xp-product-bar { min-height:3rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.65rem .9rem; background:#fff; border-bottom:1px solid #dce5e1; }
-        .xp-product-brand { display:flex; align-items:center; gap:.55rem; font-size:.8rem; font-weight:700; }
+        .xp-product-brand { display:flex; align-items:center; gap:.55rem; font-size:11px; font-weight:700; }
         .xp-product-logo { width:1.75rem; height:1.75rem; display:grid; place-items:center; border-radius:.35rem; background:#0b4b3b; color:#fff; }
         .xp-product-actions { display:flex; gap:.45rem; }
-        .xp-product-actions span { width:1.85rem; height:1.85rem; display:grid; place-items:center; border:1px solid #dce5e1; border-radius:.35rem; color:#527067; font-size:.72rem; }
+        .xp-product-actions span { width:1.85rem; height:1.85rem; display:grid; place-items:center; border:1px solid #dce5e1; border-radius:.35rem; color:#527067; font-size:11px; }
         .xp-product-body { display:grid; grid-template-columns:10rem 1fr; min-height:24rem; }
         .xp-product-nav { background:#0b241d; padding:.8rem .65rem; color:#9fb8ae; }
-        .xp-product-nav b { display:block; color:#fff; font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; padding:.5rem .6rem .7rem; }
-        .xp-product-nav span { display:block; padding:.55rem .65rem; border-radius:.3rem; font-size:.72rem; margin-bottom:.15rem; }
+        .xp-product-nav b { display:block; color:#fff; font-size:11px; text-transform:uppercase; letter-spacing:.1em; padding:.5rem .6rem .7rem; }
+        .xp-product-nav span { display:block; padding:.55rem .65rem; border-radius:.3rem; font-size:11px; margin-bottom:.15rem; }
         .xp-product-nav span:first-of-type { background:#164b3d; color:#fff; }
         .xp-product-main { padding:1.25rem; min-width:0; }
         .xp-product-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
-        .xp-product-head h3 { margin:0 0 .2rem; font-size:1.05rem; }
-        .xp-product-head p { margin:0; color:#6b8179; font-size:.72rem; }
-        .xp-live { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:#e6f7ef; color:#137052; border-radius:.3rem; font-size:.68rem; font-weight:700; }
+        .xp-product-head h3 { margin:0 0 .2rem; font-size:14px; }
+        .xp-product-head p { margin:0; color:#6b8179; font-size:11px; }
+        .xp-live { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:#e6f7ef; color:#137052; border-radius:.3rem; font-size:11px; font-weight:700; }
         .xp-live::before { content:''; width:.38rem; height:.38rem; border-radius:50%; background:#20a775; }
         .xp-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; margin-bottom:.8rem; }
         .xp-kpi { background:#fff; border:1px solid #dfe7e4; border-radius:.4rem; padding:.8rem; min-width:0; }
-        .xp-kpi small { display:block; color:#72867f; font-size:.64rem; margin-bottom:.35rem; }
-        .xp-kpi strong { display:block; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .xp-kpi i { display:block; font-style:normal; color:#1b8b68; font-size:.62rem; margin-top:.3rem; }
+        .xp-kpi small { display:block; color:#72867f; font-size:11px; margin-bottom:.35rem; }
+        .xp-kpi strong { display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .xp-kpi i { display:block; font-style:normal; color:#1b8b68; font-size:11px; margin-top:.3rem; }
         .xp-product-grid { display:grid; grid-template-columns:1.45fr .8fr; gap:.65rem; }
         .xp-chart, .xp-activity { background:#fff; border:1px solid #dfe7e4; border-radius:.4rem; padding:.85rem; min-width:0; }
-        .xp-panel-title { font-size:.72rem; font-weight:700; margin-bottom:.8rem; }
+        .xp-panel-title { font-size:11px; font-weight:700; margin-bottom:.8rem; }
         .xp-bars { height:8.6rem; display:flex; align-items:flex-end; gap:.55rem; border-bottom:1px solid #e4ebe8; }
         .xp-bars span { flex:1; min-width:.45rem; background:#19775c; border-radius:.2rem .2rem 0 0; }
         .xp-bars span:nth-child(2n) { background:#d2ad48; }
         .xp-activity ul { list-style:none; margin:0; padding:0; }
-        .xp-activity li { display:grid; grid-template-columns:.5rem 1fr; gap:.45rem; padding:.42rem 0; border-bottom:1px solid #edf1ef; color:#60776f; font-size:.66rem; }
+        .xp-activity li { display:grid; grid-template-columns:.5rem 1fr; gap:.45rem; padding:.42rem 0; border-bottom:1px solid #edf1ef; color:#60776f; font-size:11px; }
         .xp-activity li::before { content:''; width:.42rem; height:.42rem; border-radius:50%; background:#278c6d; margin-top:.22rem; }
-        .xp-product-note { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.65rem 1rem; background:#0a1d17; color:#a8bdb5; font-size:.7rem; }
+        .xp-product-note { display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.65rem 1rem; background:#0a1d17; color:#a8bdb5; font-size:11px; }
         .xp-product-note b { color:#d8b552; }
 
         .xp-flow { max-width:68rem; margin:1rem auto 0; display:grid; grid-template-columns:repeat(6,1fr); border:1px solid rgba(230,242,236,.1); border-radius:.45rem; overflow:hidden; background:rgba(3,17,13,.7); }
-        .xp-flow span { position:relative; padding:.8rem .5rem; color:#c2d2cc; font-size:.7rem; font-weight:600; border-right:1px solid rgba(230,242,236,.09); }
+        .xp-flow span { position:relative; padding:.8rem .5rem; color:#c2d2cc; font-size:11px; font-weight:600; border-right:1px solid rgba(230,242,236,.09); }
         .xp-flow span:last-child { border-right:0; }
-        .xp-flow span:not(:last-child)::after { content:'›'; position:absolute; right:-.28rem; top:50%; transform:translateY(-50%); z-index:2; color:#c9a84c; background:#061511; padding:0 .1rem; font-size:1rem; }
+        .xp-flow span:not(:last-child)::after { content:'›'; position:absolute; right:-.28rem; top:50%; transform:translateY(-50%); z-index:2; color:#c9a84c; background:#061511; padding:0 .1rem; font-size:13px; }
 
         /* Metrics strip */
         .xp-metrics { max-width: 60rem; margin: 2rem auto 0; display:grid; grid-template-columns: repeat(4,1fr); gap:0; border-top: 1px solid rgba(230,242,236,.08); border-bottom: 1px solid rgba(230,242,236,.08); padding: 1.25rem 0; }
         .xp-metric { text-align:center; border-right:1px solid rgba(230,242,236,.08); }
         .xp-metric:last-child { border-right:0; }
-        .xp-metric b { display:block; font-family:'Sora',sans-serif; font-weight:600; font-size:1.25rem; color:#d5bc72; line-height:1; margin-bottom:.4rem; }
+        .xp-metric b { display:block; font-family:'Sora',sans-serif; font-weight:600; font-size:16px; color:#d5bc72; line-height:1; margin-bottom:.4rem; }
         .xp-metric span { font-size:var(--fs-2xs); color:#9fb8ae; text-transform:uppercase; letter-spacing:var(--ls-wide); }
         @media(max-width:900px){ .xp-product-body{grid-template-columns:7.5rem 1fr;} .xp-kpis{grid-template-columns:repeat(2,1fr);} }
         @media(max-width: 900px){
-          .xp { --fs-display:2.35rem; --fs-h2:1.9rem; }
+          .xp { --fs-display:28px; --fs-h2:24px; }
           .xp-hero{padding:1.8rem 1rem 1.5rem;}
           .xp-product{margin-top:1.8rem;}
           .xp-product-body{grid-template-columns:1fr; min-height:0;}
@@ -342,7 +343,7 @@ export default function Login() {
           <div className="xp-product" id="preview" aria-label="ExERP idarəetmə panelinin nümunə görünüşü">
             <div className="xp-product-bar">
               <div className="xp-product-brand"><span className="xp-product-logo">E</span> ExERP idarəetmə paneli</div>
-              <div className="xp-product-actions"><span>⌕</span><span>◌</span><span>KS</span></div>
+              <div className="xp-product-actions"><span><Search size={12} aria-hidden="true" /></span><span><Bell size={12} aria-hidden="true" /></span><span>KS</span></div>
             </div>
             <div className="xp-product-body">
               <aside className="xp-product-nav">

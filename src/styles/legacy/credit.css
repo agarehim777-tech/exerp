@@ -1682,7 +1682,7 @@
 .reports-trend-bars span {
   width: min(22px, 42%);
   min-height: 4px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
 }
 
 .reports-trend-bars .revenue {
@@ -1711,7 +1711,7 @@
 .reports-chart-legend span::before {
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-control);
   content: "";
 }
 

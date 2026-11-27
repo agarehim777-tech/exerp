@@ -117,14 +117,14 @@
   gap: 3px;
   padding: 3px;
   border: 1px solid #dce5e2;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #edf2f0;
 }
 
 .main .tabs button {
   min-height: 32px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   color: #587068;
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -138,7 +138,7 @@
 
 .main .table-wrap {
   border: 1px solid #dce5e2;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #fff;
 }
 
@@ -213,7 +213,7 @@
 .ui-notice { padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--text-secondary); font-size: var(--font-size-sm); }
 .ui-notice-danger { border-color: var(--danger-border); background: var(--danger-surface); color: var(--danger); }
 .ui-notice-warning { border-color: var(--warning-border); background: var(--warning-surface); color: var(--warning); }
-.ui-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; background: var(--surface-subtle); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: 800; }
+.ui-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: 800; }
 .ui-badge-success { background: var(--success-surface); color: var(--action); }
 .ui-badge-warning { background: var(--warning-surface); color: var(--warning); }
 .ui-badge-danger { background: var(--danger-surface); color: var(--danger); }
@@ -255,7 +255,7 @@
 .ui-spacer-bottom { margin-bottom: var(--space-3); }
 .ui-category-item { display: flex; align-items: center; gap: var(--space-1); padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
 .ui-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.ui-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--overlay); }
+.ui-modal-overlay { position: fixed; inset: 0; z-index: var(--z-overlay, 150); display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--overlay); }
 .ui-modal-surface { width: min(900px, 100%); max-height: 88vh; overflow: auto; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); box-shadow: var(--modal-shadow); }
 .ui-checkbox-label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-md); }
 .ui-validation-error { color: var(--danger); font-size: var(--font-size-sm); line-height: 1.4; }

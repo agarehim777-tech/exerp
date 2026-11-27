@@ -191,7 +191,7 @@ export default function DashboardPage({
                 <div className="performance-name"><strong>{seller.name}</strong><small>{seller.orderCount} sifariş</small><progress className="ui-performance-progress" value={seller.sales} max={maxSellerSales} aria-label={seller.name} /></div>
                 <strong>{money(seller.sales)}</strong>
               </div>
-            ))}</div> : <div className="seller-performance-empty"><Users size={22} /><strong>Satıcı satış məlumatı yoxdur</strong><span>Sifarişə satıcı təyin edildikdə burada görünəcək.</span></div>}
+            ))}</div> : <div className="seller-performance-empty"><Users size={24} /><strong>Satıcı satış məlumatı yoxdur</strong><span>Sifarişə satıcı təyin edildikdə burada görünəcək.</span></div>}
           </Panel>
 
           <Panel className="performance-card">
@@ -202,7 +202,7 @@ export default function DashboardPage({
                 <div className="performance-name"><strong>{product.name}</strong><small>{product.orderCount} sifariş · {product.quantity} ədəd</small><progress className="ui-performance-progress" value={product.quantity} max={maxProductQuantity} aria-label={product.name} /></div>
                 <strong>{money(product.sales)}</strong>
               </div>
-            ))}</div> : <div className="seller-performance-empty"><ShoppingCart size={22} /><strong>Məhsul satış məlumatı yoxdur</strong><span>Satış sifarişi yaradıldıqda məhsullar burada sıralanacaq.</span></div>}
+            ))}</div> : <div className="seller-performance-empty"><ShoppingCart size={24} /><strong>Məhsul satış məlumatı yoxdur</strong><span>Satış sifarişi yaradıldıqda məhsullar burada sıralanacaq.</span></div>}
           </Panel>
         </div>
       </section>

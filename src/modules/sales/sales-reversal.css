@@ -1,7 +1,7 @@
 .reversal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--z-overlay, 150);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -15,7 +15,7 @@
   overflow: auto;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
 }

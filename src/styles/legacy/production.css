@@ -169,11 +169,11 @@
   gap: 5px;
 }
 
+/* Step titles and hints are instructions: wrap them instead of cutting them with an ellipsis. */
 .onboarding-step-card strong,
 .onboarding-step-card span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .production-control-grid,

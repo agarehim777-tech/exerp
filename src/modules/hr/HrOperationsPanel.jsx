@@ -99,15 +99,15 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
       {!controlledTab && <div className={"ui-tabs"}>
         {TABS.map(({ id, label, icon: Icon }) => (
           <Button key={id} onClick={() => setInternalTab(id)} className={["ui-button ui-button-tab",tab === id ? "active" : [].filter(Boolean).join(' ')].filter(Boolean).join(' ')}>
-            <Icon size={15} /> {label}
+            <Icon size={16} /> {label}
           </Button>
         ))}
       </div>}
 
       <div className={"ui-notice"}>
-        <ActiveTabIcon size={19} />
+        <ActiveTabIcon size={20} />
         <div className={"ui-detail-stack"}><strong>{activeTab.label}</strong><span>{activeTab.description}</span></div>
-        <div className={"ui-help-text"}><Info size={13} /> Məlumat mənbəyi: employee_events</div>
+        <div className={"ui-help-text"}><Info size={14} /> Məlumat mənbəyi: employee_events</div>
       </div>
 
       {message && <div className={message.tone === "ok" ? "ui-notice ui-notice-success" : "ui-notice ui-notice-danger"}>{message.text}</div>}
@@ -137,7 +137,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 amount: Number(attendance.hours || 0),
                 payload: { hours: Number(attendance.hours || 0), note: attendance.note },
               }))}
-            ><Plus size={15} /> Davamiyyəti qeyd et</Button>
+            ><Plus size={16} /> Davamiyyəti qeyd et</Button>
           </div>
           <div className={"ui-stat-grid"}>
             <Total label="Hesabat dövrü" value={periodLabel(period)} />
@@ -182,7 +182,7 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 endDate: leave.endDate,
                 payload: { kind: leave.kind },
               }))}
-            ><Plus size={15} /> Sorğu yarat</Button>
+            ><Plus size={16} /> Sorğu yarat</Button>
           </div>
           <div className={"ui-stat-grid"}>
             <Total label="Bu ay sorğu" value={`${periodLeaveRows.length} sorğu`} />

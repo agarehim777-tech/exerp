@@ -27,9 +27,10 @@ it('exposes credit read failures and retries instead of presenting a successful 
   expect(view.getByRole('status')).toHaveTextContent('Kredit məlumatları yüklənir...');
 });
 
-it('allows browser order fallback only under the explicit legacy-write flag', () => {
+it('builds credit records only from database orders (the browser order fallback was removed)', () => {
   const app = readFileSync('src/App.jsx', 'utf8');
-  expect(app).toContain('!ENABLE_LEGACY_WRITES || dbOrdersLoaded ? dbOrders.map(dbOrderToLegacy) : state.orders');
+  expect(app).toContain('() => dbOrders.map(dbOrderToLegacy),');
+  expect(app).not.toMatch(/ENABLE_LEGACY_WRITES|useLegacyMigrations/);
   // The credits page block is rendered from the finance page group.
   const pages = readFileSync('src/pages/groups/FinancePages.jsx', 'utf8');
   expect(pages).toContain('error={dbOrdersError}');

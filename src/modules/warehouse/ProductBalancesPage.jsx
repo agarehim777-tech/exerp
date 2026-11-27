@@ -19,7 +19,7 @@ const movementType = (item) => item?.movement_type || item?.move_type || "";
 function DocumentButton({ children, onClick, title }) {
   if (!onClick) return children || "—";
   return <button type="button" className="product-history-link" onClick={onClick} title={title}>
-    <span>{children}</span><ExternalLink size={13} />
+    <span>{children}</span><ExternalLink size={14} />
   </button>;
 }
 
@@ -94,7 +94,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
         <div className="modal-head product-360-head">
           <div className="product-360-title-wrap">
             <div className="product-360-photo">
-              {product.imageUrl || product.image_url ? <img src={product.imageUrl || product.image_url} alt={`${product.name} şəkli`} /> : <Package size={25} />}
+              {product.imageUrl || product.image_url ? <img src={product.imageUrl || product.image_url} alt={`${product.name} şəkli`} /> : <Package size={24} />}
             </div>
             <div>
               <span className="u-color-0b7a5c u-font-weight-700 u-font-size-13px">MƏHSUL 360</span>
@@ -127,7 +127,7 @@ function Product360Modal({ product, warehouses, warehouseStock, inventoryBalance
 
           <div className="warehouse-balance-tabs u-margin-bottom-16px" role="tablist" >
             {[["stock", `Qalıq (${balances.length})`, Package], ["cost", `Maya tarixçəsi (${costHistory.length})`, CircleDollarSign], ["returns", "Problemli stok", RotateCcw], ["reservations", `Rezervlər (${activeReservations.length})`, Users], ["sales", `Satışlar (${sales.length})`, ShoppingCart], ["receipts", `Daxilolmalar (${incoming.length})`, ArrowDownToLine], ["history", `Stok 360 (${productMovements.length})`, History]].map(([key, label, Icon]) => (
-              <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={15} /> {label}</button>
+              <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={16} /> {label}</button>
             ))}
           </div>
 

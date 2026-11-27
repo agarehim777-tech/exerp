@@ -32,7 +32,7 @@ export default function TaxPage({ taxRows, payrollTaxRows, invoiceSummary, accou
         <MetricCard label="Yaxın öhdəlik" value={soon.length} icon={CalendarClock} tone="warning" />
         <MetricCard label="Gecikən" value={overdue.length} icon={CircleAlert} tone={overdue.length ? "danger" : "success"} />
         <MetricCard label="ƏDV bazası" value={money(invoiceSummary.vat)} icon={FileText} tone="info" />
-        <MetricCard label="Payroll vergi/DSMF" value={money(payrollLiability)} icon={UserCog} tone="primary" />
+        <MetricCard label="Əmək haqqı vergisi/DSMF" value={money(payrollLiability)} icon={UserCog} tone="primary" />
       </section>
 
       <Panel className="tax-control-panel" data-testid="tax-control-panel">
@@ -102,7 +102,7 @@ export default function TaxPage({ taxRows, payrollTaxRows, invoiceSummary, accou
       </section>
 
       <Panel>
-        <PanelHeader title="Payroll vergi hesabı" subtitle="Gross, gəlir vergisi, sosial ödəniş və net əmək haqqı" />
+        <PanelHeader title="Əmək haqqı vergi hesabı" subtitle="Gross, gəlir vergisi, sosial ödəniş və net əmək haqqı" />
         <DataTable
           columns={["Əməkdaş", "Şöbə", "Gross", "Gəlir vergisi", "İşçi DSMF/işsizlik/tibbi", "Net", "İşəgötürən xərci"]}
           rows={payrollTaxRows.map((row) => [

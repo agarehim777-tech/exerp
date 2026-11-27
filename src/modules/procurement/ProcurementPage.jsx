@@ -161,7 +161,7 @@ function ProcurementWorkspace({ tenantId, user }) {
 
       <section className="procurement-page-styles-toolbar">
         <div className="procurement-page-styles-search-box">
-          <Search size={17} />
+          <Search size={16} />
           <input className="procurement-page-styles-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Təchizatçı, PO, GRN və ya SKU axtar..." />
         </div>
         {tab === "po" && (
@@ -207,7 +207,7 @@ function ProcurementWorkspace({ tenantId, user }) {
 
       {loading && !registryLoaded ? (
         <section className="procurement-page-styles-empty-panel">
-          <RefreshCw size={26} />
+          <RefreshCw size={24} />
           <h2>Məlumatlar yüklənir</h2>
           <p>Satınalma reyestri serverdən oxunur.</p>
         </section>

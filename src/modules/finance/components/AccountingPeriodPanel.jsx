@@ -126,7 +126,7 @@ export function AccountingPeriodPanel({ tenantId, canManage = false, expenses = 
             onClick={closePeriod}
             disabled={!tenantId || !canManage || !confirmed || reason.trim().length < 3 || loading || Boolean(currentLock)}
           >
-            <LockKeyhole size={17} /> {currentLock ? "Bu tarixədək artıq bağlıdır" : loading ? "İcra olunur..." : "Bu tarixədək bağla"}
+            <LockKeyhole size={16} /> {currentLock ? "Bu tarixədək artıq bağlıdır" : loading ? "İcra olunur..." : "Bu tarixədək bağla"}
           </Button>
           {!canManage && <small className="period-permission-note">Bu əməliyyat üçün Maliyyə idarəetməsi icazəsi tələb olunur.</small>}
         </div>
