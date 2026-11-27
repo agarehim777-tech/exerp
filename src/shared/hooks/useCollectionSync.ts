@@ -71,17 +71,27 @@ export function useCollectionSync({ tenantId, ready, collections, state, setStat
         const next = collectionRows(latest.current, names, tenantId);
         const { upserts, deletes } = collectionChanges(session.baseline, next);
         if (!upserts.length && !deletes.length) break;
-        const { error } = await supabase.rpc('apply_collection_changes' as never, {
-          _tenant: tenantId,
-          _changes: [
-            ...upserts.map(row => ({ table: definitionFor(row.collection).table, operation: 'upsert', row: toDedicatedRow(row) })),
-            ...deletes.map(row => ({ table: definitionFor(row.collection).table, operation: 'delete', row: { record_key: row.record_key } })),
-          ],
-        } as never);
-        if (error) throw error;
-        if (!session.alive) return;
-        upserts.forEach(row => session.baseline.set(identity(row), row));
-        deletes.forEach(row => session.baseline.delete(identity(row)));
+        // One request per collection: a module the user cannot edit (RLS) fails only its own rows instead
+        // of rolling back every other collection's changes in the same batch.
+        const byCollection = new Map<string, { upserts: CollectionRow[]; deletes: CollectionRow[] }>();
+        upserts.forEach(row => { const group = byCollection.get(row.collection) || { upserts: [], deletes: [] }; group.upserts.push(row); byCollection.set(row.collection, group); });
+        deletes.forEach(row => { const group = byCollection.get(row.collection) || { upserts: [], deletes: [] }; group.deletes.push(row); byCollection.set(row.collection, group); });
+        let firstError: unknown = null;
+        for (const [collection, group] of byCollection) {
+          const table = definitionFor(collection).table;
+          const { error } = await supabase.rpc('apply_collection_changes' as never, {
+            _tenant: tenantId,
+            _changes: [
+              ...group.upserts.map(row => ({ table, operation: 'upsert', row: toDedicatedRow(row) })),
+              ...group.deletes.map(row => ({ table, operation: 'delete', row: { record_key: row.record_key } })),
+            ],
+          } as never);
+          if (!session.alive) return;
+          if (error) { firstError ||= error; continue; }
+          group.upserts.forEach(row => session.baseline.set(identity(row), row));
+          group.deletes.forEach(row => session.baseline.delete(identity(row)));
+        }
+        if (firstError) throw firstError;
       }
       if (session.alive) setStatus({ phase: "saved", error: null });
     } catch (error) {

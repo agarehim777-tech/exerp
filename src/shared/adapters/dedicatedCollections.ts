@@ -11,6 +11,17 @@ export const collectionDefinitions: Record<string, Definition> = {
   financeAccounts: { table: 'finance_account_records', fields: {"name": "name", "code": "code", "type": "type", "currency": "currency", "openingBalance": "opening_balance", "status": "status"} },
   supportTickets: { table: 'support_tickets', fields: {"title": "title", "requester": "requester", "module": "module", "priority": "priority", "status": "status", "owner": "owner", "slaHours": "sla_hours", "createdAt": "opened_at", "threadId": "thread_id", "linkedType": "linked_type", "linkedLabel": "linked_label"} },
   conversations: { table: 'message_threads', fields: {"type": "type", "title": "title", "person": "person", "status": "status", "team": "team", "ticketId": "ticket_id", "unread": "unread", "time": "last_at"} },
+  // Record lists moved out of the tenant snapshot (20261127090000); the whole record stays in `metadata`.
+  notifications: { table: 'notification_records', fields: {} },
+  notificationSendLog: { table: 'notification_send_log', fields: {} },
+  projects: { table: 'project_records', fields: {} },
+  productionPlans: { table: 'production_plan_records', fields: {} },
+  knowledgeBase: { table: 'knowledge_base_articles', fields: {} },
+  taxCalendar: { table: 'tax_calendar_entries', fields: {} },
+  currencyRates: { table: 'currency_rate_records', fields: {} },
+  apiWebhookLogs: { table: 'api_webhook_logs', fields: {} },
+  reportExports: { table: 'report_export_records', fields: {} },
+  receivableClosures: { table: 'receivable_closure_records', fields: {} },
   credits: { table: 'finance_credit_records', fields: {"customer": "customer", "contractId": "contract_id", "orderId": "order_id", "total": "total", "initialPayment": "initial_payment", "balance": "balance", "months": "months", "status": "status"} },
 };
 export function definitionFor(collection: string): Definition {

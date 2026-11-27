@@ -40,7 +40,7 @@ import { createModuleActions } from "./shared/state/moduleActions.js";
 import { createCreditActions } from "./shared/state/creditActions.js";
 import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
-const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations"];
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations", "notifications", "notificationSendLog", "projects", "productionPlans", "knowledgeBase", "taxCalendar", "currencyRates", "apiWebhookLogs", "reportExports", "receivableClosures"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";

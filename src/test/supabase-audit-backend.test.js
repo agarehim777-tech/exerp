@@ -82,7 +82,7 @@ it('narrows fixture reads and paginates composite stock identities with a stable
   await expect(backend.readState({ scope: 'unknown' })).rejects.toThrow('SCOPE');
   urls.length = 0;
   await backend.readState({ scope: 'hr' });
-  expect(urls.every(url => /snapshot|employees|hr_|business_contracts|support_tickets|message_threads|audit_events|expenses/.test(url.pathname))).toBe(true);
+  expect(urls.every(url => /snapshot|employees|hr_|business_contracts|support_tickets|message_threads|_records|notification_send_log|knowledge_base_articles|tax_calendar_entries|api_webhook_logs|audit_events|expenses/.test(url.pathname))).toBe(true);
   expect(urls.some(url => url.pathname.endsWith('/tenant_collection_records'))).toBe(false);
   expect(urls.map(url => url.pathname.split('/').pop())).toEqual(expect.arrayContaining(
     ['employees', 'hr_departments', 'hr_leave_requests', 'hr_vacancies', 'business_contracts', 'support_tickets', 'message_threads']));
@@ -194,7 +194,11 @@ it('verifies persisted workflow report exports instead of relying only on the UI
     if (path.endsWith('/tenant_members')) return response([{ user_id: tenant, role: 'admin' }]);
     if (path.endsWith('/erp_runtime_capabilities')) return response({ schema_version: 3 });
     if (path.endsWith('/cashbook_ledger_summary')) return response({ accounts: [] });
-    if (path.endsWith('/tenant_state_snapshots')) return response([{ state: { reportExports: [{ id: 'report', score: 0 }, { id: 'historic' }] } }]);
+    if (path.endsWith('/tenant_state_snapshots')) return response([{ state: {} }]);
+    // Report exports kept in the app moved to report_export_records (20261127090000).
+    if (path.endsWith('/report_export_records')) return response([
+      { tenant_id: tenant, record_key: 'report', sort_position: 0, metadata: { id: 'report', score: 0 } },
+      { tenant_id: tenant, record_key: 'historic', sort_position: 1, metadata: { id: 'historic' } }]);
     if (path.endsWith('/workflow_records')) {
       expect(new URL(url).searchParams.get('module')).toBe('eq.reports');
       expect(new URL(url).searchParams.get('record_type')).toBe('eq.report_export');
@@ -271,7 +275,7 @@ it('checks persisted report exports and report audit events without unrelated bu
   const state = await backend.readState({ scope: 'reports' });
   expect(state.reportExports[0]).toMatchObject({ id: 'report', workflowId: 'workflow', snapshot: { moduleRows: [1] } });
   expect(state.auditLog).toHaveLength(1);
-  expect(urls.map(url => url.pathname.split('/').at(-1)).sort()).toEqual(['audit_events', 'tenant_state_snapshots', 'workflow_records']);
+  expect(urls.map(url => url.pathname.split('/').at(-1)).sort()).toEqual(['audit_events', 'report_export_records', 'tenant_state_snapshots', 'workflow_records']);
   expect(urls.every(url => url.searchParams.get('tenant_id') === `eq.${tenant}`)).toBe(true);
   expect(urls.find(url => url.pathname.endsWith('/audit_events')).searchParams.get('module')).toBe('eq.Hesabat');
 });

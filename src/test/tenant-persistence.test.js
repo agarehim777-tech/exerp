@@ -33,12 +33,12 @@ describe('tenant UI persistence boundary', () => {
       cashEntries: [{ id: 'cash-1' }],
       credits: [{ id: 'credit-1' }],
       settings: { theme: 'light' },
-      notifications: [{ id: 'ui-only' }],
+      notificationRules: [{ id: 'ui-only' }],
     });
 
     expect(result).toEqual({
       settings: { theme: 'light' },
-      notifications: [{ id: 'ui-only' }],
+      notificationRules: [{ id: 'ui-only' }],
     });
   });
 
