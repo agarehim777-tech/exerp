@@ -60,8 +60,8 @@ export function InventoryUnitsPanel({ warehouses = [], products = [], selectedWa
             money(unit.unit_cost),
             <StatusBadge status={unit.status} />,
             <div className="table-actions">
-              <Button variant="ghost" className="icon-btn" title="Redaktə et" onClick={() => setEditor({ ...unit })}><Pencil size={15} /></Button>
-              <Button variant="ghost" className="icon-btn danger" title="Sil" onClick={() => removeUnit(unit)}><Trash2 size={15} /></Button>
+              <Button variant="ghost" className="icon-btn" title="Redaktə et" onClick={() => setEditor({ ...unit })}><Pencil size={16} /></Button>
+              <Button variant="ghost" className="icon-btn danger" title="Sil" onClick={() => removeUnit(unit)}><Trash2 size={16} /></Button>
             </div>,
           ])}
         />

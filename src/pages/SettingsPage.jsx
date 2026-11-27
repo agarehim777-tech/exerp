@@ -359,7 +359,7 @@ function SettingsPage({
                   key={`${role.name}-${permission.key}`}
                   className={role.permissions?.includes(permission.key) ? "permission-chip allowed" : "permission-chip"}
                 >
-                  {role.permissions?.includes(permission.key) ? "✓" : "—"} {permission.label}
+                  {role.permissions?.includes(permission.key) ? <Check size={14} aria-hidden="true" className="u-vertical-align-middle" /> : "—"} {permission.label}
                 </span>
               ))}
             </div>,

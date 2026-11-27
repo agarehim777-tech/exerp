@@ -9,6 +9,7 @@ import { usePageQuery } from '../../shared/hooks/usePageQuery.jsx';
 import { toLocalIsoDate, formatDate } from "../../services/date.js";
 import { foldSearchText } from "../../shared/lib/searchText.ts";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
+import { ArrowLeftRight } from "lucide-react";
 
 const ACCOUNT_TYPE = { cash: "Kassa", bank: "Bank", card: "Kart", other: "Digər" };
 const EXPENSE_CATEGORIES = ["icarə", "kommunal", "əmək haqqı", "marketinq", "nəqliyyat", "digər"];
@@ -84,7 +85,7 @@ function AccountsPanel({ book }) {
       {msg && <div className="ui-notice ui-notice-warning">{msg}</div>}
       <div className="ui-table-actions ui-spacer-bottom">
         <Button type="button"  onClick={() => setOpenForm(current => current === "account" ? "" : "account")}>+ Yeni kassa</Button>
-        {book.accounts.length > 1 && <Button type="button" variant="secondary" onClick={() => setOpenForm(current => current === "transfer" ? "" : "transfer")}>↔ Pul transferi</Button>}
+        {book.accounts.length > 1 && <Button type="button" variant="secondary" onClick={() => setOpenForm(current => current === "transfer" ? "" : "transfer")}><ArrowLeftRight size={14} aria-hidden="true" className="u-vertical-align-middle" /> Pul transferi</Button>}
       </div>
       {openForm === "account" && <form onSubmit={submit} className="ui-form-grid ui-form-surface">
         <Input required placeholder="Hesab adı" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}  />

@@ -170,7 +170,7 @@ export default function BonusesPage({ salesBonuses = [] }) {
           />
           <div className="kpi-bonus-toolbar">
             <button className="secondary-btn compact" onClick={() => setSeller(null)}>
-              <ArrowLeft size={15} /> Satıcılara qayıt
+              <ArrowLeft size={16} /> Satıcılara qayıt
             </button>
             <div className="kpi-bonus-total"><span>Cəmi bonus</span><strong>{money(detailBonus)}</strong></div>
           </div>

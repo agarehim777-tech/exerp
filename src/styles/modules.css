@@ -87,7 +87,7 @@
   gap: 4px;
   padding: 4px;
   border: 1px solid #d4e0dc;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 2px 8px rgba(25, 65, 53, 0.05);
 }
@@ -101,7 +101,7 @@
   gap: 7px;
   padding: 0 12px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: #31574b;
   font-size: var(--font-size-sm);
@@ -122,7 +122,7 @@
 /* Credit workspace: one reading path, fewer competing cards. */
 .credit-detail-modal-card {
   width: min(1040px, calc(100vw - 32px));
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #f5f8f7;
 }
 
@@ -135,7 +135,7 @@
 .credit-detail-modal-head h2 { font-size: 20px; }
 .credit-detail-modal-head > div > p { margin-top: 4px; }
 .credit-detail-title-meta { margin-top: 7px; }
-.credit-detail-title-meta span { max-width: 210px; border-radius: 5px; background: #f1f5f3; }
+.credit-detail-title-meta span { max-width: 210px; border-radius: var(--radius-control); background: #f1f5f3; }
 .credit-detail-modal-body { padding: 14px; container: credit-modal / inline-size; }
 
 .credit-detail-layout {
@@ -151,7 +151,7 @@
   gap: 12px;
   padding: 14px;
   border-color: #d6e1dd;
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: none;
 }
 
@@ -160,7 +160,7 @@
   gap: 0;
   overflow: hidden;
   border: 1px solid #dde6e2;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #fff;
 }
 
@@ -175,7 +175,7 @@
 
 .credit-context-grid div:last-child { border-right: 0; }
 
-.credit-contract-snapshot { gap: 0; border: 1px solid #d8e3df; border-radius: 8px; overflow: hidden; }
+.credit-contract-snapshot { gap: 0; border: 1px solid #d8e3df; border-radius: var(--radius); overflow: hidden; }
 
 .credit-contract-tile {
   min-height: 82px;
@@ -196,7 +196,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid #dce5e2;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #fff;
 }
 
@@ -223,7 +223,7 @@
 .credit-payment-form,
 .credit-detail-actions,
 .credit-health-grid div {
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: none;
 }
 

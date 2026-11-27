@@ -224,7 +224,7 @@ export function HrOrganizationNode({ department, depth, index, selectedDepartmen
         <span className="hr-org-card-number">{cardNumber}</span>
         <span className="hr-org-card-label">{department.isVirtual ? "Şöbə qrupu" : "Şöbə"}</span>
         <strong>{department.department}</strong>
-        <span className="hr-org-card-count"><Users size={13} />{department.count} əməkdaş</span>
+        <span className="hr-org-card-count"><Users size={14} />{department.count} əməkdaş</span>
         <span className="hr-org-card-lead">
           <span className="small-avatar">{lead?.initials || "HR"}</span>
           <span>
@@ -279,7 +279,7 @@ export function HrEmployeeTreeNode({ employee, onSelectEmployee, depth = 0 }: {
         </div>
         <StatusBadge status={employee.level} />
         {hasChildren
-          ? <ChevronRight className={`hr-employee-chevron ${expanded ? "expanded" : ""}`} size={17} />
+          ? <ChevronRight className={`hr-employee-chevron ${expanded ? "expanded" : ""}`} size={16} />
           : <span className="hr-employee-chevron-placeholder" aria-hidden="true" />}
       </button>
       {hasChildren && expanded && (

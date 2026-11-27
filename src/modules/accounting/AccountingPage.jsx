@@ -12,6 +12,7 @@ import { appAlert } from "../../shared/ui/dialogService.js";
 import { Badge, Button, Card, DataTable, FormGrid, Input, Notice, PageStack, Select, TableActions, Tabs, Toolbar } from "../../shared/ui/primitives.jsx";
 import { formatNumber } from "../../services/format.js";
 import LoadMoreBar from "../../components/LoadMoreBar.jsx";
+import { Check, X } from "lucide-react";
 // Ledger columns show plain 2-decimal amounts (debit/credit); Azerbaijani separators, no currency sign.
 const fixed2 = (value) => formatNumber(Number(value) || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -138,7 +139,7 @@ function JournalPanel({ isAdmin }) {
                 <td className="is-numeric"><strong>Cəm:</strong></td>
                 <td className="is-numeric"><Badge tone={totals.balanced ? "success" : "danger"}>{fixed2(totals.d)}</Badge></td>
                 <td className="is-numeric"><Badge tone={totals.balanced ? "success" : "danger"}>{fixed2(totals.c)}</Badge></td>
-                <td>{totals.balanced ? "✓ balanslıdır" : "✗ balanssız"}</td>
+                <td>{totals.balanced ? <><Check size={14} aria-hidden="true" className="u-vertical-align-middle" /> balanslıdır</> : <><X size={14} aria-hidden="true" className="u-vertical-align-middle" /> balanssız</>}</td>
               </tr>
             </tbody>
           </table></div>
@@ -174,7 +175,7 @@ export function TrialBalancePanel({ tenantId }) {
 
   return (
     <Card title="Sınaq balansı" actions={<Toolbar><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /><Button onClick={load}>Yenilə</Button></Toolbar>}>
-      <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Hesab" }, { key: "type", label: "Tip" }, { key: "debit", label: "Debet", align: "right" }, { key: "credit", label: "Kredit", align: "right" }, { key: "balance", label: "Balans", align: "right" }]} rows={loading ? [] : rows} emptyText={loading ? "Yüklənir…" : "Məlumat yoxdur."} renderCell={(row, column) => column.key === "code" ? <strong>{row.code}</strong> : column.key === "type" ? TYPE_LABEL[row.type] : ["debit", "credit", "balance"].includes(column.key) ? fixed2(row[column.key]) : row[column.key]} footer={<tfoot><tr><td colSpan={3} className="is-numeric"><strong>Cəm</strong></td><td className="is-numeric"><strong>{fixed2(totals.d)}</strong></td><td className="is-numeric"><strong>{fixed2(totals.c)}</strong></td><td className="is-numeric"><Badge tone={Math.abs(totals.d - totals.c) < 0.01 ? "success" : "danger"}>{Math.abs(totals.d - totals.c) < 0.01 ? "✓" : "✗ balanssız"}</Badge></td></tr></tfoot>} />
+      <DataTable columns={[{ key: "code", label: "Kod" }, { key: "name", label: "Hesab" }, { key: "type", label: "Tip" }, { key: "debit", label: "Debet", align: "right" }, { key: "credit", label: "Kredit", align: "right" }, { key: "balance", label: "Balans", align: "right" }]} rows={loading ? [] : rows} emptyText={loading ? "Yüklənir…" : "Məlumat yoxdur."} renderCell={(row, column) => column.key === "code" ? <strong>{row.code}</strong> : column.key === "type" ? TYPE_LABEL[row.type] : ["debit", "credit", "balance"].includes(column.key) ? fixed2(row[column.key]) : row[column.key]} footer={<tfoot><tr><td colSpan={3} className="is-numeric"><strong>Cəm</strong></td><td className="is-numeric"><strong>{fixed2(totals.d)}</strong></td><td className="is-numeric"><strong>{fixed2(totals.c)}</strong></td><td className="is-numeric"><Badge tone={Math.abs(totals.d - totals.c) < 0.01 ? "success" : "danger"}>{Math.abs(totals.d - totals.c) < 0.01 ? <Check size={14} aria-hidden="true" className="u-vertical-align-middle" /> : <><X size={14} aria-hidden="true" className="u-vertical-align-middle" /> balanssız</>}</Badge></td></tr></tfoot>} />
     </Card>
   );
 }

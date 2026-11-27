@@ -117,14 +117,14 @@ export function WarehouseBalancesWorkspace({
           </button>
           <div className="warehouse-action-menu">
             <button type="button" className="primary-btn" aria-expanded={actionMenuOpen} onClick={() => setActionMenuOpen((open) => !open)}>
-              <ShoppingCart size={16} /> Əməliyyatlar <ChevronRight size={15} />
+              <ShoppingCart size={16} /> Əməliyyatlar <ChevronRight size={16} />
             </button>
             {actionMenuOpen && (
               <div className="warehouse-action-menu-popover">
-                <button type="button" onClick={() => { setActionMenuOpen(false); onReceiveStock(); }}><Plus size={15} /> Mədaxil et</button>
-                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenImport(); }}><Upload size={15} /> Toplu idxal</button>
-                <button type="button" onClick={() => { setActionMenuOpen(false); onCreateProduct(); }}><Package size={15} /> Məhsul yarat</button>
-                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenOperations(); }}><Warehouse size={15} /> Anbar idarəetməsi</button>
+                <button type="button" onClick={() => { setActionMenuOpen(false); onReceiveStock(); }}><Plus size={16} /> Mədaxil et</button>
+                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenImport(); }}><Upload size={16} /> Toplu idxal</button>
+                <button type="button" onClick={() => { setActionMenuOpen(false); onCreateProduct(); }}><Package size={16} /> Məhsul yarat</button>
+                <button type="button" onClick={() => { setActionMenuOpen(false); onOpenOperations(); }}><Warehouse size={16} /> Anbar idarəetməsi</button>
               </div>
             )}
           </div>
@@ -266,7 +266,7 @@ export function WarehouseBalanceTable({ rows, view, onEditProduct, onOpenProduct
               <td>{row.category}</td>
               <td>
                 <div className="warehouse-product-cell">
-                  <span className="warehouse-product-thumb">{row.imageUrl ? <img src={row.imageUrl} alt="" /> : <Package size={15} />}</span>
+                  <span className="warehouse-product-thumb">{row.imageUrl ? <img src={row.imageUrl} alt="" /> : <Package size={16} />}</span>
                   {row.productId && onOpenProduct ? (
                     <button type="button" className="text-btn" onClick={() => onOpenProduct(row.productId)} title="Məhsulun 360 baxışını aç">
                       <strong>{row.product}</strong>

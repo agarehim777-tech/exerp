@@ -14,7 +14,7 @@ export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
   return (
     <div className="stack">
       <section className="metric-grid four">
-        <MetricCard label="Qurulum mərhələsi" value={onboarding.companyStage || "Go-live hazırlığı"} icon={ShieldCheck} tone="primary" />
+        <MetricCard label="Qurulum mərhələsi" value={onboarding.companyStage || "İstifadəyə hazırlıq"} icon={ShieldCheck} tone="primary" />
         <MetricCard label="Biznes sahəsi" value={onboarding.businessArea || "Təyin edilməyib"} icon={Building2} tone="info" />
         <MetricCard label="Açıq addım" value={rows.steps.length - rows.completed} icon={Users} tone={rows.completed === rows.steps.length ? "success" : "warning"} />
         <MetricCard label="Tamamlanma" value={percent(rows.progress)} icon={Check} tone="success" />

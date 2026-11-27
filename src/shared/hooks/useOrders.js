@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
@@ -7,64 +7,13 @@ import { ensureMainCashAccount } from '../../services/cashAccounts';
 import { readOrderById, readOrderPage, readOrderRelations } from '../../services/orderRead.js';
 import { toLocalIsoDate } from '../../services/date.js';
 
-const ENABLE_LEGACY_WRITES = import.meta.env.VITE_ENABLE_LEGACY_WRITES === 'true';
-
 function isMissingRpc(error) {
   return error?.code === 'PGRST202'
     || error?.code === '42883'
     || /function .* does not exist|schema cache/i.test(error?.message || '');
 }
 
-function lineValues(item, index, tenantId, orderId) {
-  const qty = Number(item.qty) || 0;
-  const unitPrice = Number(item.unit_price) || 0;
-  const discount = Number(item.discount_pct) || 0;
-  const vatRate = Number(item.vat_rate) || 0;
-  const net = qty * unitPrice * (1 - discount / 100);
-  return {
-    tenant_id: tenantId,
-    order_id: orderId,
-    product_id: item.product_id || null,
-    line_no: item.line_no || index + 1,
-    description: item.description || null,
-    qty,
-    unit_price: unitPrice,
-    discount_pct: discount,
-    vat_rate: vatRate,
-    line_total: Number((net * (1 + vatRate / 100)).toFixed(2)),
-  };
-}
-
 const ORDERS_PAGE_SIZE = 200;
-
-export function buildMissingCreditDraft(order) {
-  const total = Number(order?.total || 0);
-  const paid = Math.max(0, Number(order?.paid_amount || 0));
-  const orderNumber = String(order?.order_no || '');
-  const numericOrderNumber = orderNumber.match(/(\d+)$/)?.[1];
-  const status = String(order?.status || '').toLowerCase();
-
-  if (
-    !order?.id
-    || !order?.customer_id
-    || order?.credit
-    || !numericOrderNumber
-    || paid <= 0
-    || total <= paid
-    || status === 'cancelled'
-  ) return null;
-
-  return {
-    orderId: order.id,
-    contractNo: `İN-${numericOrderNumber}`,
-    customerId: order.customer_id,
-    principal: total,
-    initialPayment: paid,
-    requiredInitial: paid,
-    termMonths: 12,
-    orderDate: order.order_date || toLocalIsoDate(),
-  };
-}
 
 export function useOrders(tenantId) {
   const { scope, begin } = useTenantRequestScope(tenantId);
@@ -75,8 +24,6 @@ export function useOrders(tenantId) {
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(ORDERS_PAGE_SIZE);
   const [hasMore, setHasMore] = useState(false);
-  const reconciliationKeyRef = useRef('');
-  const missingCreditRepairKeyRef = useRef('');
 
   const fetchAll = useCallback(async () => {
     const isCurrent = begin();
@@ -148,270 +95,43 @@ export function useOrders(tenantId) {
     return ensureMainCashAccount(tenantId, currency);
   };
 
-  const registerInitialPayment = async (orderId, amount, currency = 'AZN') => {
-    const expected = Number(amount || 0);
-    if (!orderId || !Number.isFinite(expected) || expected <= 0) return;
-    const { data: order, error: orderError } = await supabase.from('orders')
-      .select('id,paid_amount').eq('id', orderId).eq('tenant_id', tenantId).single();
-    if (orderError) throw orderError;
-    const missingAmount = Number((expected - Number(order.paid_amount || 0)).toFixed(2));
-    if (missingAmount <= 0) return;
-
-    const account = await resolveMainCashAccount(currency);
-    const { error: paymentError } = await supabase.rpc('register_order_payment', {
-      _order_id: orderId,
-      _amount: missingAmount,
-      _account_id: account.id,
-    });
-    if (paymentError) throw paymentError;
-  };
-
-  const createCreditContract = useCallback(async (credit) => {
-    const params = {
-      _tenant_id: tenantId,
-      _contract_no: credit.contract_no,
-      _customer_id: credit.customer_id,
-      _order_id: credit.order_id,
-      _principal: Number(credit.principal || 0),
-      _initial_payment: Number(credit.initial_payment || 0),
-      _required_initial: Number(credit.required_initial ?? credit.initial_payment ?? 0),
-      _term_months: Number(credit.term_months || 12),
-      _start_date: credit.start_date || toLocalIsoDate(),
-    };
-    let result = await supabase.rpc('create_credit_contract', params);
-    if (result.error && isMissingRpc(result.error)) {
-      const { _required_initial: _ignored, ...legacyParams } = params;
-      result = await supabase.rpc('create_credit_contract', legacyParams);
-    }
-    if (result.error) throw result.error;
-    return result.data;
-  }, [tenantId]);
-
-  const createCreditForOrder = async (orderId, credit) => {
-    if (!credit || !orderId) return null;
-    const { data: existing, error: existingError } = await supabase.from('credit_contracts')
-      .select('id').eq('tenant_id', tenantId).eq('order_id', orderId).limit(1).maybeSingle();
-    if (existingError) throw existingError;
-    if (existing) return existing.id;
-    return createCreditContract({ ...credit, order_id: orderId });
-  };
-
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES) return undefined;
-    if (!tenantId || loading || !orders.length) return;
-    const drafts = orders.map(buildMissingCreditDraft).filter(Boolean);
-    if (!drafts.length) {
-      missingCreditRepairKeyRef.current = '';
-      return;
-    }
-
-    const repairKey = drafts.map((draft) => `${draft.orderId}:${draft.initialPayment}`).sort().join('|');
-    if (missingCreditRepairKeyRef.current === repairKey) return;
-    missingCreditRepairKeyRef.current = repairKey;
-    let active = true;
-
-    (async () => {
-      for (const draft of drafts) {
-        await createCreditContract({
-          contract_no: draft.contractNo,
-          customer_id: draft.customerId,
-          order_id: draft.orderId,
-          principal: draft.principal,
-          initial_payment: draft.initialPayment,
-          required_initial: draft.requiredInitial,
-          term_months: draft.termMonths,
-          start_date: draft.orderDate,
-        });
-      }
-      if (active) await fetchAll();
-    })().catch((repairError) => {
-      if (!active) return;
-      setError(new Error(`Kredit bağlantısı bərpa edilmədi: ${repairError.message || repairError}`));
-    });
-
-    return () => { active = false; };
-  }, [tenantId, loading, orders, fetchAll, createCreditContract]);
-
-  const saveBonusAssignments = async (orderId, effectiveFrom, allocations = [], reason = null) => {
-    const normalized = allocations
-      .map((row) => ({ seller_name: String(row?.seller_name || row?.seller || '').trim(), rate: Number(row?.rate ?? row?.bonus ?? 0) }))
-      .filter((row) => row.seller_name && row.rate > 0);
-    if (!orderId || !normalized.length) return;
-    const { error: bonusError } = await supabase.rpc('set_order_bonus_assignments', {
-      _order_id: orderId,
-      _effective_from: effectiveFrom || toLocalIsoDate(),
-      _allocations: normalized,
-      _reason: reason || 'Sifariş yaradılarkən təyin edilib',
-    });
-    if (bonusError) throw bonusError;
-  };
-
-  useEffect(() => {
-    if (!ENABLE_LEGACY_WRITES) return undefined;
-    if (!tenantId || loading || !orders.length) return;
-    const reconciliationKey = `${tenantId}:${orders.map((order) => `${order.id}:${Number(order.paid_amount || 0)}`).sort().join('|')}`;
-    if (reconciliationKeyRef.current === reconciliationKey) return;
-    reconciliationKeyRef.current = reconciliationKey;
-    let active = true;
-    (async () => {
-      const orderIds = orders.map((order) => order.id).filter(Boolean);
-      const { data: contracts, error: contractError } = await supabase.from('credit_contracts')
-        .select('order_id,initial_payment').eq('tenant_id', tenantId).in('order_id', orderIds).gt('initial_payment', 0);
-      if (contractError) throw contractError;
-      let changed = false;
-      for (const contract of contracts || []) {
-        const order = orders.find((row) => row.id === contract.order_id);
-        if (!order || Number(order.paid_amount || 0) >= Number(contract.initial_payment || 0)) continue;
-        await registerInitialPayment(order.id, contract.initial_payment, order.currency || 'AZN');
-        changed = true;
-      }
-      if (active && changed) await fetchAll();
-    })().catch((reconcileError) => {
-      if (active) {
-        reconciliationKeyRef.current = '';
-        setError(reconcileError);
-      }
-    });
-    return () => { active = false; };
-    // Mövcud natamam sifarişlər tenant üzrə yalnız bir dəfə sinxronlaşdırılır.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, loading, orders]);
-
+  // Sales are created only through create_sales_order_complete: order, credit, bonus split and initial payment
+  // commit in one server transaction (the old client-side multi-step paths were removed).
   const create = async ({ items = [], request_key: requestKey, credit = null, bonus_allocations: bonusAllocations = [], ...header }) => {
+    if (!header.customer_id) throw new Error('Satış üçün müştəri seçilməlidir.');
     const isCurrent = begin('create');
-    if (requestKey && header.customer_id) {
-      const initialPayment = Number(credit?.initial_payment || 0);
-      let resolvedAccount = null;
-      if (initialPayment > 0) {
-        resolvedAccount = await resolveMainCashAccount(header.currency || 'AZN');
-      }
-      try {
-        const completeResult = await createSalesOrderComplete({
-          tenantId, requestKey, orderNo: header.order_no, customerId: header.customer_id,
-          orderDate: header.order_date || toLocalIsoDate(),
-          currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
-          bonusAllocations, initialPayment, accountId: resolvedAccount?.id || null,
-        });
-        // Hydrate only the committed order; refreshing a whole portfolio must not hold the form open.
-        try {
-          const row = await readOrderById(tenantId, completeResult.order_id, isCurrent);
-          if (row && isCurrent()) {
-            const related = await readOrderRelations(tenantId, [row.id], isCurrent);
-            if (related && isCurrent()) {
-              const saved = { ...row, credit: related.credits.find(item => item.order_id === row.id) || null,
-                bonus_assignments: related.bonuses, delivery: related.deliveries[0] || null };
-              setOrders(current => [saved, ...current.filter(item => item.id !== row.id)].slice(0, limit));
-              setLoadedScope(scope);
-              setLoaded(true);
-              setError(null);
-            }
-          }
-        } catch (readError) {
-          if (isCurrent()) setError(readError);
-        }
-        if (isCurrent()) void fetchAll();
-        return { id: completeResult.order_id, creditId: completeResult.credit_id };
-      } catch (completeError) {
-        if (!ENABLE_LEGACY_WRITES || (!isMissingRpc(completeError) && completeError?.code !== 'ERP_SCHEMA_MIGRATION_REQUIRED')) throw completeError;
-      }
-
-      const { data: atomicResult, error: atomicError } = await supabase.rpc('create_sales_order_atomic', {
-        _tenant_id: tenantId,
-        _request_key: requestKey,
-        _order_no: header.order_no,
-        _customer_id: header.customer_id,
-        _order_date: header.order_date || toLocalIsoDate(),
-        _currency: header.currency || 'AZN',
-        _notes: header.notes || null,
-        _items: items,
-        _credit: credit,
-      });
-      if (!atomicError) {
-        await saveBonusAssignments(atomicResult.order_id, header.order_date, bonusAllocations);
-        await registerInitialPayment(atomicResult.order_id, credit?.initial_payment, header.currency || 'AZN');
-        await fetchAll();
-        return { id: atomicResult.order_id, creditId: atomicResult.credit_id };
-      }
-      if (!isMissingRpc(atomicError)) throw atomicError;
-    }
-
-    if (!ENABLE_LEGACY_WRITES) throw migrationRequiredError('satış yaratma');
-
-    const { data: orderId, error } = await supabase.rpc('create_sales_order', {
-      _tenant_id: tenantId,
-      _order_no: header.order_no,
-      _customer_id: header.customer_id || null,
-      _order_date: header.order_date || toLocalIsoDate(),
-      _currency: header.currency || 'AZN',
-      _notes: header.notes || null,
-      _items: items,
+    const initialPayment = Number(credit?.initial_payment || 0);
+    const resolvedAccount = initialPayment > 0 ? await resolveMainCashAccount(header.currency || 'AZN') : null;
+    const completeResult = await createSalesOrderComplete({
+      tenantId, requestKey: requestKey || createIdempotencyKey('sales-order'), orderNo: header.order_no, customerId: header.customer_id,
+      orderDate: header.order_date || toLocalIsoDate(),
+      currency: header.currency || 'AZN', notes: header.notes || null, items, credit,
+      bonusAllocations, initialPayment, accountId: resolvedAccount?.id || null,
     });
-    if (!error) {
-      try {
-        const creditId = await createCreditForOrder(orderId, credit ? { ...credit, customer_id: header.customer_id } : null);
-        await saveBonusAssignments(orderId, header.order_date, bonusAllocations);
-        await registerInitialPayment(orderId, credit?.initial_payment, header.currency || 'AZN');
-        await fetchAll();
-        return { id: orderId, creditId };
-      } catch (setupError) {
-        await supabase.rpc('delete_sales_order_safe', { _order_id: orderId });
-        throw setupError;
-      }
-    }
-    if (!isMissingRpc(error)) throw error;
-
-    // Transitional path for environments where the core-operations migration
-    // has not been deployed yet. Remove after all environments report v2.
-    const rows = items.map((item, index) => lineValues(item, index, tenantId, null));
-    const subtotal = rows.reduce((sum, item) => {
-      const net = item.qty * item.unit_price * (1 - item.discount_pct / 100);
-      return sum + net;
-    }, 0);
-    const vatTotal = rows.reduce((sum, item) => {
-      const net = item.qty * item.unit_price * (1 - item.discount_pct / 100);
-      return sum + net * item.vat_rate / 100;
-    }, 0);
-    const { data: order, error: insertError } = await supabase
-      .from('orders')
-      .insert({
-        ...header,
-        status: header.status || 'confirmed',
-        subtotal: Number(subtotal.toFixed(2)),
-        vat_total: Number(vatTotal.toFixed(2)),
-        total: Number((subtotal + vatTotal).toFixed(2)),
-        tenant_id: tenantId,
-      })
-      .select()
-      .single();
-    if (insertError) throw insertError;
-
-    const fallbackRows = items.map((item, index) => lineValues(item, index, tenantId, order.id));
-    const { error: itemError } = await supabase.from('order_items').insert(fallbackRows);
-    if (itemError) {
-      await supabase.from('orders').delete().eq('id', order.id).eq('tenant_id', tenantId);
-      throw itemError;
-    }
+    // Hydrate only the committed order; refreshing a whole portfolio must not hold the form open.
     try {
-      const creditId = await createCreditForOrder(order.id, credit ? { ...credit, customer_id: header.customer_id } : null);
-      await saveBonusAssignments(order.id, header.order_date, bonusAllocations);
-      await registerInitialPayment(order.id, credit?.initial_payment, header.currency || 'AZN');
-      await fetchAll();
-      return { ...order, creditId };
-    } catch (setupError) {
-      await supabase.rpc('delete_sales_order_safe', { _order_id: order.id });
-      throw setupError;
+      const row = await readOrderById(tenantId, completeResult.order_id, isCurrent);
+      if (row && isCurrent()) {
+        const related = await readOrderRelations(tenantId, [row.id], isCurrent);
+        if (related && isCurrent()) {
+          const saved = { ...row, credit: related.credits.find(item => item.order_id === row.id) || null,
+            bonus_assignments: related.bonuses, delivery: related.deliveries[0] || null };
+          setOrders(current => [saved, ...current.filter(item => item.id !== row.id)].slice(0, limit));
+          setLoadedScope(scope);
+          setLoaded(true);
+          setError(null);
+        }
+      }
+    } catch (readError) {
+      if (isCurrent()) setError(readError);
     }
+    if (isCurrent()) void fetchAll();
+    return { id: completeResult.order_id, creditId: completeResult.credit_id };
   };
 
   const updateStatus = async (id, status) => {
     const { error } = await supabase.rpc('process_sales_order_status', { _order_id: id, _status: status });
-    if (error) {
-      if (!isMissingRpc(error) || !ENABLE_LEGACY_WRITES) throw error;
-      const { error: fallbackError } = await supabase.from('orders')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id).eq('tenant_id', tenantId);
-      if (fallbackError) throw fallbackError;
-    }
+    if (error) throw error;
     await fetchAll();
   };
 
@@ -445,59 +165,12 @@ export function useOrders(tenantId) {
       _account_id: resolvedAccountId,
     });
     if (paymentError) throw paymentError;
-    /*const { data: transaction, error: cashError } = await supabase.from('cash_transactions').insert({
-      tenant_id: tenantId,
-      account_id: resolvedAccountId,
-      direction: 'in',
-      amount: payment,
-      currency: order.currency || 'AZN',
-      category: 'sales_payment',
-      counterparty: order.customer?.name || null,
-      customer_id: order.customer_id || order.customer?.id || null,
-      reference: order.order_no,
-      description: `${order.order_no} sifarişi üzrə müştəri ödənişi`,
-      occurred_at: toLocalIsoDate(),
-    }).select('id').single();
-    if (cashError) throw cashError;
-
-    const newPaid = Number((alreadyPaid + payment).toFixed(2));
-    const { error: orderError } = await supabase.from('orders').update({
-      paid_amount: newPaid,
-      payment_status: newPaid >= total ? 'paid' : 'partial',
-    }).eq('id', order.id).eq('tenant_id', tenantId);
-    if (orderError) {
-      await supabase.from('cash_transactions').delete().eq('id', transaction.id).eq('tenant_id', tenantId);
-      throw orderError;
-    }*/
     await fetchAll();
   };
 
   const update = async (id, { items = [], expected_updated_at, request_key, ...header }) => {
-    if (!ENABLE_LEGACY_WRITES) {
-      await editSalesOrderAtomic({ tenantId, orderId: id, requestKey: request_key || createIdempotencyKey(`sales-edit:${id}`),
-        payload: { ...header, expected_updated_at, items } });
-      await fetchAll();
-      return;
-    }
-    const rows = items.map((item, index) => lineValues(item, index, tenantId, id));
-    const subtotal = rows.reduce((sum, item) => sum + item.qty * item.unit_price * (1 - item.discount_pct / 100), 0);
-    const vatTotal = rows.reduce((sum, item) => {
-      const net = item.qty * item.unit_price * (1 - item.discount_pct / 100);
-      return sum + net * item.vat_rate / 100;
-    }, 0);
-    const { error: headerError } = await supabase.from('orders').update({
-      ...header,
-      subtotal: Number(subtotal.toFixed(2)),
-      vat_total: Number(vatTotal.toFixed(2)),
-      total: Number((subtotal + vatTotal).toFixed(2)),
-    }).eq('id', id).eq('tenant_id', tenantId);
-    if (headerError) throw headerError;
-    const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', id).eq('tenant_id', tenantId);
-    if (deleteError) throw deleteError;
-    if (rows.length) {
-      const { error: itemError } = await supabase.from('order_items').insert(rows);
-      if (itemError) throw itemError;
-    }
+    await editSalesOrderAtomic({ tenantId, orderId: id, requestKey: request_key || createIdempotencyKey(`sales-edit:${id}`),
+      payload: { ...header, expected_updated_at, items } });
     await fetchAll();
   };
 
@@ -509,17 +182,8 @@ export function useOrders(tenantId) {
   const previewRemoval = async (id) => {
     const { data, error: previewError } = await supabase.rpc('preview_sales_order_reversal', { _order_id: id });
     if (!previewError) return data;
-    if (!ENABLE_LEGACY_WRITES && isMissingRpc(previewError)) throw migrationRequiredError('satış ləğvinin önizləməsi');
-    if (!isMissingRpc(previewError)) throw previewError;
-    const order = orders.find((row) => row.id === id);
-    return {
-      order_no: order?.order_no || '—',
-      credit_count: order?.credit ? 1 : 0,
-      payment_amount: Number(order?.paid_amount || 0),
-      reservation_count: 0,
-      stock_return_count: order?.status === 'delivered' ? (order?.items || []).length : 0,
-      warning: 'Server önizləməsi mövcud deyil; lokal sifariş məlumatı göstərilir.',
-    };
+    if (isMissingRpc(previewError)) throw migrationRequiredError('satış ləğvinin önizləməsi');
+    throw previewError;
   };
 
   const current = Boolean(tenantId && loadedScope === scope && loaded);

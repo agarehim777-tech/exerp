@@ -3,8 +3,9 @@ import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useActivities } from '../../shared/hooks/useActivities.js';
 import { Button, Input, Select } from "../../shared/ui/primitives.tsx";
 import { formatDateTime } from "../../services/date.js";
+import { Mail, MessageSquare, Phone, StickyNote, Users } from "lucide-react";
 
-const icon = { call: '📞', meeting: '🤝', email: '✉️', note: '📝', sms: '💬' };
+const icon = { call: Phone, meeting: Users, email: Mail, note: StickyNote, sms: MessageSquare };
 
 export default function CrmActivitiesPage() {
   const { activeTenantId } = useAuth();
@@ -31,8 +32,8 @@ export default function CrmActivitiesPage() {
     <div className="u-padding-24px u-display-flex u-flex-direction-column u-gap-16px">
       <div className="u-display-flex u-gap-8px u-background-surface u-padding-12px u-border-radius-12px u-border-1px_solid_border">
         <Select value={type} onChange={e => setType(e.target.value)} className="u-padding-8px_10px u-border-1px_solid_border u-border-radius-8px">
-          <option value="note">📝 Qeyd</option><option value="call">📞 Zəng</option><option value="meeting">🤝 Görüş</option>
-          <option value="email">✉️ E-poçt</option><option value="sms">💬 SMS</option>
+          <option value="note">Qeyd</option><option value="call">Zəng</option><option value="meeting">Görüş</option>
+          <option value="email">E-poçt</option><option value="sms">SMS</option>
         </Select>
         <Input value={subject} onChange={e => setSubject(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Sürətli aktivlik əlavə et..."
@@ -56,7 +57,7 @@ export default function CrmActivitiesPage() {
           <div className="u-padding-40px u-text-align-center u-color-text_secondary">Aktivlik yoxdur</div>
         ) : filtered.map(a => (
           <div key={a.id} className="u-display-flex u-gap-12px u-padding-12px u-background-surface_subtle u-border-radius-10px">
-            <span className="u-font-size-20px">{icon[a.type] || '•'}</span>
+            <span className="u-font-size-20px">{(() => { const Icon = icon[a.type]; return Icon ? <Icon size={20} aria-hidden="true" /> : '•'; })()}</span>
             <div className="u-flex-1">
               <div className="u-font-weight-600">{a.subject}</div>
               {a.body && <div className="u-font-size-13px u-color-text_secondary u-margin-top-2px">{a.body}</div>}

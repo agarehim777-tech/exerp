@@ -136,7 +136,7 @@ function ProductionPlanModal({ plan, warehouses, stockOptions, onClose, onSubmit
               className="secondary-btn compact"
               onClick={() => setValues((current) => ({ ...current, materials: [...current.materials, { ...emptyMaterial }] }))}
             >
-              <Plus size={15} /> Xammal əlavə et
+              <Plus size={16} /> Xammal əlavə et
             </button>
           </div>
           <div className="production-material-lines">
@@ -285,21 +285,21 @@ export function ProductionPage({
                 <div className="table-actions production-row-actions">
                   {!started && !completed && (
                     <button className="icon-btn" title="İstehsala başla" disabled={!canManage || !plan.canProduce} onClick={() => onStartPlan(plan.id)}>
-                      <Play size={15} />
+                      <Play size={16} />
                     </button>
                   )}
                   {started && (
                     <button className="icon-btn success" title="İstehsalı tamamla" disabled={!canManage} onClick={() => onCompletePlan(plan.id)}>
-                      <Check size={15} />
+                      <Check size={16} />
                     </button>
                   )}
                   {!completed && (
                     <>
                       <button className="icon-btn" title="Redaktə et" disabled={!canManage || started} onClick={() => setEditor({ mode: "edit", plan })}>
-                        <Pencil size={15} />
+                        <Pencil size={16} />
                       </button>
                       <button className="icon-btn danger" title="Planı sil" disabled={!canManage || started} onClick={() => onDeletePlan(plan.id)}>
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
                     </>
                   )}

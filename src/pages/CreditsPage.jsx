@@ -247,7 +247,7 @@ function CreditsPage({
           <div className="credit-directory-head">
             <div>
               <h3>
-                <CreditCard size={17} />
+                <CreditCard size={16} />
                 Kredit siyahısı
               </h3>
               <span>{todayLabel} tarixinə portfel icmalı</span>
@@ -285,7 +285,7 @@ function CreditsPage({
             <label className="credit-search-field">
               <span>Axtarış</span>
               <div>
-                <Search size={15} />
+                <Search size={16} />
                 <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -386,12 +386,12 @@ function CreditsPage({
                     disabled={debt.balance <= 0 || !isCreditStarted(credit)}
                     onClick={() => setQuickCreditId(credit.id)}
                   >
-                    <Wallet size={15} />
+                    <Wallet size={16} />
                     <span className="credit-action-label">Ödəniş götür</span>
                   </Button>
                   {!isCreditStarted(credit) && !isCreditClosed(credit, plan) ? (
                     <Button variant="primary" size="compact"  type="button" title="Krediti başlat" aria-label="Krediti başlat" onClick={() => setStartCreditId(credit.id)}>
-                      <Play size={15} />
+                      <Play size={16} />
                       <span className="credit-action-label">Krediti başlat</span>
                     </Button>
                   ) : null}

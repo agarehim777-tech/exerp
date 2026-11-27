@@ -4,7 +4,6 @@
 import { normalize } from "../../services/format.js";
 import { total } from "../utils/aggregate.js";
 import { currentBusinessDate } from "./businessDate.ts";
-import { roundMoney } from "./credit.js";
 
 type Row = Record<string, any>;
 
@@ -151,31 +150,34 @@ export function buildHrLeaveUsageMap(leaveRequests: Row[] = []): Map<string, Lea
   }, new Map());
 }
 
+// Payroll amounts are kept in qəpik (0.01 ₼); EPSILON keeps 12.505 from rounding down to 12.50.
+const toQepik = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
 export function calculatePayrollTax2026(grossValue: unknown): PayrollTax {
   const amount = Number(grossValue ?? 0);
   if (!Number.isFinite(amount)) throw new Error('Invalid payroll amount');
-  const gross = Math.max(0, roundMoney(amount));
-  const incomeTax =
+  const gross = Math.max(0, toQepik(amount));
+  const incomeTax = toQepik(
     gross <= 2500
-      ? Math.max(0, Math.round((gross - 200) * 0.03))
+      ? Math.max(0, (gross - 200) * 0.03)
       : gross <= 8000
-        ? Math.round(75 + (gross - 2500) * 0.1)
-        : Math.round(625 + (gross - 8000) * 0.14);
-  const employeeSocial = gross <= 200 ? Math.round(gross * 0.03) : Math.round(6 + (gross - 200) * 0.1);
-  const employerSocial =
+        ? 75 + (gross - 2500) * 0.1
+        : 625 + (gross - 8000) * 0.14);
+  const employeeSocial = toQepik(gross <= 200 ? gross * 0.03 : 6 + (gross - 200) * 0.1);
+  const employerSocial = toQepik(
     gross <= 200
-      ? Math.round(gross * 0.22)
+      ? gross * 0.22
       : gross <= 8000
-        ? Math.round(44 + (gross - 200) * 0.15)
-        : Math.round(44 + 7800 * 0.15 + (gross - 8000) * 0.11);
-  const employeeUnemployment = Math.round(gross * 0.005);
-  const employerUnemployment = Math.round(gross * 0.005);
+        ? 44 + (gross - 200) * 0.15
+        : 44 + 7800 * 0.15 + (gross - 8000) * 0.11);
+  const employeeUnemployment = toQepik(gross * 0.005);
+  const employerUnemployment = toQepik(gross * 0.005);
   // Mandatory health insurance (icbari tibbi sığorta), paid by the employee and the employer alike:
-  // 2% of the part up to 8000 ₼ and 0.5% of the part above. The old HR panel rule had it; this shared rule did not.
-  const medical = gross <= 8000 ? Math.round(gross * 0.02) : Math.round(160 + (gross - 8000) * 0.005);
+  // 2% of the part up to 8000 ₼ and 0.5% of the part above.
+  const medical = toQepik(gross <= 8000 ? gross * 0.02 : 160 + (gross - 8000) * 0.005);
   const employeeMedical = medical;
   const employerMedical = medical;
-  const totalDeductions = incomeTax + employeeSocial + employeeUnemployment + employeeMedical;
+  const totalDeductions = toQepik(incomeTax + employeeSocial + employeeUnemployment + employeeMedical);
 
   return {
     gross,
@@ -184,11 +186,11 @@ export function calculatePayrollTax2026(grossValue: unknown): PayrollTax {
     employeeUnemployment,
     employeeMedical,
     totalDeductions,
-    net: Math.max(0, gross - totalDeductions),
+    net: Math.max(0, toQepik(gross - totalDeductions)),
     employerSocial,
     employerUnemployment,
     employerMedical,
-    employerCost: gross + employerSocial + employerUnemployment + employerMedical,
+    employerCost: toQepik(gross + employerSocial + employerUnemployment + employerMedical),
   };
 }
 
@@ -446,6 +448,8 @@ export function buildHrRecruitmentRows(planningRows: Row[], vacancies: Row[] = [
 }
 
 export const hrPlatformTabs = ["Komanda", "İş vaxtı", "Məzuniyyət", "Payroll", "Recruitment"];
+// Tab keys stay in the URL (?tab=Payroll); this is what the page shows.
+export const hrPlatformTabLabels: Record<string, string> = { Payroll: "Əmək haqqı", Recruitment: "İşə qəbul" };
 
 export function buildHrDepartmentTree(structure: Row[] = []): Row[] {
   const nodes = new Map<string, Row>();

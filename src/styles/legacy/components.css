@@ -181,7 +181,7 @@
   padding: 5px;
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 3px 10px rgba(21, 58, 48, 0.05);
   scrollbar-width: none;
@@ -200,7 +200,7 @@
   gap: 7px;
   padding: 0 12px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: #355047;
   background: transparent;
   font: inherit;
@@ -257,7 +257,7 @@
   gap: 5px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-dashboard);
   background: #fbfcfa;
 }
 
@@ -268,7 +268,7 @@
 }
 
 .seller-performance-summary strong { font-size: 16px; }
-.seller-performance-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.seller-performance-table { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-dashboard); }
 .seller-performance-head,
 .seller-performance-row {
   min-width: 830px;
@@ -283,7 +283,7 @@
 .seller-performance-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .seller-performance-person > div { display: grid; gap: 2px; min-width: 0; }
 .seller-performance-person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.seller-performance-rank { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: #08775c; background: #e8f6f1; font-weight: 800; }
+.seller-performance-rank { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: var(--radius); color: #08775c; background: #e8f6f1; font-weight: 800; }
 .seller-positive { color: #07815f; font-weight: 700; }
 .seller-balance { color: #c2413b; font-weight: 700; }
 .seller-collection { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 7px; }
@@ -711,7 +711,7 @@ tr:hover td {
   min-height: 24px;
   max-width: 100%;
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;

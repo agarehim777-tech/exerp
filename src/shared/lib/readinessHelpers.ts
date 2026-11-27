@@ -403,7 +403,7 @@ function buildGoLiveReadiness(snapshot: Row = {}, integrityReport: Row = {}): Re
 
   return {
     checkedAt: new Date().toISOString(),
-    status: blockers > 0 ? "Bloker var" : watch > 0 ? "Staging hazırdır" : "Go-live hazır",
+    status: blockers > 0 ? "Bloker var" : watch > 0 ? "Staging hazırdır" : "İstifadəyə hazır",
     score,
     blockers,
     watch,
@@ -447,7 +447,7 @@ function buildProductionHardeningReport(snapshot: Row = {}, { goLiveReport = {},
       area: "Deployment monitorinqi",
       status: deploymentReady && goLiveReport.score >= 70 ? "Hazır" : "Nəzarət",
       score: deploymentReady ? Math.max(70, Number(goLiveReport.score || 70)) : 55,
-      detail: `Go-live ${goLiveReport.status || "yoxlanmayıb"} · deploy toolkit ${deploymentToolkitReady ? "hazır" : "yoxdur"}`,
+      detail: `İstifadəyə hazırlıq: ${goLiveReport.status || "yoxlanmayıb"} · deploy toolkit ${deploymentToolkitReady ? "hazır" : "yoxdur"}`,
       next: "Health endpoint, smoke test və deploy nəticəsi release checklist-də saxlanmalıdır",
     },
     {

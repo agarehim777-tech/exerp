@@ -19,6 +19,7 @@
   --radius-control: 6px;
   --radius-panel: 8px;
   --radius-dashboard: 12px;
+  --radius-xl: 16px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -54,5 +55,16 @@
   --focus-shadow: 0 0 0 2px rgba(8, 118, 93, .16);
   --overlay: rgba(12, 20, 18, .55);
   --modal-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+  /* Stacking layers, lowest to highest. Local stacking inside a component may use 0-5;
+     page-level layers use these tokens (src/test/visual-guards.test.js enforces it). */
+  --z-sticky: 10;
+  --z-scrim: 15;
+  --z-sidebar: 20;
+  --z-popover: 30;
+  --z-fab: 40;
+  --z-modal: 50;
+  --z-overlay: 150;
+  --z-toast: 200;
+  --z-dialog: 300;
 }
 

@@ -51,7 +51,7 @@ export default function SupportPage({
           <PanelHeader title="Dəstək və tapşırıq növbəsi" subtitle="Sifariş, kredit və müştəriyə bağlı operativ tapşırıqlar" icon={MessageSquare} />
           <DataTable
             emptyText={loading ? "Sorğular yüklənir…" : undefined}
-            columns={["Sorğu", "Bağlantı", "Prioritet", "Comment", "Məsul", "SLA", "Status", "Aç"]}
+            columns={["Sorğu", "Bağlantı", "Prioritet", "Şərh", "Məsul", "SLA", "Status", "Aç"]}
             rows={enrichedTickets.map((ticket) => [
               <TwoLine title={ticket.title} subtitle={`${ticket.id} · ${ticket.createdAt}`} />,
               <TwoLine title={ticket.linkedLabel} subtitle={ticket.customer || ticket.fin || ticket.module} />,
@@ -130,7 +130,7 @@ export default function SupportPage({
                     <p>{comment.text}</p>
                   </div>
                 ))}
-                {selected.comments.length === 0 && <EmptyState title="Comment yoxdur" />}
+                {selected.comments.length === 0 && <EmptyState title="Şərh yoxdur" />}
               </div>
               <div className="support-comment-composer">
                 <textarea
@@ -141,7 +141,7 @@ export default function SupportPage({
                 />
                 <button className="primary-btn" onClick={submitComment} data-testid="support-comment-submit">
                   <Send size={16} />
-                  Comment
+                  Şərh əlavə et
                 </button>
               </div>
             </>

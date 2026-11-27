@@ -56,7 +56,7 @@ function SidebarNav({ items, active, onSelect }) {
           const Icon = navIcons[entry.item.id] || Settings;
           return (
             <ModuleLink key={entry.item.id} to={pathForModule(entry.item.id)} aria-current={active === entry.item.id ? 'page' : undefined} className={`nav-item ${active === entry.item.id ? "active" : ""}`} onSelect={() => onSelect?.(entry.item.id)}>
-              <Icon size={17} />
+              <Icon size={16} />
               <span>{entry.item.label}</span>
             </ModuleLink>
           );
@@ -73,7 +73,7 @@ function SidebarNav({ items, active, onSelect }) {
               onClick={() => setOpen((current) => ({ ...current, [entry.id]: !current[entry.id] }))}
               aria-expanded={isOpen}
             >
-              <GroupIcon size={17} />
+              <GroupIcon size={16} />
               <span className="u-flex-1 u-text-align-left">{GROUP_LABELS[entry.id] || entry.id}</span>
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
@@ -83,7 +83,7 @@ function SidebarNav({ items, active, onSelect }) {
                   const Icon = navIcons[child.id];
                   return (
                     <ModuleLink key={child.id} to={pathForModule(child.id)} aria-current={active === child.id ? 'page' : undefined} className={`nav-item ${active === child.id ? "active" : ""}`} onSelect={() => onSelect?.(child.id)}>
-                      {Icon && <Icon size={15} />}
+                      {Icon && <Icon size={16} />}
                       <span>{child.label}</span>
                     </ModuleLink>
                   );
@@ -108,7 +108,7 @@ export function Sidebar({ active, items = navItems, currentUser, activeRole, mob
           <button className="icon-btn sidebar-close" onClick={onClose} aria-label="Menyunu bağla"><X size={18} /></button>
         </div>
         <SidebarNav items={items} active={active} onSelect={onSelect} />
-        <button type="button" className="sidebar-logout" onClick={onLogout}><LogOut size={17} aria-hidden="true" /><span>Sistemdən çıx</span></button>
+        <button type="button" className="sidebar-logout" onClick={onLogout}><LogOut size={16} aria-hidden="true" /><span>Sistemdən çıx</span></button>
         <div className="admin-card">
           <div className="avatar">{initials}</div>
           <div><div className="admin-name">{currentUser?.name || "Administrator"}</div><div className="admin-mail">{activeRole?.name || currentUser?.email}</div></div>
@@ -124,7 +124,7 @@ export function Topbar({ query, setQuery, unread, messages, onMenu, onMessages, 
     <header className="topbar">
       <button className="icon-btn mobile-menu" onClick={onMenu} aria-label="Menyunu aç"><Menu size={20} /></button>
       <div className="searchbox">
-        <Search size={17} />
+        <Search size={16} />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Müştəri, sifariş, məhsul axtar..." />
         {query && <button className="clear-search" onClick={() => setQuery("")} aria-label="Axtarışı sil"><X size={14} /></button>}
       </div>

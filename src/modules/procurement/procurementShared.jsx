@@ -103,7 +103,7 @@ export function IconButton({ icon: Icon, label, onClick, tone = "ghost", disable
       disabled={disabled}
       className={`procurement-page-styles-icon-button procurement-page-styles-button-${tone}`}
  >
-      <Icon size={15} />
+      <Icon size={16} />
       <span>{label}</span>
     </button>
   );
@@ -141,7 +141,7 @@ export function ProductAutocomplete({ products, value, onSelect }) {
 
   return (
     <div className="product-autocomplete">
-      <Search size={15} aria-hidden="true" />
+      <Search size={16} aria-hidden="true" />
       <input
         value={query}
         placeholder="Məhsul adı və ya SKU yazın"

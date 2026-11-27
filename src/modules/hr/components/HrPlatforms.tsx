@@ -30,7 +30,7 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
   const profileViews: { label: string; icon: LucideIcon; count?: number }[] = [
     { label: "Ümumi", icon: LayoutDashboard },
     { label: "İş və məzuniyyət", icon: CalendarClock },
-    { label: "Payroll", icon: Wallet },
+    { label: "Əmək haqqı", icon: Wallet },
     { label: "Sənədlər", icon: FileText, count: selectedRecord.missingDocumentCount },
   ];
 
@@ -39,7 +39,7 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
       <div className="hr-people-list">
         <div className="hr-people-list-head">
           <div><strong>Əməkdaşlar</strong><span>{records.length} nəticə</span></div>
-          <Users size={17} />
+          <Users size={16} />
         </div>
         {records.map((record) => (
           <button
@@ -73,7 +73,7 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
         <nav className="hr-profile-tabs" aria-label="Əməkdaş profil bölmələri">
           {profileViews.map(({ label, icon: Icon, count }) => (
             <button key={label} className={profileView === label ? "active" : ""} onClick={() => setProfileView(label)}>
-              <Icon size={15} /><span>{label}</span>{count! > 0 && <b>{count}</b>}
+              <Icon size={16} /><span>{label}</span>{count! > 0 && <b>{count}</b>}
             </button>
           ))}
         </nav>
@@ -88,7 +88,7 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
           <div className="hr-profile-snapshot">
             <div><span>İştirak</span><strong>{percent(selectedRecord.attendanceRate)}</strong><small>{selectedRecord.workMode} · {selectedRecord.shift}</small></div>
             <div><span>Məzuniyyət</span><strong>{selectedRecord.leaveBalance} gün qalıq</strong><small>{selectedRecord.usedLeave} gün istifadə · {selectedRecord.pendingLeaveDays} gün təsdiqdə</small></div>
-            <div><span>Payroll</span><strong>{selectedRecord.payrollStatus}</strong><small>{money(selectedRecord.netSalary)} net əmək haqqı</small></div>
+            <div><span>Əmək haqqı</span><strong>{selectedRecord.payrollStatus}</strong><small>{money(selectedRecord.netSalary)} net əmək haqqı</small></div>
           </div>
           <div className="hr-skill-strip">
             {(selectedRecord.skills.length ? selectedRecord.skills : ["Profil bacarıqları əlavə edilməyib"]).map((skill: string) => <span key={skill}>{skill}</span>)}
@@ -106,11 +106,11 @@ export function HrEmployeePlatform({ records, selectedRecord, onSelect, onEdit, 
           <div className="hr-profile-focus-card"><CalendarClock size={20} /><div><span>Məzuniyyət vəziyyəti</span><strong>{selectedRecord.leaveBalance} gün qalıq</strong><small>{selectedRecord.usedLeave} gün istifadə olunub, {selectedRecord.pendingLeaveDays} gün təsdiq gözləyir</small></div></div>
         </div>}
 
-        {profileView === "Payroll" && <div className="hr-profile-view">
+        {profileView === "Əmək haqqı" && <div className="hr-profile-view">
           <div className="hr-profile-grid compact">
             <TwoLine title="Net payroll" subtitle={money(selectedRecord.netSalary)} />
             <TwoLine title="İşəgötürən xərci" subtitle={money(selectedRecord.employerCost)} />
-            <TwoLine title="Payroll periodu" subtitle={selectedRecord.payrollPeriod} />
+            <TwoLine title="Əmək haqqı dövrü" subtitle={selectedRecord.payrollPeriod} />
             <TwoLine title="Ödənilmə tarixi" subtitle={selectedRecord.payrollPaidAt || "Hələ bağlanmayıb"} />
           </div>
           <div className="hr-profile-focus-card"><Wallet size={20} /><div><span>Ödəniş statusu</span><strong>{selectedRecord.payrollStatus}</strong><small>{selectedRecord.payrollPeriod} dövrü üzrə</small></div></div>
@@ -275,7 +275,7 @@ export function HrPayrollPlatform({ rows, totalNet, onMarkPaid }: {
         <div>
           <span>Net ödəniş</span>
           <strong>{money(net)}</strong>
-          <small>Payroll uçotu</small>
+          <small>Əmək haqqı uçotu</small>
         </div>
         <div>
           <span>İşəgötürən xərci</span>

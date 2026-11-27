@@ -56,7 +56,7 @@ function signature(expense) {
   return JSON.stringify(appExpenseToRow(expense, "-"));
 }
 
-export function useExpensesSync({ tenantId, ready, expenses, setState, onError, allowLegacyWrites = false }) {
+export function useExpensesSync({ tenantId, ready, expenses, setState, onError }) {
   const { scope } = useTenantRequestScope(tenantId);
   const latest = useRef(expenses);
   latest.current = expenses;
@@ -96,41 +96,6 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
     }
   }, [tenantId, setState]);
 
-  const flush = useCallback(async () => {
-    if (!allowLegacyWrites) return;
-    const session = sessionRef.current;
-    if (!session?.alive || session.scope !== scope || !session.hydrated || session.busy) return;
-    session.busy = true;
-    setStatus({ phase: "saving", error: null });
-    try {
-      while (session.alive) {
-        const rows = (latest.current || []).filter(row => row?.id);
-        const keys = new Set(rows.map(row => String(row.id)));
-        const changed = rows.filter(row => session.baseline.get(String(row.id)) !== signature(row));
-        const removed = [...session.baseline.keys()].filter(key => !keys.has(key));
-        if (!changed.length && !removed.length) break;
-        if (changed.length) {
-          const { error } = await supabase.from("expenses").upsert(changed.map(row => appExpenseToRow(row, tenantId)), { onConflict: "tenant_id,expense_no" });
-          if (error) throw error;
-          if (!session.alive) return;
-          changed.forEach(row => session.baseline.set(String(row.id), signature(row)));
-        }
-        if (removed.length) {
-          const { error } = await supabase.from("expenses").delete().eq("tenant_id", tenantId).in("expense_no", removed);
-          if (error) throw error;
-          if (!session.alive) return;
-          removed.forEach(key => session.baseline.delete(key));
-        }
-      }
-      if (session.alive) setStatus({ phase: "saved", error: null });
-    } catch (error) {
-      if (session.alive) {
-        setStatus({ phase: "error", error });
-        errorHandler.current?.(error);
-      }
-    } finally { session.busy = false; }
-  }, [scope, tenantId, allowLegacyWrites]);
-
   useEffect(() => {
     const session = { scope, alive: true, hydrated: false, busy: false, baseline: new Map() };
     sessionRef.current = session;
@@ -138,17 +103,11 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
     return () => { session.alive = false; };
   }, [tenantId, ready, scope, hydrate]);
 
-  useEffect(() => {
-    if (!allowLegacyWrites || !ready || !sessionRef.current?.hydrated) return;
-    const timer = setTimeout(flush, 400);
-    return () => clearTimeout(timer);
-  }, [expenses, ready, flush, allowLegacyWrites]);
-
   const retry = useCallback(() => {
     const session = sessionRef.current;
     if (!ready || !tenantId || session?.scope !== scope) return;
-    return allowLegacyWrites && session.hydrated ? flush() : hydrate(session);
-  }, [ready, tenantId, scope, flush, hydrate, allowLegacyWrites]);
+    return hydrate(session);
+  }, [ready, tenantId, scope, hydrate]);
 
   const refresh = useCallback(() => {
     const session = sessionRef.current;
@@ -156,7 +115,7 @@ export function useExpensesSync({ tenantId, ready, expenses, setState, onError, 
     return hydrate(session);
   }, [ready, tenantId, scope, hydrate]);
 
-  useRealtimeResync(ready && !allowLegacyWrites ? tenantId : null, ['expenses'], refresh,
+  useRealtimeResync(ready ? tenantId : null, ['expenses'], refresh,
     { channelPrefix: 'expense-read' });
 
   useEffect(() => {

@@ -618,7 +618,7 @@
   .scrim {
     position: fixed;
     inset: 0;
-    z-index: 15;
+    z-index: var(--z-scrim, 15);
     border: 0;
     background: rgba(15, 23, 42, 0.36);
   }
@@ -1203,5 +1203,17 @@
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* Phones: the two-row topbar (~125px) scrolls away instead of staying fixed, and the page keeps room
+   below its last row for the floating assistant button so it does not cover content. */
+@media (max-width: 640px) {
+  .topbar {
+    position: static;
+  }
+
+  .main {
+    padding-bottom: 88px;
   }
 }

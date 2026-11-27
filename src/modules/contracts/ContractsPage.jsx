@@ -21,7 +21,7 @@ export function ContractsPage({ contracts, onExport }) {
         {contractTemplates.map((template) => (
           <Panel key={template.title}>
             <div className="template-card">
-              <FileText size={22} />
+              <FileText size={24} />
               <h3>{template.title}</h3>
               <p>{template.desc}</p>
             </div>
