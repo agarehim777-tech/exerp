@@ -62,9 +62,17 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
     const result = calcPayroll({
       baseSalary: employee.salary,
       workDays: norm,
-      workedDays: days || norm,
+      workedDays: days,
     });
-    return { employee, ...result, posted };
+    // Closed periods retain their recorded amounts when the calculation rule changes.
+    const snapshot = posted ? {
+      ...result,
+      gross: Number(posted.payload?.gross ?? result.gross),
+      incomeTax: Number(posted.payload?.incomeTax ?? result.incomeTax),
+      socialEmployee: Number(posted.payload?.social ?? result.socialEmployee),
+      net: Number(posted.payload?.net ?? posted.amount),
+    } : result;
+    return { employee, ...snapshot, posted, attendanceReady: days > 0 };
   }), [attendanceSummary, ops.byType.payroll, period, norm]);
 
   const payrollTotals = payrollRows.reduce((acc, row) => ({
@@ -233,16 +241,17 @@ export default function HrOperationsPanel({ employees = [], controlledTab = null
                 : <Button
                     key="b"
                     className={"ui-button ui-button-secondary ui-button-compact"}
-                    disabled={busy}
+                    disabled={busy || ops.loading || Boolean(ops.error) || !row.attendanceReady}
+                    title={!row.attendanceReady ? "Davamiyyət məlumatı tamamlanmayıb" : undefined}
                     onClick={() => guard(() => ops.createEvent({
                       employeeId: row.employee.id,
                       eventType: "payroll",
                       status: "approved",
                       startDate: `${period}-01`,
                       amount: row.net,
-                      payload: { period, gross: row.gross, incomeTax: row.incomeTax, social: row.socialEmployee, net: row.net },
+                      payload: { period, ruleVersion: 'hr-domain-2026', gross: row.gross, incomeTax: row.incomeTax, social: row.socialEmployee, net: row.net },
                     }))}
-                  >Bağla</Button>,
+                  >{row.attendanceReady ? 'Bağla' : 'Davamiyyət yoxdur'}</Button>,
             ])}
           />
         </>
@@ -275,5 +284,5 @@ function SectionTitle({ title, subtitle }) {
 }
 
 function Table({ columns, rows }) {
-  return <DataTable columns={columns} rows={rows} emptyText="Qeyd yoxdur" />;
+  return <DataTable columns={columns.map((label, key) => ({ key, label }))} rows={rows} emptyText="Qeyd yoxdur" />;
 }

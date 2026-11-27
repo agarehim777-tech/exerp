@@ -18,10 +18,12 @@ export interface PayrollTax {
   incomeTax: number;
   employeeSocial: number;
   employeeUnemployment: number;
+  employeeMedical: number;
   totalDeductions: number;
   net: number;
   employerSocial: number;
   employerUnemployment: number;
+  employerMedical: number;
   employerCost: number;
 }
 
@@ -76,7 +78,7 @@ export function buildHrEmployeeRecords(employees: Row[], leaveRequests: Row[] = 
     const bonus = kpi >= 105 ? Math.round(salary * 0.14) : kpi >= 95 ? Math.round(salary * 0.07) : 0;
     const payrollTax = calculatePayrollTax2026(salary + bonus);
     const tax = payrollTax.incomeTax;
-    const social = payrollTax.employeeSocial + payrollTax.employeeUnemployment;
+    const social = payrollTax.employeeSocial + payrollTax.employeeUnemployment + payrollTax.employeeMedical;
     const netSalary = payrollTax.net;
     const documentReviewRequired = Boolean(employee.documentReviewRequired || employee.hrStatus === "Məlumat gözləyir");
     const documentsComplete = documentReviewRequired ? Number(employee.documentsComplete || 0) : 100;
@@ -168,18 +170,25 @@ export function calculatePayrollTax2026(grossValue: unknown): PayrollTax {
         : Math.round(44 + 7800 * 0.15 + (gross - 8000) * 0.11);
   const employeeUnemployment = Math.round(gross * 0.005);
   const employerUnemployment = Math.round(gross * 0.005);
-  const totalDeductions = incomeTax + employeeSocial + employeeUnemployment;
+  // Mandatory health insurance (icbari tibbi sığorta), paid by the employee and the employer alike:
+  // 2% of the part up to 8000 ₼ and 0.5% of the part above. The old HR panel rule had it; this shared rule did not.
+  const medical = gross <= 8000 ? Math.round(gross * 0.02) : Math.round(160 + (gross - 8000) * 0.005);
+  const employeeMedical = medical;
+  const employerMedical = medical;
+  const totalDeductions = incomeTax + employeeSocial + employeeUnemployment + employeeMedical;
 
   return {
     gross,
     incomeTax,
     employeeSocial,
     employeeUnemployment,
+    employeeMedical,
     totalDeductions,
     net: Math.max(0, gross - totalDeductions),
     employerSocial,
     employerUnemployment,
-    employerCost: gross + employerSocial + employerUnemployment,
+    employerMedical,
+    employerCost: gross + employerSocial + employerUnemployment + employerMedical,
   };
 }
 

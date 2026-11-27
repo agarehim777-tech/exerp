@@ -40,8 +40,8 @@ describe("HR domain logic", () => {
 
   it("calculates 2026 payroll tax brackets", () => {
     expect(calculatePayrollTax2026(1000)).toEqual({
-      gross: 1000, incomeTax: 24, employeeSocial: 86, employeeUnemployment: 5, totalDeductions: 115,
-      net: 885, employerSocial: 164, employerUnemployment: 5, employerCost: 1169,
+      gross: 1000, incomeTax: 24, employeeSocial: 86, employeeUnemployment: 5, employeeMedical: 20, totalDeductions: 135,
+      net: 865, employerSocial: 164, employerUnemployment: 5, employerMedical: 20, employerCost: 1189,
     });
     expect(calculatePayrollTax2026(-50)).toMatchObject({ gross: 0, net: 0, employerCost: 0 });
     expect(calculatePayrollTax2026(9000).incomeTax).toBe(Math.round(625 + 1000 * 0.14));
