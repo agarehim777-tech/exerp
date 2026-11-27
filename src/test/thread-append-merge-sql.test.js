@@ -39,6 +39,13 @@ it('applies on the replayed repo schema', () => {
   expect(skipped.map((row) => row.file)).not.toContain(FILE);
 });
 
+it('lets signed-in users run the merge helper the trigger calls, but not anonymous users', async () => {
+  const can = async (role) => (await db.query(
+    `SELECT has_function_privilege($1, 'private.merge_appended_entries(jsonb, jsonb)', 'EXECUTE') AS ok`, [role])).rows[0].ok;
+  expect(await can('authenticated')).toBe(true);
+  expect(await can('anon')).toBe(false);
+});
+
 it('keeps both messages when two people write in the same conversation', async () => {
   const thread = { id: 'MSG-T', title: 'Komanda', messages: [m('M1', 'Salam')] };
   await save('message_threads', 'conversations', thread);

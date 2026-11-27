@@ -59,4 +59,6 @@ DROP TRIGGER IF EXISTS support_tickets_merge_comments ON public.support_tickets;
 CREATE TRIGGER support_tickets_merge_comments BEFORE UPDATE ON public.support_tickets
   FOR EACH ROW EXECUTE FUNCTION private.merge_thread_entries_on_update('comments');
 
+-- The trigger runs as the signed-in user, so the users who write these rows must be able to call the helper.
 REVOKE ALL ON FUNCTION private.merge_appended_entries(jsonb, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.merge_appended_entries(jsonb, jsonb) TO authenticated, service_role;
