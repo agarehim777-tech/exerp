@@ -83,6 +83,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"api_webhook_logs": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "api_webhook_logs_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"app_logs": {
                   Row: {
                     "context": Json | null,"created_at": string,"id": string,"level": string,"message": string,"source": string | null,"stack": string | null,"tenant_id": string | null,"url": string | null,"user_id": string | null
@@ -673,6 +693,26 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "currencies_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"currency_rate_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "currency_rate_records_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
       referencedRelation: "tenants"
@@ -1535,6 +1575,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"knowledge_base_articles": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "knowledge_base_articles_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"kpi_periods": {
                   Row: {
                     "account_id": string | null,"approved_at": string | null,"approved_by": string | null,"closed_at": string,"closed_by": string,"expense_id": string | null,"id": string,"paid_at": string | null,"payout_amount": number,"period": string,"snapshot": NonNullable<Json>,"status": string,"tenant_id": string
@@ -1601,6 +1661,46 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "notification_deliveries_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_records_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_send_log": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_send_log_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
       referencedRelation: "tenants"
@@ -2125,6 +2225,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"production_plan_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "production_plan_records_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"products": {
                   Row: {
                     "cost_price": number,"created_at": string,"created_by": string | null,"currency": string,"description": string | null,"id": string,"image_path": string | null,"is_active": boolean,"minimum_stock": number,"name": string,"price": number,"recommended_order_qty": number,"serial_tracked": boolean,"sku": string,"tenant_id": string,"unit": string,"updated_at": string,"vat_rate": number
@@ -2160,6 +2280,26 @@ isOneToOne: false
                     {
       foreignKeyName: "profiles_active_tenant_id_fkey"
       columns: ["active_tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"project_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_records_tenant_id_fkey"
+      columns: ["tenant_id"]
 isOneToOne: false
       referencedRelation: "tenants"
       referencedColumns: ["id"]
@@ -2295,6 +2435,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"receivable_closure_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "receivable_closure_records_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"receivable_settlements": {
                   Row: {
                     "account_id": string,"amount": number,"created_at": string,"created_by": string,"credit_id": string | null,"currency": string,"id": string,"invoice_id": string | null,"order_id": string | null,"receipt_id": string,"result": NonNullable<Json>,"source_id": string,"source_type": string,"tenant_id": string
@@ -2365,6 +2525,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "reconciliation_lines_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"report_export_records": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "report_export_records_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
       referencedRelation: "tenants"
@@ -2729,6 +2909,26 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "support_tickets_tenant_id_fkey"
+      columns: ["tenant_id"]
+isOneToOne: false
+      referencedRelation: "tenants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"tax_calendar_entries": {
+                  Row: {
+                    "metadata": NonNullable<Json>,"record_key": string,"sort_position": number,"tenant_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "metadata"?: NonNullable<Json>,"record_key": string,"sort_position"?: number,"tenant_id": string
+                  }
+                  Update: {
+                    "metadata"?: NonNullable<Json>,"record_key"?: string,"sort_position"?: number,"tenant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tax_calendar_entries_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
       referencedRelation: "tenants"

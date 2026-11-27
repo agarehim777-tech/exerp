@@ -205,3 +205,24 @@ it('starts every collection read at once instead of one table after another', as
   await act(async () => { pending.forEach((resolve) => resolve({ data: [], error: null, count: 0 })); });
   await waitFor(() => expect(result.current.sync.ready).toBe(true));
 });
+
+it('saves each collection separately so a refused module does not roll back the others', async () => {
+  // apply_collection_changes runs with the caller's RLS: one module without edit rights used to fail the whole batch.
+  const names = ['employees', 'departments'];
+  const { result } = renderHook(() => {
+    const [state, setState] = useState({ employees: [], departments: [] });
+    const sync = useCollectionSync({ tenantId: 'A', ready: true, collections: names, state, setState });
+    return { state, setState, sync };
+  });
+  await waitFor(() => expect(result.current.sync.ready).toBe(true));
+  mocks.save.mockImplementation(async (changes) => (changes[0].table === 'hr_departments'
+    ? { error: { code: '42501', message: 'new row violates row-level security policy' } } : { error: null }));
+  act(() => result.current.setState({ employees: [{ id: 'E1', name: 'Aysel' }], departments: [{ id: 'D1', name: 'Satış' }] }));
+  await waitFor(() => expect(result.current.sync.phase).toBe('error'));
+  expect(mocks.save.mock.calls.map(([changes]) => changes.map((change) => change.table))).toEqual(
+    expect.arrayContaining([['employees'], ['hr_departments']]));
+  // The allowed collection was acknowledged: a retry only resends the refused one.
+  mocks.save.mockClear();
+  await act(async () => result.current.sync.retry());
+  expect(mocks.save.mock.calls.map(([changes]) => changes[0].table)).toEqual(['hr_departments']);
+});

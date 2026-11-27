@@ -125,7 +125,7 @@ export async function createAuditBackend(env, fetcher = fetch) {
   const capabilities = await request('rest/v1/rpc/erp_runtime_capabilities', { method: 'POST', data: {}, token });
   if (Number(capabilities?.schema_version) < 3) throw new Error('ERP_SCHEMA_MIGRATION_REQUIRED');
   // HR and contract collections live in dedicated tables; rows come back in the app's collection shape.
-  const stateCollections = ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts', 'supportTickets', 'conversations'];
+  const stateCollections = ['employees', 'departments', 'leaveRequests', 'vacancies', 'contracts', 'supportTickets', 'conversations', 'notifications', 'notificationSendLog', 'projects', 'productionPlans', 'knowledgeBase', 'taxCalendar', 'currencyRates', 'apiWebhookLogs', 'reportExports', 'receivableClosures'];
   const readDedicatedCollections = async (names, name) => {
     const rows = [];
     for (const collection of names) {
@@ -194,7 +194,8 @@ export async function createAuditBackend(env, fetcher = fetch) {
       const [snapshots, collections, customers, products, orders, credits, installments, payments, warehouses,
         balances, accounts, accountMetadata, cash, expenses, vendors, invoices, bonuses, audit, purchaseOrders, purchaseOrderLines, reportExports] = await Promise.all([
         scopedRead('tenant_state_snapshots'),
-        ['all', 'hr', 'ui'].includes(scope) ? readDedicatedCollections(stateCollections) : [],
+        ['all', 'hr', 'ui'].includes(scope) ? readDedicatedCollections(stateCollections)
+          : scope === 'reports' ? readDedicatedCollections(['reportExports']) : [],
         scopedRead('customers'), scopedRead('products'), scopedRead('orders', '*,customer:customers(*),items:order_items(*),delivery:deliveries(*),reservations:stock_reservations(warehouse_id,order_item_id,status)', '&status=neq.cancelled'),
         scopedRead('credit_contracts'), scopedRead('credit_installments'), scopedRead('credit_payments'), scopedRead('warehouses'), scopedRead('stock_balances'),
         ['all','sales-ledger','credit-ledger','finance'].includes(scope) ? request('rest/v1/rpc/cashbook_ledger_summary', { method: 'POST', data: { _tenant_id: tenantId }, token }) : { accounts: [] },

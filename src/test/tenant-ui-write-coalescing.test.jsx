@@ -54,23 +54,23 @@ it('keeps one patch in flight and merges later edits into the next one', async (
   vi.useFakeTimers();
   let release;
   mocks.rpc.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-  mocks.snapshot = { notifications: [{ text: 'original' }], theme: 'light' };
+  mocks.snapshot = { notificationRules: [{ text: 'original' }], theme: 'light' };
   const options = { tenantId: 'tenant-a', userId: 'user-a', setState: vi.fn(), hydrateState, localKey: 'test-ui', schemaVersion: 3 };
   const { rerender } = renderHook(({ state }) => useTenantUiPersistence({ ...options, state }),
-    { initialProps: { state: { notifications: [{ text: 'original' }], theme: 'light' } } });
+    { initialProps: { state: { notificationRules: [{ text: 'original' }], theme: 'light' } } });
   await act(async () => { await Promise.resolve(); });
-  rerender({ state: { notifications: [{ text: 'second' }], theme: 'light' } });
+  rerender({ state: { notificationRules: [{ text: 'second' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'light' } });
+  rerender({ state: { notificationRules: [{ text: 'latest reply' }], theme: 'light' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-  rerender({ state: { notifications: [{ text: 'latest reply' }], theme: 'dark' } });
+  rerender({ state: { notificationRules: [{ text: 'latest reply' }], theme: 'dark' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(800); });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
-  await act(async () => { release({ data: { saved: ['notifications'], denied: [] }, error: null }); await Promise.resolve(); });
+  await act(async () => { release({ data: { saved: ['notificationRules'], denied: [] }, error: null }); await Promise.resolve(); });
   expect(patches()).toEqual([
-    { notifications: [{ text: 'second' }] },
-    { notifications: [{ text: 'latest reply' }], theme: 'dark' },
+    { notificationRules: [{ text: 'second' }] },
+    { notificationRules: [{ text: 'latest reply' }], theme: 'dark' },
   ]);
 });
 

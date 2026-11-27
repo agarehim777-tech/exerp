@@ -88,8 +88,8 @@ it('saves thread rows through apply_collection_changes together with ticket rows
 
 it('ignores conversations in snapshot patches from old tabs and saves the rest', async () => {
   const { rows: [{ r }] } = await db.query(`SELECT public.save_tenant_state_patch($1, $2) AS r`,
-    [TENANT, JSON.stringify({ conversations: [{ id: 'OLD' }], notifications: [{ id: 'N1' }] })]);
-  expect(r).toEqual({ saved: ['notifications'], denied: [], ignored: ['conversations'] });
+    [TENANT, JSON.stringify({ conversations: [{ id: 'OLD' }], notificationRules: [{ id: 'N1' }] })]);
+  expect(r).toEqual({ saved: ['notificationRules'], denied: [], ignored: ['conversations'] });
   const { rows: [{ state }] } = await db.query(`SELECT state FROM public.tenant_state_snapshots WHERE tenant_id = $1`, [TENANT]);
   expect(state.conversations).toEqual([thread, { title: 'Açarsız' }]);
 });

@@ -29,6 +29,17 @@ export const snapshotBackedCollections = Object.freeze([
   "supportTickets",
   // Message conversations: one row per thread in message_threads (20261126090000).
   "conversations",
+  // Record lists in their own tables (20261127090000).
+  "notifications",
+  "notificationSendLog",
+  "projects",
+  "productionPlans",
+  "knowledgeBase",
+  "taxCalendar",
+  "currencyRates",
+  "apiWebhookLogs",
+  "reportExports",
+  "receivableClosures",
 ]);
 
 export const operationalCollections = Object.freeze([
