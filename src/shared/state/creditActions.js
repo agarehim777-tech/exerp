@@ -1,60 +1,45 @@
 import { supabase } from "../../integrations/supabase/client";
 import { ensureMainCashAccount } from "../../services/cashAccounts.js";
-import { postCreditPayment, startCreditContract } from "../../services/coreOperations.js";
+import { postCreditPayment, rescheduleCreditInstallment, startCreditContract } from "../../services/coreOperations.js";
 import { money } from "../../services/format.js";
-import { buildAllCreditRecords } from "../lib/appHelpers.jsx";
-import { applyCreditPrincipalPayment, getCreditDisplayPlan, isCreditStarted } from "../lib/credit.js";
+import { applyCreditPrincipalPayment, isCreditStarted } from "../lib/credit.js";
 import { round2 } from "../utils/invoiceMath.js";
 
-// Credit commands (payment schedule dates, payments, initial payments, activation, SMS),
-// moved out of App.jsx unchanged. Payments and activation go through the server commands
-// (postCreditPayment, startCreditContract); App passes in the state and its helpers.
-export function createCreditActions({ activeTenantId, auditOperation, creditRecords, notify, refreshDbOrders, requirePermission, setState, state }) {
+// Credit commands (payment schedule dates, payments, initial payments, activation, SMS).
+// All of them go through the server commands
+// (rescheduleCreditInstallment, postCreditPayment, startCreditContract); there is no browser credits list.
+export function createCreditActions({ activeTenantId, auditOperation, creditRecords, notify, refreshDbOrders, requirePermission }) {
   function sendCreditSms() {
     if (!requirePermission("credits.manage", "kredit SMS göndərmək")) return;
     notify("SMS xidməti qoşulmayıb. Göndəriş icra olunmadı.", "warning");
   }
 
-  function updateCreditPaymentDate(creditId, month, due) {
-    if (!requirePermission("credits.manage", "kredit ödəniş tarixini dəyişmək")) return;
-
-    const targetCredit = buildAllCreditRecords(state.orders, state.credits).find((credit) => credit.id === creditId);
-
+  async function updateCreditPaymentDate(creditId, month, due) {
+    if (!requirePermission("credits.manage", "kredit ödəniş tarixini dəyişmək")) return false;
+    const targetCredit = creditRecords.find((credit) => credit.id === creditId);
     if (!targetCredit) {
       notify("Kredit tapılmadı.", "warning");
-      return;
+      return false;
     }
-
-    setState((current) => ({
-      ...current,
-      credits: (() => {
-        const exists = current.credits.some((credit) => credit.id === creditId);
-        const source = exists ? null : targetCredit;
-        const nextCredits = exists ? current.credits : [source, ...current.credits];
-
-        return nextCredits.map((credit) => {
-          if (credit.id !== creditId) return credit;
-
-          const plan = getCreditDisplayPlan(credit);
-          const installments = plan.installments.map((installment) =>
-            installment.month === month ? { ...installment, due } : installment,
-          );
-          const nextIndex = Math.min(Number(credit.paidMonths || 0), Math.max(0, installments.length - 1));
-
-          return {
-            ...credit,
-            installments,
-            next: installments[nextIndex]?.due || credit.next,
-          };
-        });
-      })(),
-    }));
+    if (!isCreditStarted(targetCredit)) {
+      notify("Ödəniş tarixləri kredit başladıldıqdan sonra dəyişdirilə bilər.", "warning");
+      return false;
+    }
+    try {
+      if (!activeTenantId) throw new Error("Şirkət seçilməyib.");
+      await rescheduleCreditInstallment({ tenantId: activeTenantId, creditId, installmentNo: Number(month), dueDate: due });
+      await refreshDbOrders();
+    } catch (error) {
+      notify(`Ödəniş tarixi dəyişdirilmədi: ${error.message || error}`, "error");
+      return false;
+    }
     notify("Ödəniş tarixi yeniləndi.");
     auditOperation({
       module: "Kredit",
       action: "Ödəniş tarixi redaktə edildi",
       detail: `${creditId} · ${month}. ay · ${due}`,
     });
+    return true;
   }
 
   async function receiveCreditPayment(creditId, values) {

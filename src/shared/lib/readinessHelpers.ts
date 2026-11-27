@@ -75,7 +75,7 @@ function buildStateIntegrityReport(snapshot: Row = {}, creditRows: Row[] = []): 
   const contracts = snapshot.contracts || [];
   const stock = snapshot.stock || [];
   const warehouseStock = snapshot.warehouseStock || {};
-  const credits = creditRows.length > 0 ? creditRows : snapshot.credits || [];
+  const credits = creditRows;
   const employees = snapshot.employees || [];
   const departments = snapshot.departments || [];
   const leaveRequests = snapshot.leaveRequests || [];
@@ -487,11 +487,10 @@ function buildModuleReadiness(snapshot: Row = {}, integrityReport: Row = {}): Re
   const products = snapshot.products || [];
   const warehouseStock = snapshot.warehouseStock || {};
   const expenses = snapshot.expenses || [];
-  const cashEntries = snapshot.cashEntries || [];
   const purchaseOrders = snapshot.purchaseOrders || [];
   const employees = snapshot.employees || [];
   const departments = snapshot.departments || [];
-  const credits = buildAllCreditRecords(orders, snapshot.credits || []);
+  const credits = buildAllCreditRecords(orders, []);
   const contracts = snapshot.contracts || [];
   const salesBonuses = buildSalesBonusRows(orders);
   const integrityIssues = integrityReport.issues || [];
@@ -605,8 +604,8 @@ function buildModuleReadiness(snapshot: Row = {}, integrityReport: Row = {}): Re
     {
       module: "finance",
       title: "Maliyyə",
-      status: statusFrom({ warnings: expenses.length + cashEntries.length === 0 ? 1 : 0, hasData: true }),
-      primary: `${cashEntries.length} kassa girişi`,
+      status: statusFrom({ warnings: expenses.length === 0 ? 1 : 0, hasData: true }),
+      primary: `${expenses.length} xərc`,
       secondary: `${approvedCashExpenses.length} təsdiqli xərc`,
       detail: "Satış, kredit ödənişi, PO xərci və payroll accrual ayrılır",
       next: payrollExpense?.cashImpact === false

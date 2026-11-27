@@ -348,34 +348,6 @@ async function createRecord(type, values) {
           ...current,
           warehouseStock: nextWarehouseStock,
           stock: adjustStockRows(current.stock, reservedByProduct, { reservedDelta: 1, createMissing: true }),
-          credits: isCreditSale
-            ? [
-                {
-                  id: creditId,
-                  customer: values.customer,
-                  fin: values.fin || "Yeni FİN",
-                  orderId: nextId,
-                  contractId,
-                  product: productSummary,
-                  device: productSummary,
-                  total: amount,
-                  initialPayment: creditPlan.initialPayment,
-                  requiredInitial: creditPlan.initialPayment,
-                  initialPaid: depositPaid,
-                  balance: creditPlan.balance,
-                  monthly: creditPlan.monthly,
-                  lastPayment: creditPlan.lastPayment,
-                  months: creditPlan.months,
-                  paidMonths: 0,
-                  rate: 0,
-                  next: "—",
-                  status: "Başlanmamış",
-                  installments: creditPlan.installments,
-                  createdFrom: "Satış sifarişi",
-                },
-                ...current.credits,
-              ]
-            : current.credits,
           orders: [
             {
               id: nextId,
@@ -441,38 +413,6 @@ async function createRecord(type, values) {
               status: "Təsdiq gözləyir",
             },
             ...current.expenses,
-          ],
-        };
-      }
-
-      if (type === "credits") {
-        const creditPlan = buildCreditPlan({
-          total: values.total,
-          initialPayment: values.initialPayment,
-          months: values.months,
-        });
-        return {
-          ...current,
-          credits: [
-            {
-              id: createPrefixedId("KR"),
-              customer: values.customer,
-              contractId: nextContractNumber(current),
-              product: values.product,
-              device: values.product,
-              total: creditPlan.total,
-              initialPayment: creditPlan.initialPayment,
-              balance: creditPlan.balance,
-              monthly: creditPlan.monthly,
-              lastPayment: creditPlan.lastPayment,
-              months: creditPlan.months,
-              paidMonths: 0,
-              rate: 0,
-              next: values.next || creditPlan.installments[0]?.due || "—",
-              status: "Aktiv",
-              installments: creditPlan.installments,
-            },
-            ...current.credits,
           ],
         };
       }

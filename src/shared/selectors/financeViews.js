@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { buildHrEmployeeRecords } from "../lib/appDomain.jsx";
 import { buildAccountingData, buildCurrencyExposureRows, buildInvoiceRows, buildPayrollTaxCalculatorRows, buildReceivableRows, buildTaxCalendarRows, buildTodayActionRows } from "../lib/appHelpers.jsx";
-import { total } from "../utils/aggregate.js";
 
 // Receivables, invoices, accounting, tax and currency views derived from the tenant snapshot.
 export function useFinanceViews({ state, creditRecords }) {
@@ -29,22 +28,16 @@ export function useFinanceViews({ state, creditRecords }) {
     () => buildPayrollTaxCalculatorRows(buildHrEmployeeRecords(state.employees)),
     [state.employees],
   );
-  const financeOpeningBalance = useMemo(
-    () => total(state.financeAccounts || [], "openingBalance"),
-    [state.financeAccounts],
-  );
   const accountingData = useMemo(
     () =>
       buildAccountingData({
         orders: state.orders,
         expenses: state.expenses,
-        cashEntries: state.cashEntries || [],
         credits: creditRecords,
         stock: state.stock,
         invoices: invoiceRows,
-        openingBalance: financeOpeningBalance,
       }),
-    [state.orders, state.expenses, state.cashEntries, creditRecords, state.stock, invoiceRows, financeOpeningBalance],
+    [state.orders, state.expenses, creditRecords, state.stock, invoiceRows],
   );
   const taxCalendarRows = useMemo(
     () =>
@@ -62,9 +55,8 @@ export function useFinanceViews({ state, creditRecords }) {
         currencyRates: state.currencyRates || [],
         orders: state.orders,
         credits: creditRecords,
-        cashEntries: state.cashEntries || [],
       }),
-    [state.currencyRates, state.orders, creditRecords, state.cashEntries],
+    [state.currencyRates, state.orders, creditRecords],
   );
   const todayActionRows = useMemo(
     () =>
@@ -79,5 +71,5 @@ export function useFinanceViews({ state, creditRecords }) {
       }),
     [creditRecords, state.orders, state.expenses, state.stock, state.products, invoiceRows, taxCalendarRows],
   );
-  return { receivableRows, invoiceRows, payrollTaxRows, financeOpeningBalance, accountingData, taxCalendarRows, currencyExposureRows, todayActionRows };
+  return { receivableRows, invoiceRows, payrollTaxRows, accountingData, taxCalendarRows, currencyExposureRows, todayActionRows };
 }

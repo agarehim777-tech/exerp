@@ -9,7 +9,7 @@ import { buildExecutiveInsights, buildReportPackage } from "../../shared/lib/app
 export function FinancePages({ active, activeKpiPeriod, approvePurchaseOrder, can, createPurchaseOrder, creditRecords, dbOrdersError, dbOrdersLoading, exportReport, filtered, invoiceRows, kpiAccountId, kpiEmployeeRows, kpiLedger, kpiTargetRows, markPayrollPaid, openDepartmentCreator, openEmployeeDelete, openEmployeeEditor, openLeaveRequestCreator, openLinkedSalesOrder, openVacancyCreator, openVendorDelete, payCreditInitial, productionRows, receiveCreditPayment, refreshDbOrders, runKpiPeriodAction, salesBonusRows, selectedKpiPeriod, sendCreditSms, setKpiAccountId, setModal, setSelectedKpiPeriod, startCredit, state, updateCreditPaymentDate, updateEmployeeDocuments, updateEmployeeStructure, updateLeaveRequestStatus }) {
   return (
     <>
-          {active === "cashbook" && <CashbookPage legacyCashEntries={state.cashEntries || []} />}
+          {active === "cashbook" && <CashbookPage />}
           {active === "ar-invoices" && <SalesInvoicesPage onOpenSalesOrder={openLinkedSalesOrder} />}
           {active === "accounting" && <AccountingPageV2 />}
           {active === "credits" && (
@@ -93,7 +93,6 @@ export function FinancePages({ active, activeKpiPeriod, approvePurchaseOrder, ca
               purchaseOrders={state.purchaseOrders || []}
               productionPlans={productionRows}
               invoices={invoiceRows}
-              cashEntries={state.cashEntries || []}
               exports={state.reportExports || []}
               onExport={exportReport}
               canExport={can("reports.export")}

@@ -140,7 +140,7 @@ function buildInvoiceSummary(invoices: Row[]): InvoiceSummary {
   };
 }
 
-function buildCurrencyExposureRows({ currencyRates = [], orders, credits, cashEntries }: { currencyRates?: Row[]; orders: Row[]; credits: Row[]; cashEntries: Row[] }): Row[] {
+function buildCurrencyExposureRows({ currencyRates = [], orders, credits, cashEntries = [] }: { currencyRates?: Row[]; orders: Row[]; credits: Row[]; cashEntries?: Row[] }): Row[] {
   const salesTotal = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
   const collectedTotal = orders.reduce((sum, order) => sum + Number(order.paid || 0), 0) + total(cashEntries, "amount");
   const creditBalance = credits.reduce((sum, credit) => sum + Number(getCreditDisplayPlan(credit).balance || 0), 0);
@@ -160,10 +160,10 @@ function buildCurrencyExposureRows({ currencyRates = [], orders, credits, cashEn
   });
 }
 
-function buildAccountingData({ orders, expenses, cashEntries, credits, stock, invoices, openingBalance = 0 }: {
+function buildAccountingData({ orders, expenses, cashEntries = [], credits, stock, invoices, openingBalance = 0 }: {
   orders: Row[];
   expenses: Row[];
-  cashEntries: Row[];
+  cashEntries?: Row[];
   credits: Row[];
   stock: Row[];
   invoices: Row[];

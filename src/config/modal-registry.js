@@ -11,7 +11,6 @@ export const modalRegistry = Object.freeze({
   vacancy: "vacancy",
   employeeDelete: "employeeDelete",
   product: "product",
-  financeAccount: "financeAccount",
   contractPrint: "contractPrint",
   salesOperation: "salesOperation",
   salesOperationDelete: "salesOperationDelete",

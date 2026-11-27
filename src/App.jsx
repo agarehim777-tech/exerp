@@ -2,7 +2,6 @@ import { createVendorRegistryActions } from "./shared/state/vendorRegistryAction
 import { createWarehouseActions } from "./shared/state/warehouseActions.js";
 import { createProductCatalogActions } from "./shared/state/productCatalogActions.js";
 import { createRecordCreationActions } from "./shared/state/recordCreationActions.js";
-import { createFinanceAccountActions } from "./shared/state/financeAccountActions.js";
 import { useEffect, useMemo, useState, useCallback, Suspense } from "react";
 import { useModuleNavigation } from "./shared/hooks/useModuleNavigation";
 import { useToasts } from "./shared/hooks/useToasts";
@@ -24,6 +23,7 @@ import { useOperationsViews } from "./shared/selectors/operationsViews.js";
 import { useIntegrationViews } from "./shared/selectors/integrationViews.js";
 import { useMessagingViews } from "./shared/selectors/messagingViews.js";
 import { useSystemReports } from "./shared/selectors/systemReports.js";
+import { useCashAccountCount } from "./shared/hooks/useCashAccountCount.js";
 import { useAuditServerSync } from "./shared/hooks/useAuditServerSync.ts";
 import { useRemoteApiSession } from "./shared/hooks/useRemoteApiSession.ts";
 import { getCreateAudit } from "./shared/lib/createAudit.ts";
@@ -39,7 +39,7 @@ import { createModuleActions } from "./shared/state/moduleActions.js";
 import { createCreditActions } from "./shared/state/creditActions.js";
 import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
-const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "cashEntries", "financeAccounts", "credits", "supportTickets", "conversations", "notifications", "notificationSendLog", "projects", "productionPlans", "knowledgeBase", "taxCalendar", "currencyRates", "apiWebhookLogs", "reportExports", "receivableClosures"];
+const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "supportTickets", "conversations", "notifications", "notificationSendLog", "projects", "productionPlans", "knowledgeBase", "taxCalendar", "currencyRates", "apiWebhookLogs", "reportExports", "receivableClosures"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
 import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
@@ -110,7 +110,7 @@ import {
   TextField as Field,
   TwoLine,
 } from "./shared/ui/primitives.tsx";
-import { money, normalize } from "./services/format.js";
+import { normalize } from "./services/format.js";
 import { useTenantRequestScope } from './shared/hooks/useTenantRequestScope.js';
 import { createIdempotencyKey } from "./services/coreOperations.js";
 import {
@@ -271,8 +271,9 @@ function App() {
     [dbOrders],
   );
   const creditRecords = useMemo(
-    () => buildAllCreditRecords(creditSourceOrders, state.credits),
-    [creditSourceOrders, state.credits],
+    // Credits come only from credit_contracts (via the orders read); the browser credits list was retired.
+    () => buildAllCreditRecords(creditSourceOrders, []),
+    [creditSourceOrders],
   );
   const { salesBonusRows, kpiEmployeeRows, kpiTargetRows, activeKpiPeriod } = useKpiViews({ state, selectedKpiPeriod, kpiLedger });
   const legacyCurrentUser = useMemo(() => getCurrentUser(state.settings), [state.settings]);
@@ -334,7 +335,8 @@ function App() {
   const { notificationProviderRows, notificationAutomationRows, apiWebhookRows, apiSecretRows } = useIntegrationViews({ state, creditRecords, invoiceRows });
   const { messageConversations, messageParticipantOptions, messageContextOptions } = useMessagingViews({ state, creditRecords });
   const auditServerSyncedAt = useAuditServerSync({ activeRoleInfo, activeTenantId, authUser, state });
-  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
+  const cashAccountCount = useCashAccountCount(activeTenantId);
+  const { onboardingRows, integrityReport, goLiveReport, productionHardeningReport, helpModuleGuides, helpArticles } = useSystemReports({ state, creditRecords, cashAccountCount, apiWebhookRows, apiSecretRows, notificationProviderRows, auditServerSynced: Boolean(auditServerSyncedAt) });
 
   useEffect(() => {
     if (Number(state.dbMeta?.baselineVersion || 0) >= localDbBaselineVersion) return;
@@ -471,7 +473,6 @@ function App() {
 
 
 
-  const { saveFinanceAccount } = createFinanceAccountActions({ auditCurrentState, money, normalize, notify, requirePermission, setModal, setState, state });
 
 
   
@@ -492,7 +493,7 @@ function App() {
   });
 
   const { sendCreditSms, updateCreditPaymentDate, receiveCreditPayment, payCreditInitial, startCredit } = createCreditActions({
-    activeTenantId, auditOperation, creditRecords, notify, refreshDbOrders, requirePermission, setState, state,
+    activeTenantId, auditOperation, creditRecords, notify, refreshDbOrders, requirePermission,
   });
 
   const { createPurchaseOrder, approvePurchaseOrder } = createPurchaseOrderActions({
@@ -664,11 +665,6 @@ function App() {
               ? state.expenses.find((expense) => expense.id === modal.expenseId)
               : null
           }
-          financeAccount={
-            modal.accountId
-              ? state.financeAccounts.find((account) => account.id === modal.accountId)
-              : null
-          }
           employee={
             modal.employeeId
               ? state.employees.find((employee) => getEmployeeKey(employee) === modal.employeeId)
@@ -703,7 +699,6 @@ function App() {
           onImportWarehouseStock={importWarehouseStock}
           onUpdateProduct={updateProduct}
           onDeleteProduct={deleteProduct}
-          onSaveFinanceAccount={saveFinanceAccount}
           onUpdateSalesOrder={updateSalesOrder}
           onDeleteSalesOrder={deleteSalesOrder}
           onUpdateExpense={updateExpense}

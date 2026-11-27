@@ -68,6 +68,5 @@ describe("topbar search", () => {
       state: { customers: [{ name: "Aysel" }, { name: "Murad" }], orders: [], stock: [], warehouses: [], expenses: [], vendors: [], employees: [], contracts: [], notifications: [] },
     }));
     expect(result.current.customers).toEqual([{ name: "Aysel" }]);
-    expect(result.current.cashEntries).toEqual([]);
   });
 });
