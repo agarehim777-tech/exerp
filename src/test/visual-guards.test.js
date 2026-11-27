@@ -60,14 +60,14 @@ function sourceFiles(dir, pattern) {
 }
 
 describe('visual system', () => {
-  it('puts page-level layers on the --z-* scale (local stacking may use 0-5)', () => {
+  it('puts page-level layers on the --z-* scale with a numeric fallback (local stacking may use 0-5)', () => {
     // A FAB at 1000 covered modals and toasts at 70 hid under modal overlays.
     const offenders = [];
     for (const file of sourceFiles('src', /\.(css|jsx)$/)) {
       if (/utilities\.css$|Login\.jsx$/.test(file)) continue;
       for (const m of readFileSync(file, 'utf8').matchAll(/z-index\s*:\s*([^;}\n]+)/g)) {
         const value = m[1].trim();
-        if (!/^var\(--z-[a-z]+\)$/.test(value) && !(Number(value) >= 0 && Number(value) <= 5)) offenders.push(`${file}: ${value}`);
+        if (!/^var\(--z-[a-z]+, \d+\)$/.test(value) && !(Number(value) >= 0 && Number(value) <= 5)) offenders.push(`${file}: ${value}`);
       }
     }
     expect(offenders).toEqual([]);

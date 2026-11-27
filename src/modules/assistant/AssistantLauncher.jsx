@@ -25,7 +25,7 @@ function LauncherButton({ onOpen }) {
           position: fixed;
           left: 16px;
           bottom: 16px;
-          z-index: var(--z-fab);
+          z-index: var(--z-fab, 40);
           display: flex;
           flex-direction: column;
           align-items: flex-start;

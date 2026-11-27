@@ -804,7 +804,7 @@
 .app-dialog-provider-backdrop {
   position: fixed;
   inset: 0;
-  z-index: var(--z-dialog);
+  z-index: var(--z-dialog, 300);
   display: grid;
   place-items: center;
   padding: 16px;

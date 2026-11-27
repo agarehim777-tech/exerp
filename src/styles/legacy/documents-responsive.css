@@ -618,7 +618,7 @@
   .scrim {
     position: fixed;
     inset: 0;
-    z-index: var(--z-scrim);
+    z-index: var(--z-scrim, 15);
     border: 0;
     background: rgba(15, 23, 42, 0.36);
   }

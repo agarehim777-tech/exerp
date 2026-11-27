@@ -167,7 +167,7 @@ button {
   flex-direction: column;
   position: sticky;
   top: 0;
-  z-index: var(--z-sidebar);
+  z-index: var(--z-sidebar, 20);
 }
 
 .brand {
@@ -331,7 +331,7 @@ button {
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  z-index: var(--z-sticky, 10);
 }
 
 .searchbox {

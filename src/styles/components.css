@@ -255,7 +255,7 @@
 .ui-spacer-bottom { margin-bottom: var(--space-3); }
 .ui-category-item { display: flex; align-items: center; gap: var(--space-1); padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
 .ui-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.ui-modal-overlay { position: fixed; inset: 0; z-index: var(--z-overlay); display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--overlay); }
+.ui-modal-overlay { position: fixed; inset: 0; z-index: var(--z-overlay, 150); display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--overlay); }
 .ui-modal-surface { width: min(900px, 100%); max-height: 88vh; overflow: auto; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); box-shadow: var(--modal-shadow); }
 .ui-checkbox-label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-md); }
 .ui-validation-error { color: var(--danger); font-size: var(--font-size-sm); line-height: 1.4; }

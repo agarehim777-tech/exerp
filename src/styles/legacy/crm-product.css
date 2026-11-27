@@ -170,7 +170,7 @@
 .modal-shell {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal);
+  z-index: var(--z-modal, 50);
   display: grid;
   place-items: center;
   padding: 22px;
@@ -603,7 +603,7 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: var(--z-popover);
+  z-index: var(--z-popover, 30);
   max-height: 280px;
   overflow-y: auto;
   padding: 6px;
@@ -822,7 +822,7 @@
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: var(--z-toast);
+  z-index: var(--z-toast, 200);
   display: grid;
   gap: 10px;
   width: min(380px, calc(100vw - 40px));

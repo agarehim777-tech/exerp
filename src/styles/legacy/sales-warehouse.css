@@ -426,7 +426,7 @@
   position: absolute;
   top: calc(100% + 7px);
   right: 0;
-  z-index: var(--z-popover);
+  z-index: var(--z-popover, 30);
   width: 224px;
   display: grid;
   padding: 6px;
