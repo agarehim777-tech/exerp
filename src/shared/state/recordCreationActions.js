@@ -1,6 +1,6 @@
 import { createPrefixedId } from "../utils/id.js";
 // Focused domain commands; dependencies are explicit and supplied by App.
-export function createRecordCreationActions({ ENABLE_LEGACY_WRITES, activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage }) {
+export function createRecordCreationActions({ activeTenantId, adjustStockRows, appConfirm, auditCurrentState, auditOperation, beginTenantRequest, buildCreditPlan, buildQuantityMap, buildSellerBonusRows, createDbCustomer, createDbOrder, createDbProduct, createIdempotencyKey, creditRecords, currentBusinessDate, dbCustomers, dbOrders, dbProducts, describeStockError, getCreateAudit, getEmployeeKey, getFreeQuantity, hasCreatePermission, isStockShortageError, nextContractNumber, nextSalesOrderNumber, normalize, normalizeVendor, notify, readSaleStockShortages, resolveOrderCustomer, serializeOrderNotes, setModal, setSelectedWarehouseId, setState, state, toLocalIsoDate, updateSerialStatuses, uploadDbProductImage }) {
 async function createRecord(type, values) {
     if (!hasCreatePermission(type, values)) return false;
 
@@ -33,13 +33,6 @@ async function createRecord(type, values) {
           if (isCurrent()) notify(`Qalıq serverdən yoxlanılmadı: ${error.message}`, 'error');
           return false;
         }
-      } else if (ENABLE_LEGACY_WRITES) {
-        const warehouseRows = state.warehouseStock?.[warehouseId] || [];
-        shortageLines = productLines.map(line => {
-          const item = warehouseRows.find(row => row.product === line.product);
-          const shortage = Math.max(0, line.qty - (item ? getFreeQuantity(item) : 0));
-          return shortage > 0 ? `${line.product} (${shortage} ədəd)` : null;
-        }).filter(Boolean);
       } else {
         notify('Aktiv şirkət seçilməyib.', 'error');
         return false;
