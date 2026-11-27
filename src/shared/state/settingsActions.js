@@ -204,7 +204,7 @@ export function createSettingsActions({ activeRoleInfo, apiSecretRows, apiWebhoo
         const parsed = JSON.parse(String(reader.result || "{}"));
         const incomingState = parsed.state || parsed;
         const hydrated = hydrateState(incomingState);
-        const restoredCredits = buildAllCreditRecords(hydrated.orders || [], hydrated.credits || []);
+        const restoredCredits = buildAllCreditRecords(hydrated.orders || [], []);
         const report = buildStateIntegrityReport(hydrated, restoredCredits);
         const importedAt = new Date().toISOString();
 

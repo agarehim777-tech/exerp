@@ -10,11 +10,8 @@ it('stores salary in an employee column and preserves supplementary fields acros
   expect(fromDedicatedRow(saved, 'employees')).toEqual(source);
 });
 
-it('stores account balances and credit debt in separate domain columns', () => {
-  expect(definitionFor('financeAccounts').table).toBe('finance_account_records');
-  expect(definitionFor('credits').table).toBe('finance_credit_records');
-  expect(toDedicatedRow({ tenant_id: 'a', collection: 'credits', record_key: 'c', position: 0,
-    data: { total: 10000, initialPayment: 1000, balance: 9000, months: 12 } }))
-    .toMatchObject({ total: 10000, initial_payment: 1000, balance: 9000, months: 12 });
+it('has no browser copies of cash entries, finance accounts or credits', () => {
+  // Retired: cash_transactions, cash_accounts and credit_contracts are the only sources.
+  for (const name of ['cashEntries', 'financeAccounts', 'credits']) expect(() => definitionFor(name)).toThrow('Unknown collection');
   expect(() => definitionFor('unknown')).toThrow('Unknown collection');
 });

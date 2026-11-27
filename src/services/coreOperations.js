@@ -206,6 +206,15 @@ export function startCreditContract({ tenantId, creditId, startDate }) {
   });
 }
 
+export function rescheduleCreditInstallment({ tenantId, creditId, installmentNo, dueDate }) {
+  return callRpc("reschedule_credit_installment", {
+    _tenant_id: requireValue(tenantId, "tenantId"),
+    _credit_id: requireValue(creditId, "creditId"),
+    _installment_no: requireValue(installmentNo, "installmentNo"),
+    _due_date: requireValue(dueDate, "dueDate"),
+  });
+}
+
 export function receiveStock({
   tenantId,
   warehouseId,

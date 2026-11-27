@@ -7,8 +7,6 @@ export const collectionDefinitions: Record<string, Definition> = {
   leaveRequests: { table: 'hr_leave_requests', fields: {"employeeId": "employee_id", "employeeName": "employee_name", "department": "department", "type": "type", "from": "from_date", "to": "to_date", "days": "days", "approver": "approver", "status": "status"} },
   vacancies: { table: 'hr_vacancies', fields: {"role": "role", "department": "department", "candidates": "candidates", "stage": "stage", "owner": "owner", "targetDate": "target_date", "status": "status"} },
   contracts: { table: 'business_contracts', fields: {"customer": "customer", "fin": "fin", "product": "product", "amount": "amount", "status": "status", "orderId": "order_id"} },
-  cashEntries: { table: 'finance_entries', fields: {"description": "description", "amount": "amount", "currency": "currency", "direction": "direction", "category": "category", "date": "date", "status": "status", "accountId": "account_id"} },
-  financeAccounts: { table: 'finance_account_records', fields: {"name": "name", "code": "code", "type": "type", "currency": "currency", "openingBalance": "opening_balance", "status": "status"} },
   supportTickets: { table: 'support_tickets', fields: {"title": "title", "requester": "requester", "module": "module", "priority": "priority", "status": "status", "owner": "owner", "slaHours": "sla_hours", "createdAt": "opened_at", "threadId": "thread_id", "linkedType": "linked_type", "linkedLabel": "linked_label"} },
   conversations: { table: 'message_threads', fields: {"type": "type", "title": "title", "person": "person", "status": "status", "team": "team", "ticketId": "ticket_id", "unread": "unread", "time": "last_at"} },
   // Record lists moved out of the tenant snapshot (20261127090000); the whole record stays in `metadata`.
@@ -22,7 +20,6 @@ export const collectionDefinitions: Record<string, Definition> = {
   apiWebhookLogs: { table: 'api_webhook_logs', fields: {} },
   reportExports: { table: 'report_export_records', fields: {} },
   receivableClosures: { table: 'receivable_closure_records', fields: {} },
-  credits: { table: 'finance_credit_records', fields: {"customer": "customer", "contractId": "contract_id", "orderId": "order_id", "total": "total", "initialPayment": "initial_payment", "balance": "balance", "months": "months", "status": "status"} },
 };
 export function definitionFor(collection: string): Definition {
   const definition = collectionDefinitions[collection];

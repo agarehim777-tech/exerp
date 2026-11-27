@@ -40,9 +40,9 @@ export interface HelpModuleGuide {
   owner: string;
 }
 
-function buildOnboardingRows(onboarding: Row = {}, snapshot: Row = {}): OnboardingRows {
+function buildOnboardingRows(onboarding: Row = {}, snapshot: Row = {}, sources: { creditRecords?: Row[]; cashAccountCount?: number } = {}): OnboardingRows {
   const warehouseStockRows = Object.values(snapshot.warehouseStock || {}).flatMap((rows: any) => rows || []);
-  const creditRecords = buildAllCreditRecords(snapshot.orders || [], snapshot.credits || []);
+  const creditRecords = sources.creditRecords || buildAllCreditRecords(snapshot.orders || [], []);
   const payrollReady = (snapshot.expenses || []).some((expense: Row) => expense.source === "HR Payroll");
   const reportReady = (snapshot.reportExports || []).length > 0;
   const backupReady = Boolean(snapshot.integritySnapshot || snapshot.goLiveSnapshot);
@@ -51,7 +51,7 @@ function buildOnboardingRows(onboarding: Row = {}, snapshot: Row = {}): Onboardi
     "ONB-2": (snapshot.warehouses || []).length > 0,
     "ONB-3": (snapshot.products || []).length > 0 && warehouseStockRows.some((item: Row) => Number(item.total || 0) > 0),
     "ONB-4": (snapshot.settings?.users || []).length > 1 || (snapshot.settings?.roles || []).length > 0,
-    "ONB-5": (snapshot.financeAccounts || []).length > 0,
+    "ONB-5": Number(sources.cashAccountCount || 0) > 0,
     "ONB-6": (snapshot.employees || []).length > 0 && payrollReady,
     "ONB-7": (snapshot.orders || []).length > 0 && creditRecords.length > 0,
     "ONB-8": (snapshot.vendors || []).length > 0 || (snapshot.purchaseOrders || []).length > 0,

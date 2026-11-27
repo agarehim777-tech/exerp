@@ -17,9 +17,6 @@ export const dbBackedCollections = Object.freeze([
 export const snapshotBackedCollections = Object.freeze([
   "warehouseStock",
   "expenses",
-  "cashEntries",
-  "financeAccounts",
-  "credits",
   "employees",
   "departments",
   "leaveRequests",
@@ -42,9 +39,14 @@ export const snapshotBackedCollections = Object.freeze([
   "receivableClosures",
 ]);
 
+// Retired browser lists: cash entries, finance accounts and credits now come only from cash_transactions,
+// cash_accounts and credit_contracts. They stay listed so an old snapshot copy is never saved again or loaded.
+export const retiredCollections = Object.freeze(["cashEntries", "financeAccounts", "credits"]);
+
 export const operationalCollections = Object.freeze([
   ...dbBackedCollections,
   ...snapshotBackedCollections,
+  ...retiredCollections,
 ]);
 
 export function stripDbBackedCollections(state = {}) {

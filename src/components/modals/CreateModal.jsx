@@ -15,7 +15,6 @@ const HrEmployeeDeleteModal = lazy(() => import("../../modules/hr/components/HrM
 const HrEmployeeModal = lazy(() => import("../../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrEmployeeModal })));
 const HrLeaveRequestModal = lazy(() => import("../../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrLeaveRequestModal })));
 const HrVacancyModal = lazy(() => import("../../modules/hr/components/HrModals.jsx").then((module) => ({ default: module.HrVacancyModal })));
-const FinanceAccountModal = lazy(() => import("../../modules/finance/components/FinanceAccountModal.jsx").then((module) => ({ default: module.FinanceAccountModal })));
 const StockIntakeModal = lazy(() => import("../../modules/warehouse/components/StockIntakeModal.jsx").then((module) => ({ default: module.StockIntakeModal })));
 const FactoryPurchaseOrderModal = lazy(() => import("../../modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.FactoryPurchaseOrderModal })));
 const VendorFormModal = lazy(() => import("../../modules/procurement/components/ProcurementModals.jsx").then((module) => ({ default: module.VendorFormModal })));
@@ -81,7 +80,6 @@ function CreateModal({
   product,
   employee,
   vendor,
-  financeAccount,
   salesOrder,
   expense,
   contract,
@@ -96,7 +94,6 @@ function CreateModal({
   onImportWarehouseStock,
   onUpdateProduct,
   onDeleteProduct,
-  onSaveFinanceAccount,
   onUpdateSalesOrder,
   onDeleteSalesOrder,
   onUpdateExpense,
@@ -245,16 +242,6 @@ function CreateModal({
           }
           return onCreate("product", values);
         }}
-      />
-    );
-  }
-
-  if (modalKind === "financeAccount") {
-    return (
-      <FinanceAccountModal
-        account={financeAccount}
-        onClose={onClose}
-        onSubmit={(values) => onSaveFinanceAccount(financeAccount?.id, values)}
       />
     );
   }

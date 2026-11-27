@@ -3,7 +3,7 @@ import { normalizeOrderProductLines, summarizeOrderProducts } from "../../module
 import { toLocalIsoDate } from "../../services/date.js";
 import { money, normalize } from "../../services/format.js";
 import { currentBusinessDate, getAvailableQuantity } from "../lib/appDomain.jsx";
-import { adjustStockRows, buildQuantityMap, buildSalesCreditForOrder, buildSellerBonusRows, calculateOrderLineTotal, getCreditIdForOrder, nextContractNumber, productLineSignature, releaseOrderSerialReservations, summarizeSellerBonusRows, updateSerialStatuses } from "../lib/appHelpers.jsx";
+import { adjustStockRows, buildQuantityMap, buildSellerBonusRows, calculateOrderLineTotal, getCreditIdForOrder, nextContractNumber, productLineSignature, releaseOrderSerialReservations, summarizeSellerBonusRows, updateSerialStatuses } from "../lib/appHelpers.jsx";
 import { buildCreditPlan } from "../lib/credit.js";
 import { resolveOrderCustomer } from "../lib/orderCustomer.js";
 
@@ -11,7 +11,7 @@ import { resolveOrderCustomer } from "../lib/orderCustomer.js";
 export function createSalesOrderActions({ activeTenantId, auditCurrentState, auditOperation, creditRecords, dbCustomers, deleteDbOrder, navigate, notify, requirePermission, setMobileNav, setModal, setQuery, setState, state, updateDbOrder }) {
   function getSalesOrderLinkedCredit(snapshot, order) {
     if (!order) return null;
-    return (snapshot.credits || []).find(
+    return (creditRecords || []).find(
       (credit) => credit.orderId === order.id || credit.id === order.creditId || credit.id === getCreditIdForOrder(order),
     );
   }
@@ -242,15 +242,6 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
         bonusTotal: Number(values.bonusTotal ?? (paid * sellerBonuses.reduce((sum, item) => sum + Number(item.bonus || 0), 0)) / 100),
       };
 
-      const nextCredits = isCreditSale
-        ? (() => {
-            const creditRecord = buildSalesCreditForOrder(nextOrder, linkedCredit);
-            const exists = (current.credits || []).some((credit) => credit.id === creditRecord.id || credit.orderId === order.id);
-            return exists
-              ? current.credits.map((credit) => (credit.id === creditRecord.id || credit.orderId === order.id ? creditRecord : credit))
-              : [creditRecord, ...(current.credits || [])];
-          })()
-        : (current.credits || []).filter((credit) => credit.orderId !== order.id && credit.id !== order.creditId);
 
       const nextContracts = isCreditSale
         ? (() => {
@@ -276,7 +267,6 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
           stock,
           warehouseStock,
           orders: current.orders.map((item) => (item.id === order.id ? nextOrder : item)),
-          credits: nextCredits,
           contracts: nextContracts,
         },
         {
@@ -313,8 +303,7 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
       const order = current.orders.find((item) => item.id === orderId);
       if (!order) return current;
 
-      const linkedCredit = getSalesOrderLinkedCredit(current, order);
-      const linkedCreditIds = new Set([order.creditId, linkedCredit?.id, getCreditIdForOrder(order)].filter(Boolean));
+
       const delivered = order.status === "Təhvil verilib";
       let warehouseStock = current.warehouseStock;
       let stock = current.stock;
@@ -339,11 +328,7 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
           stock,
           warehouseStock,
           orders: current.orders.filter((item) => item.id !== order.id),
-          credits: (current.credits || []).filter(
-            (credit) => credit.orderId !== order.id && !linkedCreditIds.has(credit.id),
-          ),
           contracts: current.contracts.filter((contract) => contract.orderId !== order.id && contract.id !== order.contractId),
-          cashEntries: (current.cashEntries || []).filter((entry) => !linkedCreditIds.has(entry.creditId)),
         },
         {
           module: "Satış",

@@ -91,7 +91,6 @@ export const createPermissionByType = {
   warehouse: "warehouse.manage",
   product: "warehouse.manage",
   products: "warehouse.manage",
-  financeAccount: "finance.manage",
   finance: "finance.manage",
   invoices: "invoices.manage",
   accounting: "accounting.manage",
