@@ -63,6 +63,19 @@ jobs:
           fi
           test -n "$RUN_ID" || (echo "Uğurlu backup tapılmadı" && exit 1)
           gh run download "$RUN_ID" --name "supabase-backup-$RUN_ID" --dir backup
+      - name: Decrypt backup
+        env:
+          BACKUP_DECRYPTION_KEY: ${{ secrets.BACKUP_DECRYPTION_KEY }}
+        run: |
+          if [ -f backup/backup.tgz.cms ]; then
+            (cd backup && sha256sum --check SHA256SUMS)
+            test -n "$BACKUP_DECRYPTION_KEY" || (echo "BACKUP_DECRYPTION_KEY secret yoxdur" && exit 1)
+            umask 077
+            printf '%s\n' "$BACKUP_DECRYPTION_KEY" > "$RUNNER_TEMP/backup-key.pem"
+            openssl cms -decrypt -binary -inform DER -in backup/backup.tgz.cms -inkey "$RUNNER_TEMP/backup-key.pem" -recip .github/backup-recipient.pem -out "$RUNNER_TEMP/backup.tgz"
+            rm -f "$RUNNER_TEMP/backup-key.pem" backup/backup.tgz.cms backup/SHA256SUMS
+            tar -C backup -xzf "$RUNNER_TEMP/backup.tgz"
+          fi
       - name: Verify checksum
         run: (cd backup && sha256sum --check SHA256SUMS)
       - name: Wait for disposable database
