@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { pickUiPreferences, stripOperationalCollections, withoutOperationalData, writeTenantUiCache } from '../state/tenantPersistence.js';
+import { operationalCollections, pickUiPreferences, stripOperationalCollections, withoutOperationalData, writeTenantUiCache } from '../state/tenantPersistence.js';
 import { useTenantRequestScope } from './useTenantRequestScope.js';
 
 const keyJson = (value) => JSON.stringify(value ?? null);
@@ -26,6 +26,10 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
   const { scope } = useTenantRequestScope(tenantId);
   const [loadedTenant, setLoadedTenant] = useState(null);
   const ready = Boolean(tenantId && loadedTenant === scope);
+  // The tenant's state was reset (no data of the previous tenant left). Collection tables can load from
+  // here on, in parallel with the snapshot read, instead of waiting for it.
+  const [clearedTenant, setClearedTenant] = useState(null);
+  const cleared = Boolean(tenantId && clearedTenant === scope);
   const snapshotUnavailable = useRef(false);
   const saveTimer = useRef(null);
   const writer = useRef(null);
@@ -41,6 +45,7 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
     let cancelled = false;
     setLoadedTenant(null);
     setState(hydrateState(withoutOperationalData({})));
+    setClearedTenant(scope);
     if (!tenantId) return () => { cancelled = true; };
     supabase.from('tenant_state_snapshots').select('state,schema_version').eq('tenant_id', tenantId).maybeSingle()
       .then(({ data, error }) => {
@@ -54,7 +59,12 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
         const hydrated = hydrateState(withoutOperationalData(snapshot));
         // Baseline = what the page starts with, so only later user changes are sent.
         savedKeys.current = snapshotKeyJson(stripOperationalCollections(hydrated));
-        setState(hydrated);
+        // Collections may already be loaded from their own tables (they start after the reset, not after
+        // this read): keep them instead of the empty lists the hydrated snapshot carries.
+        setState((current) => ({
+          ...hydrated,
+          ...Object.fromEntries(operationalCollections.filter((key) => Object.hasOwn(current, key)).map((key) => [key, current[key]])),
+        }));
         setLoadedTenant(scope);
       }).catch((error) => {
         if (!cancelled) onError?.(error);
@@ -115,6 +125,6 @@ export function useTenantUiPersistence({ tenantId, userId, state, setState, hydr
     return () => window.clearTimeout(saveTimer.current);
   }, [tenantId, userId, ready, snapshotJson, schemaVersion]);
 
-  return { ready, snapshotUnavailable };
+  return { ready, cleared, snapshotUnavailable };
 }
 
