@@ -43,14 +43,14 @@ Bunlar bitmədən real müştəri məlumatı daxil edilmir.
 - [ ] Pilot şirkət(lər) seçilib: kiçik/orta, 3–10 istifadəçi, kreditlə satış və anbarı olan, köhnə uçotunu paralel apara bilən.
 - [ ] Yazılı razılaşma: pilot müddəti, məlumatın məxfiliyi, köhnə sistemin paralel saxlanması, dəstək kanalı və cavab müddəti.
 - [ ] Tenant yaradılıb, owner dəvət olunub (parol mənbə kodunda saxlanmır).
-- [ ] Başlanğıc qalıqlar daxil edilib və köhnə sistemlə tutuşdurulub:
+- [ ] Başlanğıc qalıqlar daxil edilib (**Quraşdırma köməkçisi → Başlanğıc qalıqların idxalı**, CSV şablonları ilə) və köhnə sistemlə tutuşdurulub:
   - [ ] Kassa/bank hesabları və qalıqları
   - [ ] Məhsul kataloqu, anbarlar, anbar qalıqları (say + maya dəyəri)
   - [ ] Müştərilər (FIN/VÖEN təkrarlanmır)
   - [ ] Aktiv kredit müqavilələri və qalan ödəniş qrafiki
   - [ ] Təchizatçılar və açıq borclar
   - [ ] İşçilər və əmək haqqı məlumatları
-- [ ] İstifadəçilərə 1 saatlıq təlim keçilib (satış → kredit → ödəniş qəbulu → kassa → anbar hərəkəti → hesabat).
+- [ ] İstifadəçilərə 1 saatlıq təlim keçilib (satış → kredit → ödəniş qəbulu → kassa → anbar hərəkəti → hesabat). Hər istifadəçiyə öz rolunun bölməsi verilib: [USER_GUIDES.md](USER_GUIDES.md).
 
 ---
 
