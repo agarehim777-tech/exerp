@@ -3707,6 +3707,9 @@ isOneToOne: false
 "post_invoice_to_gl":
 { Args: { "_invoice_id": string }; Returns: string
                            },
+"post_manual_cash_transaction":
+{ Args: { "_account_id": string,"_amount": number,"_category": string,"_counterparty"?: string,"_customer_id"?: string,"_description"?: string,"_direction": string,"_occurred_at"?: string,"_tenant_id": string,"_transaction_no": string }; Returns: string
+                           },
 "post_manual_journal_entry":
 { Args: { "_entry": string }; Returns: undefined
                            },
@@ -3835,6 +3838,9 @@ isOneToOne: false
 "seed_default_crm_pipeline":
 { Args: { "_tenant": string }; Returns: string
                            },
+"set_credit_collection_stage":
+{ Args: { "_credit_id": string,"_reason"?: string,"_stage": string,"_tenant_id": string }; Returns: undefined
+                           },
 "set_order_bonus_assignments":
 { Args: { "_allocations": Json,"_effective_from": string,"_order_id": string,"_reason"?: string }; Returns: undefined
                            },
@@ -3863,6 +3869,9 @@ isOneToOne: false
 { Args: { "_from": string,"_tenant": string,"_to": string }; Returns: {
               "account_id": string,"balance": number,"code": string,"credit": number,"debit": number,"name": string,"type": Database["public"]['Enums']["account_type"]
             }[]
+                           },
+"update_sales_order_header":
+{ Args: { "_customer_id": string,"_notes": string,"_order_date": string,"_order_id": string,"_tenant_id": string }; Returns: undefined
                            },
 "webhook_audit_receipt_context":
 { Args: { "_dispatch_id": string }; Returns: Json

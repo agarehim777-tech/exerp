@@ -141,7 +141,8 @@ export function createSalesOrderActions({ activeTenantId, auditCurrentState, aud
         ...(custRow ? { customer_id: custRow.id } : {}),
         order_date: values.date || existingOrder.date || toLocalIsoDate(),
         notes: values.note ?? existingOrder.note ?? null,
-        status: statusMap[values.status || existingOrder.status] || "draft",
+        // Only a real status change is sent; it runs through process_sales_order_status on the server.
+        ...(values.status && values.status !== existingOrder.status ? { status: statusMap[values.status] } : {}),
       };
       updateDbOrder(orderId, patch).catch((err) => {
         console.error("[orders] DB update failed:", err);
