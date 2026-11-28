@@ -82,7 +82,7 @@ Uyğunsuzluq tapılarsa: fərqi, tarixi, sənəd nömrəsini qeyd edin. Səbəb 
 
 1. Problemi Sentry / istifadəçi şikayəti / uyğunsuzluq ilə qeydə alın (ekran şəkli, vaxt, istifadəçi, sənəd nömrəsi).
 2. Məlumat itkisi və ya səhv məbləğ varsa: həmin modulda işi dayandırın, köhnə sistemdə davam edin.
-3. Frontend xətası: əvvəlki deploy-a qayıdın (GitHub Pages workflow-unu əvvəlki commit üzərində işə salın).
+3. Frontend xətası: səhvə səbəb olan commit-i `main`-də geri qaytarın (`git revert <sha>` ilə PR açıb merge edin). Pages deploy-u əl ilə işə salınmır: yalnız `main`-ə push-dan sonra CI uğurlu bitəndə avtomatik başlayır, ona görə də geri qaytarma da adi CI → deploy yolu ilə gedir. Bu vaxt ərzində (təxminən 30–40 dəq) problemli modulda işi köhnə sistemdə davam etdirin.
 4. Baza xətası: miqrasiyanı geri çəkməyin. Yalnız sınaqdan keçmiş irəli düzəliş (forward-fix) miqrasiyası tətbiq edin.
 5. Məlumat bərpası lazımdırsa: əvvəlcə ehtiyat layihəyə bərpa edin, lazımi sətirləri oradan yoxlayın. Production bərpası yalnız platforma sahibi və maliyyə sahibinin təsdiqi ilə.
 
