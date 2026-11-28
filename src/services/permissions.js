@@ -41,7 +41,7 @@ export const defaultRoles = [
     name: "Satış Meneceri",
     users: "12 istifadəçi",
     scope: "CRM, Satış, Kredit oxunuşu",
-    permissions: ["crm.manage", "sales.create", "contracts.manage", "reports.export", "messages.send", "messages.manage", "notifications.manage"],
+    permissions: ["crm.manage", "sales.create", "contracts.manage", "reports.export", "support.manage", "messages.send", "messages.manage", "notifications.manage"],
   },
   {
     name: "Anbar İşçisi",
@@ -53,7 +53,7 @@ export const defaultRoles = [
     name: "Satınalma Əməkdaşı",
     users: "0 istifadəçi",
     scope: "Satınalma sifarişləri və göndərişlər",
-    permissions: ["vendors.manage", "vendors.po", "procurement.manage", "reports.export", "messages.send", "notifications.manage"],
+    permissions: ["vendors.manage", "vendors.po", "procurement.manage", "reports.export", "support.manage", "messages.send", "notifications.manage"],
   },
   {
     name: "Maliyyəçi",
