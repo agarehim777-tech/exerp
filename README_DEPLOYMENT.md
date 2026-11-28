@@ -45,8 +45,12 @@ npx playwright install chromium
 ## Backup and recovery
 
 - `.github/workflows/backup-supabase.yml` creates role, schema and data dumps
-  every day at 01:17 UTC, records SHA-256 checksums and retains the compressed
-  GitHub artifact for 90 days.
+  every day at 01:17 UTC, records SHA-256 checksums and retains the
+  GitHub artifact for 90 days. The repository is public, so the dump is
+  encrypted before upload (`openssl cms`, AES-256-GCM) to the public
+  certificate `.github/backup-recipient.pem`; the artifact holds only
+  `backup.tgz.cms` and `SHA256SUMS`. The private key is kept offline by the
+  owner and stored as the `BACKUP_DECRYPTION_KEY` secret for the restore drill.
 - Configure `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_URL`,
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SENTRY_DSN`,
   `E2E_TEST_USER`, `E2E_TEST_PASS` and the browser E2E session values in the
