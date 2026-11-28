@@ -44,9 +44,10 @@ async function disablePwaOnStaticHosting() {
 
 export function installChunkErrorRecovery() {
   if (typeof window === "undefined") return;
-  if (window.location.hostname.endsWith("github.io")) {
-    // GitHub Pages releases are immutable static bundles. A stale service
-    // worker can mix chunk versions, so PWA registration is disabled there.
+  const host = window.location.hostname;
+  if (host.endsWith("github.io") || host.endsWith("onrender.com")) {
+    // GitHub Pages and Render releases are immutable static bundles. A stale
+    // service worker can mix chunk versions, so PWA registration is disabled there.
     disablePwaOnStaticHosting();
   }
   window.addEventListener("error", (event) => {

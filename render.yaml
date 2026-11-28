@@ -1,10 +1,15 @@
+# Production frontend on Render (static site). The browser gets only the public Supabase URL and
+# publishable key; enter the env values in the Render dashboard (sync: false keeps them out of git).
 services:
   - type: web
     name: exerp-web
     runtime: static
-    buildCommand: npm ci && npm run build
+    # Deploy only after the GitHub checks (CI) of the commit pass, like the GitHub Pages workflow did.
+    autoDeployTrigger: checksPass
+    buildCommand: npm ci && VITE_RELEASE_VERSION=$RENDER_GIT_COMMIT npm run build
     staticPublishPath: ./dist
-    pullRequestPreviewsEnabled: true
+    # Previews would run against the production database; keep them off.
+    pullRequestPreviewsEnabled: false
     envVars:
       - key: NODE_VERSION
         value: "24"
@@ -16,8 +21,25 @@ services:
         sync: false
       - key: VITE_SENTRY_DSN
         sync: false
-      - key: VITE_RELEASE_VERSION
-        sync: false
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
     routes:
       - type: rewrite
         source: /*
