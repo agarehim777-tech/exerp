@@ -42,16 +42,24 @@ for (const method of ['weighted_average', 'fifo']) {
         expect(await rpc('create_sales_order_complete', command)).toEqual(sale);
         const reservation = await rpc('reserve_stock', { _tenant_id: tenantId, _warehouse_id: warehouse.id,
           _product_id: product.id, _order_id: orderId, _order_item_id: null, _quantity: 2 });
+        // Orders are server-write only (20261128110000): a direct status PATCH is refused before any trigger runs.
         await expect(call('patch', `orders?id=eq.${orderId}&tenant_id=eq.${tenantId}`, { status: 'cancelled' }))
-          .rejects.toThrow('sales_cancellation_requires_reversal_command');
-        const unrelated = await insert('cash_transactions', { account_id: account.id, direction: 'in', amount: 17,
-          category: 'sales_payment', reference_id: crypto.randomUUID(), reference: `${marker}-OTHER`, description: `Unrelated ${marker}` });
+          .rejects.toThrow(/sales_cancellation_requires_reversal_command|42501/);
+        // An unrelated manual cash entry on the same account must survive the sale reversal.
+        const unrelatedId = await rpc('post_manual_cash_transaction', { _tenant_id: tenantId, _transaction_no: `${marker}-OTHER`,
+          _account_id: account.id, _direction: 'in', _amount: 17, _category: 'digər', _description: `Unrelated ${marker}` });
+        const unrelated = { id: unrelatedId };
         let deliver: () => Promise<unknown>;
         let deliveryId = '';
         if (path === 'complete') {
-          const delivery = await insert('deliveries', { delivery_no: marker, order_id: orderId, warehouse_id: warehouse.id, status: 'ready' }); deliveryId = delivery.id;
-          await insert('delivery_items', { delivery_id: delivery.id, product_id: product.id, reservation_id: reservation, quantity: 2 });
-          deliver = () => rpc('complete_delivery', { _tenant_id: tenantId, _delivery_id: delivery.id, _recipient_name: 'CI recipient', _recipient_document: marker });
+          // The app path: deliveries are created and completed by one server command (same request key = same result).
+          deliver = async () => {
+            const done = await rpc('complete_sales_delivery', { _tenant_id: tenantId, _order_id: orderId, _warehouse_id: warehouse.id,
+              _request_key: `${marker}:delivery`, _acceptance: { recipientName: 'CI recipient', documentNo: marker,
+                warehouseEmployeeName: 'CI warehouse', signatureConfirmed: true } });
+            deliveryId = done.delivery_id;
+            return done;
+          };
         } else if (path === 'mark') {
           deliver = () => rpc('mark_sales_order_delivered', { _order_id: orderId });
         } else {
@@ -98,9 +106,9 @@ for (const method of ['weighted_average', 'fifo']) {
           expect(lines.reduce((sum: number, line: { debit: number; credit: number }) => sum + Number(line.debit) - Number(line.credit), 0)).toBe(0);
         }
         await expect(deliver()).rejects.toThrow(/cancelled_order_is_terminal|delivery_order_cancelled/);
-        await expect(call('patch', `credit_contracts?tenant_id=eq.${tenantId}&id=eq.${sale.credit_id}`, { status: 'active' })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK/);
+        await expect(call('patch', `credit_contracts?tenant_id=eq.${tenantId}&id=eq.${sale.credit_id}`, { status: 'active' })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK|42501/);
         await expect(insert('cash_transactions', { account_id: account.id, direction: 'in', amount: 1,
-          category: 'sales_payment', reference_id: orderId, reference: marker })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK/);
+          category: 'sales_payment', reference_id: orderId, reference: marker })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK|42501/);
       } finally {
         if (orderId) await rpc('reverse_sales_order_v3', { _tenant_id: tenantId, _order_id: orderId, _reason: marker, _request_key: `${marker}:cleanup` });
         for (const [table, id] of [['cash_accounts', accountId], ['products', productId], ['warehouses', warehouseId], ['warehouses', otherWarehouseId]]) {
