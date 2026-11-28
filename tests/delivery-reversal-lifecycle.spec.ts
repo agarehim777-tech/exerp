@@ -49,13 +49,13 @@ for (const method of ['weighted_average', 'fifo']) {
         const unrelatedId = await rpc('post_manual_cash_transaction', { _tenant_id: tenantId, _transaction_no: `${marker}-OTHER`,
           _account_id: account.id, _direction: 'in', _amount: 17, _category: 'digər', _description: `Unrelated ${marker}` });
         const unrelated = { id: unrelatedId };
-        let deliver: () => Promise<unknown>;
+        let deliver: (attempt?: string) => Promise<unknown>;
         let deliveryId = '';
         if (path === 'complete') {
           // The app path: deliveries are created and completed by one server command (same request key = same result).
-          deliver = async () => {
+          deliver = async (attempt = 'first') => {
             const done = await rpc('complete_sales_delivery', { _tenant_id: tenantId, _order_id: orderId, _warehouse_id: warehouse.id,
-              _request_key: `${marker}:delivery`, _acceptance: { recipientName: 'CI recipient', documentNo: marker,
+              _request_key: `${marker}:delivery:${attempt}`, _acceptance: { recipientName: 'CI recipient', documentNo: marker,
                 warehouseEmployeeName: 'CI warehouse', signatureConfirmed: true } });
             deliveryId = done.delivery_id;
             return done;
@@ -105,7 +105,9 @@ for (const method of ['weighted_average', 'fifo']) {
           const lines = await call('get', `journal_lines?entry_id=eq.${event.journal_entry_id}&select=debit,credit`);
           expect(lines.reduce((sum: number, line: { debit: number; credit: number }) => sum + Number(line.debit) - Number(line.credit), 0)).toBe(0);
         }
-        await expect(deliver()).rejects.toThrow(/cancelled_order_is_terminal|delivery_order_cancelled/);
+        // A new delivery attempt (new request key) after the reversal must be refused; the same key would only
+        // replay the first, successful result.
+        await expect(deliver('after-cancel')).rejects.toThrow(/cancelled_order_is_terminal|delivery_order_cancelled|order_cancelled|order_not_active/);
         await expect(call('patch', `credit_contracts?tenant_id=eq.${tenantId}&id=eq.${sale.credit_id}`, { status: 'active' })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK|42501/);
         await expect(insert('cash_transactions', { account_id: account.id, direction: 'in', amount: 1,
           category: 'sales_payment', reference_id: orderId, reference: marker })).rejects.toThrow(/cancelled_order_is_terminal|ERP_CANCELLED_ORDER_LINK|42501/);
