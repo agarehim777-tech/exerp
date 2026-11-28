@@ -8,6 +8,8 @@ export function buildOperationalHealth({ orders = [], credits = [], cashTransact
   const issues = [];
 
   for (const credit of credits) {
+    // A credit without an order is an opening balance from the old system (import_opening_balances), not an orphan.
+    if (!credit.order_id) continue;
     const order = orderById.get(String(credit.order_id));
     if (!order) {
       issues.push({ id: `credit-orphan-${credit.id}`, domain: 'Kredit', severity: 'error', title: 'Sifarişsiz kredit', detail: credit.contract_no || credit.id, remedy: 'Kredit müqaviləsini arxivlə və ödəniş planını bağla' });

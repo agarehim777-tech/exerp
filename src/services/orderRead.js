@@ -30,6 +30,15 @@ export async function readOrderById(tenantId, orderId, isCurrent) {
   return data;
 }
 
+// Credits brought over from another system (import_opening_balances) have no sale order, so the order read
+// above never reaches them; they are read on their own and shown next to the sale credits.
+export function readOpeningCredits(tenantId, isCurrent) {
+  return readPages(() => supabase.from('credit_contracts')
+    .select('id,customer_id,contract_no,principal,initial_payment,required_initial,term_months,start_date,status,created_at,customer:customers(id,name,fin),installments:credit_installments(id,installment_no,due_date,principal_due,principal_paid,status)', { count: 'exact' })
+    .eq('tenant_id', tenantId).is('order_id', null).neq('status', 'cancelled')
+    .order('created_at', { ascending: false }).order('id'), Infinity, isCurrent);
+}
+
 export async function readOrderRelations(tenantId, orderIds, isCurrent) {
   if (!orderIds.length) return { credits: [], bonuses: [], deliveries: [], deliveryError: null };
   const query = (table, columns) => supabase.from(table).select(columns, { count: 'exact' })

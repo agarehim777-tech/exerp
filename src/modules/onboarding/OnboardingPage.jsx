@@ -2,8 +2,9 @@ import { Building2, Check, ChevronRight, ShieldCheck, Users } from "lucide-react
 import { MetricCard, Panel, PanelHeader, ProgressRow, SimpleTable as DataTable, StatusBadge, TwoLine } from "../../shared/ui/primitives.tsx";
 import { pageMeta } from "../../config/page-meta.js";
 import { percent } from "../../services/format.js";
+import { OpeningBalanceImport } from "./OpeningBalanceImport.jsx";
 
-export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
+export function OnboardingPage({ onboarding = {}, rows, onOpenModule, tenantId, can, notify, onOpeningImported }) {
   const activeStep = rows.nextStep;
   const checklistGroups = [
     { title: "Əsas qurulum", steps: rows.steps.filter((step) => ["ONB-1", "ONB-2", "ONB-3", "ONB-4"].includes(step.id)) },
@@ -35,6 +36,9 @@ export function OnboardingPage({ onboarding = {}, rows, onOpenModule }) {
           Modula keç
         </button>
       </section>
+      {tenantId && (
+        <OpeningBalanceImport tenantId={tenantId} can={can} notify={notify} onImported={onOpeningImported} onOpenModule={onOpenModule} />
+      )}
       <Panel className="onboarding-panel">
         <PanelHeader title="Yeni şirkət üçün quraşdırma köməkçisi" subtitle="Şirkət, anbar, rol, maliyyə, bildiriş və təlim addımları" icon={ShieldCheck} />
         <div className="onboarding-progress">

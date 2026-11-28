@@ -73,9 +73,11 @@ function buildSalesCreditRecord(order: Row, storedCredit?: Row): CreditRecord {
     ...(storedCredit || {}),
     id: storedCredit?.id || getCreditIdForOrder(order),
     salesSource: true,
-    createdFrom: "Satış modulu",
-    orderId: order.id,
-    orderNo: order.orderNo || order.order_no || order.id,
+    // An opening-balance credit (import_opening_balances) has no sale order to link to.
+    openingBalance: Boolean(order.openingBalance),
+    createdFrom: order.openingBalance ? "Başlanğıc qalıq" : "Satış modulu",
+    orderId: order.openingBalance ? null : order.id,
+    orderNo: order.openingBalance ? null : order.orderNo || order.order_no || order.id,
     date: storedCredit?.date || order.date || order.deliveryDate || null,
     customer: order.customer,
 

@@ -187,6 +187,7 @@ export function getCreditPaymentState(credit, plan = getCreditDisplayPlan(credit
 }
 
 export function getCreditSourceLabel(credit) {
+  if (credit.openingBalance) return "Başlanğıc qalıq";
   return credit.salesSource || credit.orderId ? "Satışdan gələn" : "Manual kredit";
 }
 

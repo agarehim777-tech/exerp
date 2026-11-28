@@ -1,7 +1,8 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ read: vi.fn(), byId: vi.fn(), create: vi.fn(), relations: vi.fn(), resync: vi.fn() }));
-vi.mock('../services/orderRead.js', () => ({ readOrderPage: mocks.read, readOrderById: mocks.byId, readOrderRelations: mocks.relations }));
+vi.mock('../services/orderRead.js', () => ({ readOrderPage: mocks.read, readOrderById: mocks.byId, readOrderRelations: mocks.relations,
+  readOpeningCredits: async () => [] }));
 vi.mock('../services/coreOperations', async importOriginal => ({ ...(await importOriginal()), createSalesOrderComplete: mocks.create }));
 vi.mock('../shared/hooks/useRealtimeResync', () => ({ useRealtimeResync: mocks.resync }));
 import { useOrders } from '../shared/hooks/useOrders.js';

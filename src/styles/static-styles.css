@@ -1916,3 +1916,27 @@
 
 /* Inline controls inside toolbars size to content; flex utilities decide growth. */
 .ui-toolbar > .ui-input { width: auto; }
+
+/* Opening-balance import (onboarding page). */
+.opening-import-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.opening-import-step {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface);
+  color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.opening-import-step > span {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px;
+  background: var(--surface-subtle); color: var(--muted); font-size: 12px;
+}
+.opening-import-step.is-active { border-color: var(--accent); }
+.opening-import-step.is-active > span { background: var(--accent); color: #fff; }
+.opening-import-step:disabled { cursor: not-allowed; opacity: 0.6; }
+.opening-import-hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.opening-import-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 12px; }
+.opening-import-message { margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius); font-size: 13px; }
+.opening-import-message.is-success { background: var(--success-surface); color: var(--text); }
+.opening-import-message.is-error { background: var(--danger-surface); border: 1px solid var(--danger-border); color: var(--danger); }
+.opening-import-errors {
+  margin: 0 0 12px; padding: 10px 12px 10px 28px; border: 1px solid var(--danger-border); border-radius: var(--radius);
+  background: var(--danger-surface); color: var(--danger); font-size: 13px;
+}

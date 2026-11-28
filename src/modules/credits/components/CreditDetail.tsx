@@ -466,7 +466,7 @@ export function CreditHealthSummary({ item }: { item: Row }) {
       <div>
         <span>Mənbə</span>
         <strong>{getCreditSourceLabel(credit)}</strong>
-        <small>{credit.orderId ? `${credit.orderNo || credit.orderId} sifarişi` : "Manual qeyd"}</small>
+        <small>{credit.orderId ? `${credit.orderNo || credit.orderId} sifarişi` : credit.openingBalance ? "Köhnə sistemdən köçürülüb" : "Manual qeyd"}</small>
       </div>
     </div>
   );
