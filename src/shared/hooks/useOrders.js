@@ -141,9 +141,19 @@ export function useOrders(tenantId) {
     await fetchAll();
   };
 
-  const updateHeader = async (id, patch) => {
-    const { error } = await supabase.from('orders').update(patch).eq('id', id);
+  // Orders are server-write only: customer/date/notes go through update_sales_order_header, a status change
+  // through process_sales_order_status (which also moves reservations, deliveries and accounting).
+  /** @param {string} id @param {{ customer_id?: string | null, order_date?: string | null, notes?: string | null, status?: string | null }} patch */
+  const updateHeader = async (id, { status = null, ...header } = {}) => {
+    const { error } = await supabase.rpc('update_sales_order_header', {
+      _tenant_id: tenantId, _order_id: id, _customer_id: header.customer_id || null,
+      _order_date: header.order_date || null, _notes: header.notes ?? null,
+    });
     if (error) throw error;
+    if (status) {
+      const { error: statusError } = await supabase.rpc('process_sales_order_status', { _order_id: id, _status: status });
+      if (statusError) throw statusError;
+    }
     await fetchAll();
   };
 

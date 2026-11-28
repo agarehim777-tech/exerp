@@ -8,6 +8,20 @@ import { createExpenseCommand, createExpenseEditCommand, createTransferCommand, 
 
 
 const newAccountCode = type => `${type === 'bank' ? 'BNK' : type === 'card' ? 'KRT' : 'KAS'}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+const manualCashErrors = {
+  cash_category_reserved: 'Bu kateqoriya sistem əməliyyatları üçündür (satış, kredit, transfer, xərc). Başqa kateqoriya seçin.',
+  cash_category_required: 'Kateqoriya boşdur.',
+  cash_amount_invalid: 'Məbləğ sıfırdan böyük olmalıdır.',
+  cash_direction_invalid: 'Əməliyyat növü düzgün deyil.',
+  cash_account_not_found: 'Hesab tapılmadı və ya aktiv deyil.',
+  cash_transaction_no_taken: 'Bu nömrə ilə başqa əməliyyat var. Formu yenidən doldurun.',
+  customer_not_found: 'Müştəri tapılmadı.',
+  permission_denied: 'Kassa əməliyyatı üçün icazəniz yoxdur.',
+};
+const describeManualCashError = (error) => {
+  const code = Object.keys(manualCashErrors).find((key) => String(error?.message || '').includes(key));
+  return code ? new Error(manualCashErrors[code]) : financeRpcError(error);
+};
 export const newTransactionNo = (prefix = 'KAS') => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
 // Transactions and expenses load newest first, CASH_PAGE rows at a time; "load more" raises the limit and the
@@ -115,17 +129,23 @@ export function useCashbook(tenantId) {
 
   // The page passes one transaction_no per draft. If a first attempt was saved but its response was lost, the
   // retry hits UNIQUE (tenant_id, transaction_no); that means "already saved", not a second transaction.
+  // Manual cash in/out goes through post_manual_cash_transaction (the table is server-write only); the same
+  // transaction_no returns the first row, so a retry after a lost response does not post twice.
   const addTransaction = async (payload) => {
     const customer = customers.find(item => item.id === payload.customer_id);
-    const { error: err } = await supabase.from('cash_transactions').insert({
-      ...payload,
-      customer_id: payload.customer_id || null,
-      counterparty: customer?.name || String(payload.counterparty || '').trim() || null,
-      transaction_no: payload.transaction_no || newTransactionNo(),
-      amount: Number(payload.amount) || 0,
-      tenant_id: tenantId,
+    const { error: err } = await supabase.rpc('post_manual_cash_transaction', {
+      _tenant_id: tenantId,
+      _transaction_no: payload.transaction_no || newTransactionNo(),
+      _account_id: payload.account_id,
+      _direction: payload.direction,
+      _amount: Number(payload.amount) || 0,
+      _category: String(payload.category || '').trim(),
+      _description: payload.description || null,
+      _customer_id: payload.customer_id || null,
+      _counterparty: customer?.name || String(payload.counterparty || '').trim() || null,
+      _occurred_at: payload.occurred_at ? String(payload.occurred_at).slice(0, 10) : null,
     });
-    if (err && !(err.code === '23505' && payload.transaction_no)) throw err;
+    if (err) throw describeManualCashError(err);
     await fetchAll();
   };
 

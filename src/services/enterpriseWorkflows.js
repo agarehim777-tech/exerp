@@ -112,15 +112,11 @@ export async function refreshCreditOverdue({ tenantId, asOf }) {
 
 export async function updateCreditCollection({ tenantId, credit, stage, reason }) {
   if (!tenantId || !credit?.id || !stage) throw new Error("Kredit və mərhələ tələb olunur.");
-  const updated = unwrap(await supabase.from("credit_contracts").update({ collection_stage: stage })
-    .eq("tenant_id", tenantId).eq("id", credit.id).select().single());
-  unwrap(await supabase.from("credit_adjustments").insert({
-    tenant_id: tenantId, credit_id: credit.id, adjustment_type: "collection",
-    old_value: { collection_stage: credit.collection_stage }, new_value: { collection_stage: stage },
-    reason: reason || "Kolleksiya mərhələsi yeniləndi",
+  // One server command updates the stage and writes its adjustment and collection-event history together.
+  unwrap(await supabase.rpc("set_credit_collection_stage", {
+    _tenant_id: tenantId, _credit_id: credit.id, _stage: stage, _reason: reason || null,
   }));
-  unwrap(await supabase.from("credit_collection_events").insert({ tenant_id: tenantId, credit_id: credit.id, stage, outcome: "Mərhələ yeniləndi", note: reason || null }));
-  return updated;
+  return { ...credit, collection_stage: stage };
 }
 
 export async function listCreditAudit({ tenantId, creditId }) {
