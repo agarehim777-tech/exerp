@@ -28,7 +28,8 @@ beforeEach(async () => {
     CREATE TABLE public.cash_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid, code text, name text, type text,
       currency text, account_no text, opening_balance numeric, is_active boolean, UNIQUE(tenant_id, code));
     CREATE TABLE public.credit_contracts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid, customer_id uuid, order_id uuid,
-      contract_no text, principal numeric, initial_payment numeric, required_initial numeric, term_months integer, start_date date,
+      contract_no text, principal numeric, initial_payment numeric, required_initial numeric,
+      term_months integer CHECK (term_months IN (2,3,4,5,6,12,18,24,36,48)), start_date date,
       status text, created_by uuid);
     CREATE TABLE public.credit_installments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid, credit_id uuid,
       installment_no integer, due_date date, principal_due numeric, principal_paid numeric, status text, paid_at timestamptz);
@@ -106,6 +107,11 @@ it('rebuilds an active credit schedule and allocates the principal paid in the o
   expect(schedule.slice(0, 2).every((r) => r.status === 'paid')).toBe(true);
   expect(schedule[2].status).toBe('overdue');
   expect(schedule.slice(4).map((r) => r.status)).toEqual(['pending', 'pending']);
+  // Old-system terms outside the sales list are accepted for opening credits only.
+  expect(await run('credits', 'k4', [{ contractNo: 'A-10', fin: 'OLD1234', financed: 1000, termMonths: 10, firstDueDate: month(1) }]))
+    .toMatchObject({ created: 1 });
+  await expect(db.query(`INSERT INTO credit_contracts(tenant_id, order_id, contract_no, term_months)
+    VALUES ('${tenant}', gen_random_uuid(), 'S-1', 10)`)).rejects.toThrow('credit_contracts_term_months_check');
   await expect(run('credits', 'k3', [{ line: 2, contractNo: 'İN-1050', fin: 'OLD1234', financed: 10, termMonths: 1, firstDueDate: '2030-01-01' }]))
     .rejects.toThrow('line 2: contract already exists');
 }, 30000);

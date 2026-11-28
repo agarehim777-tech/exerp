@@ -83,3 +83,14 @@ describe('opening-balance credits in the credit portfolio', () => {
     expect(getCreditSourceLabel(credit)).toBe('Başlanğıc qalıq');
   });
 });
+
+describe('operational health with opening-balance credits', () => {
+  it('does not report a credit without an order as an orphan, but still reports a missing order', async () => {
+    const { buildOperationalHealth } = await import('../shared/lib/operationalHealth.js');
+    const report = buildOperationalHealth({ credits: [
+      { id: 'opening', order_id: null, contract_no: 'K-1', status: 'active' },
+      { id: 'lost', order_id: 'o-missing', contract_no: 'İN-1001', status: 'active' },
+    ] });
+    expect(report.issues.map((issue) => issue.id)).toEqual(['credit-orphan-lost']);
+  });
+});

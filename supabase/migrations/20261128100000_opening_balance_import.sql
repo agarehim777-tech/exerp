@@ -10,15 +10,30 @@
 -- that money was collected before the switch). Later payments go through post_credit_payment as usual.
 -- Products and stock keep using import_warehouse_stock_atomic.
 
+-- Sales offer only the listed credit terms, but a credit from the old system can have any term. The term
+-- check keeps the list for credits from sales and allows 1-120 months for opening credits (no order).
+DO $$
+DECLARE c record;
+BEGIN
+  FOR c IN SELECT conname FROM pg_constraint
+    WHERE conrelid = 'public.credit_contracts'::regclass AND contype = 'c'
+      AND pg_get_constraintdef(oid) LIKE '%term_months%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.credit_contracts DROP CONSTRAINT %I', c.conname);
+  END LOOP;
+END $$;
+ALTER TABLE public.credit_contracts ADD CONSTRAINT credit_contracts_term_months_check
+  CHECK (term_months IN (2, 3, 4, 5, 6, 12, 18, 24, 36, 48) OR (order_id IS NULL AND term_months BETWEEN 1 AND 120));
+
 CREATE OR REPLACE FUNCTION private.opening_import_fail(_line integer, _reason text)
-RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = '' AS $$
+RETURNS void LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   RAISE EXCEPTION 'opening_import_invalid: line %: %', _line, _reason USING ERRCODE = '22023';
 END;
 $$;
 
 CREATE OR REPLACE FUNCTION private.opening_amount(_value jsonb, _line integer, _field text, _required boolean)
-RETURNS numeric LANGUAGE plpgsql IMMUTABLE SET search_path = '' AS $$
+RETURNS numeric LANGUAGE plpgsql SET search_path = '' AS $$
 DECLARE v numeric;
 BEGIN
   IF _value IS NULL OR jsonb_typeof(_value) = 'null' OR trim(_value #>> '{}') = '' THEN
