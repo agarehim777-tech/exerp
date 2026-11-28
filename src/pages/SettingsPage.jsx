@@ -58,11 +58,12 @@ function SettingsPage({
     moduleAccess: getDefaultModuleAccessForRole(activeRole?.name || defaultRoles[0].name, defaultRoles),
   });
   const integrations = [
-    ["AKB", "Müştəri kredit tarixçəsi sorğusu", "Aktiv"],
-    ["SMS Gateway", "Bildirişlər və OTP üçün", "Aktiv"],
-    ["1C Mühasibat", "Maliyyə məlumatlarının sinxronizasiyası", "Gözləyir"],
-    ["ASAN İmza", "Müqavilələrin rəqəmsal imzalanması", "Gözləyir"],
-    ["E-Qaimə Sistemi", "Elektron qaimələrin avtomatik göndərilməsi", "Aktiv"],
+    // None of these is connected yet; SMS and e-qaimə are planned. Show the real state, never "Aktiv".
+    ["AKB", "Müştəri kredit tarixçəsi sorğusu", "Qoşulmayıb"],
+    ["SMS Gateway", "Bildirişlər və OTP üçün", "Planlaşdırılır"],
+    ["1C Mühasibat", "Maliyyə məlumatlarının sinxronizasiyası", "Qoşulmayıb"],
+    ["ASAN İmza", "Müqavilələrin rəqəmsal imzalanması", "Qoşulmayıb"],
+    ["E-Qaimə Sistemi", "Elektron qaimələrin vergi portalına göndərilməsi", "Planlaşdırılır"],
   ];
   const roles = settings.roles || defaultRoles;
   const currentRole = activeRole || getActiveRole(settings);
@@ -152,7 +153,7 @@ function SettingsPage({
       </Panel>
 
       <Panel>
-        <PanelHeader title="Bildiriş Tənzimləmələri" subtitle="Kanallar və avtomatik xəbərdarlıqlar" />
+        <PanelHeader title="Bildiriş Tənzimləmələri" subtitle="SMS və e-poçt göndərişi hələ qoşulmayıb; bildirişlər sistemin daxilində göstərilir" />
         <div className="toggle-list">
           <Toggle label="Push bildirişlər" checked={settings.toggles.push} disabled={!canManageSettings} onChange={() => toggleSetting("push")} />
           <Toggle label="SMS bildirişlər" checked={settings.toggles.sms} disabled={!canManageSettings} onChange={() => toggleSetting("sms")} />

@@ -121,7 +121,7 @@ export function buildInvoiceControlSummary(invoices: Row[]) {
   });
 
   return {
-    sent: invoices.filter((invoice) => invoice.invoiceSentAt || invoice.eTaxStatus === "E-qaimə göndərildi").length,
+    sent: invoices.filter((invoice) => invoice.invoiceSentAt || invoice.eTaxStatus === "E-qaimə göndərildi" || invoice.eTaxStatus === "Əl ilə göndərildi").length,
     ready: invoices.filter((invoice) => invoice.eTaxStatus === "Göndərişə hazır").length,
     overdueCount: overdue.length,
     overdueBalance: total(overdue, "balance"),

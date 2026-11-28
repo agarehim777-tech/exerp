@@ -146,8 +146,9 @@ export function CreditDetail({ item, sendCreditSms, onUpdatePaymentDate, onRecei
           <CreditHealthSummary item={item} />
           {started ? <div className="credit-detail-actions">
             <span>Növbəti: {paymentState.nextInstallment?.due || credit.next}</span>
-            <button className="secondary-btn" onClick={() => sendCreditSms(credit.id)}>
-              SMS xatırlatma
+            {/* SMS provider is not connected yet (planned); the button stays visible but cannot send. */}
+            <button className="secondary-btn" disabled title="SMS xidməti hələ qoşulmayıb" onClick={() => sendCreditSms(credit.id)}>
+              SMS xatırlatma (tezliklə)
             </button>
           </div> : null}
         </aside>

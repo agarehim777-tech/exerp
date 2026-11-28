@@ -76,8 +76,8 @@ export const pageMeta = {
     action: "Yeni xərc",
   },
   invoices: {
-    title: "Faktura & E-qaimə",
-    subtitle: "Satış sifarişlərindən avtomatik faktura, ƏDV bölgüsü və e-qaimə hazırlığı.",
+    title: "Fakturalar",
+    subtitle: "Satış sifarişlərindən avtomatik faktura və ƏDV bölgüsü.",
     action: "Faktura yarat",
   },
   insights: {
@@ -117,7 +117,7 @@ export const pageMeta = {
   },
   credits: {
     title: "Kredit İdarəetməsi",
-    subtitle: "Avtomatik kredit cədvəli və SMS xatırlatma sistemi.",
+    subtitle: "Avtomatik kredit cədvəli, ödəniş qəbulu və gecikmə nəzarəti.",
     action: "Yeni kredit satış",
   },
   receivables: {
@@ -194,7 +194,7 @@ export const pageMeta = {
   },
   notifications: {
     title: "Bildirişlər",
-    subtitle: "Push, SMS və daxili sistem xəbərdarlıqları.",
+    subtitle: "Daxili sistem xəbərdarlıqları və bildiriş qaydaları.",
     action: "Növbəni işlə",
   },
   api: {

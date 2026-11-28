@@ -36,8 +36,11 @@ describe("finance helpers", () => {
       ["INV-0002", 200, 36, 200, "Qismən ödənilib"],
       ["INV-0003", 50, 9, 59, "Ödəniş gözləyir"],
     ]);
-    expect(rows[0]).toMatchObject({ seller: "Test MMC", voen: "—", currency: "AZN", eTaxStatus: "E-qaimə göndərildi" });
-    expect(buildInvoiceSummary(rows)).toEqual({ count: 3, total: 413, vat: 63, paid: 118, balance: 259, ready: 2 });
+    expect(rows[0]).toMatchObject({ seller: "Test MMC", voen: "—", currency: "AZN", eTaxStatus: "Göndərişə hazır" });
+    expect(buildInvoiceSummary(rows)).toEqual({ count: 3, total: 413, vat: 63, paid: 118, balance: 259, ready: 3 });
+    // A paid invoice is not "sent to e-qaimə" by itself; only an invoice marked by hand shows as sent.
+    const marked = buildInvoiceRows({ orders: [{ ...orders[0], invoiceSentAt: "2026-11-28" }], settings: {}, invoiceSettings: {} });
+    expect(marked[0].eTaxStatus).toBe("Əl ilə göndərildi");
   });
 
   it("converts sales into each currency and flags volatile rates", () => {

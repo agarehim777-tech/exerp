@@ -40,9 +40,9 @@ describe("finance module actions", () => {
     );
     actions.runInvoiceAction();
     expect(getState().orders[0]).toEqual({ id: "O1" });
-    expect(getState().orders[1]).toMatchObject({ eTaxStatus: "E-qaimə göndərildi", invoiceBatchId: expect.stringMatching(/^ETX-[0-9A-Z]+-[0-9A-Z]{12}$/) });
-    expect(audits[0]).toMatchObject({ module: "Faktura", action: "E-qaimə göndərildi" });
-    expect(deps.notify).toHaveBeenLastCalledWith("F-2 e-qaimə növbəsinə göndərildi.");
+    expect(getState().orders[1]).toMatchObject({ eTaxStatus: "Əl ilə göndərildi", invoiceBatchId: expect.stringMatching(/^ETX-[0-9A-Z]+-[0-9A-Z]{12}$/) });
+    expect(audits[0]).toMatchObject({ module: "Faktura", action: "Faktura göndərildi kimi qeyd edildi" });
+    expect(deps.notify).toHaveBeenLastCalledWith("F-2 göndərildi kimi qeyd edildi. E-qaimə portalına avtomatik göndəriş hələ qoşulmayıb.");
   });
 
   it("warns when there is no invoice to send", () => {

@@ -45,7 +45,7 @@ export function InvoicePrintModal({ invoice, invoiceSettings = {}, onClose }) {
         <div className="modal-head">
           <div>
             <h2>{invoice.id}</h2>
-            <p>Faktura/e-qaimə çap görünüşü və HTML/PDF ixracına hazırlıq.</p>
+            <p>Faktura çap görünüşü və HTML/PDF ixracı.</p>
           </div>
           <button className="icon-btn" onClick={onClose} aria-label="Pəncərəni bağla">
             <X size={18} />

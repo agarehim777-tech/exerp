@@ -9,6 +9,9 @@ import { currentBusinessDate } from "./businessDate.ts";
 import { currentBusinessYear, hasExpenseCashImpact } from "./financeDomain.ts";
 import { calculatePayrollTax2026 } from "./appDomainHr.jsx";
 import { currentBusinessQuarter } from "./appDomainProcurement.jsx";
+
+// Shown when an invoice was marked as sent by hand; nothing goes to the e-qaimə portal until it is connected.
+const MANUALLY_SENT = "Əl ilə göndərildi";
 import { getAvailableQuantity } from "./appDomainWarehouse.jsx";
 import { addDays, daysBetween, getCreditDisplayPlan, roundMoney } from "./credit.js";
 
@@ -118,7 +121,10 @@ function buildInvoiceRows({ orders, settings = {}, invoiceSettings = {} }: { ord
       paid: Number(order.paid || 0),
       balance,
       currency: invoiceSettings.defaultCurrency || "AZN",
-      eTaxStatus: order.eTaxStatus || (balance <= 0 ? "E-qaimə göndərildi" : "Göndərişə hazır"),
+      // E-qaimə is not connected yet: an invoice is "sent" only when someone marked it so (legacy value kept).
+      eTaxStatus: order.invoiceSentAt || order.eTaxStatus === "E-qaimə göndərildi" || order.eTaxStatus === MANUALLY_SENT
+        ? MANUALLY_SENT
+        : "Göndərişə hazır",
       invoiceBatchId: order.invoiceBatchId,
       invoiceSentAt: order.invoiceSentAt,
       status,

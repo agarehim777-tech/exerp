@@ -88,7 +88,7 @@ export default function TaxPage({ taxRows, payrollTaxRows, invoiceSummary, accou
           <div className="statement-list">
             <TwoLine title="Satış ƏDV" subtitle={money(invoiceSummary.vat)} />
             <TwoLine title="ƏDV öhdəliyi" subtitle={money(accounting.vatPayable)} />
-            <TwoLine title="E-qaimə sayı" subtitle={`${invoiceSummary.count} faktura`} />
+            <TwoLine title="Faktura sayı" subtitle={`${invoiceSummary.count} faktura`} />
           </div>
         </Panel>
         <Panel>

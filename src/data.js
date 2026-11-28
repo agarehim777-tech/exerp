@@ -202,7 +202,7 @@ export const initialState = {
       provider: "Local/Sandbox",
       endpoint: "https://sms.provider.local/send",
       sender: "ERPCRM",
-      status: "Aktiv",
+      status: "Qoşulmayıb",
       mode: "Sandbox",
       secretStatus: "Secret tələb olunur",
     },

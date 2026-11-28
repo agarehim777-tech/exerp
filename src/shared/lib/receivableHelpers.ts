@@ -87,7 +87,7 @@ function getReceivableNextAction(row: RiskInput): string {
   if (Number(row.overdueDays || 0) > 90) return "Hüquqi mərhələyə ötür";
   if (Number(row.overdueDays || 0) > 30) return "Menecer eskalasiyası";
   if (Number(row.overdueDays || 0) > 7) return "Kollektor zəngi";
-  if (Number(row.overdueDays || 0) > 0) return "SMS xatırlatma";
+  if (Number(row.overdueDays || 0) > 0) return "Mesajla xatırlatma";
   return "Planlı izləmə";
 }
 
