@@ -139,7 +139,7 @@ function buildReportModuleRows({
       module: "Faktura",
       metric: money(invoiceControl.openBalance),
       count: `${invoices.length} faktura`,
-      signal: invoiceControl.overdueCount > 0 ? `${invoiceControl.overdueCount} gecikmiş faktura` : `${invoiceControl.ready} e-qaimə hazır`,
+      signal: invoiceControl.overdueCount > 0 ? `${invoiceControl.overdueCount} gecikmiş faktura` : `${invoiceControl.ready} faktura göndərişə hazır`,
       status: invoiceControl.overdueCount > 0 || invoiceControl.openBalance > 0 ? "Nəzarət" : "Hazır",
     },
     {

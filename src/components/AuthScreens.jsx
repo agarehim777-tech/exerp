@@ -50,7 +50,7 @@ const companyModuleCopy = {
   warehouse: ["Anbar və stok", "Qalıqlar, rezervlər və anbar əməliyyatları"],
   deliveries: ["Təhvil və logistika", "Çatdırılma mərhələləri və təhvil nəzarəti"],
   finance: ["Maliyyə", "Kassa, xərclər və maliyyə təsdiqləri"],
-  invoices: ["Fakturalar və e-qaimə", "Faktura yaradılması və ödəniş izləmə"],
+  invoices: ["Fakturalar", "Faktura yaradılması və ödəniş izləmə"],
   accounting: ["Mühasibat", "Mühasibat yazılışları və maliyyə hesabatları"],
   tax: ["Vergi təqvimi", "Vergi öhdəlikləri və son tarixlər"],
   credits: ["Kreditlər", "Kredit satışları və ödəniş cədvəlləri"],

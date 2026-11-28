@@ -4,7 +4,7 @@ export const permissionCatalog = [
   { key: "warehouse.manage", label: "Anbar idarəsi" },
   { key: "delivery.complete", label: "Təhvil tamamlamaq" },
   { key: "finance.manage", label: "Maliyyə təsdiqi" },
-  { key: "invoices.manage", label: "Faktura/e-qaimə" },
+  { key: "invoices.manage", label: "Faktura idarəsi" },
   { key: "accounting.manage", label: "Mühasibat" },
   { key: "tax.manage", label: "Vergi təqvimi" },
   { key: "credits.manage", label: "Kredit idarəsi" },

@@ -39,7 +39,7 @@ export function createFinanceModuleActions({ accountingData, auditCurrentState, 
             order.id === targetInvoice.orderId
               ? {
                   ...order,
-                  eTaxStatus: "E-qaimə göndərildi",
+                  eTaxStatus: "Əl ilə göndərildi",
                   invoiceBatchId: batchId,
                   invoiceSentAt: stamp,
                 }
@@ -48,12 +48,13 @@ export function createFinanceModuleActions({ accountingData, auditCurrentState, 
         },
         {
           module: "Faktura",
-          action: "E-qaimə göndərildi",
+          action: "Faktura göndərildi kimi qeyd edildi",
           detail: `${targetInvoice.id} · ${targetInvoice.customer} · ${batchId}`,
         },
       ),
     );
-    notify(`${targetInvoice.id} e-qaimə növbəsinə göndərildi.`);
+    // Nothing is sent to the e-qaimə portal yet; the invoice is only marked as sent by hand.
+    notify(`${targetInvoice.id} göndərildi kimi qeyd edildi. E-qaimə portalına avtomatik göndəriş hələ qoşulmayıb.`);
   }
 
   function runAccountingAction() {

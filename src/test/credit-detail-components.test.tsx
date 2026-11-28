@@ -50,8 +50,8 @@ describe("credit detail components", () => {
     expect(handlers.onOpenSalesOrder).toHaveBeenCalledWith("O-9");
     fireEvent.change(within(dialog).getByLabelText("3. ay ödəniş tarixi"), { target: { value: "2027-01-15" } });
     expect(handlers.onUpdatePaymentDate).toHaveBeenCalledWith("CR-1", 3, "2027-01-15");
-    fireEvent.click(within(dialog).getByRole("button", { name: "SMS xatırlatma" }));
-    expect(handlers.sendCreditSms).toHaveBeenCalledWith("CR-1");
+    // SMS is not connected yet: the reminder button is shown as coming soon and cannot be pressed.
+    expect(within(dialog).getByRole("button", { name: "SMS xatırlatma (tezliklə)" })).toBeDisabled();
     fireEvent.click(within(dialog).getByRole("button", { name: "Pəncərəni bağla" }));
     expect(handlers.onClose).toHaveBeenCalledOnce();
   });
@@ -61,7 +61,7 @@ describe("credit detail components", () => {
     expect(screen.getByText("Kredit başlanmayıb")).toBeInTheDocument();
     expect(screen.queryByLabelText("Əsas məbləğ")).toBeNull();
     expect(screen.queryByLabelText("2. ay ödəniş tarixi")).toBeNull();
-    expect(screen.queryByRole("button", { name: "SMS xatırlatma" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /SMS xatırlatma/ })).toBeNull();
   });
 
   it("marks closed, current and future schedule months", () => {
