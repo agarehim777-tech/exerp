@@ -3617,6 +3617,9 @@ isOneToOne: false
 "gl_account_by_code":
 { Args: { "_code": string,"_tenant": string }; Returns: string
                            },
+"import_opening_balances":
+{ Args: { "_kind": string,"_request_key": string,"_rows": Json,"_tenant_id": string }; Returns: Json
+                           },
 "import_warehouse_stock_atomic":
 { Args: { "_request_key": string,"_rows": Json,"_tenant_id": string }; Returns: Json
                            },

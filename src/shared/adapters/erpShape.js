@@ -151,6 +151,41 @@ export function dbOrderToLegacy(o) {
   };
 }
 
+export const OPENING_CREDIT_SOURCE = "Başlanğıc qalıq";
+
+// A credit imported as an opening balance has no sale order. It goes through the same mapping as a credit
+// sale (so schedule, balance and status are read the same way) with the contract standing in for the order;
+// the opening flag removes the sale-order link and the product/seller fields.
+export function openingCreditToLegacyOrder(contract) {
+  if (!contract) return null;
+  const installments = contract.installments || [];
+  const paidPrincipal = installments.reduce((sum, row) => sum + Math.max(0, Number(row.principal_paid || 0)), 0);
+  const initial = Math.max(0, Number(contract.initial_payment || 0));
+  const legacy = dbOrderToLegacy({
+    id: contract.id,
+    order_no: contract.contract_no,
+    customer: contract.customer,
+    customer_id: contract.customer_id,
+    total: Number(contract.principal || 0),
+    paid_amount: Number((initial + paidPrincipal).toFixed(2)),
+    payment_status: "partial",
+    currency: "AZN",
+    order_date: contract.start_date || String(contract.created_at || "").slice(0, 10) || null,
+    status: "delivered",
+    notes: OPENING_CREDIT_SOURCE,
+    credit: contract,
+    items: [],
+  });
+  return {
+    ...legacy,
+    fin: contract.customer?.fin || "",
+    products: OPENING_CREDIT_SOURCE,
+    seller: "—",
+    deliveredAt: null,
+    openingBalance: true,
+  };
+}
+
 // Reverse: legacy new-order payload -> DB insert payload
 export function legacyOrderToDb(o, { tenantId, customersByName = new Map() } = {}) {
   const customerId = o.customerId || customersByName.get((o.customer || "").toLowerCase())?.id || null;

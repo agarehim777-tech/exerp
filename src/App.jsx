@@ -41,7 +41,7 @@ import { createMessagingActions } from "./shared/state/messagingActions.js";
 import { appConfirm } from "./shared/ui/dialogService.js";
 const syncedCollections = ["employees", "departments", "leaveRequests", "vacancies", "contracts", "supportTickets", "conversations", "notifications", "notificationSendLog", "projects", "productionPlans", "knowledgeBase", "taxCalendar", "currencyRates", "apiWebhookLogs", "reportExports", "receivableClosures"];
 import { useGitHubSync } from "./shared/hooks/useGitHubSync.js";
-import { dbOrderToLegacy } from "./shared/adapters/erpShape.js";
+import { dbOrderToLegacy, openingCreditToLegacyOrder } from "./shared/adapters/erpShape.js";
 import { usePermissions } from "./shared/hooks/usePermissions.js";
 import {
   BarChart3,
@@ -208,7 +208,7 @@ function App() {
   const { customers: dbCustomers, loaded: dbCustomersLoaded, refresh: refreshDbCustomers, create: createDbCustomer } = useCustomers(activeTenantId);
   const { products: dbProducts, loaded: dbProductsLoaded, refresh: refreshDbProducts, create: createDbProduct, update: updateDbProduct, remove: deleteDbProduct, uploadImage: uploadDbProductImage, removeImage: removeDbProductImage } = useProducts(activeTenantId);
   const dbSales = useOrders(activeTenantId);
-  const { orders: dbOrders, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
+  const { orders: dbOrders, openingCredits: dbOpeningCredits, loaded: dbOrdersLoaded, loading: dbOrdersLoading, error: dbOrdersError, refresh: refreshDbOrders, create: createDbOrder, updateHeader: updateDbOrder, remove: deleteDbOrder } = dbSales;
   const dbInventory = useStock(activeTenantId);
   const refreshDbInventory = dbInventory.refresh;
   const { ready: tenantStateReady, cleared: tenantStateCleared } = useTenantUiPersistence({
@@ -267,9 +267,12 @@ function App() {
   const [selectedSupportTicketId, setSelectedSupportTicketId] = useState("");
 
   const creditSourceOrders = useMemo(
-    () => dbOrders.map(dbOrderToLegacy),
-    [dbOrders],
+    // Opening-balance credits (no sale order) are read next to the orders and mapped the same way.
+    () => [...dbOrders.map(dbOrderToLegacy), ...dbOpeningCredits.map(openingCreditToLegacyOrder)],
+    [dbOrders, dbOpeningCredits],
   );
+  // After an opening-balance import the customer list and the credit portfolio are read again.
+  const onOpeningImported = useCallback(() => { refreshDbCustomers(); refreshDbOrders(); }, [refreshDbCustomers, refreshDbOrders]);
   const creditRecords = useMemo(
     // Credits come only from credit_contracts (via the orders read); the browser credits list was retired.
     () => buildAllCreditRecords(creditSourceOrders, []),
@@ -597,6 +600,7 @@ function App() {
           <Suspense fallback={<div className="page-suspense-loader u-padding-32px u-opacity-0_6" >Yüklənir…</div>}>
           <SystemPages {...{
             collectionsLoading: !collectionSync.ready,
+            activeTenantId, onOpeningImported,
             active, activeRoleInfo, addSupportTicketComment, apiSecretRows, applyDefaultUserPermissions, archiveMessageConversation, can, changeCurrentRole,
             choosePage, conversationId, createMessageConversation, createUser, creditRecords, currentUser, deleteMessageConversation, draftMessage,
             exportBackup, filtered, goLiveReport, helpArticles, helpModuleGuides, importBackup, integrityReport, markAllNotificationsRead,

@@ -4,7 +4,7 @@ import { useRealtimeResync } from './useRealtimeResync';
 import { useTenantRequestScope } from './useTenantRequestScope';
 import { createIdempotencyKey, createSalesOrderComplete, editSalesOrderAtomic, migrationRequiredError, reverseSalesOrder } from '../../services/coreOperations';
 import { ensureMainCashAccount } from '../../services/cashAccounts';
-import { readOrderById, readOrderPage, readOrderRelations } from '../../services/orderRead.js';
+import { readOpeningCredits, readOrderById, readOrderPage, readOrderRelations } from '../../services/orderRead.js';
 import { toLocalIsoDate } from '../../services/date.js';
 
 function isMissingRpc(error) {
@@ -19,6 +19,7 @@ export function useOrders(tenantId) {
   const { scope, begin } = useTenantRequestScope(tenantId);
   const [loadedScope, setLoadedScope] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [openingCredits, setOpeningCredits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
@@ -29,6 +30,7 @@ export function useOrders(tenantId) {
     const isCurrent = begin();
     if (!tenantId) {
       setOrders([]);
+      setOpeningCredits([]);
       setLoaded(false);
       return;
     }
@@ -54,8 +56,11 @@ export function useOrders(tenantId) {
         if (related.deliveryError) console.warn('[orders] delivery history could not be loaded:', related.deliveryError);
       }
       if (!isCurrent()) return;
+      const opening = await readOpeningCredits(tenantId, isCurrent);
+      if (!isCurrent()) return;
       setError(null);
       setLoadedScope(scope);
+      setOpeningCredits(opening || []);
       setHasMore(rows.length > limit);
       setOrders(visibleRows.map((row) => ({
         ...row,
@@ -71,6 +76,7 @@ export function useOrders(tenantId) {
 
   useEffect(() => {
     setOrders([]);
+    setOpeningCredits([]);
     setLoaded(false);
     setLimit(ORDERS_PAGE_SIZE);
   }, [scope]);
@@ -187,7 +193,7 @@ export function useOrders(tenantId) {
   };
 
   const current = Boolean(tenantId && loadedScope === scope && loaded);
-  return { orders: current ? orders : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, getById, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
+  return { orders: current ? orders : EMPTY_ROWS, openingCredits: current ? openingCredits : EMPTY_ROWS, loading, loaded: current, error, hasMore: current && hasMore, loadMore, getById, pageSize: limit, refresh: fetchAll, create, update, updateStatus, updateHeader, registerPayment, remove, previewRemoval };
 }
 
 // Frozen so no caller can fill the shared empty list; typed as the hook's row array so pages that take
